@@ -15,3 +15,5 @@ export {
   snapAngle, snapScale, snapTranslation, mergeOverride, resetOverride, isIdentityTransform, effectiveNodeTransform,
 } from './editing'
 export type { GizmoMode, NodeBase, NodeTransform } from './editing'
+export { imageFrame, imageBounds, imageGridToWorld, imageWallsToWorld, imageSceneLayout, layoutForCells, imageSceneGrid, pixelsPerCell } from './imageScene'
+export type { ImageFrame, ImageSceneLayout, SceneImage } from './imageScene'

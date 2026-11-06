@@ -37,7 +37,11 @@ const frag = /* glsl */ `
   }
 `
 
-export function FogOverlay({ bounds, walls }: { bounds: Bounds2; walls: readonly WallSegment[] }) {
+/**
+ * `brightFloor`: the floor is a map image, which reads much lighter than a 3D room, so unexplored
+ * and explored-but-unseen cells are darkened a little more for revealed cells to stand out.
+ */
+export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bounds2; walls: readonly WallSegment[]; brightFloor?: boolean }) {
   const { grid, floorY, viewer, sceneId, scene, onIntent } = useTable()
   const tokens = useGame((s) => s.tokens)
   const fog = useGame((s) => s.fog[sceneId])
@@ -126,8 +130,8 @@ export function FogOverlay({ bounds, walls }: { bounds: Bounds2; walls: readonly
     uiSet({ visible: darkness > 0 ? visibleDisplay : null })
     return () => uiSet({ visible: null })
   }, [visibleDisplay, darkness, uiSet])
-  material.uniforms.uDark!.value = (gm ? 0.4 : 0.94) * darkness
-  material.uniforms.uDim!.value = (gm ? 0.18 : 0.6) * darkness
+  material.uniforms.uDark!.value = (gm ? (brightFloor ? 0.6 : 0.4) : (brightFloor ? 0.97 : 0.94)) * darkness
+  material.uniforms.uDim!.value = (gm ? (brightFloor ? 0.3 : 0.18) : (brightFloor ? 0.72 : 0.6)) * darkness
 
   if (darkness <= 0) return null
   const w = bounds.maxX - bounds.minX
