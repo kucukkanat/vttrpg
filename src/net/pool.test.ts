@@ -194,6 +194,28 @@ describe('RelayPool', () => {
     expect(s.attempts[A]).toBe(1)
     expect(s.created[1].connected).toBe(false)
   })
+
+  it('reconnect retries every down relay at once with a fresh backoff and leaves open ones alone', async () => {
+    const s = scripted({ [A]: ['fail', 'fail', 'fail', 'ok'], [B]: ['ok'] })
+    const pool = make({ relays: [A, B], createRelay: s.createRelay })
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(1000) // second attempt fails; now waiting out a 2 s backoff
+    expect(s.attempts[A]).toBe(2)
+    expect(s.attempts[B]).toBe(1)
+    pool.reconnect()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(s.attempts[A]).toBe(3) // did not wait the 2 s
+    expect(s.attempts[B]).toBe(1) // open: untouched
+    // That attempt failed too; the backoff restarted from the base (1 s), not 4 s.
+    await vi.advanceTimersByTimeAsync(999)
+    expect(s.attempts[A]).toBe(3)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(s.attempts[A]).toBe(4)
+    expect(pool.openCount).toBe(2)
+    pool.reconnect() // nothing down: no new attempts
+    await vi.advanceTimersByTimeAsync(0)
+    expect(s.attempts[A]).toBe(4)
+  })
 })
 
 describe('StatusTracker over RelayPool', () => {

@@ -37,9 +37,20 @@ export interface GameConnection {
   relays: string[]
   /** Number of relays with an open socket right now (for a "3/4 relays" indicator). */
   relayCount: number
-  /** Non-GM: send an intent to the GM. GM: delivered to `onIntent`. */
-  sendIntent(intent: IntentEnvelope): void
+  /**
+   * Non-GM: send an intent to the GM. GM: delivered to `onIntent`. While the GM is away a
+   * player's own token moves and chat wait in a queue (see `SendIntentResult`); the rest is refused.
+   * Callers that do not care about the outcome may ignore the result.
+   */
+  sendIntent(intent: IntentEnvelope): SendIntentResult
   onIntent(cb: (intent: IntentEnvelope) => void): () => void
+  /** Player: true after `GM_AWAY_AFTER_MS` without a presence event from the GM. Always false for the GM. */
+  gmAway: boolean
+  onGmAway(cb: (away: boolean) => void): () => void
+  /** Player: intents waiting for the GM to come back. */
+  queuedIntents: number
+  /** Ask the pool to retry every relay that is down right now instead of waiting out its backoff. */
+  reconnect(): void
   publishPresence(p: Presence): void
   onPresence(cb: (p: Presence) => void): () => void
   onStatus(cb: (s: GameConnection['status']) => void): () => void
@@ -54,6 +65,16 @@ export interface GameConnection {
   close(): void
 }
 
+/**
+ * What became of a player's intent: sent to the relays, held until the GM is back (`settled`
+ * says whether it was delivered or dropped after the TTL), or refused with a short reason
+ * (`gm-away` for rolls and skills while the GM is away, `not-owner`, `closed`).
+ */
+export type SendIntentResult =
+  | { sent: true }
+  | { queued: true; settled: Promise<'delivered' | 'expired'> }
+  | { rejected: string }
+
 export interface InviteInfo {
   gameId: GameId
   gm: PlayerPubkey
@@ -63,6 +84,9 @@ export interface InviteInfo {
 
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
 export { currentProfile, profileSuffix } from './identity'
+export { IntentQueue, INTENT_QUEUE_TTL_MS, QUEUEABLE_INTENTS } from './connection'
+export type { QueueOutcome } from './connection'
+export { GM_AWAY_AFTER_MS } from '@/core/presence'
 export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
 export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'
 export { localGameStore, openLocalGameStore, createMemoryGameStore } from './localStore'

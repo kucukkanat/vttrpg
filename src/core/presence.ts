@@ -14,3 +14,11 @@ export interface Presence {
   rollCommit?: string
   lastSeen: number
 }
+
+/** Players treat the GM as away once this long has passed without a presence event from them. */
+export const GM_AWAY_AFTER_MS = 15_000
+
+/** True when `lastSeen` (ms on the local clock; undefined = never seen) is older than `after` at `now`. */
+export function isAway(lastSeen: number | undefined, now: number, after = GM_AWAY_AFTER_MS): boolean {
+  return lastSeen === undefined || now - lastSeen > after
+}

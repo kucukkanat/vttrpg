@@ -13,7 +13,7 @@ import { useGame } from '@/state/store'
 import { canControl, useTable } from './context'
 import { snapToCell } from './grid'
 import { flickerNoise } from './SceneModel'
-import { useTableUi } from './tableState'
+import { clearPendingMove, useTableUi } from './tableState'
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
 
@@ -106,7 +106,7 @@ export function GlbMini({ url, scale, onObject }: { url: string; scale: number; 
   return <primitive object={object} scale={scale} />
 }
 
-function Disc({ token, radius, dimmed }: { token: Token; radius: number; dimmed: boolean }) {
+function Disc({ token, radius, dimmed, ghost = false }: { token: Token; radius: number; dimmed: boolean; ghost?: boolean }) {
   const initials = initialsOf(token.name)
   const top = useMemo(() => makeInitialsTexture(initials, token.color), [initials, token.color])
   useEffect(() => () => top.dispose(), [top])
@@ -114,8 +114,10 @@ function Disc({ token, radius, dimmed }: { token: Token; radius: number; dimmed:
   const face = useMemo(() => new MeshStandardMaterial({ map: top, roughness: 0.5 }), [top])
   useEffect(() => () => { side.dispose(); face.dispose() }, [side, face])
   useEffect(() => {
-    for (const m of [side, face]) { m.transparent = dimmed; m.opacity = dimmed ? 0.45 : 1 }
-  }, [dimmed, side, face])
+    // Ghost: a move the GM has not applied yet (queued while they were away) shows half-there.
+    const opacity = dimmed ? 0.45 : ghost ? 0.6 : 1
+    for (const m of [side, face]) { m.transparent = opacity < 1; m.opacity = opacity }
+  }, [dimmed, ghost, side, face])
   const h = radius * 0.22
   return (
     <mesh castShadow receiveShadow position-y={h / 2} material={[side, face, side]}>
@@ -143,6 +145,8 @@ export function TokenMesh({ token }: { token: Token }) {
   const setSelected = useGame((s) => s.setSelectedToken)
   const hovered = useTableUi((s) => s.hovered === token.id)
   const dragGhost = useTableUi((s) => (s.drag && s.drag.token === token.id ? s.drag : null))
+  // Dropped while the GM was away: stays where it was dropped, ghosted, until the doc catches up.
+  const pending = useTableUi((s) => s.pending[token.id] ?? null)
   const targeting = useTableUi((s) => s.targeting !== null)
   const targetInside = useTableUi((s) => s.targeting?.inside.has(token.id) ?? false)
   const targetOutOfRange = useTableUi((s) => (s.targeting ? !s.targeting.inRange.has(token.id) : false))
@@ -172,8 +176,8 @@ export function TokenMesh({ token }: { token: Token }) {
   useFrame(({ clock }, dt) => {
     const g = group.current
     if (!g) return
-    const tx = dragGhost ? dragGhost.x : preview ? preview.position.x : token.position.x
-    const tz = dragGhost ? dragGhost.z : preview ? preview.position.z : token.position.z
+    const tx = dragGhost ? dragGhost.x : pending ? pending.x : preview ? preview.position.x : token.position.x
+    const tz = dragGhost ? dragGhost.z : pending ? pending.z : preview ? preview.position.z : token.position.z
     const k = 1 - Math.exp(-dt * (dragGhost || preview ? 18 : 10))
     current.current.x += (tx - current.current.x) * k
     current.current.z += (tz - current.current.z) * k
@@ -273,8 +277,14 @@ export function TokenMesh({ token }: { token: Token }) {
 
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The document moved on (the GM applied the queued move, or moved the token elsewhere): the truth wins.
+  useEffect(() => {
+    if (pending && (token.position.x !== pending.from.x || token.position.z !== pending.from.z)) clearPendingMove(token.id)
+  }, [pending, token.id, token.position.x, token.position.z])
+
   if (token.hidden && !gmView) return null
   const dimmed = token.hidden || targetOutOfRange
+  const ghost = pending !== null && !dragGhost
 
   return (
     <group
@@ -291,13 +301,20 @@ export function TokenMesh({ token }: { token: Token }) {
       {/* Lifted part: the mini, its rings and light. The group below stays on the floor. */}
       <group ref={body} position-y={elevation} rotation-y={rotationY}>
         {modelUrl ? (
-          <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
-            <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
+          <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />}>
+            <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />}>
               <GlbMini url={modelUrl} scale={scale} />
             </Suspense>
           </ModelBoundary>
         ) : (
-          <Disc token={token} radius={radius} dimmed={dimmed} />
+          <Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />
+        )}
+        {ghost && (
+          // Amber "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
+          <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>
+            <ringGeometry args={[radius * 1.15, radius * 1.3, 48]} />
+            <meshBasicMaterial color="#e0a458" transparent opacity={0.6} depthWrite={false} />
+          </mesh>
         )}
         {(selected || hovered) && !targeting && (
           <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>

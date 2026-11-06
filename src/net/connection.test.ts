@@ -353,6 +353,111 @@ describe('intents', () => {
   })
 })
 
+describe('GM away', () => {
+  const beacon = (c: GameConnection): Presence => ({ pubkey: c.gm, name: 'GM', color: '#fff', scene: null, lastSeen: 0 })
+  /** A player whose connection calls the GM away after `gmAwayMs` of silence and drops queued intents after `ttl`. */
+  async function joinPlayer(w: World, gmAwayMs: number, queueTtlMs: number) {
+    const identity = localIdentity(generateSecretKey())
+    const pool = new FakePool(w.relay)
+    const { manifest } = await fetchManifest(pool, RELAYS, w.gameKey, w.gameId, 1500)
+    const conn = await openConnection({ relays: RELAYS, identity, gameId: w.gameId, gameKey: w.gameKey, isGm: false, pool, tracker: tracker(), manifest, gmAwayMs, queueTtlMs })
+    w.open.push(conn)
+    return { conn, identity }
+  }
+  const say = (text: string): IntentEnvelope => ({ id: crypto.randomUUID(), from: 'x' as never, at: 1, intent: { type: 'chat.say', text } })
+  const roll = (): IntentEnvelope => ({ id: crypto.randomUUID(), from: 'x' as never, at: 1, intent: { type: 'roll', formula: 'd20', seed: 's' } })
+
+  it('flags the GM away after silence, back on their next beacon, and never for the GM itself', async () => {
+    const w = await world()
+    // 250 ms of silence: well above the 100 ms presence throttle, so a beaconing GM stays present.
+    const { conn: player } = await joinPlayer(w, 250, 10_000)
+    const seen: boolean[] = []
+    player.onGmAway((a) => seen.push(a))
+    expect(player.gmAway).toBe(false)
+    expect(w.gm.gmAway).toBe(false)
+    await until(() => player.gmAway, 2000)
+    expect(seen).toEqual([true])
+    w.gm.publishPresence(beacon(w.gm))
+    await until(() => !player.gmAway, 1500)
+    expect(seen).toEqual([true, false])
+    // A GM that keeps beaconing (throttled to one per 100 ms) never counts as away.
+    for (let i = 0; i < 6; i++) {
+      await sleep(60)
+      w.gm.publishPresence(beacon(w.gm))
+    }
+    await sleep(0)
+    expect(player.gmAway).toBe(false)
+    expect(seen).toEqual([true, false])
+    expect(w.gm.gmAway).toBe(false)
+  })
+
+  it('queues chat and own token moves while away, refuses rolls, and delivers the queue in order when the GM is back', async () => {
+    const w = await world()
+    const { conn: player, identity: playerId } = await joinPlayer(w, 150, 10_000)
+    w.gm.publishPresence(beacon(w.gm)) // the GM is here while the doc settles
+    // The player owns t1 in the doc; t2 belongs to nobody.
+    w.gm.doc.getMap('tokens').set('t1', { owner: playerId.pubkey })
+    w.gm.doc.getMap('tokens').set('t2', {})
+    await settle()
+    const got: IntentEnvelope[] = []
+    w.gm.onIntent((i) => got.push(i))
+
+    // Present: straight through.
+    expect(player.gmAway).toBe(false)
+    expect(player.sendIntent(say('hello'))).toEqual({ sent: true })
+    await until(() => got.length === 1)
+
+    await until(() => player.gmAway, 2000)
+    const move = { id: 'm1', from: 'x' as never, at: 1, intent: { type: 'token.move', token: 't1' as never, position: { x: 1, y: 0, z: 1 } } } as IntentEnvelope
+    const r1 = player.sendIntent(move)
+    const r2 = player.sendIntent(say('while you were out'))
+    expect(r1).toMatchObject({ queued: true })
+    expect(r2).toMatchObject({ queued: true })
+    expect(player.sendIntent(roll())).toEqual({ rejected: 'gm-away' })
+    expect(player.sendIntent({ ...move, intent: { ...move.intent, token: 't2' as never } as never })).toEqual({ rejected: 'not-owner' })
+    expect(player.sendIntent({ id: 'c', from: 'x' as never, at: 1, intent: { type: 'token.claim', token: 't2' as never } })).toEqual({ rejected: 'gm-away' })
+    expect(player.queuedIntents).toBe(2)
+    await sleep(60)
+    expect(got).toHaveLength(1) // nothing left the device
+
+    w.gm.publishPresence(beacon(w.gm))
+    await until(() => got.length === 3)
+    expect(got.slice(1).map((e) => e.intent.type)).toEqual(['token.move', 'chat.say'])
+    expect(got.every((e) => e.from === playerId.pubkey)).toBe(true)
+    expect(player.queuedIntents).toBe(0)
+    expect(player.gmAway).toBe(false)
+    if (!('queued' in r1) || !('queued' in r2)) throw new Error('expected queued results')
+    await expect(Promise.all([r1.settled, r2.settled])).resolves.toEqual(['delivered', 'delivered'])
+  })
+
+  it('drops queued intents after the TTL and reports them as expired', async () => {
+    const w = await world()
+    const { conn: player } = await joinPlayer(w, 40, 80)
+    const got: IntentEnvelope[] = []
+    w.gm.onIntent((i) => got.push(i))
+    await until(() => player.gmAway, 1500)
+    const r = player.sendIntent(say('too late'))
+    if (!('queued' in r)) throw new Error('expected a queued result')
+    expect(player.queuedIntents).toBe(1)
+    await expect(r.settled).resolves.toBe('expired')
+    expect(player.queuedIntents).toBe(0)
+    w.gm.publishPresence(beacon(w.gm))
+    await sleep(60)
+    expect(got).toHaveLength(0)
+  })
+
+  it('close expires whatever is still queued', async () => {
+    const w = await world()
+    const { conn: player } = await joinPlayer(w, 40, 10_000)
+    await until(() => player.gmAway, 1500)
+    const r = player.sendIntent(say('bye'))
+    if (!('queued' in r)) throw new Error('expected a queued result')
+    player.close()
+    await expect(r.settled).resolves.toBe('expired')
+    expect(player.sendIntent(say('after close'))).toEqual({ rejected: 'closed' })
+  })
+})
+
 describe('presence', () => {
   const p = (name: string): Presence => ({ pubkey: 'x' as never, name, color: '#fff', scene: null, lastSeen: 0 })
 

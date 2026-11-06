@@ -3,7 +3,8 @@
  *   connection (net)  ->  Y.Doc  ->  store (state)  ->  UI/table
  *   UI/table intents  ->  GM: validate (rules) + apply (state)  |  player: sendIntent (net)
  */
-import type { GameConnection } from '@/net'
+import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
+import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
@@ -145,7 +146,32 @@ export function createController(opts: {
   const dispatch = async (intent: Intent): Promise<void> => {
     const env: IntentEnvelope = { id: crypto.randomUUID(), from: me.pubkey, at: Date.now(), intent }
     if (!connection.isGm) {
-      connection.sendIntent(env)
+      const result = connection.sendIntent(env)
+      if ('rejected' in result) {
+        if (result.rejected === 'gm-away') {
+          const what = intent.type === 'roll' ? 'rolls' : intent.type === 'skill.use' ? 'skills' : 'that'
+          pushToast({ key: 'gm-away', text: `The GM is away; ${what} wait until they are back` })
+        }
+        return
+      }
+      if ('queued' in result) {
+        pushToast({ key: 'gm-away', text: 'Waiting for the GM… your move is queued' })
+        if (intent.type === 'token.move') {
+          // Hold the token where it was dropped (ghost look) until the GM's delta lands or the queue gives up.
+          const token = intent.token
+          const committed = useGame.getState().tokens[token]?.position ?? intent.position
+          setPendingMove(token, { x: intent.position.x, z: intent.position.z, from: { x: committed.x, z: committed.z }, until: Date.now() + INTENT_QUEUE_TTL_MS })
+          void result.settled.then((outcome) => {
+            if (outcome === 'expired') {
+              clearPendingMove(token)
+              pushToast({ key: 'gm-away', text: 'The GM did not come back; your move was dropped' })
+            } else {
+              // Delivered: the document normally updates within a moment; if the GM refused it, snap back.
+              setTimeout(() => clearPendingMove(token), 10_000)
+            }
+          })
+        }
+      }
       return
     }
     // Destructive intents from this client get an inverse on the undo stack and an Undo toast
