@@ -13,6 +13,12 @@ export interface PackManifest {
   description?: string
   license?: string
   grid: { type: GridType; cellSize: number }
+  /**
+   * How the engine turns a roll into an outcome when a target number is known.
+   * `roll-under`: success when the total is <= the target (saves against a stat).
+   * `d20-vs-dc`: success when the total is >= the target.
+   */
+  resolution?: RollResolution
   /** Files relative to the pack folder. */
   files: {
     attributes: string
@@ -23,6 +29,10 @@ export interface PackManifest {
     skills?: string[]
   }
 }
+
+export type RollResolution =
+  | { kind: 'roll-under'; die: string }
+  | { kind: 'd20-vs-dc' }
 
 export interface AttributeDef {
   id: string
@@ -55,7 +65,15 @@ export type SheetField =
   | { kind: 'number'; bind: string; label: string; readonly?: boolean }
   | { kind: 'text'; bind: string; label: string; multiline?: boolean }
   | { kind: 'resource'; bind: string; label: string }
-  | { kind: 'inventory-grid'; bind: string; label: string; cols: number; rows: number }
+  | {
+      kind: 'inventory-grid'
+      bind: string
+      label: string
+      cols: number
+      rows: number
+      /** Optional labels for the first slots (e.g. paws, body); unlabeled slots are general storage. */
+      slotLabels?: string[]
+    }
   | { kind: 'list'; bind: string; label: string; item: SheetField[] }
   | { kind: 'roll'; label: string; formula: string }
 
@@ -108,6 +126,8 @@ export interface ChargenStep {
   /** Table id to roll on; result merged into the sheet. */
   table?: string
   choose?: { bind: string; options: string[] }
+  /** Literal values merged into the sheet (arrays append, inventory arrays are placed into the grid). */
+  set?: Record<string, unknown>
 }
 
 export interface ChargenSchema {
