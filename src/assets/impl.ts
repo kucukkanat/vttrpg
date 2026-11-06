@@ -42,11 +42,17 @@ export function createAssetResolver(opts: ResolverOptions): AssetResolver {
 
   const urls = new Map<string, { url: string; count: number }>()
   const inflight = new Map<string, Promise<string>>()
+  // Bytes from importFile that could not be written to IndexedDB (private mode, quota). Session only.
+  const unpersisted = new Map<string, Blob>()
   let libraryIndex: Promise<Map<string, LibraryEntry>> | undefined
 
   // Cache failures (private mode, quota) must never break resolving.
   const cacheGet = (h: string) => cache.get(h).catch(() => undefined)
-  const cachePut = (h: string, b: Blob) => cache.put(h, b).catch(() => undefined)
+  const cachePut = (h: string, b: Blob) =>
+    cache.put(h, b).then(
+      () => true,
+      () => false,
+    )
 
   function loadLibrary(): Promise<Map<string, LibraryEntry>> {
     return (libraryIndex ??= (async () => {
@@ -93,6 +99,8 @@ export function createAssetResolver(opts: ResolverOptions): AssetResolver {
     const cached = await cacheGet(ref.sha256)
     // A corrupted cache entry falls through to the network.
     if (cached && (await sha256Hex(cached)) === ref.sha256) return new Blob([cached], { type: ref.mime })
+    const local = unpersisted.get(ref.sha256)
+    if (local) return local
 
     const candidates: string[] = []
     const entry = (await loadLibrary()).get(ref.sha256)
@@ -143,7 +151,9 @@ export function createAssetResolver(opts: ResolverOptions): AssetResolver {
   async function importFile(file: File): Promise<AssetRef> {
     const sha256 = await sha256Hex(file)
     const mime = inferMime(file.name, file.type)
-    await cachePut(sha256, new Blob([file], { type: mime }))
+    const blob = new Blob([file], { type: mime })
+    if (await cachePut(sha256, blob)) unpersisted.delete(sha256)
+    else unpersisted.set(sha256, blob)
     return { sha256, kind: inferKind(file.name, mime), mime, size: file.size, name: file.name, sources: [] }
   }
 
