@@ -61,6 +61,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   const token = useGame((s) => (selected ? s.tokens[selected] : undefined))
   const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
   const chat = useGame((s) => s.chat)
+  const custom = useGame((s) => s.customSkills)
   const pending = useTargeting((s) => s.pending)
   const firedAt = useTargeting((s) => s.firedAt)
   const rules = controller.rules
@@ -68,6 +69,8 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   const mayUse = isGm || (token?.owner === controller.pubkey)
 
   const labelOf = useMemo(() => (id: string) => rules?.pack.resources.find((r) => r.id === id)?.name ?? rules?.pack.attributes.find((a) => a.id === id)?.abbr ?? id, [rules])
+  // Pack skills with this game's custom skills merged over them (the controller feeds `custom` to the engine).
+  const skills = useMemo(() => rules?.allSkills() ?? [], [rules, custom])
 
   // Evaluate non-numeric cost expressions against the sheet (most are literals).
   const [amounts, setAmounts] = useState<Record<string, number>>({})
@@ -76,7 +79,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
     let live = true
     const next: Record<string, number> = {}
     const pendingEvals: Promise<void>[] = []
-    for (const skill of rules.pack.skills) {
+    for (const skill of skills) {
       for (const [i, cost] of (skill.cost ?? []).entries()) {
         const key = `${skill.id}:${i}`
         const n = Number(cost.amount)
@@ -87,7 +90,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
     setAmounts({ ...next })
     if (pendingEvals.length) void Promise.all(pendingEvals).then(() => { if (live) setAmounts({ ...next }) })
     return () => { live = false }
-  }, [rules, character])
+  }, [rules, character, skills])
 
   // Outcome line: system messages the GM appended since the last skill fired.
   const [now, setNow] = useState(() => Date.now())
@@ -103,7 +106,6 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   }, [chat, firedAt, now])
 
   if (!rules) return null
-  const skills = rules.pack.skills
   if (skills.length === 0) return null
 
   const use = (skill: SkillDef) => {
@@ -149,7 +151,10 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
             const active = pending?.skillId === skill.id && pending.source === token.id
             return (
               <button key={skill.id} type="button" style={btn(active, disabled)} disabled={disabled} onClick={() => use(skill)} aria-pressed={active} title={skill.description}>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>{skill.name}</span>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>
+                  {skill.name}
+                  {skill.id in custom && <span className="muted small" style={{ marginLeft: 6, fontWeight: 400 }} title="Custom skill for this game">custom</span>}
+                </span>
                 <span className="small" style={{ color: disabled ? '#ff9b8f' : 'var(--accent)', whiteSpace: 'nowrap' }}>{reason ?? costLabel(skill, labelOf)}</span>
                 <span className="muted small" style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {shapeLabel(skill)} — {skill.description}
