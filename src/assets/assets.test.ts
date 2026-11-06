@@ -56,6 +56,16 @@ describe('importFile', () => {
   })
 })
 
+describe('importFile without IndexedDB', () => {
+  it('keeps imported bytes in memory so they still resolve', async () => {
+    vi.stubGlobal('indexedDB', undefined)
+    const r = createAssetResolver({ libraryBase: LIB, dbName: freshDb(), blossomServers: [] })
+    const ref = await r.importFile(new File([enc('private mode')], 'p.json'))
+    await expect(r.resolve(ref)).resolves.toMatch(/^blob:/)
+    expect(calls.filter((u) => !u.endsWith('/index.json'))).toEqual([])
+  })
+})
+
 describe('source order', () => {
   it('uses the library index before ref.sources and caches the result', async () => {
     const ref = await makeRef('lib-bytes', ['https://src.test/a'])

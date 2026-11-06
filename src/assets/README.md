@@ -15,7 +15,8 @@ assets.release(ref)                   // when done
 `resolve(ref)` stops at the first source that yields bytes whose SHA-256 equals `ref.sha256`:
 
 1. In-memory object URL (same hash resolved before; reference counted).
-2. IndexedDB cache (re-hashed on read; a corrupt entry is skipped).
+2. IndexedDB cache (re-hashed on read; a corrupt entry is skipped). Files imported while IndexedDB is
+   unavailable are kept in memory for the session instead.
 3. Starter library: if `library/index.json` lists the hash, fetch `<libraryBase>/<path>`.
 4. Each URL in `ref.sources`, in order.
 5. `DEFAULT_BLOSSOM_SERVERS` (or `blossomServers` option) as `<server>/<sha256>`.
