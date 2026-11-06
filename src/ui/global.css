@@ -40,3 +40,7 @@ label { display: grid; gap: 4px; margin: 10px 0; font-size: 14px; }
   .left { display: none; }
   .right { border-left: 0; border-top: 1px solid var(--border); max-height: 35vh; }
 }
+
+button.tiny { padding: 2px 8px; font-size: 12px; }
+.tiny-file { display: inline-block; padding: 2px 8px; font-size: 12px; background: #26262d; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; margin: 0; }
+.sheet { max-height: 50vh; overflow: auto; }

@@ -9,7 +9,7 @@ import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import type { Character, GameDocShape, RollResult } from '@/core/doc'
-import type { CharacterId } from '@/core/ids'
+import type { CharacterId, PlayerPubkey } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
 import { rollFromSeed } from '@/dice'
@@ -18,6 +18,7 @@ export interface GameController {
   connection: GameConnection
   rules: RulesEngine | null
   assets: AssetResolver
+  pubkey: PlayerPubkey
   dispatch(intent: Intent): Promise<void>
   presence(partial: Partial<Presence>): void
   dispose(): void
@@ -28,11 +29,12 @@ export function createController(opts: {
   rules: RulesEngine | null
   assets: AssetResolver
   displayName: string
+  pubkey: PlayerPubkey
 }): GameController {
   const { connection, rules, assets } = opts
   const unbind = bindDoc(connection.doc)
   const me: Presence = {
-    pubkey: connection.doc.clientID.toString() as never, // replaced below once identity is known
+    pubkey: opts.pubkey,
     name: opts.displayName,
     color: '#7cc4ff',
     scene: null,
@@ -87,6 +89,7 @@ export function createController(opts: {
     connection,
     rules,
     assets,
+    pubkey: opts.pubkey,
     async dispatch(intent) {
       const env: IntentEnvelope = { id: crypto.randomUUID(), from: me.pubkey, at: Date.now(), intent }
       if (connection.isGm) await gmApply(env)

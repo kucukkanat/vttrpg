@@ -7,5 +7,14 @@
     "size": 105,
     "name": "placeholder.json",
     "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e67e7637b418a2a312e6e0f8a541251fa0992618e1bccef886bc1e4b83d3b0c1",
+    "path": "scenes/dev-room.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 23676,
+    "name": "dev-room.glb",
+    "license": "CC0-1.0"
   }
 ]

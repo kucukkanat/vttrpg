@@ -39,7 +39,7 @@ export async function startGame(start: Start): Promise<GameController> {
     const m = connection.doc.getMap('meta')
     connection.doc.transact(() => { for (const [k, v] of Object.entries(meta)) m.set(k, v) })
     const rules = await tryRules(start.packId)
-    return createController({ connection, rules, assets, displayName: start.displayName })
+    return createController({ connection, rules, assets, displayName: start.displayName, pubkey: identity.pubkey })
   }
 
   const info = parseInvite(start.invite)
@@ -47,5 +47,5 @@ export async function startGame(start: Start): Promise<GameController> {
   const connection = await joinGame({ relays: info.relays.length ? info.relays : DEFAULT_RELAYS, identity, gameId: info.gameId, gameKey: info.gameKey, isGm: false })
   const packId = (connection.doc.getMap('meta').get('pack') as string | undefined) ?? 'mausritter'
   const rules = await tryRules(packId)
-  return createController({ connection, rules, assets, displayName: start.displayName })
+  return createController({ connection, rules, assets, displayName: start.displayName, pubkey: identity.pubkey })
 }
