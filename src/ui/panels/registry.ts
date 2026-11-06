@@ -30,17 +30,22 @@ export interface PanelDef {
   side: 'left' | 'right'
   /** Takes the remaining height when stacked with others (chat); default false. */
   fill?: boolean
+  /**
+   * Position (1-based) on the phone tab bar. Four panels get a slot; every other visible panel
+   * is listed in the fifth "More" tab's sheet, so nothing is unreachable on a narrow screen.
+   */
+  phoneSlot?: number
 }
 
 export const PANELS: PanelDef[] = [
-  { id: 'scenes', title: 'Scenes', short: 'Scenes', glyph: '🗺', component: ScenesPanel, scope: 'all', side: 'left' },
-  { id: 'tokens', title: 'Tokens', short: 'Tokens', glyph: '♟', component: TokensPanel, scope: 'all', side: 'left' },
+  { id: 'scenes', title: 'Scenes', short: 'Scenes', glyph: '🗺', component: ScenesPanel, scope: 'all', side: 'left', phoneSlot: 1 },
+  { id: 'tokens', title: 'Tokens', short: 'Tokens', glyph: '♟', component: TokensPanel, scope: 'all', side: 'left', phoneSlot: 2 },
   { id: 'object', title: 'Edit', short: 'Edit', glyph: '✎', component: ObjectPanel, scope: 'all', side: 'left' },
   { id: 'sound', title: 'Sound', short: 'Sound', glyph: '🔊', component: SoundboardPanel, scope: 'gm', side: 'left' },
   { id: 'players', title: 'Players', short: 'Players', glyph: '👥', component: PlayersPanel, scope: 'all', side: 'left' },
-  { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right' },
+  { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right', phoneSlot: 3 },
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: '✦', component: SkillsPanel, scope: 'all', side: 'right' },
-  { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right', fill: true },
+  { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right', fill: true, phoneSlot: 4 },
   { id: 'journal', title: 'Journal', short: 'Journal', glyph: '📖', component: JournalPanel, scope: 'all', side: 'right' },
   { id: 'prep', title: 'Prep', short: 'Prep', glyph: '🧰', component: PrepPanel, scope: 'gm', side: 'left' },
   { id: 'skills-editor', title: 'Skill editor', short: 'Editor', glyph: '🛠', component: SkillEditorPanel, scope: 'gm', side: 'right' },

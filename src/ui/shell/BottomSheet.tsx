@@ -3,8 +3,11 @@
  * overlaps the table without being inside the canvas container. Half = 55% of the area, full = the
  * whole area minus the keyboard. The header row is the drag surface: vertical drags resize, a
  * horizontal swipe switches tabs, dragging below 60% of half closes.
+ *
+ * Hosts a registry panel (`def`) or, when `def` is omitted, arbitrary `children` under the same
+ * header (the More list).
  */
-import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { PanelHost } from './PanelHost'
@@ -25,8 +28,12 @@ export function snapSheet(i: SnapInput): SnapResult {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
-export function BottomSheet({ def, controller, size, keyboard, onSize, onClose, onSwipeTab }: {
-  def: PanelDef
+export function BottomSheet({ def, title, children, controller, size, keyboard, onSize, onClose, onSwipeTab }: {
+  /** Panel to host; omit to render `children` under the header instead. */
+  def?: PanelDef
+  /** Header title; defaults to the panel's title. */
+  title?: string
+  children?: ReactNode
   controller: GameController
   size: SheetSize
   /** On-screen keyboard overlap in px; the sheet shrinks by it and goes full while it is open. */
@@ -39,6 +46,7 @@ export function BottomSheet({ def, controller, size, keyboard, onSize, onClose, 
   const sheet = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; h: number } | null>(null)
   const [dragging, setDragging] = useState(false)
+  const label = title ?? def?.title ?? ''
 
   const fullHeight = () => (area.current?.clientHeight ?? 0) - keyboard
 
@@ -77,14 +85,14 @@ export function BottomSheet({ def, controller, size, keyboard, onSize, onClose, 
       <button type="button" className="icon sheet-size" aria-label={size === 'full' ? 'Shrink panel' : 'Expand panel'} onClick={() => onSize(size === 'full' ? 'half' : 'full')}>
         {size === 'full' ? '⌄' : '⌃'}
       </button>
-      <h2 className="host-title">{def.title}</h2>
+      <h2 className="host-title">{label}</h2>
       <button type="button" className="icon sheet-close" aria-label="Close panel" onClick={onClose}>✕</button>
     </div>
   )
   return (
     <div className="sheet-area" ref={area}>
-      <div className={cls} ref={sheet} role="dialog" aria-label={def.title}>
-        <PanelHost def={def} controller={controller} head={head} />
+      <div className={cls} ref={sheet} role="dialog" aria-label={label}>
+        {def ? <PanelHost def={def} controller={controller} head={head} /> : <div className="hosted">{head}{children}</div>}
       </div>
     </div>
   )

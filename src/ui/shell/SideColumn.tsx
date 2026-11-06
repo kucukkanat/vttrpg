@@ -1,10 +1,12 @@
 /**
  * Desktop side column: panels stacked as collapsible sections, a drag handle on the inner edge to
- * resize (double-click collapses), and a slim rail with an expand button when collapsed.
+ * resize (double-click collapses), and a slim rail with an expand button when collapsed. The right
+ * column ends with a footer carrying the build tag.
  */
 import { useRef, type PointerEvent as RPointerEvent } from 'react'
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
+import { BuildTag } from '../BuildTag'
 import { PanelHost } from './PanelHost'
 
 export const COL_MIN = 200
@@ -77,6 +79,7 @@ export function SideColumn({ side, panels, width, open, collapsed, controller, o
           )
         })}
       </div>
+      {side === 'right' && <div className="col-foot"><span>Build</span><BuildTag inline /></div>}
       <div
         className="handle"
         role="separator"
