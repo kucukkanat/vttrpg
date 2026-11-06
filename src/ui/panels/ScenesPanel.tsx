@@ -3,6 +3,7 @@ import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newId, type SceneId } from '@/core/ids'
 import type { LibraryEntry } from '@/assets'
+import type { Scene } from '@/core/doc'
 import { libraryRef, loadLibraryIndex } from '../library'
 
 export function ScenesPanel({ controller }: { controller: GameController }) {
@@ -36,6 +37,8 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
     })
     await controller.dispatch({ type: 'scene.activate', scene: id })
   }
+  const active = meta?.activeScene ? scenes[meta.activeScene] : undefined
+  const update = (patch: Partial<Scene>) => active && void controller.dispatch({ type: 'scene.update', scene: active.id, patch })
   const toggleCamera = (id: SceneId) => {
     const s = scenes[id]
     void controller.dispatch({ type: 'scene.update', scene: id, patch: { cameraMode: s.cameraMode === 'orbit' ? 'token' : 'orbit' } })
@@ -59,6 +62,21 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
             + GLB file
             <input type="file" accept=".glb" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void addFromFile(f) }} />
           </label>
+        </div>
+      )}
+      {isGm && active && (
+        <div className="grid2">
+          <label>Weather
+            <select value={active.weather ?? 'none'} onChange={(e) => update({ weather: e.target.value as Scene['weather'] })}>
+              {['none', 'rain', 'snow', 'fog', 'embers'].map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </label>
+          <label>Ambience
+            <select value={active.ambientPreset ?? 'none'} onChange={(e) => update({ ambientPreset: e.target.value as Scene['ambientPreset'] })}>
+              {['none', 'wind', 'fire', 'rain', 'cave', 'tavern', 'forest'].map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </label>
+          <label>Darkness<input type="range" min={0} max={1} step={0.05} value={active.darkness} onChange={(e) => update({ darkness: Number(e.target.value) })} /></label>
         </div>
       )}
       {isGm && Object.keys(scenes).length === 0 && <p className="muted small">Add a scene from the library or a GLB following the Blender convention.</p>}

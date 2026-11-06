@@ -44,3 +44,20 @@ label { display: grid; gap: 4px; margin: 10px 0; font-size: 14px; }
 button.tiny { padding: 2px 8px; font-size: 12px; }
 .tiny-file { display: inline-block; padding: 2px 8px; font-size: 12px; background: #26262d; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; margin: 0; }
 .sheet { max-height: 50vh; overflow: auto; }
+
+.props { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+.props label { margin: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; align-items: end; }
+.check { display: flex; align-items: center; gap: 6px; padding-bottom: 8px; }
+.check input { width: auto; }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+.swatch.on { border-color: #fff; }
+button.wide { width: 100%; }
+button.danger { border-color: #7a2e2e; color: #ff9a93; }
+.chatform { display: flex; gap: 6px; margin-top: 8px; }
+.chatform select { width: auto; max-width: 40%; }
+.msg.whisper { color: #c58af9; }
+.msg.system { color: var(--muted); font-style: italic; }
+.ok { color: #8fd18f; } .bad { color: #f28b82; }
+input[type=range] { padding: 0; }
