@@ -5,7 +5,10 @@ import type { ChatMessage } from '@/core/doc'
 import { newSeed } from '@/dice'
 import type { PlayerPubkey } from '@/core/ids'
 import { findWhisperTarget, type Person } from './chatNames'
+import { formatDay, formatTime, groupMessages, isChatMessage } from './chatGroups'
 import { DiceValues } from '../components'
+import { toggleShortcutsOverlay } from '../shell/useShortcuts'
+import './ChatPanel.css'
 
 const HELP = [
   '/r <formula> — roll dice, e.g. /r 2d6+1',
@@ -13,15 +16,26 @@ const HELP = [
   '/help — this list',
 ]
 
+/** Last formula rolled from this chat (a chip or `/r`); module-level so it survives the panel remounting. */
+let lastChatFormula: string | null = null
+
+/** Quick dice: the pack's table die last. Mausritter reads two d6 as tens and ones (d66); others roll d100. */
+export function quickDice(pack: string | undefined): string[] {
+  return ['d20', 'd6', '2d6', pack === 'mausritter' ? 'd66' : 'd100']
+}
+
 export function ChatPanel({ controller }: { controller: GameController }) {
   const chat = useGame((s) => s.chat)
   const notices = useGame((s) => s.notices)
   const presence = useGame((s) => s.presence)
   const names = useGame((s) => s.meta?.names)
+  const pack = useGame((s) => s.meta?.pack)
   const [text, setText] = useState('')
   const [to, setTo] = useState<string>('')
   const [notice, setNotice] = useState<string[] | null>(null)
+  const [last, setLast] = useState(lastChatFormula)
   const log = useRef<HTMLDivElement>(null)
+  const input = useRef<HTMLInputElement>(null)
   const me = controller.pubkey
   const gm = controller.connection.gm
 
@@ -45,6 +59,26 @@ export function ChatPanel({ controller }: { controller: GameController }) {
 
   useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notices.length, notice])
 
+  /** The `/r` command and the quick dice share this; the formula is remembered for "Last". */
+  const roll = async (formula: string) => {
+    const f = formula.trim()
+    if (!f) return
+    lastChatFormula = f
+    setLast(f)
+    await controller.dispatch({ type: 'roll', formula: f, seed: newSeed() })
+  }
+
+  /** "+" chip: a prefilled `/r ` with the caret at the end, ready for a formula. */
+  const startRoll = () => {
+    setText('/r ')
+    requestAnimationFrame(() => {
+      const el = input.current
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(el.value.length, el.value.length)
+    })
+  }
+
   const send = async () => {
     const t = text.trim()
     if (!t) return
@@ -54,7 +88,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
     if (t === '/help' || t.startsWith('/help ')) {
       setNotice(HELP)
     } else if (t.startsWith('/r ') || t.startsWith('/roll ')) {
-      await controller.dispatch({ type: 'roll', formula: t.replace(/^\/(r|roll)\s+/, ''), seed: newSeed() })
+      await roll(t.replace(/^\/(r|roll)\s+/, ''))
     } else if (t.startsWith('/w ') || t.startsWith('/whisper ')) {
       const m = /^\/(?:w|whisper)\s+(\S+)\s*(.*)$/s.exec(t)
       const who = m?.[1] ?? ''
@@ -79,35 +113,63 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   }
 
   const mineOrPublic = chat.filter((m) => !m.to || m.author === me || m.to.includes(me as PlayerPubkey) || controller.connection.isGm)
-  const lines = interleave(mineOrPublic, notices)
+  const blocks = groupMessages(interleave(mineOrPublic, notices))
+
+  const body = (m: ChatMessage) => m.kind === 'roll' && m.roll ? (
+    <span><em>{m.text}</em> → <strong>{m.roll.total}</strong> <DiceValues className="muted small" formula={m.roll.formula} dice={m.roll.dice} />
+      {m.roll.outcome && 'success' in m.roll.outcome && <span className={m.roll.outcome.success ? 'ok' : 'bad'}> {m.roll.outcome.success ? 'success' : 'fail'}{m.roll.outcome.critical ? '!' : ''}</span>}
+    </span>
+  ) : m.text
+  const time = (at: number) => <time className="time muted" dateTime={new Date(at).toISOString()}>{formatTime(at)}</time>
+
   return (
     <div className="panel chat">
-      <h3>Chat</h3>
+      <h3>
+        Chat
+        <button type="button" className="icon chat-help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => toggleShortcutsOverlay(true)}>?</button>
+      </h3>
       <div className="log" ref={log}>
-        {lines.map((m) => 'kind' in m ? (
-          <div key={m.id} className={`msg ${m.kind}`}>
-            <span className="who">{name(m.author)}{m.to && <> → {m.to.map(name).join(', ')}</>}</span>{' '}
-            {m.kind === 'roll' && m.roll ? (
-              <span><em>{m.text}</em> → <strong>{m.roll.total}</strong> <DiceValues className="muted small" formula={m.roll.formula} dice={m.roll.dice} />
-                {m.roll.outcome && 'success' in m.roll.outcome && <span className={m.roll.outcome.success ? 'ok' : 'bad'}> {m.roll.outcome.success ? 'success' : 'fail'}{m.roll.outcome.critical ? '!' : ''}</span>}
-              </span>
-            ) : m.text}
-          </div>
-        ) : (
-          <div key={m.id} className="msg system notice">{m.text}</div>
-        ))}
+        {blocks.map((b) => {
+          if (b.kind === 'date') return <div key={b.key} className="day" role="separator"><span>{formatDay(b.at)}</span></div>
+          if (b.kind === 'line') {
+            // System lines (skill messages) and local notices keep their plain single-line form.
+            return isChatMessage(b.line) ? (
+              <div key={b.key} className={`msg ${b.line.kind}`}><span className="who">{name(b.line.author)}</span> {b.line.text}</div>
+            ) : (
+              <div key={b.key} className="msg system notice">{b.line.text}</div>
+            )
+          }
+          return (
+            <div key={b.key} className={`group ${b.messages[0].kind}`}>
+              <div className="who">{name(b.author)}{b.to && <> → {b.to.map(name).join(', ')}</>}</div>
+              {b.messages.map((m) => (
+                <div key={m.id} className={`msg ${m.kind}`}>
+                  <span className="body">{body(m)}</span>
+                  {time(m.at)}
+                </div>
+              ))}
+            </div>
+          )
+        })}
         {notice && (
           <div className="msg system chat-notice" role="status">
             {notice.map((line) => <div key={line}>{line}</div>)}
           </div>
         )}
       </div>
+      <div className="dice-row" role="toolbar" aria-label="Quick dice">
+        {quickDice(pack).map((f) => (
+          <button type="button" key={f} className="die-chip" onClick={() => void roll(f)} aria-label={`Roll ${f}`}>{f}</button>
+        ))}
+        <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) void roll(last) }} aria-label={last ? `Roll ${last} again` : 'Repeat the last roll'} title={last ? `Roll ${last} again` : 'Nothing rolled from the chat yet'}>Last</button>
+        <button type="button" className="die-chip die-plus" onClick={startRoll} aria-label="Type a dice formula">+</button>
+      </div>
       <form className="chatform" onSubmit={(e) => { e.preventDefault(); void send() }}>
         <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Whisper to">
           <option value="">All</option>
           {people().map((p) => <option key={p.pubkey} value={p.pubkey}>{p.name}</option>)}
         </select>
-        <input placeholder={to ? 'Whisper…' : 'Say something, /r 2d6+1, or /help'} value={text} onChange={(e) => setText(e.target.value)} enterKeyHint="send" />
+        <input ref={input} placeholder={to ? 'Whisper…' : 'Say something, /r 2d6+1, or /help'} value={text} onChange={(e) => setText(e.target.value)} enterKeyHint="send" />
       </form>
     </div>
   )

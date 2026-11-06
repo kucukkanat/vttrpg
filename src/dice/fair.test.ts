@@ -8,6 +8,14 @@ describe('parseFormula', () => {
     expect(parseFormula('4d6kh3 - 1')).toMatchObject({ terms: [{ count: 4, sides: 6, keep: 'highest', keepN: 3 }], modifier: -1 })
     expect(parseFormula('d20 + 2d4 + 1 + 1')).toMatchObject({ modifier: 2 })
   })
+  it('reads d66 as two d6, tens then ones', () => {
+    expect(parseFormula('d66')).toMatchObject({ terms: [{ count: 2, sides: 6, d66: true }], modifier: 0 })
+    expect(parseFormula('D66 + 1')).toMatchObject({ terms: [{ count: 2, sides: 6, d66: true }], modifier: 1 })
+    expect(totalFromDice(parseFormula('d66'), [3, 5].map((v) => ({ sides: 6, value: v })))).toBe(35)
+    expect(totalFromDice(parseFormula('d66+d6'), [6, 6, 2].map((v) => ({ sides: 6, value: v })))).toBe(68)
+    expect(() => parseFormula('2d66')).toThrow()
+    expect(() => parseFormula('d66kh1')).toThrow()
+  })
   it('rejects garbage', () => {
     expect(() => parseFormula('')).toThrow()
     expect(() => parseFormula('2x6')).toThrow()

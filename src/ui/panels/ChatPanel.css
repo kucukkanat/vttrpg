@@ -1,0 +1,34 @@
+/* Chat panel: quick dice row, the "?" header button, and the grouped log (panels/ChatPanel.tsx,
+   panels/chatGroups.ts). Base .chat / .msg / .chatform rules live in global.css. */
+
+/* Header "?" opens the shortcuts overlay; a host header relocates it next to the ✕. */
+.chat-help { min-width: var(--control); min-height: var(--control); font-weight: 600; }
+
+/* Day divider: a hairline with the label in the middle. */
+.chat .day { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-1); color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
+.chat .day::before, .chat .day::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+.chat .log > .day:first-child { margin-top: 0; }
+
+/* One author line, then the messages; the group keeps the kind colour (roll, whisper). */
+.chat .group { display: grid; gap: 2px; }
+.chat .group + .group { margin-top: var(--sp-1); }
+.chat .group > .who { display: block; }
+.chat .group .msg { display: flex; align-items: baseline; gap: var(--sp-2); }
+.chat .group .msg .body { flex: 1 1 auto; min-width: 0; }
+.chat .group .msg .time { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+/* With a mouse the time appears on hover; a touch screen shows it always, right-aligned. */
+@media (hover: hover) and (pointer: fine) {
+  .chat .group .msg .time { opacity: 0; transition: opacity .12s ease; }
+  .chat .group .msg:hover .time, .chat .group .msg:focus-within .time { opacity: 1; }
+}
+
+/* Quick dice above the input: wrapping chips the height of a control (44px on touch). */
+.chat .dice-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); flex: none; }
+.chat .die-chip {
+  min-height: var(--control); min-width: var(--control); padding: 0 var(--sp-3);
+  font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; border-radius: 999px;
+  background: var(--panel-2); color: var(--accent); touch-action: manipulation;
+}
+.chat .die-chip:disabled { opacity: .45; cursor: default; }
+.chat .die-plus { color: var(--fg); font-size: var(--fs-lg); padding: 0 var(--sp-2); }
+.chat .dice-row + .chatform { margin-top: var(--sp-1); }

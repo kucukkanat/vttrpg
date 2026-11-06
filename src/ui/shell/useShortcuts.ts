@@ -1,6 +1,7 @@
 /**
  * Desktop keyboard shortcuts for the shell. Ignored while typing in a field or when a modifier is
  * held, so browser shortcuts and the table's own keys (G grid, F first person, C camera, Delete, Esc) keep working.
+ * `?` opens the shortcuts overlay (ShortcutsOverlay.tsx), which lists `SHORTCUTS`.
  */
 import { useEffect } from 'react'
 import { undoLast } from '@/state/undo'
@@ -16,8 +17,47 @@ export interface ShortcutHandlers {
   openPanel?(id: string): void
 }
 
+export type ShortcutGroup = 'Table' | 'Panels' | 'Chat'
+
+export interface Shortcut {
+  /** Human-readable key, "Cmd/Ctrl+Z"; several alternatives joined with " / ". */
+  keys: string
+  what: string
+  group: ShortcutGroup
+}
+
+/**
+ * Every keyboard shortcut in the game screen, for the shortcuts overlay. Panels and Chat are bound
+ * here (desktop only); Table keys live in the table itself and work on every layout with a keyboard.
+ * Keep in step with docs/UX.md.
+ */
+export const SHORTCUTS: readonly Shortcut[] = [
+  { keys: 'G', what: 'Toggle the grid overlay (gizmo: move, in edit mode)', group: 'Table' },
+  { keys: 'F', what: 'First-person view from the selected token', group: 'Table' },
+  { keys: 'C', what: 'Switch camera between orbit and follow', group: 'Table' },
+  { keys: 'R / S', what: 'Gizmo: rotate / scale (edit mode)', group: 'Table' },
+  { keys: 'Delete', what: 'Remove the selected prop (GM)', group: 'Table' },
+  { keys: 'Esc', what: 'Deselect; cancel skill targeting', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
+  { keys: '[ / ]', what: 'Show or hide the left / right column', group: 'Panels' },
+  { keys: '1 – 9', what: 'Expand or fold the n-th panel section', group: 'Panels' },
+  { keys: '?', what: 'This list', group: 'Panels' },
+  { keys: '/', what: 'Focus the chat input (opens Chat if folded)', group: 'Chat' },
+  { keys: 'Enter', what: 'Send; /r 2d6+1 rolls, /w name whispers, /help lists commands', group: 'Chat' },
+  { keys: 'Esc', what: 'Leave the chat input', group: 'Chat' },
+]
+
+export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Panels', 'Chat']
+
 /** Window event panels use to ask the shell for another panel (Tokens row "Edit" opens the Edit panel). */
 export const OPEN_PANEL_EVENT = 'vtt:open-panel'
+
+/** Window event that shows or hides the shortcuts overlay (`?` key, the chat panel's "?" button). */
+export const SHORTCUTS_EVENT = 'vtt:shortcuts'
+
+export function toggleShortcutsOverlay(open?: boolean) {
+  window.dispatchEvent(new CustomEvent(SHORTCUTS_EVENT, { detail: { open } }))
+}
 
 export function requestOpenPanel(id: string) {
   window.dispatchEvent(new CustomEvent(OPEN_PANEL_EVENT, { detail: { id } }))
@@ -81,6 +121,7 @@ export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
         case '[': e.preventDefault(); handlers.toggleLeft(); break
         case ']': e.preventDefault(); handlers.toggleRight(); break
         case '/': e.preventDefault(); handlers.focusChat(); break
+        case '?': e.preventDefault(); toggleShortcutsOverlay(); break
         default:
           if (/^[1-9]$/.test(e.key)) { e.preventDefault(); handlers.togglePanel(Number(e.key)) }
       }

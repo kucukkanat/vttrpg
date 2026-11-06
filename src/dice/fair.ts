@@ -11,9 +11,18 @@
  * Die i (0-based, in formula order) = (uint64BE(sha256(utf8(`${seed}:${i}`))[0..8]) mod sides) + 1.
  */
 export interface ParsedFormula {
-  terms: { count: number; sides: number; keep?: 'highest' | 'lowest'; keepN?: number }[]
+  terms: DiceTerm[]
   modifier: number
   raw: string
+}
+
+export interface DiceTerm {
+  count: number
+  sides: number
+  keep?: 'highest' | 'lowest'
+  keepN?: number
+  /** `d66`: two d6 read as tens and ones (11–66), the Mausritter table die. `count` is 2, `sides` 6. */
+  d66?: true
 }
 
 const te = new TextEncoder()
@@ -45,6 +54,7 @@ export async function verifyCommit(seed: string, commit: string): Promise<boolea
 
 /**
  * Parses formulas like "d20", "2d6+3", "4d6kh3", "3d6kl1 - 1", "d20 + 2d4 + 1".
+ * `d66` is two d6 read as tens and ones (11–66), not a 66-sided die; it takes no count or keep.
  * Whitespace is ignored. Throws on anything else.
  */
 export function parseFormula(formula: string): ParsedFormula {
@@ -66,6 +76,11 @@ export function parseFormula(formula: string): ParsedFormula {
     if (sign < 0) throw new Error(`negative dice term not supported in "${raw}"`)
     const count = m[2] === '' ? 1 : Number(m[2])
     const sides = Number(m[3])
+    if (m[3] === '66') {
+      if (count !== 1 || m[4]) throw new Error(`d66 takes no count or keep in "${raw}"`)
+      terms.push({ count: 2, sides: 6, d66: true })
+      continue
+    }
     if (count < 1 || count > 100) throw new Error(`bad die count in "${raw}"`)
     if (sides < 2 || sides > 1000) throw new Error(`bad die sides in "${raw}"`)
     const term: ParsedFormula['terms'][number] = { count, sides }
@@ -105,7 +120,8 @@ export function totalFromDice(formula: ParsedFormula, dice: { sides: number; val
   for (const t of formula.terms) {
     const vals = dice.slice(i, i + t.count).map((d) => d.value)
     i += t.count
-    if (t.keep) {
+    if (t.d66) total += (vals[0] ?? 0) * 10 + (vals[1] ?? 0)
+    else if (t.keep) {
       vals.sort((a, b) => (t.keep === 'highest' ? b - a : a - b))
       total += vals.slice(0, t.keepN).reduce((a, b) => a + b, 0)
     } else total += vals.reduce((a, b) => a + b, 0)
