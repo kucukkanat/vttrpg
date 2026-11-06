@@ -16,7 +16,7 @@ label { display: grid; gap: 4px; margin: 10px 0; font-size: 14px; }
 .muted { color: var(--muted); } .small { font-size: 12px; } .error { color: #ff7b72; }
 .spacer { flex: 1; }
 
-.game { display: grid; grid-template-rows: 44px 1fr; grid-template-columns: 240px 1fr 300px; height: 100%; }
+.game { display: grid; grid-template-rows: 44px minmax(0, 1fr); grid-template-columns: 240px minmax(0, 1fr) 300px; height: 100%; }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .left, .right { background: var(--panel); overflow: auto; display: flex; flex-direction: column; }
 .left { border-right: 1px solid var(--border); } .right { border-left: 1px solid var(--border); }
@@ -36,7 +36,7 @@ label { display: grid; gap: 4px; margin: 10px 0; font-size: 14px; }
 .chat form { margin-top: 8px; }
 
 @media (max-width: 900px) {
-  .game { grid-template-columns: 1fr; grid-template-rows: 44px 1fr auto; }
+  .game { grid-template-columns: 1fr; grid-template-rows: 44px minmax(0, 1fr) minmax(35vh, auto); }
   .left { display: none; }
   .right { border-left: 0; border-top: 1px solid var(--border); max-height: 35vh; }
 }
