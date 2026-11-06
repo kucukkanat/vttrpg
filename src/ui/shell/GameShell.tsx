@@ -21,6 +21,8 @@ import { useUnread } from './useUnread'
 import { focusChatInput, useShortcuts } from './useShortcuts'
 import { BottomSheet, type SheetSize } from './BottomSheet'
 import { TabBar } from './TabBar'
+import { MoreList } from './MoreList'
+import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
 import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W } from './SideColumn'
 import { RollToast, SelectedTokenChip } from './Hud'
@@ -40,13 +42,15 @@ export function GameShell({ controller }: { controller: GameController }) {
   const bp = useBreakpoint()
   const isGm = controller.connection.isGm
   const panels = useMemo(() => PANELS.filter((p) => p.scope === 'all' || isGm), [isGm])
+  const phoneTabs = useMemo(() => splitPhoneTabs(panels), [panels])
   const meta = useGame((s) => s.meta)
   const chat = useGame((s) => s.chat)
   const presence = useGame((s) => s.presence)
   const targeting = useSkillTargeting(controller)
   const keyboard = useKeyboardInset()
 
-  // Layout state per breakpoint. Phone tab is session-only; tablet and desktop persist.
+  // Layout state per breakpoint. Phone tab is session-only (a panel id, or MORE_ID while the More
+  // list is showing); tablet and desktop persist.
   const [phoneTab, setPhoneTab] = useState<string | null>(null)
   const [sheetSize, setSheetSize] = useState<SheetSize>('half')
   const [tablet, setTablet] = usePersisted<TabletLayout>('vtt.shell.tablet', TABLET_DEFAULT)
@@ -54,6 +58,10 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   const byId = (id: string | null): PanelDef | undefined => panels.find((p) => p.id === id)
   const phonePanel = byId(phoneTab)
+  const phoneMore = phoneTab === MORE_ID
+  // Last panel opened from the More list, so the list can mark it when reopened.
+  const [lastMore, setLastMore] = useState<string | null>(null)
+  useEffect(() => { if (phoneTab && phoneTabs.more.some((p) => p.id === phoneTab)) setLastMore(phoneTab) }, [phoneTab, phoneTabs])
   const tabletTab = byId(tablet.tab) ? tablet.tab : (panels[0]?.id ?? 'chat')
 
   // Open a panel wherever the current layout keeps it.
@@ -110,7 +118,7 @@ export function GameShell({ controller }: { controller: GameController }) {
     '--right-w': `${desktop.right.open ? desktop.right.width : RAIL_W}px`,
     '--drawer-w': `${tablet.open && tablet.pinned ? DRAWER_W : 0}px`,
   } as CSSProperties
-  const cls = ['game', `game--${bp}`, keyboard > 0 ? 'kb' : '', bp === 'phone' && phonePanel ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
+  const cls = ['game', `game--${bp}`, keyboard > 0 ? 'kb' : '', bp === 'phone' && (phonePanel || phoneMore) ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
 
   const drawerToggle = bp === 'tablet' ? (
     <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
@@ -167,17 +175,19 @@ export function GameShell({ controller }: { controller: GameController }) {
       ) : null}
 
       {bp === 'phone' ? (
-        <TabBar panels={panels} active={phoneTab} badges={badges} onSelect={(id) => { if (id === phoneTab) setPhoneTab(null); else { setPhoneTab(id); setSheetSize('half') } }} />
+        <TabBar tabs={phoneTabs} active={phoneTab} badges={badges}
+          onSelect={(id) => { if (id === phoneTab) setPhoneTab(null); else { setPhoneTab(id); setSheetSize('half') } }}
+          // More: closes when its list is showing; otherwise shows the list (also from a More panel, to switch).
+          onMore={() => { if (phoneMore) setPhoneTab(null); else { setPhoneTab(MORE_ID); setSheetSize('half') } }} />
       ) : null}
 
-      {bp === 'phone' && phonePanel ? (
-        <BottomSheet key={phonePanel.id} def={phonePanel} controller={controller} size={sheetSize} keyboard={keyboard}
+      {bp === 'phone' && (phonePanel || phoneMore) ? (
+        <BottomSheet key={phoneTab} def={phonePanel} title={phoneMore ? 'More' : undefined} controller={controller} size={sheetSize} keyboard={keyboard}
           onSize={setSheetSize}
           onClose={() => setPhoneTab(null)}
-          onSwipeTab={(dir) => {
-            const i = panels.findIndex((p) => p.id === phonePanel.id)
-            setPhoneTab(panels[(i + dir + panels.length) % panels.length]!.id)
-          }} />
+          onSwipeTab={(dir) => setPhoneTab(nextPhoneTab(phoneTab ?? MORE_ID, dir, phoneTabs))}>
+          {phoneMore && <MoreList panels={phoneTabs.more} current={lastMore} badges={badges} onSelect={setPhoneTab} />}
+        </BottomSheet>
       ) : null}
 
       {bp === 'phone' && dice ? <div className="dice-layer">{dice}</div> : null}

@@ -77,7 +77,7 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 
 /* Scroll containers: momentum on iOS, thin bars elsewhere. */
-.scroll, .hosted > .panel, .col-scroll, .chat .log, .drawer-tabs, .tabbar { overflow: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.scroll, .hosted > .panel, .col-scroll, .chat .log, .drawer-tabs, .more-body { overflow: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 
 /* ---------------------------------------------------------------------------------------------
    Game grid: one tree, three arrangements
@@ -212,9 +212,22 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
    --------------------------------------------------------------------------------------------- */
 .drawer { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-left: 1px solid var(--border); }
 .drawer.floating { position: absolute; top: var(--topbar-h); right: 0; bottom: 0; width: 360px; max-width: 100%; z-index: 6; box-shadow: -12px 0 32px rgba(0, 0, 0, .45); }
-.drawer-tabs { display: flex; flex: none; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+/* Tab strip: scrolls sideways with snap points and no scrollbar; a fade on an edge says more tabs
+   hide behind it (`.fade-start` / `.fade-end` are set from the scroll position). */
+.drawer-strip { position: relative; flex: none; border-bottom: 1px solid var(--border); }
+.drawer-tabs {
+  position: relative; display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+  scroll-snap-type: x proximity; overscroll-behavior-x: contain; scroll-padding: 0 var(--sp-3);
+}
 .drawer-tabs::-webkit-scrollbar { display: none; }
-.drawer-tabs .tab { flex: 1 0 48px; }
+.drawer-tabs .tab { flex: 1 0 64px; min-width: 64px; padding: 0 var(--sp-2); scroll-snap-align: start; }
+.drawer-strip::before, .drawer-strip::after {
+  content: ""; position: absolute; top: 0; bottom: 1px; width: 32px; z-index: 1; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+}
+.drawer-strip::before { left: 0; background: linear-gradient(to right, var(--panel), rgba(23, 23, 27, 0)); }
+.drawer-strip::after { right: 0; background: linear-gradient(to left, var(--panel), rgba(23, 23, 27, 0)); }
+.drawer-strip.fade-start::before, .drawer-strip.fade-end::after { opacity: 1; }
 .drawer-head { display: flex; align-items: center; gap: var(--sp-1); min-height: var(--head-h); padding: 0 var(--sp-2) 0 var(--sp-3); }
 .drawer .hosted { flex: 1; min-height: 0; --actions-right: calc(var(--control) * 2 + var(--sp-2) + var(--sp-1)); }
 .drawer .hosted > .panel { overflow: auto; }
@@ -222,19 +235,24 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .pin.on { color: var(--accent); }
 .pin:not(.on) { opacity: .6; }
 
+/* Build tag. Hosts show it as muted footer text; the fixed corner tag from main.tsx stays for the
+   home, new-game and join pages and is hidden while a game is on screen so it never overlaps. */
+.build-id { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--muted); }
+.build-tag { position: fixed; left: 6px; bottom: calc(2px + var(--sab)); font-size: 10px; color: var(--muted); pointer-events: none; z-index: 5; font-family: ui-monospace, monospace; }
+.game ~ .build-tag, #root:has(.game) > .build-tag { display: none; }
+.col-foot, .drawer-foot {
+  flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1);
+  padding: 2px var(--sp-3) calc(2px + var(--sab)); border-top: 1px solid var(--border);
+  font-size: var(--fs-xs); color: var(--muted); line-height: 18px;
+}
+
 /* ---------------------------------------------------------------------------------------------
    Phone: tab bar and bottom sheet
    --------------------------------------------------------------------------------------------- */
-.tabbar { display: flex; background: var(--panel); border-top: 1px solid var(--border); padding: 0 var(--sar) var(--sab) var(--sal); scrollbar-width: none; overflow: hidden; }
-@media (max-width: 420px) { .tab .lbl { font-size: 10px; } .tab .glyph { font-size: 18px; } }
-.drawer-tabs { overflow: hidden; }
-.drawer-tabs .tab { flex: 1 1 0; min-width: 36px; padding: 0 1px; }
-.drawer-tabs .tab .lbl { font-size: 10px; }
-.build-tag { position: fixed; left: 6px; bottom: calc(2px + env(safe-area-inset-bottom, 0px)); font-size: 10px; color: #6b6a66; pointer-events: none; z-index: 5; font-family: ui-monospace, monospace; }
-.game--phone ~ .build-tag, .game--tablet ~ .build-tag { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
-.tabbar::-webkit-scrollbar { display: none; }
+/* Five slots (four panels + More) always fit: 64px each at 320px, so the bar never scrolls or clips. */
+.tabbar { display: flex; background: var(--panel); border-top: 1px solid var(--border); padding: 0 var(--sar) var(--sab) var(--sal); overflow: hidden; }
 .tab {
-  position: relative; flex: 1 1 0; min-width: 40px; min-height: 56px; padding: 0 1px; gap: 2px;
+  position: relative; flex: 1 1 0; min-width: 0; min-height: 56px; padding: 0 2px; gap: 2px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: transparent; border: 0; border-radius: 0; color: var(--muted); font-size: var(--fs-xs);
 }
@@ -262,6 +280,21 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .bsheet-head { position: relative; display: flex; align-items: center; gap: var(--sp-1); min-height: var(--head-h); padding: var(--sp-2) var(--sp-2) 0 var(--sp-2); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; flex: none; }
 .bsheet-head .grip { position: absolute; top: 6px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--border); }
 .bsheet-head .host-title { flex: 1; font-size: var(--fs-lg); text-transform: none; letter-spacing: 0; color: var(--fg); }
+
+/* More sheet: every panel without a tab as a 48px row, build tag in the footer. */
+.more-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: var(--sp-1) calc(var(--sp-3) + var(--sar)) 0 calc(var(--sp-3) + var(--sal)); }
+.more-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.more-row {
+  width: 100%; min-height: 48px; justify-content: flex-start; gap: var(--sp-3); padding: 0 var(--sp-3);
+  background: transparent; border-color: transparent; font-size: var(--fs-md); text-align: left; color: var(--fg);
+}
+.more-row:active { background: #22222a; filter: none; }
+.more-row.on { background: #2b2b35; color: var(--accent); }
+.more-row .glyph { flex: none; width: 28px; font-size: 20px; line-height: 1; text-align: center; }
+.more-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more-tag { flex: none; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
+.more-count { flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 700; line-height: 20px; text-align: center; }
+.more-foot { margin-top: auto; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1); padding: var(--sp-3) var(--sp-1) var(--sp-3); font-size: var(--fs-xs); color: var(--muted); }
 
 /* ---------------------------------------------------------------------------------------------
    HUD over the table: selected token chip, roll toast
