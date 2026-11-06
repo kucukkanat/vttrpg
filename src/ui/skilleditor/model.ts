@@ -174,6 +174,16 @@ export function formFromSkill(skill: SkillDef): SkillForm {
 }
 
 /** A copy of a skill ready to edit: "(copy)" name and an id that follows the name until edited. */
+/**
+ * Form that replaces a pack skill: same id, so saving overrides it in every sheet instead of
+ * adding a second copy next to it. The id stays fixed while the name is edited.
+ */
+export function overrideForm(skill: SkillDef): SkillForm {
+  const form = formFromSkill(skill)
+  form.idFollowsName = false
+  return form
+}
+
 export function duplicateForm(skill: SkillDef, taken: Iterable<string>): SkillForm {
   const form = formFromSkill(skill)
   form.name = `${skill.name} (copy)`

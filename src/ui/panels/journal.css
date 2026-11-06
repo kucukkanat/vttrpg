@@ -1,0 +1,10 @@
+/* Journal note editor: the Create / Save row stays reachable at the bottom of the scrolling panel,
+   so a long body on a phone never hides the only way out of the form. */
+.journal-actions {
+  position: sticky; bottom: 0; z-index: 1;
+  margin: var(--sp-2) calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3));
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  background: var(--panel); border-top: 1px solid var(--border);
+  align-items: center;
+}
+.journal-actions > button { min-height: var(--control); }

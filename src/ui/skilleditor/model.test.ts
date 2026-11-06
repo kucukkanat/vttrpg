@@ -8,6 +8,7 @@ import {
   emptyForm,
   emptyVfx,
   formFromSkill,
+  overrideForm,
   skillFromForm,
   skillFromJson,
   skillToJson,
@@ -95,6 +96,17 @@ describe('form <-> SkillDef', () => {
     expect(form.idFollowsName).toBe(true)
     const saved = validateForm(form, pack).skill!
     expect(saved).toEqual({ ...fireball, id: 'fireball-copy-2', name: 'Fireball (copy)' })
+  })
+
+  it('overrides a pack skill under its own id, which stays put while the name changes', () => {
+    const fireball = pack.skills.find((s) => s.id === 'fireball')!
+    const form = overrideForm(fireball)
+    expect(form.id).toBe('fireball')
+    expect(form.name).toBe('Fireball')
+    expect(form.idFollowsName).toBe(false)
+    form.name = 'Bigger Fireball'
+    const saved = validateForm(form, pack).skill!
+    expect(saved).toEqual({ ...fireball, name: 'Bigger Fireball' })
   })
 
   it('drops empty optionals so the JSON stays clean', () => {

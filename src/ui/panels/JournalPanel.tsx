@@ -11,6 +11,7 @@ import type { NoteId, PlayerPubkey } from '@/core/ids'
 import { newId } from '@/core/ids'
 import { renderMarkdown } from '../prep/markdown'
 import { isUnread, loadRead, markRead } from '../prep/unread'
+import './journal.css'
 
 type Mode = { kind: 'list' } | { kind: 'read'; id: NoteId } | { kind: 'edit'; id: NoteId | null }
 
@@ -24,6 +25,25 @@ export function canSee(note: Note, pubkey: PlayerPubkey, isGm: boolean): boolean
 export function sortNotes(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt)
 }
+
+/** The chat line players see when a handout reaches them. */
+export function handoutLine(note: Pick<Note, 'title'>): string {
+  return `GM shared a handout: ${note.title || 'Untitled'}`
+}
+
+/**
+ * Chat line to post after saving `next` over `prev` (undefined when the note is new): a note that
+ * was created shared, or that just went from private to shared, is announced; a note that was
+ * already shared, or one still private, is not.
+ */
+export function shareAnnouncement(prev: Note | undefined, next: Note): string | null {
+  const wasShared = !!prev && prev.sharedWith !== 'gm'
+  const isShared = next.sharedWith !== 'gm'
+  return isShared && !wasShared ? handoutLine(next) : null
+}
+
+/** Inline size for small header controls so they stay tappable on coarse pointers. */
+const touch = { minHeight: 'var(--control)' } as const
 
 export function JournalPanel({ controller }: { controller: GameController }) {
   const notes = useGame((s) => s.notes)
@@ -41,21 +61,30 @@ export function JournalPanel({ controller }: { controller: GameController }) {
   useEffect(() => { if (current) setRead((m) => markRead(m, current)) }, [current])
 
   const save = (note: Note) => void controller.dispatch({ type: 'note.upsert', note })
+  const post = (text: string) => void controller.dispatch({ type: 'chat.say', text })
+  /** Create or Save from the editor: one verb; a note that reaches players for the first time is posted to chat. */
+  const commit = (prev: Note | undefined, next: Note) => {
+    save(next)
+    const line = shareAnnouncement(prev, next)
+    if (line) post(line)
+    setMode({ kind: 'read', id: next.id })
+  }
+  /** "Post to chat" on a shared note; on a private one it shares to everyone first. */
   const share = (note: Note) => {
-    const next: Note = note.sharedWith === 'gm' ? { ...note, sharedWith: 'all', updatedAt: Date.now() } : note
-    if (next !== note) save(next)
-    void controller.dispatch({ type: 'chat.say', text: `GM shared a handout: ${note.title || 'Untitled'}` })
+    if (note.sharedWith === 'gm') save({ ...note, sharedWith: 'all', updatedAt: Date.now() })
+    post(handoutLine(note))
   }
 
   if (mode.kind === 'edit') {
     const base = mode.id ? notes[mode.id] : undefined
+    // The editor's Cancel (bottom row, next to Create / Save) is its only back control.
     return (
       <div className="panel">
-        <h3>Journal <button className="tiny" onClick={() => setMode(base ? { kind: 'read', id: base.id } : { kind: 'list' })}>Cancel</button></h3>
+        <h3>Journal <span className="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>{base ? 'Edit note' : 'New note'}</span></h3>
         <NoteEditor
           controller={controller}
           note={base}
-          onSave={(n) => { save(n); setMode({ kind: 'read', id: n.id }) }}
+          onSave={(n) => commit(base, n)}
           onCancel={() => setMode(base ? { kind: 'read', id: base.id } : { kind: 'list' })}
         />
       </div>
@@ -65,12 +94,11 @@ export function JournalPanel({ controller }: { controller: GameController }) {
   if (mode.kind === 'read' && current) {
     return (
       <div className="panel">
-        <h3>Journal <button className="tiny" onClick={() => setMode({ kind: 'list' })}>‹ All notes</button></h3>
+        <h3>Journal <button className="tiny" style={touch} onClick={() => setMode({ kind: 'list' })}>‹ All notes</button></h3>
         <NoteView
           controller={controller}
           note={current}
           isGm={isGm}
-          onBack={() => setMode({ kind: 'list' })}
           onEdit={() => setMode({ kind: 'edit', id: current.id })}
           onPin={() => save({ ...current, pinned: !current.pinned, updatedAt: Date.now() })}
           onShare={() => share(current)}
@@ -82,8 +110,8 @@ export function JournalPanel({ controller }: { controller: GameController }) {
 
   return (
     <div className="panel">
-      <h3>Journal {isGm && <button onClick={() => setMode({ kind: 'edit', id: null })} aria-label="New note">+</button>}</h3>
-      {visible.length === 0 && <p className="muted small">{isGm ? 'No notes yet. Tap + to write one.' : 'Nothing shared with you yet.'}</p>}
+      <h3>Journal {isGm && <button style={touch} onClick={() => setMode({ kind: 'edit', id: null })} aria-label="Create note" title="Create note">+ Create</button>}</h3>
+      {visible.length === 0 && <p className="muted small">{isGm ? 'No notes yet. Tap Create to write one.' : 'Nothing shared with you yet.'}</p>}
       <ul className="list">
         {visible.map((n) => (
           <li key={n.id} onClick={() => setMode({ kind: 'read', id: n.id })}>
@@ -116,9 +144,9 @@ function useAssetUrl(controller: GameController, ref: AssetRef | undefined): str
   return url
 }
 
-function NoteView({ controller, note, isGm, onBack, onEdit, onPin, onShare, onDelete }: {
+function NoteView({ controller, note, isGm, onEdit, onPin, onShare, onDelete }: {
   controller: GameController; note: Note; isGm: boolean
-  onBack(): void; onEdit(): void; onPin(): void; onShare(): void; onDelete(): void
+  onEdit(): void; onPin(): void; onShare(): void; onDelete(): void
 }) {
   const url = useAssetUrl(controller, note.image)
   const [confirm, setConfirm] = useState(false)
@@ -126,10 +154,7 @@ function NoteView({ controller, note, isGm, onBack, onEdit, onPin, onShare, onDe
   useEffect(() => setConfirm(false), [note.id])
   return (
     <div>
-      <div className="row" style={{ marginTop: 0, alignItems: 'center' }}>
-        <button className="icon" aria-label="Back to notes" onClick={onBack}>‹</button>
-        <strong style={{ flex: 1, fontSize: 'var(--fs-lg)' }}>{note.pinned && '📌 '}{note.title || 'Untitled'}</strong>
-      </div>
+      <strong style={{ display: 'block', fontSize: 'var(--fs-lg)', marginBottom: 'var(--sp-1)' }}>{note.pinned && '📌 '}{note.title || 'Untitled'}</strong>
       {isGm && <p className="muted small" style={{ margin: '0 0 var(--sp-2)' }}>{shareLabel(note)} · updated {new Date(note.updatedAt).toLocaleString()}</p>}
       {url && <img src={url} alt={note.image?.name ?? note.title} style={{ maxWidth: '100%', borderRadius: 'var(--r-sm)', display: 'block', marginBottom: 'var(--sp-2)' }} />}
       {/* Safe: renderMarkdown escapes every character of the source before adding its own tags. */}
@@ -138,7 +163,7 @@ function NoteView({ controller, note, isGm, onBack, onEdit, onPin, onShare, onDe
         <div className="row">
           <button onClick={onEdit}>Edit</button>
           <button onClick={onPin} aria-pressed={!!note.pinned}>{note.pinned ? 'Unpin' : 'Pin'}</button>
-          <button className="primary" onClick={onShare} title="Post a chat line so players notice">{note.sharedWith === 'gm' ? 'Share to everyone' : 'Announce'}</button>
+          <button className="primary" onClick={onShare} title={note.sharedWith === 'gm' ? 'Share with everyone and post a chat line' : 'Post a chat line so players notice'}>{note.sharedWith === 'gm' ? 'Share to everyone' : 'Post to chat'}</button>
           <span className="spacer" />
           {confirm
             ? <><button className="danger" onClick={onDelete}>Really delete</button><button onClick={() => setConfirm(false)}>Keep</button></>
@@ -188,11 +213,11 @@ function NoteEditor({ controller, note, onSave, onCancel }: { controller: GameCo
         <span className="muted small">Image</span>
         {preview && <img src={preview} alt="" style={{ display: 'block', maxWidth: '100%', maxHeight: 160, borderRadius: 'var(--r-sm)', margin: 'var(--sp-1) 0' }} />}
         <div className="row" style={{ marginTop: 'var(--sp-1)' }}>
-          <label className="tiny-file" style={{ minHeight: 'var(--control)' }}>
+          <label className="tiny-file" style={touch}>
             {busy ? 'Importing…' : image ? 'Replace image' : 'Add image'}
             <input type="file" accept="image/*" hidden disabled={busy} onChange={(e) => { void pickImage(e.target.files?.[0]); e.target.value = '' }} />
           </label>
-          {image && <button className="tiny" style={{ minHeight: 'var(--control)' }} onClick={() => setImage(undefined)}>Remove image</button>}
+          {image && <button className="tiny" style={touch} onClick={() => setImage(undefined)}>Remove image</button>}
         </div>
         {error && <p className="error small">{error}</p>}
       </div>
@@ -215,9 +240,10 @@ function NoteEditor({ controller, note, onSave, onCancel }: { controller: GameCo
         </div>
       )}
       <label className="check"><input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> Pin as handout (shows first)</label>
-      <div className="row">
+      <div className="row journal-actions">
         <button className="primary" onClick={submit} disabled={busy}>{note ? 'Save' : 'Create'}</button>
         <button onClick={onCancel}>Cancel</button>
+        {!note && shareMode !== 'gm' && <span className="muted small" style={{ alignSelf: 'center' }}>Posts "{handoutLine({ title: title.trim() })}" to chat</span>}
       </div>
     </div>
   )
