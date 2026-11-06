@@ -17,9 +17,19 @@ import { useTableUi } from './tableState'
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
 
-/** R3F routes captured pointer events to the object; its `target` is typed as a bare EventTarget. */
+/**
+ * R3F routes captured pointer events to the object; its `target` is typed as a bare EventTarget.
+ * The DOM call can throw (Safari after a cancelled touch, synthetic events); R3F has already
+ * recorded the capture by then, so swallowing the error keeps routing intact.
+ */
 type CaptureTarget = { setPointerCapture(id: number): void; releasePointerCapture(id: number): void }
-const capture = (e: ThreeEvent<PointerEvent>) => e.target as unknown as CaptureTarget
+const capture = (e: ThreeEvent<PointerEvent>) => {
+  const t = e.target as unknown as CaptureTarget
+  return {
+    setPointerCapture(id: number) { try { t.setPointerCapture(id) } catch { /* see above */ } },
+    releasePointerCapture(id: number) { try { t.releasePointerCapture(id) } catch { /* see above */ } },
+  }
+}
 const DRAG_THRESHOLD_PX = 6
 const LONG_PRESS_MS = 450
 
