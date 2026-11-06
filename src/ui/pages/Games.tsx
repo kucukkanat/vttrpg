@@ -7,6 +7,7 @@ import { useSession } from '../session'
 import { navigate } from '../router'
 import { startGame } from '../bootstrap'
 import { formatLastOpened, games, type SavedGame } from '../games'
+import { localGameStore } from '@/net'
 import type { GameId } from '@/core/ids'
 
 const touch: CSSProperties = { minHeight: 48, minWidth: 96, padding: '10px 16px', fontSize: 15 }
@@ -96,7 +97,7 @@ export function YourGames({ onRejoin, busyId }: { onRejoin: (gameId: GameId) => 
               </div>
               {asking ? (
                 <div className="row" style={{ marginTop: 0 }}>
-                  <button style={touch} onClick={() => { games.forget(g.gameId); setConfirmForget(null) }}>Yes, forget</button>
+                  <button style={touch} onClick={() => { games.forget(g.gameId); void localGameStore().remove(g.gameId).catch(() => {}); setConfirmForget(null) }}>Yes, forget</button>
                   <button style={touch} onClick={() => setConfirmForget(null)}>Keep</button>
                 </div>
               ) : (

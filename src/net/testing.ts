@@ -6,6 +6,7 @@
  * Used by the unit tests and the dev harness; never by the app.
  */
 import { matchFilter, type Event as NostrEvent, type Filter } from 'nostr-tools'
+import { normalizeURL } from 'nostr-tools/utils'
 import type { SubCloser, SubscribeManyParams } from 'nostr-tools/abstract-pool'
 import type { PoolLike } from './pool'
 
@@ -93,6 +94,7 @@ export class FakePool implements PoolLike {
   private mine: LiveSub[] = []
   connected = new Map<string, boolean>()
   destroyed = false
+  private openListeners = new Set<(url: string) => void>()
 
   constructor(readonly relay: FakeRelay = new FakeRelay()) {}
 
@@ -114,6 +116,18 @@ export class FakePool implements PoolLike {
 
   listConnectionStatus(): Map<string, boolean> {
     return new Map(this.connected)
+  }
+
+  onOpen(cb: (url: string) => void): () => void {
+    this.openListeners.add(cb)
+    return () => void this.openListeners.delete(cb)
+  }
+
+  /** Marks a relay open and tells listeners, as the real pool does when a socket connects. */
+  emitOpen(url: string) {
+    url = normalizeURL(url)
+    this.connected.set(url, true)
+    for (const cb of this.openListeners) cb(url)
   }
 
   destroy() {
