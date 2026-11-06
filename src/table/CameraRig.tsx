@@ -10,6 +10,7 @@ import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Box3, MathUtils, MOUSE, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
+import { useGame } from '@/state/store'
 import { tableRuntime, useTableUi } from './tableState'
 import { castRay, type WallSegment } from './walls'
 
@@ -77,6 +78,36 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
   const rig = useRef<RigState>({
     target: new Vector3(), yaw: 0, pitch: 0.42, dist: 3 * cellSize, orbitPose: null, settled: false, lastMode: null, lastFollow: null,
   })
+
+  // Tell the HUD what the rig is doing (the pill highlights the effective mode, not the request).
+  useEffect(() => {
+    useTableUi.getState().set({ cameraActive: { mode: effectiveMode, canFollow: follow !== null } })
+  }, [effectiveMode, follow])
+  useEffect(() => () => useTableUi.getState().set({ cameraActive: null }), [])
+
+  // "Find me": frame the token in orbit mode, keeping the current viewing direction. In token mode
+  // the request is already satisfied by the selection switching the follow target.
+  const focusRequest = useTableUi((s) => s.focusRequest)
+  useEffect(() => {
+    if (!focusRequest) return
+    useTableUi.getState().set({ focusRequest: undefined })
+    const game = useGame.getState()
+    const token = game.tokens[focusRequest.id]
+    if (!token || token.scene !== game.meta?.activeScene || effectiveMode !== 'orbit') return
+    const r = rig.current
+    const from = controls.current?.target ?? r.target
+    const target = new Vector3(token.position.x, floorY + (token.elevation ?? 0), token.position.z)
+    const dir = camera.position.clone().sub(from)
+    if (dir.lengthSq() < 1e-6) dir.set(0, 1, 1)
+    dir.normalize()
+    // Look down at ~30° or steeper so walls between the camera and the token do not hide it.
+    if (dir.y < 0.5) { dir.y = 0.5; dir.normalize() }
+    const dist = 4 * cellSize * Math.max(1, token.scale)
+    r.orbitPose = { pos: target.clone().addScaledVector(dir, dist), target }
+    r.settled = false
+    setOrbitReady(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest])
 
   // Mode / follow-target changes start a transition.
   useEffect(() => {

@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { GameController } from '../controller'
-import { useGame } from '@/state/store'
+import { useEffectiveToken, useGame } from '@/state/store'
 import { newSeed } from '@/dice'
 import type { Character } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
@@ -57,8 +57,8 @@ function shapeLabel(skill: SkillDef): string {
 }
 
 export function SkillsPanel({ controller }: { controller: GameController }) {
-  const selected = useGame((s) => s.selectedToken)
-  const token = useGame((s) => (selected ? s.tokens[selected] : undefined))
+  // The selected token, else the player's own: skills stay usable when nothing is selected.
+  const token = useEffectiveToken(controller.pubkey)
   const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
   const chat = useGame((s) => s.chat)
   const custom = useGame((s) => s.customSkills)

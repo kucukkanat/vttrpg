@@ -25,7 +25,7 @@ import { MoreList } from './MoreList'
 import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
 import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W } from './SideColumn'
-import { RollToast, SelectedTokenChip } from './Hud'
+import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
 
 interface DesktopLayout {
   left: { width: number; open: boolean }
@@ -151,7 +151,8 @@ export function GameShell({ controller }: { controller: GameController }) {
           </div>
         )}
         <div className="hud">
-          {bp !== 'desktop' && <SelectedTokenChip onOpen={() => openPanel('character')} />}
+          {bp !== 'desktop' && <SelectedTokenChip pubkey={controller.pubkey} onOpen={() => openPanel('character')} />}
+          <CameraPill />
           <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
         </div>
         {bp !== 'phone' ? dice : null}
