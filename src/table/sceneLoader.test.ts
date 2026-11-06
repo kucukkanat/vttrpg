@@ -15,7 +15,7 @@ describe('interpretScene on the generated dev room', () => {
     const gltf = await parseGlb(resolve(__dirname, '../../public/library/scenes/dev-room.glb'))
     const scene = interpretScene(gltf)
     expect(scene.colliders.map((c) => c.name).sort()).toEqual([
-      'COL_WALL_east', 'COL_WALL_north', 'COL_WALL_south', 'COL_WALL_west', 'COL_floor', 'COL_pillar',
+      'COL_floor', 'COL_pillar', 'COL_wall_east', 'COL_wall_north', 'COL_wall_south', 'COL_wall_west',
     ])
     for (const c of scene.colliders) expect(c.visible).toBe(false)
     // 5 boxes -> 4 segments each; the floor slab adds 4 thin sides.

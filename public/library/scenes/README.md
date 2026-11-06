@@ -26,6 +26,7 @@ reports what it found and what is missing (`report.found / missing / warnings`).
 | Object | Type | Meaning |
 |---|---|---|
 | `COL_<anything>` | mesh | Collider. Hidden after load. Its near-vertical faces become 2D wall segments used for line-of-sight and fog. Keep these simple boxes; never rely on visual geometry for walls. A `COL_floor` slab is fine (its horizontal faces are ignored). |
+| `WALL_<anything>` | mesh | Visible wall (case-insensitive prefix). The table fades these out when the camera looks down from above so a room does not read as a picture frame in orbit view. Keep them at most 0.3 m thick and give each one a matching `COL_` box; the `WALL_` mesh itself never blocks sight. |
 | `LIGHT_<anything>` | light | Dynamic point/spot light. Custom properties on the light *object*: `flicker` (0..1, amplitude of the flame flicker), `color_temp` (Kelvin; overrides the light colour). The first four lights cast shadows. |
 | `SPAWN_player`, `SPAWN_<name>` | empty | Token spawn points, by name. `SPAWN_player` is where new player tokens appear. |
 | `GRID` | empty | World origin of grid cell (0,0). Custom properties: `cell_size` (metres), `type` (`square` or `hex`). Hex grids are pointy-top, axial coordinates, `cell_size` is the centre-to-centre spacing. |
@@ -39,18 +40,32 @@ both.
 ## Checklist before export
 
 1. Floor at height 0, +Y up, metres.
-2. Every wall that should block sight has a `COL_` box behind it.
+2. Every wall that should block sight has a `COL_` box behind it; name the visible wall `WALL_*`, no thicker than 0.3 m.
 3. One `GRID` empty at the centre of the cell you want to be (0,0), with `cell_size` and `type`.
 4. `SPAWN_player` placed on the floor.
 5. Lights named `LIGHT_*`; torches get `flicker` and `color_temp`.
 6. Export as `.glb` with custom properties and lights enabled, Draco compression on.
 
-## Dev room
+## Generated scenes
 
-`dev-room.glb` is generated, not authored: `node scripts/make-dev-room.mjs` writes it using the same
-convention (four `COL_` walls plus a pillar, a floor, two flickering `LIGHT_` torches,
-`SPAWN_player`, `GRID` with `cell_size` 1.5, a `FOG_east` region). It is the scene behind
-`#/dev/table`.
+The starter scenes are generated, not authored, with three's `GLTFExporter` in Node:
+
+| File | Script | What it is |
+|---|---|---|
+| `tavern.glb` | `scripts/make-scenes/tavern.mjs` | 12 x 9 m common room: bar, four tables with benches, fireplace (`LIGHT_fire`), three sconces, a door. `SPAWN_player` a cell inside the door, `SPAWN_barkeep` behind the counter. Square grid, `ambient_preset: tavern`. |
+| `dungeon.glb` | `scripts/make-scenes/dungeon.mjs` | Entrance corridor, two side rooms, pillar hall, built from a cell map; every floor/rock edge is a `COL_` wall run. Two torches, `FOG_` over both rooms and the hall, `SPAWN_player` (+ `_2`, `_3` up the corridor), `SPAWN_enemy_rat`, `SPAWN_enemy_brute`. `ambient_preset: cave`. |
+| `forest.glb` | `scripts/make-scenes/forest.mjs` | ~20 x 20 m clearing ringed by low-poly trees (vertex colours; trunks are `COL_`), a campfire (`LIGHT_campfire`), a path, boulders. Hex grid with its origin at the fire, `SPAWN_player` and `SPAWN_player_2` beside it. `ambient_preset: forest`. |
+| `dev-room.glb` | `scripts/make-dev-room.mjs` | Small stone room behind `#/dev/table`: four `COL_` walls plus a pillar, two flickering torches, `FOG_east`. |
+
+`npm run scenes` regenerates all four and rebuilds `index.json`. Shared helpers (walls, props, lights,
+spawns, grid, fog, the FileReader shim the exporter needs) live in `scripts/make-scenes/lib.mjs`;
+`scripts/make-scenes/scenes.test.ts` loads every file through the table's loader and checks the
+convention. The quick-start templates in `src/ui/templates.ts` hardcode each scene's spawn points
+and grid origin; `src/ui/templates.test.ts` cross-checks them against the generated files, so
+moving a spawn in a script means updating the template too.
+
+`ambient_preset` is a scene custom property naming one of the built-in procedural ambiences
+(`src/audio`); scenes that set it leave `ambient_audio` unset.
 
 ## License
 

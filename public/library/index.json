@@ -9,12 +9,39 @@
     "license": "CC0-1.0"
   },
   {
-    "sha256": "b913f4dda8e629645d4f0df54927bb06499a2885f01240870412f42fb96f7992",
+    "sha256": "b3d54b20c5e9a4cf517b35817881c1f5a1970f5d579864b41236762fca6e55b3",
     "path": "scenes/dev-room.glb",
     "kind": "glb",
     "mime": "model/gltf-binary",
-    "size": 23644,
+    "size": 23948,
     "name": "dev-room.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f6721597a17ebb588fa460a9644c720f3501efc77f398590d4bb3e74532c9edd",
+    "path": "scenes/dungeon.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 163244,
+    "name": "dungeon.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4c203981622a8fef1d259b8a358d2679e6248fc6b4e6df00ab3e48cddf6875ce",
+    "path": "scenes/forest.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 132644,
+    "name": "forest.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "68ecd3bea2ec15c79490e99face18139ddb820bc493234abc8da3cb34a1bf18a",
+    "path": "scenes/tavern.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 210416,
+    "name": "tavern.glb",
     "license": "CC0-1.0"
   }
 ]
