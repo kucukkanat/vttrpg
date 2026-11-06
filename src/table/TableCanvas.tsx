@@ -33,7 +33,8 @@ import { imageFrame } from './imageScene'
 import { Props } from './PropMesh'
 import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
-import { setSceneError, tableRuntime, useTableUi } from './tableState'
+import { ScenePreviewBar, SceneTransition } from './SceneTransition'
+import { clearSceneTransition, sceneTransitionEvent, setPreviewScene, setSceneError, tableRuntime, useTableUi } from './tableState'
 import { stagedSummary, stageTargeting } from './targeting'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import './TargetingBar.css'
@@ -71,16 +72,60 @@ const CAMERA_OPTS = { fov: 50, near: 0.05, far: 500, position: [8, 8, 8] as [num
 const GL_OPTS = { antialias: true, powerPreference: 'high-performance' as const }
 const CANVAS_STYLE = { touchAction: 'none' } as const
 
+/**
+ * Picks the scene to show (the GM's preview, else the live scene) and runs the fade between scenes:
+ * the scene on screen lags the target by the fade-out so the swap happens under black, and the
+ * fade-in waits for the new scene to report it has loaded (`SceneTransition` keeps the clocks).
+ */
 export function TableCanvas(props: TableCanvasProps) {
-  const sceneId = useGame((s) => s.meta?.activeScene ?? null)
-  const scene = useGame((s) => (sceneId ? s.scenes[sceneId] : undefined))
-  if (!sceneId || !scene) {
-    return <div className={props.className} style={{ padding: 16, ...props.style }}>No active scene.</div>
-  }
-  return <TableInner key={sceneId} sceneId={sceneId} scene={scene} {...props} />
+  const liveId = useGame((s) => s.meta?.activeScene ?? null)
+  const scenes = useGame((s) => s.scenes)
+  const gm = !props.viewer || props.viewer.isGm
+  const previewScene = useTableUi((s) => s.previewScene)
+  const transition = useTableUi((s) => s.transition)
+  // Preview is a GM tool for a scene that exists and is not live; anything else ends it.
+  const preview = gm && previewScene && previewScene !== liveId && scenes[previewScene] ? previewScene : null
+  useEffect(() => { if (previewScene && !preview) setPreviewScene(null) }, [previewScene, preview])
+  const target = preview ?? liveId
+  const [displayed, setDisplayed] = useState(target)
+  const shown = displayed && scenes[displayed] ? displayed : null
+  const [ready, setReady] = useState<{ scene: SceneId; ok: boolean } | null>(null)
+  const onReady = useCallback((scene: SceneId, ok: boolean) => setReady({ scene, ok }), [])
+  useEffect(() => {
+    if (!target || !shown) {
+      // Nothing to fade from or to (first scene, scene removed): show what there is at once.
+      if (target !== displayed) setDisplayed(target)
+      clearSceneTransition()
+      return
+    }
+    const name = useGame.getState().scenes[target]?.name ?? ''
+    if (target !== shown) {
+      if (!transition || transition.to !== target) sceneTransitionEvent({ type: 'change', to: target, name })
+      else if (transition.phase === 'swap') setDisplayed(target)
+      return
+    }
+    if (!transition) return
+    // Back to the scene already on screen before the fade got anywhere: retarget, then reveal.
+    if (transition.to !== target) sceneTransitionEvent({ type: 'change', to: target, name })
+    else if (transition.phase === 'swap' && ready?.scene === target && ready.ok) sceneTransitionEvent({ type: 'loaded', scene: target })
+  }, [target, shown, displayed, transition, ready])
+  useEffect(() => () => clearSceneTransition(), [])
+  const { className, style, ...inner } = props
+  const scene = shown ? scenes[shown] : undefined
+  return (
+    <div className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }}>
+      {shown && scene
+        ? <TableInner key={shown} sceneId={shown} scene={scene} onReady={onReady} {...inner} />
+        : <div style={{ padding: 16 }}>No active scene.</div>}
+      {preview && (
+        <ScenePreviewBar name={scenes[preview]?.name ?? ''} onSwitch={() => props.onIntent({ type: 'scene.activate', scene: preview })} onBack={() => setPreviewScene(null)} />
+      )}
+      <SceneTransition transition={transition} onEvent={sceneTransitionEvent} />
+    </div>
+  )
 }
 
-function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting, className, style }: TableCanvasProps & { sceneId: SceneId; scene: Scene }) {
+function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting }: Omit<TableCanvasProps, 'className' | 'style'> & { sceneId: SceneId; scene: Scene; onReady(scene: SceneId, ready: boolean): void }) {
   const resolve = resolveAsset ?? defaultResolveAsset
   /** Events older than the canvas are never replayed. */
   const mountedAt = useRef(Date.now()).current
@@ -193,6 +238,9 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const [imageStatus, setImageStatus] = useState<ImageFloorStatus | null>(null)
   const [imageRetry, setImageRetry] = useState(0)
   const retryImage = useCallback(() => setImageRetry((n) => n + 1), [])
+  // Everything the scene needs is on screen (or has failed and shows its banner): the fade can end.
+  const ready = (!model || loaded !== null || error !== null) && (!image || (imageStatus !== null && imageStatus.kind !== 'loading'))
+  useEffect(() => { onReady(sceneId, ready) }, [onReady, sceneId, ready])
   const bounds3 = useMemo(() => {
     const b = (loaded?.bounds ?? (imageBox ? null : new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))))?.clone() ?? null
     const modelBox = b && transform ? b.applyMatrix4(sceneTransformMatrix(transform)) : b
@@ -231,7 +279,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const mode: CameraMode = cameraOverride ?? cameraMode ?? scene.cameraMode
 
   return (
-    <div className={className} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background: '#0b0b10', ...style }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background: '#0b0b10' }}>
       <Canvas
         shadows="percentage"
         dpr={[1, 1.5]}

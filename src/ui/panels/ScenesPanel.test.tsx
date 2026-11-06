@@ -43,6 +43,15 @@ describe('ScenesPanel', () => {
     expect(html.match(/class="scene-live"/g)).toHaveLength(1)
     expect(html.match(/class="scene-switch"/g)).toHaveLength(1)
   })
+  it('offers Preview on the scenes that are not live and marks the one being previewed', () => {
+    let html = render()
+    expect(html.match(/class="scene-preview"/g)).toHaveLength(1)
+    expect(html).toMatch(/Dungeon<\/span>.*?class="scene-preview" aria-pressed="false"/)
+    useTableUi.getState().set({ previewScene: dungeon.id })
+    html = render()
+    expect(html).toMatch(/class="scene-preview primary" aria-pressed="true"[^>]*>Previewing</)
+    useTableUi.getState().set({ previewScene: null })
+  })
   it('replaces the mode word with a camera icon that explains itself', () => {
     const html = render()
     expect(html).not.toMatch(/>orbit</)
