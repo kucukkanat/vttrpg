@@ -9,11 +9,11 @@
     "license": "CC0-1.0"
   },
   {
-    "sha256": "e67e7637b418a2a312e6e0f8a541251fa0992618e1bccef886bc1e4b83d3b0c1",
+    "sha256": "b913f4dda8e629645d4f0df54927bb06499a2885f01240870412f42fb96f7992",
     "path": "scenes/dev-room.glb",
     "kind": "glb",
     "mime": "model/gltf-binary",
-    "size": 23676,
+    "size": 23644,
     "name": "dev-room.glb",
     "license": "CC0-1.0"
   }

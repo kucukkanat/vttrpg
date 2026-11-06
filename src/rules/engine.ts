@@ -368,8 +368,12 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
           for (const t of tgts) {
             const amount = Math.max(0, Math.floor(await evalNumber(e.formula, scopeFor(t), stream, `${e.kind} formula`)))
             const ref = resourceRef(t.data, e.resource)
-            if (ref.current === undefined) throw new Error(`${t.name} has no ${labelOf(e.resource)}`)
             const label = labelOf(e.resource)
+            if (ref.current === undefined) {
+              // Sheetless tokens (plain minis) take part in messages and vfx but track no resources.
+              messages.push(`${t.name} ${e.kind === 'damage' ? `takes ${amount} damage` : `would recover ${amount} ${label}`} (no ${label} tracked).`)
+              continue
+            }
             if (e.kind === 'damage') {
               const next = Math.max(0, ref.current - amount)
               setPath(t.data, ref.path, next)
@@ -436,8 +440,13 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     return out + text.slice(i)
   }
 
+  /** A character with the pack's default (zeroed) data: used for plain minis that have no sheet. */
+  function blankCharacter(id: string, name: string): Character {
+    return { id: id as Character['id'], name, data: initialData() }
+  }
+
   function evaluateNow(expr: string, character: Character, context: Data = {}): Value {
     return evaluateSync(expr, contextScope(context, character))
   }
-  return { pack, roll, evaluate: evaluateFor, evaluateNow, validate, generateCharacter, resolveSkill }
+  return { pack, roll, evaluate: evaluateFor, evaluateNow, blankCharacter, validate, generateCharacter, resolveSkill }
 }

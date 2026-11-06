@@ -55,3 +55,9 @@ convention (four `COL_` walls plus a pillar, a floor, two flickering `LIGHT_` to
 ## License
 
 Files in this folder are CC0 unless a `LICENSE` file next to them says otherwise.
+
+## Walls that fade in top-down view
+
+Name visible wall meshes `WALL_<anything>` (case-insensitive). The table fades them to 25% opacity
+while the camera looks down steeply, so rooms stay readable from above. Keep walls at most ~0.3 m
+thick; `COL_*` colliders are separate and unaffected.

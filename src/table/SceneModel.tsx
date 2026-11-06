@@ -1,7 +1,7 @@
 /** Renders a loaded scene: its meshes, and its lights with shadows (capped) and flicker. */
 import { useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { DirectionalLight, Light, PointLight, SpotLight } from 'three'
+import { DirectionalLight, Light, Material, Mesh, PointLight, SpotLight, Vector3 } from 'three'
 import type { LoadedScene } from './sceneLoader'
 
 export const MAX_SHADOW_CASTERS = 4
@@ -33,6 +33,40 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
   }, [loaded])
 
   const bases = useMemo(() => loaded.lights.map((l) => (l.object as Light).intensity), [loaded])
+
+  // Walls (meshes named WALL_* or wall_*) fade out when the camera looks down from above so a
+  // room does not read as a picture frame in orbit view. Materials are cloned per wall mesh.
+  const walls = useMemo(() => {
+    const out: { mesh: Mesh; mats: Material[] }[] = []
+    loaded.root.traverse((o) => {
+      if (!(o instanceof Mesh) || !/^wall[_.]/i.test(o.name)) return
+      const mats = (Array.isArray(o.material) ? o.material : [o.material]).map((m) => {
+        const c = (m as Material).clone()
+        c.transparent = true
+        return c
+      })
+      o.material = mats.length === 1 ? mats[0]! : mats
+      o.castShadow = true
+      out.push({ mesh: o, mats })
+    })
+    return out
+  }, [loaded])
+  useEffect(() => () => { for (const w of walls) for (const m of w.mats) m.dispose() }, [walls])
+
+  const dir = useMemo(() => new Vector3(), [])
+  useFrame(({ camera }) => {
+    if (walls.length === 0) return
+    camera.getWorldDirection(dir)
+    // pitch: 0 = horizontal, 1 = straight down
+    const down = Math.max(0, -dir.y)
+    const t = Math.min(1, Math.max(0, (down - 0.35) / 0.35))
+    const opacity = 1 - 0.85 * t
+    for (const w of walls) {
+      for (const m of w.mats) {
+        if (m.opacity !== opacity) { m.opacity = opacity; m.depthWrite = opacity > 0.95 }
+      }
+    }
+  })
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime

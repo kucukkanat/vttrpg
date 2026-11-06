@@ -25,6 +25,8 @@ export interface RulesEngine {
   evaluateNow(expr: string, character: Character, context?: Record<string, unknown>): number | string | boolean
   /** Validate an intent against the rules. Returns null if ok, else a reason. */
   validate(intent: Intent, actor: { isGm: boolean; pubkey: string }, doc: unknown): string | null
+  /** A character with the pack's default data, for plain minis without a sheet. */
+  blankCharacter(id: string, name: string): Character
   /** Run chargen fully randomized (Mausritter one-roll) with the given seed. */
   generateCharacter(seed: string, name: string): Promise<Character>
   /** Resolve a skill use into document patches + vfx cues. */

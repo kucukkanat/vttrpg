@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from '../session'
 import { navigate } from '../router'
 import { useGame } from '@/state/store'
+import type { AssetRef } from '@/core/assets'
 import { TableCanvas } from '@/table'
 import { DiceTrayOverlay } from '@/dice'
 import { ChatPanel } from '../panels/ChatPanel'
@@ -24,6 +25,7 @@ export function GameScreen() {
   const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length), [chat])
   useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
 
+  const resolveAsset = useCallback((ref: AssetRef) => controller!.assets.resolve(ref), [controller])
   if (!controller) return null
   const viewer = { pubkey: controller.pubkey, isGm: controller.connection.isGm }
 
@@ -41,7 +43,7 @@ export function GameScreen() {
           <TableCanvas
             onIntent={(i) => void controller.dispatch(i)}
             onPresence={(p) => controller.presence(p)}
-            resolveAsset={(ref) => controller.assets.resolve(ref)}
+            resolveAsset={resolveAsset}
             viewer={viewer}
             targeting={targeting}
           />

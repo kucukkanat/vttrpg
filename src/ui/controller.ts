@@ -8,8 +8,8 @@ import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
-import type { Character, GameDocShape, RollResult } from '@/core/doc'
-import type { CharacterId, PlayerPubkey } from '@/core/ids'
+import type { GameDocShape, RollResult } from '@/core/doc'
+import type { PlayerPubkey } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
 import { rollFromSeed } from '@/dice'
@@ -58,11 +58,11 @@ export function createController(opts: {
       const s = useGame.getState()
       const src = s.tokens[intent.source]
       const source = src?.character ? s.characters[src.character] : undefined
+      // Tokens without a sheet still take part as targets (messages, vfx); patches to them are dropped by apply.
       const targets = intent.targets
-        .map((t) => s.tokens[t]?.character)
-        .filter((c): c is CharacterId => !!c)
-        .map((c) => s.characters[c])
-        .filter((c): c is Character => !!c)
+        .map((t) => s.tokens[t])
+        .filter((t): t is NonNullable<typeof t> => !!t)
+        .map((t) => (t.character && s.characters[t.character]) || rules.blankCharacter(t.id, t.name))
       if (source) {
         const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed)
         ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx }
@@ -79,7 +79,16 @@ export function createController(opts: {
         return
       }
     }
-    applyIntent(connection.doc, env, await resolveContext(env))
+    let ctx: ApplyContext
+    try {
+      ctx = await resolveContext(env)
+    } catch (e) {
+      const text = `${env.intent.type} failed: ${e instanceof Error ? e.message : String(e)}`
+      console.warn(text, e)
+      applyIntent(connection.doc, { ...env, intent: { type: 'chat.say', text, to: [env.from] } })
+      return
+    }
+    applyIntent(connection.doc, env, ctx)
   }
 
   const offIntent = connection.isGm ? connection.onIntent((env) => void gmApply(env)) : () => {}

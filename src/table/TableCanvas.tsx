@@ -87,15 +87,22 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
   useEffect(() => { uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null }) }, [sceneId, uiSet])
 
-  // Resolve the scene model to a URL.
+  // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
+  // recreates `scene` on every document sync and the model must not reload for a chat message.
   const model = scene.model
+  const modelKey = `${model.sha256}|${model.sources.join(',')}`
+  const modelRef = useRef(model)
+  modelRef.current = model
+  const resolveRef = useRef(resolve)
+  resolveRef.current = resolve
   useEffect(() => {
     let live = true
     setUrl(null)
+    setLoaded(null)
     setError(null)
-    resolve(model).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) setError(`asset: ${String(e)}`) })
+    resolveRef.current(modelRef.current).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) setError(`asset: ${String(e)}`) })
     return () => { live = false }
-  }, [model, resolve])
+  }, [modelKey])
 
   const handleLoaded = useCallback((s: LoadedScene) => { setLoaded(s); onSceneLoaded?.(s.report) }, [onSceneLoaded])
 

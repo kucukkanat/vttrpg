@@ -30,8 +30,8 @@ if (typeof globalThis.FileReader === 'undefined') {
 
 const ROOM_W = 12 // x, meters
 const ROOM_D = 9 // z
-const WALL_H = 3
-const WALL_T = 0.3
+const WALL_H = 2.2
+const WALL_T = 0.25
 const CELL = 1.5
 
 const scene = new Scene()
@@ -57,10 +57,10 @@ function wall(name, w, d, x, z) {
 const walls = new Group()
 walls.name = 'walls'
 walls.add(
-  wall('wall_north', ROOM_W + WALL_T, WALL_T, 0, -ROOM_D / 2 - WALL_T / 2),
-  wall('wall_south', ROOM_W + WALL_T, WALL_T, 0, ROOM_D / 2 + WALL_T / 2),
-  wall('wall_west', WALL_T, ROOM_D, -ROOM_W / 2 - WALL_T / 2, 0),
-  wall('wall_east', WALL_T, ROOM_D, ROOM_W / 2 + WALL_T / 2, 0),
+  wall('WALL_north', ROOM_W + WALL_T, WALL_T, 0, -ROOM_D / 2 - WALL_T / 2),
+  wall('WALL_south', ROOM_W + WALL_T, WALL_T, 0, ROOM_D / 2 + WALL_T / 2),
+  wall('WALL_west', WALL_T, ROOM_D, -ROOM_W / 2 - WALL_T / 2, 0),
+  wall('WALL_east', WALL_T, ROOM_D, ROOM_W / 2 + WALL_T / 2, 0),
 )
 scene.add(walls)
 
