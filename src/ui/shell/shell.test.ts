@@ -3,7 +3,7 @@ import { breakpointFor } from './useBreakpoint'
 import { snapSheet } from './BottomSheet'
 import { clampWidth, COL_MAX, COL_MIN } from './SideColumn'
 import { keyboardInset } from './useKeyboardInset'
-import { unreadCount } from './useUnread'
+import { unreadCount, unreadNoteCount } from './useUnread'
 import { MORE_ID, nextPhoneTab, splitPhoneTabs, sumBadges } from './phoneTabs'
 import { edgeFade, scrollIntoRange } from './Drawer'
 import type { PanelDef } from '../panels/registry'
@@ -113,5 +113,17 @@ describe('drawer tab strip', () => {
     expect(scrollIntoRange(356, 360, 0, 64, 12)).toBe(0)
     expect(scrollIntoRange(200, 360, 240, 300, 12)).toBe(200)
     expect(scrollIntoRange(300, 360, 300, 364, 12)).toBe(288)
+  })
+})
+
+describe('unread notes', () => {
+  const seen = new Set(['a', 'b'])
+  it('counts notes that appeared while the panel was hidden', () => {
+    expect(unreadNoteCount(['a', 'b'], seen, false)).toBe(0)
+    expect(unreadNoteCount(['a', 'b', 'c', 'd'], seen, false)).toBe(2)
+  })
+  it('ignores notes that went away and is zero while the panel is open', () => {
+    expect(unreadNoteCount(['a'], seen, false)).toBe(0)
+    expect(unreadNoteCount(['a', 'b', 'c'], seen, true)).toBe(0)
   })
 })

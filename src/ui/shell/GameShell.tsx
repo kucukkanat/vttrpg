@@ -17,7 +17,7 @@ import { ClaimPrompt, PresenceBeacon } from '../panels/ClaimPrompt'
 import { useBreakpoint } from './useBreakpoint'
 import { usePersisted } from './usePersisted'
 import { useKeyboardInset } from './useKeyboardInset'
-import { useUnread } from './useUnread'
+import { useUnread, useUnreadNotes } from './useUnread'
 import { focusChatInput, useShortcuts } from './useShortcuts'
 import { BottomSheet, type SheetSize } from './BottomSheet'
 import { TabBar } from './TabBar'
@@ -83,7 +83,8 @@ export function GameShell({ controller }: { controller: GameController }) {
     : bp === 'tablet' ? tablet.open && tabletTab === 'chat'
     : desktop.right.open && !desktop.collapsed.chat
   const unread = useUnread(chat.length, chatOpen)
-  const badges = useMemo(() => ({ chat: unread }), [unread])
+  const journalUnread = useUnreadNotes(controller, bp === 'phone' ? phoneTab === 'journal' : bp === 'tablet' ? tablet.open && tabletTab === 'journal' : desktop.right.open && !desktop.collapsed.journal)
+  const badges = useMemo(() => ({ chat: unread, journal: journalUnread }), [unread, journalUnread])
 
   // Aiming a skill on a phone needs the whole table: drop the sheet, the table's own bar has Cancel.
   useEffect(() => { if (bp === 'phone' && targeting) setPhoneTab(null) }, [bp, targeting])

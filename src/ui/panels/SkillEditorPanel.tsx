@@ -1,9 +1,10 @@
 /**
- * GM skill editor. Lists the pack's skills (read-only, "Duplicate to edit") and this game's custom
- * skills (editable); the form (`src/ui/skilleditor`) validates live with the pack loader's guard.
- * Save dispatches `skill.upsert`, Delete `skill.remove`; Test dry-runs `resolveSkill` against a
- * dummy character without touching the document. A JSON pane imports and exports skills so they
- * can move between games or into a pack folder.
+ * GM skill editor. Lists the pack's skills (read-only; "Override" edits a replacement with the
+ * same id, "Duplicate" a copy with a new one) and this game's custom skills (editable); the form
+ * (`src/ui/skilleditor`) validates live with the pack loader's guard. Create / Save dispatch
+ * `skill.upsert`, Delete `skill.remove`; Test dry-runs `resolveSkill` against a dummy character
+ * without touching the document. A JSON pane imports and exports skills so they can move between
+ * games or into a pack folder.
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { GameController } from '../controller'
@@ -16,6 +17,7 @@ import {
   duplicateForm,
   emptyForm,
   formFromSkill,
+  overrideForm,
   skillFromForm,
   skillFromJson,
   skillToJson,
@@ -55,6 +57,9 @@ async function copyText(text: string): Promise<boolean> {
 /** Pack skills use icon names ("flame"); only glyph-like icons (emoji, a symbol) are shown inline. */
 const glyph = (icon: string | undefined): string => (icon && !/^[a-z0-9-]+$/i.test(icon) ? `${icon} ` : '')
 
+/** Inline size for small controls so they stay tappable on coarse pointers. */
+const touch: CSSProperties = { minHeight: 'var(--control)' }
+
 const card: CSSProperties = {
   display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 10, rowGap: 2, alignItems: 'center', textAlign: 'left',
   minHeight: 56, padding: '8px 12px', borderRadius: 10, width: '100%', border: '1px solid var(--border)', background: '#26262d',
@@ -91,7 +96,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
 
   useEffect(() => {
     if (!notice) return
-    const t = setTimeout(() => setNotice(null), 3000)
+    const t = setTimeout(() => setNotice(null), 4000)
     return () => clearTimeout(t)
   }, [notice])
 
@@ -116,6 +121,19 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
   }
   const duplicate = (skill: SkillDef) => open(duplicateForm(skill, takenIds), null)
   const edit = (skill: SkillDef) => open(formFromSkill(skill), skill.id)
+  /**
+   * Override a pack skill: edit the existing override when there is one, otherwise start a new
+   * skill pre-filled from the effective definition (`allSkills()` already applies overrides) with
+   * the pack id kept, so saving replaces the pack skill instead of adding a copy next to it.
+   */
+  const override = (id: string) => {
+    const existing = custom[id as SkillDef['id']]
+    if (existing) { edit(existing); return }
+    const source = rules.allSkills().find((s) => s.id === id) ?? pack.skills.find((s) => s.id === id)
+    if (source) open(overrideForm(source), null)
+  }
+  /** Pack skills offered by the "Override pack skill" picker, in pack order. */
+  const packSkills = pack.skills
 
   const save = async () => {
     if (view.kind !== 'edit' || !validation?.skill) return
@@ -124,7 +142,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
     if (view.editingId && view.editingId !== skill.id) await controller.dispatch({ type: 'skill.remove', skill: view.editingId as SkillDef['id'] })
     await controller.dispatch({ type: 'skill.upsert', skill })
     setView({ kind: 'edit', form: view.form, saved: JSON.stringify(view.form), editingId: skill.id })
-    setNotice(`Saved ${skill.name}.`)
+    setNotice(`Saved · find it in Skills${packSkillIds.has(skill.id) ? ` (replaces the pack's ${skill.name})` : ''}`)
   }
   const remove = async () => {
     if (view.kind !== 'edit' || !view.editingId) return
@@ -182,11 +200,11 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
       <div className="panel">
         <h3>
           Skill editor
-          <button type="button" className="tiny primary" onClick={newSkill}>+ New</button>
+          <button type="button" className="tiny primary" style={touch} onClick={newSkill}>+ Create</button>
         </h3>
         {notice && <p className="small ok" style={{ margin: '0 0 8px' }}>{notice}</p>}
-        <p className="muted small" style={{ margin: '0 0 8px' }}>Custom skills ({customList.length})</p>
-        {customList.length === 0 && <p className="muted small">None yet. Duplicate a pack skill below or start a new one.</p>}
+        <p className="muted small" style={{ margin: '0 0 8px' }}>Custom skills ({customList.length}) · they appear in every sheet's Skills tab</p>
+        {customList.length === 0 && <p className="muted small">None yet. Override or duplicate a pack skill below, or create a new one.</p>}
         <div style={{ display: 'grid', gap: 8 }}>
           {customList.map((s) => (
             <button key={s.id} type="button" style={card} onClick={() => edit(s)}>
@@ -203,7 +221,10 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
           {pack.skills.map((s) => (
             <div key={s.id} style={{ ...card, gridTemplateColumns: '1fr auto' }}>
               <span style={{ fontWeight: 600, fontSize: 15 }}>{s.name}</span>
-              <button type="button" className="tiny" onClick={() => duplicate(s)}>Duplicate to edit</button>
+              <span className="row" style={{ marginTop: 0, flexWrap: 'nowrap' }}>
+                <button type="button" className="tiny" style={touch} onClick={() => override(s.id)} title={custom[s.id] ? 'Edit the override of this pack skill' : 'Edit a replacement with the same id; every sheet gets it instead of the pack version'}>{custom[s.id] ? 'Edit override' : 'Override'}</button>
+                <button type="button" className="tiny" style={touch} onClick={() => duplicate(s)} title="Copy under a new id, next to the pack skill">Duplicate</button>
+              </span>
               <span className="muted small" style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeTarget(s.target)} · {s.effects.length} effect{s.effects.length === 1 ? '' : 's'}{custom[s.id] ? ' · overridden above' : ''}
               </span>
@@ -230,13 +251,16 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
   const errorsCount = Object.keys(validation?.errors ?? {}).length + (validation?.general.length ?? 0)
   const canSave = validation?.skill !== null && !!validation?.skill
   const isCustom = view.editingId !== null
+  const overridesPack = !isCustom && packSkillIds.has(view.form.id)
+  // Create for a skill this game does not have yet; Save once it exists.
+  const verb = isCustom ? 'Save' : 'Create'
 
   return (
     <div className="panel">
       <h3>
         Skill editor
-        <button type="button" className="tiny" onClick={() => (dirty ? setConfirm('discard') : back())}>‹ Back</button>
-        <button type="button" className="tiny primary" onClick={() => void save()} disabled={!canSave}>Save</button>
+        <button type="button" className="tiny" style={touch} onClick={() => (dirty ? setConfirm('discard') : back())}>‹ Back</button>
+        <button type="button" className="tiny primary" style={touch} onClick={() => void save()} disabled={!canSave}>{verb}</button>
       </h3>
       {confirm === 'discard' && (
         <div className="row" style={{ marginTop: 0, marginBottom: 8, alignItems: 'center' }}>
@@ -247,9 +271,19 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
       )}
       {notice && <p className="small ok" style={{ margin: '0 0 8px' }}>{notice}</p>}
       <p className="muted small" style={{ margin: '0 0 8px' }}>
-        {isCustom ? `Editing custom skill ${view.editingId}` : 'New skill'}{dirty ? ' · unsaved' : ''}
+        {isCustom ? `Editing custom skill ${view.editingId}` : overridesPack ? `New skill · overrides the pack's ${view.form.id}` : 'New skill'}{dirty ? ' · unsaved' : ''}
         {errorsCount > 0 && <span className="error"> · {errorsCount} problem{errorsCount === 1 ? '' : 's'}</span>}
       </p>
+      {!isCustom && (
+        <label className="small" style={{ display: 'grid', gap: 4, marginBottom: 8 }}>
+          <span className="muted">Override pack skill</span>
+          <select value={overridesPack ? view.form.id : ''} onChange={(e) => { if (e.target.value) override(e.target.value) }} style={touch}>
+            <option value="">Start from scratch</option>
+            {packSkills.map((s) => <option key={s.id} value={s.id}>{s.name}{custom[s.id] ? ' (already overridden)' : ''}</option>)}
+          </select>
+          <span className="muted">Pre-fills the form from the pack skill and keeps its id, so saving replaces it in every sheet.</span>
+        </label>
+      )}
 
       <SkillFormView
         form={view.form}
@@ -265,7 +299,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
       )}
 
       <div className="row" style={{ marginTop: 12 }}>
-        <button type="button" className="primary" onClick={() => void save()} disabled={!canSave}>Save</button>
+        <button type="button" className="primary" onClick={() => void save()} disabled={!canSave}>{verb}</button>
         <button type="button" onClick={() => void runTest()}>Test</button>
         <button type="button" onClick={() => setShowJson((v) => !v)} aria-pressed={showJson}>JSON</button>
         {isCustom && confirm !== 'delete' && <button type="button" className="danger" onClick={() => setConfirm('delete')}>Delete</button>}
