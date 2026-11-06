@@ -50,11 +50,15 @@ export function GameScreen() {
         ) : (
           <div className="empty">No active scene. {controller.connection.isGm ? 'Add one from the Scenes panel.' : 'Waiting for the GM.'}</div>
         )}
-        <DiceTrayOverlay
-          rollId={shownRoll}
-          dice={lastRoll?.roll?.dice ?? []}
-          onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
-        />
+        {shownRoll && (
+          <DiceTrayOverlay
+            rollId={shownRoll}
+            dice={lastRoll?.roll?.dice ?? []}
+            showRim={false}
+            floor="shadow"
+            onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
+          />
+        )}
       </section>
       {/* min-height keeps the column on screen at phone widths, where the grid row would otherwise collapse */}
       <aside className="right" style={{ minHeight: '35vh' }}>

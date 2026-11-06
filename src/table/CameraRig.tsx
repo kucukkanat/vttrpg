@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { Box3, MathUtils, MOUSE, TOUCH, Vector3 } from 'three'
+import { Box3, MathUtils, MOUSE, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
 import { useTableUi } from './tableState'
 import { castRay, type WallSegment } from './walls'
@@ -39,12 +39,27 @@ const tmpDest = new Vector3()
 const tmpLook = new Vector3()
 const tmpDir = new Vector3()
 
-function overviewPose(bounds: Box3, floorY: number): { pos: Vector3; target: Vector3 } {
+/** Frames the whole floor from ~50° above, far enough for both the vertical and horizontal FOV. */
+function overviewPose(bounds: Box3, floorY: number, camera?: Camera): { pos: Vector3; target: Vector3 } {
   const c = bounds.getCenter(new Vector3())
   const size = bounds.getSize(new Vector3())
-  const span = Math.max(size.x, size.z, 4)
   const target = new Vector3(c.x, floorY, c.z)
-  const pos = new Vector3(c.x, floorY + span * 0.9, c.z + span * 0.75)
+  const w = Math.max(size.x, 4)
+  const d = Math.max(size.z, 4)
+  const pitch = (50 * Math.PI) / 180
+  let dist: number
+  if (camera && 'isPerspectiveCamera' in camera && (camera as PerspectiveCamera).isPerspectiveCamera) {
+    const pc = camera as PerspectiveCamera
+    const vfov = (pc.fov * Math.PI) / 180
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * pc.aspect)
+    // Depth of the floor as seen at this pitch projects onto the vertical axis by sin(pitch).
+    const needV = (d * Math.sin(pitch)) / 2 / Math.tan(vfov / 2)
+    const needH = w / 2 / Math.tan(hfov / 2)
+    dist = Math.max(needV, needH) * 1.15 + d * 0.25
+  } else {
+    dist = Math.max(w, d) * 1.2
+  }
+  const pos = new Vector3(c.x, floorY + dist * Math.sin(pitch), c.z + dist * Math.cos(pitch))
   return { pos, target }
 }
 
@@ -83,7 +98,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
   useEffect(() => {
     const r = rig.current
     if (r.orbitPose) return
-    const pose = overviewPose(bounds, floorY)
+    const pose = overviewPose(bounds, floorY, camera)
     camera.position.copy(pose.pos)
     r.target.copy(pose.target)
     camera.lookAt(pose.target)
@@ -91,6 +106,23 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     controls.current?.update()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Re-frame when the real scene bounds arrive (the mount pose used placeholder bounds).
+  const lastBounds = useRef<string>('')
+  useEffect(() => {
+    const key = `${bounds.min.x},${bounds.min.z},${bounds.max.x},${bounds.max.z},${floorY}`
+    if (lastBounds.current === '') { lastBounds.current = key; return }
+    if (lastBounds.current === key) return
+    lastBounds.current = key
+    if (effectiveMode !== 'orbit') return
+    const pose = overviewPose(bounds, floorY, camera)
+    camera.position.copy(pose.pos)
+    rig.current.target.copy(pose.target)
+    camera.lookAt(pose.target)
+    controls.current?.target.copy(pose.target)
+    controls.current?.update()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds, floorY])
 
   // Token-mode input: drag on empty space turns the camera; wheel / pinch zooms.
   useEffect(() => {
@@ -147,7 +179,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     const step = 1 - Math.exp(-dt * (r.settled ? 10 : 4))
     if (effectiveMode === 'orbit') {
       if (!r.settled) {
-        const pose = r.orbitPose ?? overviewPose(bounds, floorY)
+        const pose = r.orbitPose ?? overviewPose(bounds, floorY, camera)
         camera.position.lerp(pose.pos, step)
         r.target.lerp(pose.target, step)
         camera.lookAt(r.target)
