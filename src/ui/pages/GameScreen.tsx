@@ -10,3 +10,6 @@ export function GameScreen() {
   if (!controller) return null
   return <GameShell controller={controller} />
 }
+
+// Default export for `React.lazy` in App; the route is loaded on first visit.
+export default GameScreen
