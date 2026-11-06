@@ -13,6 +13,19 @@ export interface DragGhost {
   z: number
 }
 
+/** Derived highlights while a skill is being aimed; written by the targeting layer, read by tokens. */
+export interface TargetingUi {
+  source: TokenId
+  /** Tokens inside the previewed shape. */
+  inside: ReadonlySet<TokenId>
+  /** Tokens the shape could reach at all; the rest render dimmed. */
+  inRange: ReadonlySet<TokenId>
+  /** For 'single': the token under the pointer. */
+  hovered: TokenId | null
+  /** Touch: the pick waiting for the confirm button. */
+  candidate: { targets: TokenId[]; point: { x: number; y: number; z: number } } | null
+}
+
 export interface TableUiState {
   hovered: TokenId | null
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
@@ -24,6 +37,8 @@ export interface TableUiState {
   showGrid: boolean
   /** Cells the local viewer can currently see; null when fog is off (everything visible). */
   visible: ReadonlySet<string> | null
+  /** Non-null while the host is aiming a skill on the table. */
+  targeting: TargetingUi | null
   set(partial: Partial<Omit<TableUiState, 'set'>>): void
 }
 
@@ -35,5 +50,6 @@ export const useTableUi = create<TableUiState>((set) => ({
   cameraOverride: null,
   showGrid: true,
   visible: null,
+  targeting: null,
   set: (partial) => set(partial),
 }))

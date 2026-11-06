@@ -127,6 +127,9 @@ export function TokenMesh({ token }: { token: Token }) {
   const setSelected = useGame((s) => s.setSelectedToken)
   const hovered = useTableUi((s) => s.hovered === token.id)
   const dragGhost = useTableUi((s) => (s.drag && s.drag.token === token.id ? s.drag : null))
+  const targeting = useTableUi((s) => s.targeting !== null)
+  const targetInside = useTableUi((s) => s.targeting?.inside.has(token.id) ?? false)
+  const targetOutOfRange = useTableUi((s) => (s.targeting ? !s.targeting.inRange.has(token.id) : false))
   const uiSet = useTableUi((s) => s.set)
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const modelUrl = useAssetUrl(token.model)
@@ -188,7 +191,9 @@ export function TokenMesh({ token }: { token: Token }) {
     }
   }
 
+  // While a skill is being aimed the targeting layer owns the pointer; let events fall through to it.
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (targeting) return
     e.stopPropagation()
     if (e.button === 2) { select(); return }
     if (e.button !== 0) return
@@ -208,7 +213,7 @@ export function TokenMesh({ token }: { token: Token }) {
 
   const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
     const d = drag.current
-    if (!d || e.pointerId !== d.pointerId) return
+    if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
     if (!d.moved) {
       const dist = Math.hypot(e.nativeEvent.clientX - d.startX, e.nativeEvent.clientY - d.startY)
@@ -233,7 +238,7 @@ export function TokenMesh({ token }: { token: Token }) {
 
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
     const d = drag.current
-    if (!d || e.pointerId !== d.pointerId) return
+    if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
     capture(e).releasePointerCapture(e.pointerId)
     const wasClick = !d.moved
@@ -244,7 +249,7 @@ export function TokenMesh({ token }: { token: Token }) {
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (token.hidden && !gmView) return null
-  const dimmed = token.hidden
+  const dimmed = token.hidden || targetOutOfRange
 
   return (
     <group
@@ -254,8 +259,8 @@ export function TokenMesh({ token }: { token: Token }) {
       onPointerUp={onPointerUp}
       onPointerCancel={() => endDrag(false)}
       onLostPointerCapture={() => endDrag(false)}
-      onContextMenu={(e) => { e.stopPropagation(); e.nativeEvent.preventDefault(); select() }}
-      onPointerOver={(e) => { e.stopPropagation(); uiSet({ hovered: token.id }) }}
+      onContextMenu={(e) => { if (targeting) return; e.stopPropagation(); e.nativeEvent.preventDefault(); select() }}
+      onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); uiSet({ hovered: token.id }) }}
       onPointerOut={() => { if (useTableUi.getState().hovered === token.id) uiSet({ hovered: null }) }}
     >
       {modelUrl ? (
@@ -267,10 +272,16 @@ export function TokenMesh({ token }: { token: Token }) {
       ) : (
         <Disc token={token} radius={radius} dimmed={dimmed} />
       )}
-      {(selected || hovered) && (
+      {(selected || hovered) && !targeting && (
         <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>
           <ringGeometry args={[radius * 1.12, radius * (selected ? 1.3 : 1.22), 48]} />
           <meshBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
+        </mesh>
+      )}
+      {targetInside && (
+        <mesh rotation-x={-Math.PI / 2} position-y={0.012} renderOrder={6} raycast={() => undefined}>
+          <ringGeometry args={[radius * 1.1, radius * 1.45, 48]} />
+          <meshBasicMaterial color="#ff5a1f" transparent opacity={0.95} depthWrite={false} />
         </mesh>
       )}
       {token.light > 0 && (
