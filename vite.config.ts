@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
@@ -31,4 +32,5 @@ export default defineConfig(({ command }) => ({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   build: { target: 'es2022', sourcemap: true },
   server: { port: 5173 },
+  test: { exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'] },
 }))
