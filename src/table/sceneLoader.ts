@@ -14,7 +14,7 @@
  * renderer, GLBs that use KHR_texture_basisu fail to load with a clear warning.
  */
 import {
-  Box3, Color, Light, Mesh, Object3D, PointLight, SpotLight, Vector3,
+  Box3, Color, Light, Mesh, Object3D, PointLight, SpotLight, Texture, Vector3,
   type WebGLRenderer,
 } from 'three'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -242,7 +242,7 @@ export function disposeScene(scene: LoadedScene): void {
       obj.geometry.dispose()
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
       for (const m of mats) {
-        for (const v of Object.values(m)) if (v && typeof v === 'object' && 'isTexture' in v) (v as { dispose(): void }).dispose()
+        for (const v of Object.values(m)) if (v instanceof Texture) v.dispose()
         m.dispose()
       }
     }
