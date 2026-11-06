@@ -15,6 +15,15 @@ export interface DragGhost {
   /** Snapped world position of the ghost. */
   x: number
   z: number
+  /** Committed position of the token when the drag started; other selected tokens follow by the same delta. */
+  from: { x: number; z: number }
+}
+
+/** A token context menu request: which token, and where on screen (viewport pixels) it was asked for. */
+export interface ContextMenuRequest {
+  token: TokenId
+  x: number
+  y: number
 }
 
 /**
@@ -63,6 +72,10 @@ export interface TableUiState {
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
   grab: TokenId | null
   drag: DragGhost | null
+  /** Right-click / long-press menu on a token (shell/ContextMenu.tsx renders it); null when closed. */
+  contextMenu: ContextMenuRequest | null
+  /** Touch "Select" mode: taps add tokens to the selection instead of replacing it. */
+  multiSelect: boolean
   /** Moves queued behind an away GM, by token (see `PendingMove`). */
   pending: Record<TokenId, PendingMove>
   firstPerson: boolean
@@ -106,6 +119,8 @@ export const useTableUi = create<TableUiState>((set) => ({
   hovered: null,
   grab: null,
   drag: null,
+  contextMenu: null,
+  multiSelect: false,
   pending: {} as Record<TokenId, PendingMove>,
   firstPerson: false,
   cameraOverride: null,
@@ -124,6 +139,37 @@ export const useTableUi = create<TableUiState>((set) => ({
   sceneErrors: {} as Record<SceneId, string>,
   set: (partial) => set(partial),
 }))
+
+export interface GroupMoveTarget {
+  token: TokenId
+  x: number
+  z: number
+}
+
+/**
+ * Where the other selected tokens land when `drag` commits: each keeps its offset from the dragged
+ * token, i.e. moves by the same delta (unsnapped; callers snap with the grid). Empty unless the
+ * dragged token is itself part of the selection. Tokens in other scenes and the dragged token are left out.
+ */
+export function groupMoveTargets(
+  drag: DragGhost,
+  tokens: Readonly<Record<TokenId, { id: TokenId; scene: string; position: { x: number; z: number } }>>,
+  selected: readonly TokenId[],
+): GroupMoveTarget[] {
+  if (!selected.includes(drag.token)) return []
+  const leader = tokens[drag.token]
+  if (!leader) return []
+  const dx = drag.x - drag.from.x
+  const dz = drag.z - drag.from.z
+  const out: GroupMoveTarget[] = []
+  for (const id of selected) {
+    if (id === drag.token) continue
+    const t = tokens[id]
+    if (!t || t.scene !== leader.scene) continue
+    out.push({ token: id, x: t.position.x + dx, z: t.position.z + dz })
+  }
+  return out
+}
 
 /** Ask the camera rig to frame `id` (orbit: glide the view onto it; token mode: it is followed already). */
 export function focusToken(id: TokenId): void {

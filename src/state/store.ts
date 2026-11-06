@@ -46,6 +46,16 @@ export interface GameState {
   pushNotice(text: string, at?: number): LocalNotice
   selectedToken: TokenId | null
   setSelectedToken(id: TokenId | null): void
+  /**
+   * Every selected token (multi-select). `selectedToken` is the primary one and is always a member
+   * when the set is non-empty; a plain select replaces the set with that one token.
+   */
+  selectedTokens: TokenId[]
+  /** Add `id` to the set, or drop it when it is already selected (Shift/Cmd-click, Select mode). */
+  toggleSelected(id: TokenId): void
+  /** Replace the set; `primary` (default: the current primary if included, else the first id) becomes `selectedToken`. */
+  selectMany(ids: readonly TokenId[], primary?: TokenId): void
+  clearSelection(): void
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
@@ -73,17 +83,47 @@ export const useGame = create<GameState>((set) => ({
     return notice
   },
   selectedToken: null,
-  setSelectedToken: (id) => set({ selectedToken: id, selection: id ? { kind: 'token', id } : null }),
+  setSelectedToken: (id) => set(selectTokens(id ? [id] : [], id)),
+  selectedTokens: [],
+  toggleSelected: (id) => set((s) => {
+    if (s.selectedTokens.includes(id)) {
+      const rest = s.selectedTokens.filter((t) => t !== id)
+      return selectTokens(rest, s.selectedToken === id ? rest[rest.length - 1] ?? null : s.selectedToken)
+    }
+    return selectTokens([...s.selectedTokens, id], s.selectedToken ?? id)
+  }),
+  selectMany: (ids, primary) => set((s) => {
+    const unique = [...new Set(ids)]
+    const keep = primary && unique.includes(primary) ? primary : s.selectedToken && unique.includes(s.selectedToken) ? s.selectedToken : unique[0] ?? null
+    return selectTokens(unique, keep)
+  }),
+  clearSelection: () => set(selectTokens([], null)),
   selection: null,
-  setSelection: (sel) => set({ selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null }),
+  setSelection: (sel) => set({ selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null, selectedTokens: sel?.kind === 'token' ? [sel.id] : [] }),
   setPresence: (p) => set((s) => ({ presence: { ...s.presence, [p.pubkey]: p } })),
   // A scene switch drops the selection: the selected object belongs to the scene that was live.
+  // Tokens that left the document (removed, or replaced on a resync) leave the selection too.
   _replaceFromDoc: (partial) => set((s) => {
     const next = 'meta' in partial ? partial.meta?.activeScene ?? null : s.meta?.activeScene ?? null
     const prev = s.meta?.activeScene ?? null
-    return next !== prev && s.selection ? { ...partial, selection: null, selectedToken: null } : partial
+    if (next !== prev && s.selection) return { ...partial, selection: null, selectedToken: null, selectedTokens: [] }
+    if (partial.tokens && s.selectedTokens.length) {
+      const tokens = partial.tokens
+      const kept = s.selectedTokens.filter((id) => id in tokens)
+      if (kept.length !== s.selectedTokens.length) {
+        const primary = s.selectedToken && kept.includes(s.selectedToken) ? s.selectedToken : kept[kept.length - 1] ?? null
+        return { ...partial, ...selectTokens(kept, primary) }
+      }
+    }
+    return partial
   }),
 }))
+
+/** Store patch for a token selection: the set, its primary and the mirrored `selection`. */
+function selectTokens(ids: TokenId[], primary: TokenId | null): Pick<GameState, 'selectedTokens' | 'selectedToken' | 'selection'> {
+  const selectedToken = primary && ids.includes(primary) ? primary : ids[0] ?? null
+  return { selectedTokens: ids, selectedToken, selection: selectedToken ? { kind: 'token', id: selectedToken } : null }
+}
 
 /**
  * The first token the user owns: visible tokens in the active scene first, then hidden ones there,

@@ -3,10 +3,12 @@
  * lighting and fog of war. Emits intents and presence through callbacks; never touches
  * networking or rules.
  *
- * Keys: G grid, C camera mode (local override), F first person (token mode), Esc deselect.
- * Mouse: drag a token to move it (snaps to cells), click / right-click selects, drag empty
+ * Keys: G grid, C camera mode (local override), F first person (token mode), Esc deselect,
+ * Delete removes the selected tokens (GM).
+ * Mouse: drag a token to move it (snaps to cells; a selected token drags the whole selection), click
+ * selects, Shift/Cmd-click adds to the selection, right-click opens the token menu, drag empty
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
- * two fingers pan, pinch zooms, long-press selects.
+ * two fingers pan, pinch zooms, long-press opens the token menu.
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
  * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
  * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
@@ -107,7 +109,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
 
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
   useEffect(() => {
-    uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
+    uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
   }, [sceneId, uiSet])
   // Edit mode is a GM tool; a player view never shows it.
   useEffect(() => { if (!gm) uiSet({ editMode: false }) }, [gm, uiSet])
@@ -174,6 +176,24 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [cameraMode, scene.cameraMode, setSelection, cancelTargeting, gm, onIntent])
+
+  // GM: Delete removes every selected token (one undoable intent each). Runs in the capture phase
+  // so it clears the selection before the Tokens panel's own Delete handler sees the primary token.
+  useEffect(() => {
+    if (!gm) return
+    const onDelete = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' || e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      const s = useGame.getState()
+      if (s.selectedTokens.length === 0) return
+      e.preventDefault()
+      for (const id of s.selectedTokens) onIntent({ type: 'token.remove', token: id })
+      s.clearSelection()
+    }
+    window.addEventListener('keydown', onDelete, true)
+    return () => window.removeEventListener('keydown', onDelete, true)
+  }, [gm, onIntent])
 
   const grid: GridSpec = scene.grid
   // The scene's in-game transform moves the floor, the bounds and the walls along with the model.

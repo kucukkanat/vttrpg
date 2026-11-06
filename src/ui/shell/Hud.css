@@ -45,9 +45,11 @@
 }
 .cam-btn.on kbd { color: var(--accent); border-color: rgba(224, 164, 88, .5); }
 
-/* Touch: plain 44px buttons, no key hints. */
+/* Touch: plain 44px buttons, no key hints, plus the Select mode toggle (desktop has Shift/Cmd-click). */
+.cam-group--select { display: none; }
 @media (pointer: coarse) {
   .cam-btn kbd { display: none; }
+  .cam-group--select { display: flex; }
 }
 
 /* Phone and tablet: a vertical rail under the chip row on the right edge, clear of the chip, the
