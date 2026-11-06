@@ -227,6 +227,11 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
    --------------------------------------------------------------------------------------------- */
 .tabbar { display: flex; background: var(--panel); border-top: 1px solid var(--border); padding: 0 var(--sar) var(--sab) var(--sal); scrollbar-width: none; overflow: hidden; }
 @media (max-width: 420px) { .tab .lbl { font-size: 10px; } .tab .glyph { font-size: 18px; } }
+.drawer-tabs { overflow: hidden; }
+.drawer-tabs .tab { flex: 1 1 0; min-width: 36px; padding: 0 1px; }
+.drawer-tabs .tab .lbl { font-size: 10px; }
+.build-tag { position: fixed; left: 6px; bottom: calc(2px + env(safe-area-inset-bottom, 0px)); font-size: 10px; color: #6b6a66; pointer-events: none; z-index: 5; font-family: ui-monospace, monospace; }
+.game--phone ~ .build-tag, .game--tablet ~ .build-tag { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
 .tabbar::-webkit-scrollbar { display: none; }
 .tab {
   position: relative; flex: 1 1 0; min-width: 40px; min-height: 56px; padding: 0 1px; gap: 2px;
