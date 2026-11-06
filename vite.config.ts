@@ -32,6 +32,30 @@ function buildId(): string {
   try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return 'dev' }
 }
 
+/**
+ * Vendor chunks, matched against the module id in order (first match wins, so `@react-three/rapier`
+ * goes with rapier). Each library is used from one side only: three and rapier from the table and
+ * dice, nostr and yjs from the network layer, so no chunk is pulled in by the other side by accident.
+ */
+const VENDOR_CHUNKS: Array<[name: string, test: RegExp]> = [
+  ['rapier', /\/node_modules\/(@dimforge\/rapier3d-compat|@react-three\/rapier)\//],
+  ['three', /\/node_modules\/(three|three-stdlib|three-mesh-bvh|@react-three\/(fiber|drei)|@monogrid\/gainmap-js|camera-controls|maath|meshline|troika-three-text|stats-gl|stats\.js|detect-gpu|hls\.js|glsl-noise|its-fine|react-use-measure|suspend-react|tunnel-rat|react-reconciler|@use-gesture\/react)\//],
+  // zustand is the app's store and also fiber's; it has to be assigned here (see vendorChunk).
+  ['react', /\/node_modules\/(react|react-dom|scheduler|use-sync-external-store|zustand)\//],
+  ['nostr', /\/node_modules\/(nostr-tools|@noble\/[^/]+|@scure\/[^/]+)\//],
+  ['yjs', /\/node_modules\/(yjs|lib0)\//],
+]
+
+function vendorChunk(id: string): string | undefined {
+  // Rollup folds every unassigned static dependency of a manual chunk into that chunk. Vite's
+  // dynamic-import preload helper is used by drei as well as by the app's lazy routes, so without
+  // a home of its own it would land in `three` and make every page load it. It rides with react,
+  // which every page loads anyway.
+  if (id.includes('vite/preload-helper')) return 'react'
+  if (!id.includes('/node_modules/')) return undefined
+  return VENDOR_CHUNKS.find(([, test]) => test.test(id))?.[0]
+}
+
 // GitHub Pages serves from /vttrpg/. Local dev uses /.
 export default defineConfig(({ command }) => ({
   define: { __BUILD_ID__: JSON.stringify(buildId()), __BUILD_TIME__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
@@ -59,7 +83,9 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
-        // App shell and packs are precached; scenes and library blobs are cached on first use.
+        // App shell (entry, route and vendor chunks) and packs are precached; scenes and library
+        // blobs are cached on first use. The `three` vendor chunk is the largest file (about 1 MB
+        // minified), then the draco decoder (720 kB) and basis transcoder (530 kB): keep the limit above.
         globPatterns: ['**/*.{js,css,html,svg,png,json,wasm}'],
         globIgnores: ['**/library/scenes/**', '**/*.map'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
@@ -76,7 +102,14 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  build: { target: 'es2022', sourcemap: true },
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    // The entry chunk stays small (scripts/check-bundle.mjs enforces 600 kB): the game route, the
+    // table, the dice tray and the GM-only panels are `React.lazy`, and the heavy libraries are
+    // grouped so each is fetched once, by the route that first needs it.
+    rollupOptions: { output: { manualChunks: vendorChunk } },
+  },
   server: { port: 5173 },
   test: { exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'] },
 }))

@@ -3,11 +3,9 @@
  * chrome slots are always at the same positions, so crossing a breakpoint re-arranges CSS grid
  * areas without remounting the 3D canvas. See docs/UX.md.
  */
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useGame } from '@/state/store'
 import type { AssetRef } from '@/core/assets'
-import { TableCanvas } from '@/table'
-import { DiceTrayOverlay } from '@/dice'
 import { sharedAudioEngine } from '@/audio'
 import type { GameController } from '../controller'
 import { PANELS, type PanelDef } from '../panels/registry'
@@ -28,6 +26,20 @@ import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDes
 import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
 import { GameNotices } from './GameNotices'
 import { GmCallout } from '../onboarding/GmCallout'
+
+// The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
+// the shell's chrome renders before it downloads. Both are module-level so the components keep
+// their identity across renders and the canvas is never remounted by a breakpoint change.
+const TableCanvas = lazy(() => import('@/table/TableCanvas').then((m) => ({ default: m.TableCanvas })))
+const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => ({ default: m.DiceTrayOverlay })))
+
+function TableLoading() {
+  return (
+    <div className="empty">
+      <div><p className="muted">Loading table…</p></div>
+    </div>
+  )
+}
 
 interface TabletLayout { tab: string; open: boolean; pinned: boolean }
 
@@ -90,7 +102,9 @@ export function GameShell({ controller }: { controller: GameController }) {
   const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length) ?? null, [chat])
   useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
   const dice = shownRoll ? (
-    <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)} />
+    <Suspense fallback={null}>
+      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)} />
+    </Suspense>
   ) : null
 
   const resolveAsset = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
@@ -138,7 +152,9 @@ export function GameShell({ controller }: { controller: GameController }) {
 
       <section className="table">
         {meta?.activeScene ? (
-          <TableCanvas onIntent={(i) => void controller.dispatch(i)} onPresence={(p) => controller.presence(p)} resolveAsset={resolveAsset} viewer={viewer} targeting={targeting} />
+          <Suspense fallback={<TableLoading />}>
+            <TableCanvas onIntent={(i) => void controller.dispatch(i)} onPresence={(p) => controller.presence(p)} resolveAsset={resolveAsset} viewer={viewer} targeting={targeting} />
+          </Suspense>
         ) : (
           <div className="empty">
             <div>

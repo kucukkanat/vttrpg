@@ -2,7 +2,7 @@
  * Panels the game screen can show. The shell decides placement (side columns on desktop,
  * bottom tab bar + sheets on phones). Add a panel here and it appears everywhere.
  */
-import type { ComponentType } from 'react'
+import { createElement, lazy, Suspense, type ComponentType } from 'react'
 import type { GameController } from '../controller'
 import { ScenesPanel } from './ScenesPanel'
 import { TokensPanel } from './TokensPanel'
@@ -13,8 +13,25 @@ import { ChatPanel } from './ChatPanel'
 import { ObjectPanel } from './ObjectPanel'
 import { SoundboardPanel } from './SoundboardPanel'
 import { JournalPanel } from './JournalPanel'
-import { PrepPanel } from './PrepPanel'
-import { SkillEditorPanel } from './SkillEditorPanel'
+
+type PanelComponent = ComponentType<{ controller: GameController }>
+
+/**
+ * A panel loaded the first time it is shown. GM-only tools (Prep, Skill editor) are kept out of
+ * the game chunk this way; players never download them. The wrapper has the panel's shape, so
+ * `PANELS` and the hosts need no special case; the fallback is a plain panel body under the
+ * host's own header.
+ */
+function lazyPanel(load: () => Promise<PanelComponent>): PanelComponent {
+  const Loaded = lazy(() => load().then((component) => ({ default: component })))
+  const fallback = createElement('div', { className: 'panel' }, createElement('p', { className: 'muted small' }, 'Loading…'))
+  return function LazyPanel(props) {
+    return createElement(Suspense, { fallback }, createElement(Loaded, props))
+  }
+}
+
+const PrepPanel = lazyPanel(() => import('./PrepPanel').then((m) => m.PrepPanel))
+const SkillEditorPanel = lazyPanel(() => import('./SkillEditorPanel').then((m) => m.SkillEditorPanel))
 
 export interface PanelDef {
   id: string

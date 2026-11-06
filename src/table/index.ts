@@ -1,8 +1,11 @@
 /**
  * Table engine: everything inside the <Canvas>. Reads the store, emits intents.
  * Knows nothing about rules or Nostr.
+ *
+ * `TableCanvas` itself is not re-exported here: it pulls in three, fiber and drei, and this barrel
+ * is imported by the controller, which every page loads. Import it from `@/table/TableCanvas`
+ * (the shell does so with `React.lazy`), so the 3D stack stays in the game route's chunks.
  */
-export { TableCanvas } from './TableCanvas'
 export type { TableCanvasProps, TargetingProps, ViewerInfo } from './TableCanvas'
 export { resolveShape, tokensInShape, tokensInRange, cellsInShape, pointInShape } from './targeting'
 export type { ResolvedShape } from './targeting'

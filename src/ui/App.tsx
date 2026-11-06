@@ -1,11 +1,23 @@
+import { lazy, Suspense } from 'react'
 import { useRoute } from './router'
 import { Home } from './pages/Home'
 import { NewGame } from './pages/NewGame'
 import { JoinGame } from './pages/JoinGame'
-import { GameScreen } from './pages/GameScreen'
 import { DevStories } from './pages/DevStories'
 import { SessionProvider } from './session'
 import { AudioBridge } from './AudioBridge'
+
+// The game screen (shell, panels, table, dice) is its own chunk: the home, new and join pages
+// only need the network layer, so they render before any of it downloads.
+const GameScreen = lazy(() => import('./pages/GameScreen'))
+
+function GameLoading() {
+  return (
+    <div className="empty">
+      <div><p className="muted">Loading table…</p></div>
+    </div>
+  )
+}
 
 export function App() {
   const route = useRoute()
@@ -14,7 +26,7 @@ export function App() {
       {route.name === 'home' && <Home />}
       {route.name === 'new' && <NewGame />}
       {route.name === 'join' && <JoinGame invite={route.invite} />}
-      {route.name === 'game' && <GameScreen />}
+      {route.name === 'game' && <Suspense fallback={<GameLoading />}><GameScreen /></Suspense>}
       {route.name === 'dev' && <DevStories story={route.story} />}
       {route.name === 'game' && <AudioBridge />}
     </SessionProvider>
