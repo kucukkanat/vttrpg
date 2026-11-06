@@ -6,6 +6,7 @@ import type * as Y from 'yjs'
 import type { GameId, PlayerPubkey } from '@/core/ids'
 import type { IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
+import type { LocalGameStore } from './localStore'
 
 export interface Identity {
   pubkey: PlayerPubkey
@@ -22,6 +23,8 @@ export interface GameConnectionOptions {
   /** 32-byte symmetric game key from the invite link. */
   gameKey: Uint8Array
   isGm: boolean
+  /** Local copy store; defaults to the app-wide IndexedDB store. */
+  local?: LocalGameStore
 }
 
 export interface GameConnection {
@@ -46,6 +49,8 @@ export interface GameConnection {
   snapshot(): Uint8Array
   /** GM only: republish the manifest pointing at an uploaded snapshot so late joiners skip the delta replay. */
   publishSnapshotPointer(url: string, sha256: string): Promise<void>
+  /** True when the doc was restored from this device's local copy (the relay replay then runs behind it). */
+  hasLocalCopy: boolean
   close(): void
 }
 
@@ -59,3 +64,5 @@ export interface InviteInfo {
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
 export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
 export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'
+export { localGameStore, openLocalGameStore, createMemoryGameStore } from './localStore'
+export type { LocalGameStore, LocalGameRecord } from './localStore'

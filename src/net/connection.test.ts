@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { generateSecretKey } from 'nostr-tools'
 import type { GameId } from '@/core/ids'
@@ -11,6 +11,7 @@ import { DELTA_COALESCE_MS, REMOTE_ORIGIN, fetchManifest, openConnection, readMa
 import { localIdentity } from './identity'
 import { StatusTracker } from './pool'
 import { FakePool, FakeRelay, type FakeRelayOptions } from './testing'
+import { createMemoryGameStore } from './localStore'
 
 const RELAYS = ['wss://fake.one', 'wss://fake.two']
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -77,6 +78,76 @@ const world = async (o?: FakeRelayOptions) => {
   return w
 }
 
+describe('local copy', () => {
+  it('GM: a game created while no relay accepts anything survives a reload from the local copy and is published on connect', async () => {
+    class DeadPool extends FakePool {
+      override publish(_relays: string[], event: Parameters<FakePool['publish']>[1]): Promise<string>[] {
+        this.relay.published.push(event)
+        return [Promise.reject(new Error('down')), Promise.reject(new Error('down'))]
+      }
+    }
+    const relay = new FakeRelay()
+    const local = createMemoryGameStore()
+    const identity = localIdentity(generateSecretKey())
+    const gameId = crypto.randomUUID() as GameId
+    const gameKey = randomGameKey()
+    const manifest: Manifest = { name: 'Offline', gm: identity.pubkey, relays: RELAYS }
+    const log = vi.fn()
+    const first = await openConnection({ relays: RELAYS, identity, gameId, gameKey, isGm: true, pool: new DeadPool(relay), tracker: tracker(), manifest, fresh: true, local, log, manifestWaitMs: 30 })
+    expect(relay.stored.filter((e) => e.kind === KIND_MANIFEST)).toHaveLength(0)
+    first.doc.getMap('meta').set('gm', identity.pubkey)
+    first.doc.getMap('tokens').set('t1', { hp: 3 })
+    await sleep(DELTA_COALESCE_MS * 2)
+    first.close() // flushes the pending local save
+    const saved = await local.load(gameId)
+    expect(saved?.manifest?.name).toBe('Offline')
+    expect(saved?.update).toBeDefined()
+
+    // New tab, same GM, relays reachable now: open from the local copy without asking the relays.
+    const pool = new FakePool(relay)
+    const back = await openConnection({ relays: RELAYS, identity, gameId, gameKey, isGm: true, pool, tracker: tracker(), manifest: saved!.manifest!, local, log, manifestSpreadMs: 0 })
+    worlds.push({ relay, gameId, gameKey, gm: back, open: [back] })
+    expect(back.hasLocalCopy).toBe(true)
+    expect(back.isGm).toBe(true)
+    expect(back.doc.getMap('tokens').get('t1')).toEqual({ hp: 3 })
+    // A relay opening makes the GM publish the manifest there.
+    pool.emitOpen(RELAYS[0])
+    await until(() => relay.stored.some((e) => e.kind === KIND_MANIFEST))
+    expect(readManifest(gameKey, gameId, relay.stored.find((e) => e.kind === KIND_MANIFEST)!)?.name).toBe('Offline')
+  })
+
+  it('player: rejoins from the local copy at once and catches up on deltas behind it', async () => {
+    const w = await world()
+    const local = createMemoryGameStore()
+    w.gm.doc.getMap('meta').set('name', 'Test game')
+    w.gm.doc.getMap('tokens').set('t1', { hp: 3 })
+    await settle()
+    const identity = localIdentity(generateSecretKey())
+    const open = async () => {
+      const pool = new FakePool(w.relay)
+      const { manifest } = await fetchManifest(pool, RELAYS, w.gameKey, w.gameId, 1500)
+      const c = await openConnection({ relays: RELAYS, identity, gameId: w.gameId, gameKey: w.gameKey, isGm: false, pool, tracker: tracker(), manifest, local })
+      w.open.push(c)
+      return c
+    }
+    const p1 = await open()
+    expect(p1.hasLocalCopy).toBe(false)
+    expect(p1.doc.getMap('tokens').get('t1')).toEqual({ hp: 3 })
+    await sleep(600) // debounce
+    p1.close()
+    expect((await local.load(w.gameId))?.update).toBeDefined()
+
+    // The GM moves on while the player is away.
+    w.gm.doc.getMap('tokens').set('t2', { hp: 1 })
+    await settle()
+
+    const p2 = await open()
+    expect(p2.hasLocalCopy).toBe(true)
+    expect(p2.doc.getMap('tokens').get('t1')).toEqual({ hp: 3 })
+    await until(() => p2.doc.getMap('tokens').has('t2'))
+  })
+})
+
 describe('manifest', () => {
   it('is republished by the GM to relays that come up after the first publish', async () => {
     class FlakyPool extends FakePool {
@@ -84,7 +155,7 @@ describe('manifest', () => {
       override publish(relays: string[], event: Parameters<FakePool['publish']>[1]): Promise<string>[] {
         this.relay.published.push(event)
         this.relay.inject(event)
-        return relays.map((r) => (this.down.has(r) ? Promise.reject(new Error('down')) : Promise.resolve('ok')))
+        return relays.map((r) => (this.down.has(r) ? Promise.reject(new Error(`${r}: not connected`)) : Promise.resolve('ok')))
       }
     }
     const relay = new FakeRelay()
