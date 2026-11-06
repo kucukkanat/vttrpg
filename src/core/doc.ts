@@ -27,6 +27,8 @@ export interface Scene {
   grid: GridSpec
   cameraMode: CameraMode
   ambientAudio?: AssetRef
+  /** Built-in procedural ambience when no track is set (see src/audio). */
+  ambientPreset?: 'none' | 'wind' | 'fire' | 'rain' | 'cave' | 'tavern' | 'forest'
   /** Fog regions that start hidden; cells revealed are tracked in `fog`. */
   darkness: number // 0..1, 0 = fully lit outdoors
   /** Weather preset rendered by the table's WeatherLayer. */
