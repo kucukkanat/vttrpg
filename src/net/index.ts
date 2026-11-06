@@ -38,6 +38,10 @@ export interface GameConnection {
   onStatus(cb: (s: GameConnection['status']) => void): () => void
   /** Encode an invite link (naddr + game key fragment). */
   inviteLink(): string
+  /** Full Yjs state as one update, for uploading as a snapshot. */
+  snapshot(): Uint8Array
+  /** GM only: republish the manifest pointing at an uploaded snapshot so late joiners skip the delta replay. */
+  publishSnapshotPointer(url: string, sha256: string): Promise<void>
   close(): void
 }
 
