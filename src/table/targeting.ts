@@ -7,7 +7,7 @@
  * Distances are Euclidean in world units; `range` / `radius` / `width` are in cells.
  * Cone `angle` is the full opening angle in degrees.
  */
-import type { Cell, GridSpec, TargetShape, Vec2 } from '@/core/geometry'
+import type { Cell, GridSpec, TargetShape, Vec2, Vec3 } from '@/core/geometry'
 import { cellsWithinRadius, cellToWorld } from './grid'
 
 /** Tolerance so a token standing exactly on the boundary counts as inside. */
@@ -225,4 +225,65 @@ export function shapeOutline(shape: ResolvedShape, segments = 48): Vec2[] {
       ]
     }
   }
+}
+
+// ------------------------------------------------------------------------------- staging
+
+/** A pick waiting for the Cast button: the tokens the skill would hit and where it was aimed. */
+export interface StagedPick<Id extends string = string> { targets: Id[]; point: Vec3 }
+
+export type StagingAction<Id extends string = string> =
+  /** The pointer lifted. `pick` is what the lift would hit (null: nothing valid), `onCaster` a plain tap on the source. */
+  | { kind: 'lift'; pick: StagedPick<Id> | null; onCaster: boolean }
+  /** Cast: Enter or the Cast button. */
+  | { kind: 'confirm' }
+  /** Esc, the Cancel button, right click. */
+  | { kind: 'cancel' }
+
+export interface StagingResult<Id extends string = string> {
+  /** The pick now waiting for confirmation, if any. */
+  staged: StagedPick<Id> | null
+  /** Set when the action fires the skill at this pick. */
+  cast?: StagedPick<Id>
+  /** Set when the action ends targeting without casting. */
+  cancelled?: boolean
+}
+
+/**
+ * Stage-then-confirm for every pointer type: a lift stages (or re-stages) a pick, a tap on the
+ * caster cancels, and only an explicit confirm casts. Pure so the sequence can be tested without
+ * a canvas.
+ */
+export function stageTargeting<Id extends string>(staged: StagedPick<Id> | null, action: StagingAction<Id>): StagingResult<Id> {
+  switch (action.kind) {
+    case 'lift':
+      if (action.onCaster) return { staged: null, cancelled: true }
+      return { staged: action.pick }
+    case 'confirm':
+      return staged ? { staged: null, cast: staged } : { staged: null }
+    case 'cancel':
+      return { staged: null, cancelled: true }
+  }
+}
+
+/** Short noun for the bar once a pick is staged: "2-cell burst", "6-cell cone"; '' for a single pick. */
+export function shapeSummary(shape: TargetShape): string {
+  switch (shape.kind) {
+    case 'self': return 'self'
+    case 'single': return ''
+    case 'radius': return `${shape.radius}-cell burst`
+    case 'cone': return `${shape.range}-cell cone`
+    case 'line': return `${shape.range}-cell line`
+  }
+}
+
+/**
+ * The bar's headline for a staged pick: "Fireball → Bramble, Nettle · 2-cell burst". An empty
+ * area reads "Fireball → 2-cell burst · no one in the area".
+ */
+export function stagedSummary(skillName: string, shape: TargetShape, targetNames: readonly string[]): string {
+  const summary = shape.kind === 'self' ? '' : shapeSummary(shape)
+  if (targetNames.length === 0) return summary ? `${skillName} → ${summary} · no one in the area` : `${skillName} → no target`
+  const names = targetNames.join(', ')
+  return summary ? `${skillName} → ${names} · ${summary}` : `${skillName} → ${names}`
 }

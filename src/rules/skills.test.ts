@@ -166,6 +166,21 @@ describe('effect rows', () => {
     expect(r.messages.at(-1)).toBe(`Hazel shoves Rat t (rolled ${d20} vs 9).`)
   })
 
+  it('skips saves and damage when an area skill catches nobody, but still pays the cost', async () => {
+    const r = await engine.resolveSkill('fireball', caster(), [], SEED_A)
+    expect(r.messages).toEqual(['Hazel spends 1 Willpower on Fireball.', 'Fireball hits no one.'])
+    expect(patchFor(r, 'caster')).toEqual({ wil: { current: 6, max: 7 } })
+    expect(r.patches).toHaveLength(1)
+    expect(r.vfx).toBe(pack.skills.find((s) => s.id === 'fireball')!.vfx)
+  })
+
+  it('keeps the caster-as-target fallback for non-area skills', async () => {
+    const e = withSkill([{ kind: 'roll', formula: 'd20', vs: 'target.str', label: 'STR save' }])
+    const r = await e.resolveSkill('test', caster(), [], SEED_A)
+    expect(r.messages).toHaveLength(1)
+    expect(r.messages[0]).toMatch(/^Hazel STR save: \d+ \[\d+\] vs 9/)
+  })
+
   it('pays costs from dotted paths and evaluates cost expressions', async () => {
     const e = withSkill([], [{ resource: 'pips.current', amount: '1 + 1' }])
     const r = await e.resolveSkill('test', caster(), [], SEED_A)

@@ -3,8 +3,22 @@
  * and the game screen (which hands it to the table as `TableCanvasProps.targeting`).
  */
 import { create } from 'zustand'
+import type { Character, Token } from '@/core/doc'
 import type { TargetShape } from '@/core/geometry'
-import type { SkillId, TokenId } from '@/core/ids'
+import type { PlayerPubkey, SkillId, TokenId } from '@/core/ids'
+
+/**
+ * Is this token a player's character: owned by a non-GM pubkey directly or through its sheet?
+ * The targeting bar warns before a skill is cast at one.
+ */
+export function isPlayerCharacter(
+  token: Pick<Token, 'owner' | 'character'>,
+  character: Pick<Character, 'owner'> | undefined,
+  gm: PlayerPubkey | undefined,
+): boolean {
+  const ownedByPlayer = (owner: PlayerPubkey | undefined) => !!owner && owner !== gm
+  return ownedByPlayer(token.owner) || ownedByPlayer(character?.owner)
+}
 
 export interface PendingSkill {
   skillId: SkillId
