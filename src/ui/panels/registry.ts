@@ -15,6 +15,7 @@ import { SoundboardPanel } from './SoundboardPanel'
 import { JournalPanel } from './JournalPanel'
 import { PrepPanel } from './PrepPanel'
 import { SkillEditorPanel } from './SkillEditorPanel'
+import { InitiativePanel } from './InitiativePanel'
 
 export interface PanelDef {
   id: string
@@ -43,6 +44,7 @@ export const PANELS: PanelDef[] = [
   { id: 'object', title: 'Edit', short: 'Edit', glyph: '✎', component: ObjectPanel, scope: 'all', side: 'left' },
   { id: 'sound', title: 'Sound', short: 'Sound', glyph: '🔊', component: SoundboardPanel, scope: 'gm', side: 'left' },
   { id: 'players', title: 'Players', short: 'Players', glyph: '👥', component: PlayersPanel, scope: 'all', side: 'left' },
+  { id: 'initiative', title: 'Initiative', short: 'Turns', glyph: '⚔', component: InitiativePanel, scope: 'all', side: 'left' },
   { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right', phoneSlot: 3 },
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: '✦', component: SkillsPanel, scope: 'all', side: 'right' },
   { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right', fill: true, phoneSlot: 4 },

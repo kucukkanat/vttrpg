@@ -1,0 +1,40 @@
+/* Initiative panel: the turn order with the current combatant marked, the GM's Start / Next / End
+   row and the per-row editor (score, up, down, remove). Also the HUD chip ("Round 2 · Pip's turn"). */
+
+.init-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.init-status { font-size: var(--fs-md); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.init-status strong { color: var(--accent); }
+.init-actions { display: flex; gap: var(--sp-1); flex: none; }
+.init-actions button { min-height: 44px; }
+.init-actions .primary { min-width: 88px; }
+
+.init-list li { cursor: default; }
+.init-row { display: block; }
+.init-row .list-row-main { min-height: 44px; padding: 0 var(--sp-2); width: 100%; }
+/* The combatant whose turn it is reads as live at a glance. */
+.init-row.current .list-row-main { background: #2b2b35; box-shadow: inset 3px 0 0 var(--accent); }
+.init-turn { flex: none; width: 14px; color: var(--accent); font-size: var(--fs-sm); text-align: center; }
+.init-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
+.init-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.init-score {
+  flex: none; min-width: 32px; padding: 0 8px; border-radius: 999px; text-align: center;
+  font-variant-numeric: tabular-nums; font-weight: 600; background: var(--panel-2); border: 1px solid var(--border);
+}
+.init-row.current .init-score { border-color: var(--accent); color: var(--accent); }
+
+/* Inline editor under the tapped row (GM): every control is a 44 px target. */
+.init-edit { margin: var(--sp-1) 0 var(--sp-2); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); display: grid; gap: var(--sp-1); }
+.init-edit-score { display: flex; align-items: center; gap: var(--sp-2); }
+.init-edit-score input { width: 88px; min-height: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+.init-edit-row { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.init-edit-row button { flex: 1 1 auto; min-height: 44px; }
+.init-edit-row .danger { color: var(--danger); }
+
+.init-add { margin-top: var(--sp-2); display: flex; align-items: center; gap: var(--sp-2); }
+.init-add select { flex: 1; min-width: 0; min-height: 44px; }
+.init-empty { margin: var(--sp-2) 0; }
+
+/* HUD chip over the table: a pill like the token chip, one tap opens the panel. */
+.init-chip .chip-main { gap: var(--sp-2); }
+.init-chip .init-chip-glyph { flex: none; color: var(--accent); }
+.game--phone .init-chip, .game--tablet .init-chip { max-width: calc(100% - var(--control) - var(--sp-3)); }

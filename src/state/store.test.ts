@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { GameMeta, Token } from '@/core/doc'
 import type { PlayerPubkey, SceneId, TokenId } from '@/core/ids'
-import { effectiveToken, firstOwnedToken, useGame } from './store'
+import * as Y from 'yjs'
+import { bindDoc, effectiveToken, firstOwnedToken, readInitiative, useGame } from './store'
 
 const me = 'me'.padEnd(64, '0') as PlayerPubkey
 const other = 'other'.padEnd(64, '0') as PlayerPubkey
@@ -72,5 +73,23 @@ describe('effectiveToken', () => {
     expect(effectiveToken(useGame.getState(), me)?.id).toBe('rat')
     useGame.getState().setSelectedToken(null)
     expect(effectiveToken(useGame.getState(), me)?.id).toBe('pip')
+  })
+})
+
+describe('initiative mirror', () => {
+  it('is null until the map has an order, then follows the document', () => {
+    const doc = new Y.Doc()
+    expect(readInitiative(doc)).toBeNull()
+    const off = bindDoc(doc)
+    expect(useGame.getState().initiative).toBeNull()
+    doc.transact(() => {
+      const m = doc.getMap('initiative')
+      m.set('active', true)
+      m.set('round', 1)
+      m.set('turn', 0)
+      m.set('order', [{ token: 'pip', score: 14 }])
+    })
+    expect(useGame.getState().initiative).toEqual({ active: true, round: 1, turn: 0, order: [{ token: 'pip', score: 14 }] })
+    off()
   })
 })
