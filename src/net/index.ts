@@ -62,6 +62,7 @@ export interface InviteInfo {
 }
 
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
+export { currentProfile, profileSuffix } from './identity'
 export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
 export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'
 export { localGameStore, openLocalGameStore, createMemoryGameStore } from './localStore'

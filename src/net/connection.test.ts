@@ -328,12 +328,18 @@ describe('intents', () => {
     const w = await world({ liveCopies: 2 })
     const { conn: player, identity: playerId } = await join(w)
     const got: IntentEnvelope[] = []
-    w.gm.onIntent((i) => got.push(i))
+    // Resolve on delivery instead of polling: the relay hands both live copies to the GM in the same
+    // synchronous pass, so once the first one has been seen the dedupe of the second is already decided.
+    let arrived!: () => void
+    const delivered = new Promise<void>((r) => (arrived = r))
+    w.gm.onIntent((i) => {
+      got.push(i)
+      arrived()
+    })
 
     const env: IntentEnvelope = { id: 'i1', from: w.gm.gm, at: 1, intent: { type: 'chat.say', text: 'hi' } }
     player.sendIntent(env)
-    await until(() => got.length > 0)
-    await sleep(20)
+    await delivered
     expect(got).toHaveLength(1)
     expect(got[0].from).toBe(playerId.pubkey) // envelope lied; the signature wins
     expect(got[0].intent).toEqual({ type: 'chat.say', text: 'hi' })

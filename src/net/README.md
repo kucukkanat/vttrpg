@@ -11,7 +11,7 @@ authority: players send intents, the GM applies them to the Yjs doc and publishe
 | `index.ts` | Contract used by the rest of the app |
 | `impl.ts` | `loadIdentity`, `parseInvite`, `createGame`, `joinGame`, `DEFAULT_RELAYS` |
 | `codec.ts` | Pure: kinds, tags, NIP-44 under the game key, chunking, invite format |
-| `identity.ts` | NIP-07 extension if present, else a local key in `localStorage` (`vttrpg.nostr.secret`) |
+| `identity.ts` | NIP-07 extension if present, else a local key in `localStorage` (`vttrpg.nostr.secret`); `?as=<name>` dev profiles |
 | `pool.ts` | `RelayPool`: one socket per relay, exponential backoff, subscriptions re-attached on (re)connect; `StatusTracker` |
 | `localStore.ts` | IndexedDB copy of each game (doc update + manifest) so a device is self-sufficient |
 | `connection.ts` | `GameConnection`: manifest, deltas, intents, presence, snapshots |
@@ -111,6 +111,33 @@ with an open socket right now and `connection.relays` the list it was opened wit
 `naddr` = `nip19.naddrEncode({ kind: 30078, pubkey: gm, identifier: gameId, relays })`.
 The key lives in the fragment, so it is never sent to the host. `parseInvite` also accepts
 just the fragment or a bare `naddr1...?k=...`.
+
+## Testing with two identities
+
+One browser normally has one identity: the local secret key under `vttrpg.nostr.secret`
+(or the NIP-07 extension). To play a GM and a player in two tabs of the same browser, open
+the second tab with a **profile**:
+
+```
+http://localhost:5173/?as=player1#/join/naddr1...?k=...
+http://localhost:5173/#/join/naddr1...?k=...&as=player1
+```
+
+`as=<name>` (`[A-Za-z0-9_-]{1,32}`, page query wins over hash query) makes `loadIdentity`
+persist and read that tab's key under `vttrpg.nostr.secret.<name>` and skip the extension.
+`currentProfile()` and `profileSuffix()` (`.<name>` or `''`) are exported from `@/net` for
+anything else that should be per identity.
+
+Flow: GM tab `New game` → copy the invite link (or `window.__vtt.connection.inviteLink()` in
+dev) → second tab with `?as=player1` before the `#` → `Join`. The join page shows the active
+profile and never auto-rejoins with the device's saved role.
+
+Limits: the games registry (`vttrpg.games`) and the IndexedDB local copy are shared across
+profiles. A profile tab therefore always joins fresh from the invite link (the join page puts
+the default identity's registry entry back afterwards), and its "Your games" list is the
+default identity's. Its presence name is whatever was typed on the join page; the Players panel
+labels the tab itself with the profile name. Because the local copy is shared, a profile tab
+opens the doc from IndexedDB at once; live deltas, intents and presence still go over the relays.
 
 ## Known limits
 

@@ -13,6 +13,7 @@ import type { GameController } from '../controller'
 import { PANELS, type PanelDef } from '../panels/registry'
 import { TopBar } from '../panels/TopBar'
 import { useSkillTargeting } from '../panels/SkillsPanel'
+import { ClaimPrompt, PresenceBeacon } from '../panels/ClaimPrompt'
 import { useBreakpoint } from './useBreakpoint'
 import { usePersisted } from './usePersisted'
 import { useKeyboardInset } from './useKeyboardInset'
@@ -146,6 +147,8 @@ export function GameShell({ controller }: { controller: GameController }) {
           <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
         </div>
         {bp !== 'phone' ? dice : null}
+        {!isGm && <ClaimPrompt controller={controller} />}
+        <PresenceBeacon controller={controller} />
       </section>
 
       {bp === 'desktop' ? (
