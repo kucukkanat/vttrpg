@@ -176,8 +176,17 @@ describe('validate', () => {
       { type: 'scene.update', scene, patch: { name: 'x' } },
       { type: 'token.add', token: token('t-x', alice) },
       { type: 'token.remove', token: 't-alice' },
+      { type: 'fog.revealAll', scene },
+      { type: 'scene.remove', scene: 's2' },
     ] as Intent[]) {
       expect(engine.validate(intent, asAlice, d), intent.type).toMatch(/GM/)
     }
+    expect(engine.validate({ type: 'fog.revealAll', scene }, asGm, d)).toBeNull()
+    expect(engine.validate({ type: 'scene.remove', scene: 's2' as SceneId }, asGm, d)).toBeNull()
+  })
+  it('refuses to remove the live scene, GM included', () => {
+    const d = doc()
+    expect(engine.validate({ type: 'scene.remove', scene }, asGm, d)).toMatch(/switch to another scene/)
+    expect(engine.validate({ type: 'scene.remove', scene }, asAlice, d)).toMatch(/switch to another scene/)
   })
 })

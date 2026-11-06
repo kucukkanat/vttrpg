@@ -24,6 +24,8 @@ export interface ImportHooks {
   /** Foundry only: pixels per cell when the file does not declare a grid size. */
   gridSize?: number
   darkness?: number
+  /** Make the new scene live as well (default true); false stages it for the GM to switch to later. */
+  activate?: boolean
 }
 
 export interface ImportResult {
@@ -84,6 +86,6 @@ export async function importSceneFile(file: File, controller: ImportController, 
   const asset = await controller.assets.importFile(imageFile)
   const scene = sceneFromParsedMap(parsed, asset, { cellSize: hooks.cellSize, gridType: hooks.gridType, darkness: hooks.darkness })
   await controller.dispatch({ type: 'scene.add', scene })
-  await controller.dispatch({ type: 'scene.activate', scene: scene.id })
+  if (hooks.activate !== false) await controller.dispatch({ type: 'scene.activate', scene: scene.id })
   return { scene, parsed, notes }
 }

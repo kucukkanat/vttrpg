@@ -4,12 +4,12 @@
  * keeps the last `MAX_UNDO` entries here. `undoLast()` dispatches the inverse through the same
  * controller, so players see the restore like any other change.
  *
- *   token.remove  -> token.add   (same token data)
- *   prop.remove   -> prop.add
- *   note.remove   -> note.upsert
- *   fog.reset     -> fog.reveal  (the cells that were revealed)
- *
- * There is no scene removal intent yet; add it here when one exists.
+ *   token.remove   -> token.add   (same token data)
+ *   prop.remove    -> prop.add
+ *   note.remove    -> note.upsert
+ *   scene.remove   -> scene.add   (tokens, props and fog of the scene are never deleted, so they come back with it)
+ *   fog.reset      -> fog.reveal  (the cells that were revealed), plus fog.revealAll if the map was fully revealed
+ *   fog.revealAll  -> fog.reset   (then fog.reveal of what had been explored before)
  */
 import { create } from 'zustand'
 import type { Intent } from '@/core/intents'
@@ -25,6 +25,8 @@ export interface UndoSnapshot {
   notes: Record<NoteId, Note>
   fog: Record<SceneId, FogState>
   scenes: Record<SceneId, Scene>
+  /** Only `activeScene` is read: removing the live scene is refused, so there is nothing to undo. */
+  meta?: { activeScene: SceneId | null } | null
 }
 
 export interface UndoEntry {
@@ -56,16 +58,27 @@ export function captureUndo(intent: Intent, s: UndoSnapshot, now = Date.now()): 
       const title = note.title || 'note'
       return { label: `Deleted ${title}`, subject: title, inverse: [{ type: 'note.upsert', note }], at: now }
     }
+    case 'scene.remove': {
+      const scene = s.scenes[intent.scene]
+      if (!scene || s.meta?.activeScene === intent.scene) return null
+      return { label: `Removed ${scene.name}`, subject: scene.name, inverse: [{ type: 'scene.add', scene }], at: now }
+    }
     case 'fog.reset': {
       const fog = s.fog[intent.scene]
-      if (!fog || fog.revealed.length === 0) return null
+      if (!fog || (fog.revealed.length === 0 && !fog.revealAll)) return null
       const name = s.scenes[intent.scene]?.name ?? 'scene'
-      return {
-        label: `Reset fog on ${name}`,
-        subject: `fog on ${name}`,
-        inverse: [{ type: 'fog.reveal', scene: intent.scene, cells: [...fog.revealed] }],
-        at: now,
-      }
+      const inverse: Intent[] = []
+      if (fog.revealed.length) inverse.push({ type: 'fog.reveal', scene: intent.scene, cells: [...fog.revealed] })
+      if (fog.revealAll) inverse.push({ type: 'fog.revealAll', scene: intent.scene })
+      return { label: `Reset fog on ${name}`, subject: `fog on ${name}`, inverse, at: now }
+    }
+    case 'fog.revealAll': {
+      const fog = s.fog[intent.scene]
+      if (fog?.revealAll) return null
+      const name = s.scenes[intent.scene]?.name ?? 'scene'
+      const inverse: Intent[] = [{ type: 'fog.reset', scene: intent.scene }]
+      if (fog && fog.revealed.length) inverse.push({ type: 'fog.reveal', scene: intent.scene, cells: [...fog.revealed] })
+      return { label: `Revealed all of ${name}`, subject: `fog on ${name}`, inverse, at: now }
     }
     default:
       return null

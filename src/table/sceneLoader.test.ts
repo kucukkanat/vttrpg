@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { interpretScene, kelvinToColor } from './sceneLoader'
+import { describeLoadError, interpretScene, kelvinToColor } from './sceneLoader'
 
 async function parseGlb(path: string): Promise<GLTF> {
   const bytes = readFileSync(path)
@@ -46,5 +46,18 @@ describe('kelvinToColor', () => {
     expect(warm.r).toBeGreaterThan(warm.b)
     expect(cool.b).toBeGreaterThan(cool.r)
     expect(kelvinToColor(6600).r).toBeCloseTo(1, 1)
+  })
+})
+
+describe('describeLoadError', () => {
+  it('turns the raw loader errors into one plain sentence', () => {
+    expect(describeLoadError(new Error('assets: could not resolve 0000 (missing.glb). Tried: http://x hash mismatch Failed to fetch HTTP 404')))
+      .toBe('The model file could not be found.')
+    expect(describeLoadError(new Error('fetch for "http://x/a.glb" responded with 404: Not Found'))).toBe('The model file could not be found.')
+    expect(describeLoadError(new TypeError('Failed to fetch'))).toMatch(/could not be downloaded/)
+    expect(describeLoadError(new Error('Unexpected token < in JSON at position 0'))).toBe('The file is not a GLB this app can read.')
+    expect(describeLoadError(new Error('THREE.GLTFLoader: Unsupported asset. glTF versions >=2.0 are supported.'))).toBe('The file is not a GLB this app can read.')
+    expect(describeLoadError('something else went wrong')).toBe('something else went wrong')
+    expect(describeLoadError(new Error('x'.repeat(200)))).toHaveLength(120)
   })
 })

@@ -37,6 +37,11 @@ export interface Scene {
   ambientPreset?: 'none' | 'wind' | 'fire' | 'rain' | 'cave' | 'tavern' | 'forest'
   /** Fog regions that start hidden; cells revealed are tracked in `fog`. */
   darkness: number // 0..1, 0 = fully lit outdoors
+  /**
+   * Fog of war on or off. Unset = the old rule (fog follows `darkness > 0`), so existing games keep
+   * behaving as before; once set, the toggle decides and darkness only lights the scene.
+   */
+  fogEnabled?: boolean
   /** Weather preset rendered by the table's WeatherLayer. */
   weather?: 'none' | 'rain' | 'snow' | 'fog' | 'embers'
   /** Transform applied to the whole scene model so an imported GLB can be fitted to the grid in-game. */
@@ -132,6 +137,8 @@ export interface FogState {
   scene: SceneId
   /** Revealed cells encoded "q,r". */
   revealed: string[]
+  /** The GM revealed the whole map (`fog.revealAll`); `revealed` is kept for when fog is reset. */
+  revealAll?: boolean
 }
 
 /**

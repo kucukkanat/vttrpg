@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 import type { CameraMode } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
-import type { PropId, TokenId } from '@/core/ids'
+import type { PropId, SceneId, TokenId } from '@/core/ids'
 import type { Selection } from '@/state/store'
 import type { GizmoMode, NodeBase } from './editing'
 import type { WallSegment } from './walls'
@@ -69,6 +69,8 @@ export interface TableUiState {
   nodeBase: ({ name: string } & NodeBase) | null
   /** Footprints of solid props, merged into the line-of-sight walls. */
   propWalls: Record<PropId, WallSegment[]>
+  /** Scenes whose model failed to load on this client, with the reason; cleared when a load succeeds. */
+  sceneErrors: Record<SceneId, string>
   set(partial: Partial<Omit<TableUiState, 'set'>>): void
 }
 
@@ -88,8 +90,19 @@ export const useTableUi = create<TableUiState>((set) => ({
   editPreview: null,
   nodeBase: null,
   propWalls: {} as Record<PropId, WallSegment[]>,
+  sceneErrors: {} as Record<SceneId, string>,
   set: (partial) => set(partial),
 }))
+
+/** Record (or with `error` null, clear) a scene model load failure for the Scenes list and the table banner. */
+export function setSceneError(scene: SceneId, error: string | null): void {
+  const { sceneErrors, set } = useTableUi.getState()
+  if (error === null ? !(scene in sceneErrors) : sceneErrors[scene] === error) return
+  const next = { ...sceneErrors }
+  if (error === null) delete next[scene]
+  else next[scene] = error
+  set({ sceneErrors: next })
+}
 
 /**
  * Non-reactive values the canvas publishes for hosts (where the camera looks, where the scene

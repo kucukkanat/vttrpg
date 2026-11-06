@@ -52,6 +52,8 @@ export interface MapImageOptions {
   gridType?: GridType
   name?: string
   darkness?: number
+  /** Make the new scene live as well (default true); false stages it for the GM to switch to later. */
+  activate?: boolean
 }
 
 /** A sensible default column count for an image: about 70 px per cell, clamped to 4..100. */
@@ -74,6 +76,6 @@ export async function createImageScene(file: File, controller: ImportController,
     darkness: opts.darkness,
   })
   await controller.dispatch({ type: 'scene.add', scene })
-  await controller.dispatch({ type: 'scene.activate', scene: scene.id })
+  if (opts.activate !== false) await controller.dispatch({ type: 'scene.activate', scene: scene.id })
   return scene
 }
