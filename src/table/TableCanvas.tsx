@@ -28,6 +28,8 @@ import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
 import { GridOverlay } from './GridOverlay'
+import { ImageFloor } from './ImageFloor'
+import { imageFrame } from './imageScene'
 import { Props } from './PropMesh'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
@@ -163,17 +165,35 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   // The scene's in-game transform moves the floor, the bounds and the walls along with the model.
   const transform = scene.transform
   const floorY = (loaded?.floorY ?? 0) * (transform?.scale ?? 1) + (transform?.offset.y ?? 0)
+  // Image-based scenes: the map image decides the bounds (and the framing); keyed on its numbers
+  // because the store recreates `scene` on every sync.
+  const image = scene.image
+  const imageKey = image ? `${image.widthCells},${image.heightCells},${image.offset?.x ?? 0},${image.offset?.z ?? 0},${grid.cellSize},${grid.origin.x},${grid.origin.z}` : ''
+  const imageBox = useMemo(() => {
+    if (!image) return null
+    const f = imageFrame(grid, image)
+    return new Box3(new Vector3(f.minX, 0, f.minZ), new Vector3(f.maxX, 2 * grid.cellSize, f.maxZ))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageKey])
   const bounds3 = useMemo(() => {
-    const b = (loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))).clone()
-    return transform ? b.applyMatrix4(sceneTransformMatrix(transform)) : b
-  }, [loaded, transform])
+    const b = (loaded?.bounds ?? (imageBox ? null : new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))))?.clone() ?? null
+    const modelBox = b && transform ? b.applyMatrix4(sceneTransformMatrix(transform)) : b
+    if (modelBox && imageBox) return modelBox.union(imageBox.clone().translate(new Vector3(0, floorY, 0)))
+    if (imageBox) return imageBox.clone().translate(new Vector3(0, floorY, 0))
+    return modelBox!
+  }, [loaded, transform, imageBox, floorY])
   const bounds2: Bounds2 = useMemo(() => {
     const pad = grid.cellSize * 0.5
     return { minX: bounds3.min.x - pad, minZ: bounds3.min.z - pad, maxX: bounds3.max.x + pad, maxZ: bounds3.max.z + pad }
   }, [bounds3, grid.cellSize])
+  // Imported wall segments (`scene.walls`) are already in world units and sit under the image,
+  // which the scene transform does not move, so they are not transformed either.
+  const sceneWallsKey = scene.walls ? JSON.stringify(scene.walls) : ''
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sceneWalls = useMemo<WallSegment[]>(() => scene.walls ?? [], [sceneWallsKey])
   const walls = useMemo(
-    () => [...transformWalls(loaded?.walls ?? [], transform), ...Object.values(propWalls).flat()],
-    [loaded, transform, propWalls],
+    () => [...transformWalls(loaded?.walls ?? [], transform), ...sceneWalls, ...Object.values(propWalls).flat()],
+    [loaded, transform, sceneWalls, propWalls],
   )
   useEffect(() => {
     const c = bounds3.getCenter(new Vector3())
@@ -207,11 +227,12 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
         <TableContext.Provider value={ctx}>
           {url && <SceneLoaderBridge url={url} onLoaded={handleLoaded} onError={setError} />}
           <Lighting darkness={scene.darkness} />
-          {loaded ? <SceneModel loaded={loaded} /> : <PlaceholderFloor bounds={bounds2} />}
+          {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
+          {image && <ImageFloor image={image} grid={grid} floorY={floorY} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
           <Props sceneId={sceneId} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
-          <FogOverlay bounds={bounds2} walls={walls} />
+          <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />

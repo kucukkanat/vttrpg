@@ -1,0 +1,12 @@
+{
+  "name": "Old Export",
+  "width": 200,
+  "height": 100,
+  "padding": 0,
+  "grid": 50,
+  "img": "maps/old.jpg",
+  "walls": [
+    { "_id": "a", "c": [0, 50, 200, 50], "move": 1, "sense": 1, "door": 0, "ds": 0 },
+    { "_id": "b", "c": [100, 0, 100, 100], "move": 1, "sense": 0, "door": 0, "ds": 0 }
+  ]
+}

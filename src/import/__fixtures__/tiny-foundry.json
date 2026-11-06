@@ -1,0 +1,22 @@
+{
+  "name": "Tiny Cellar",
+  "navName": "",
+  "width": 200,
+  "height": 200,
+  "padding": 0.25,
+  "grid": { "type": 1, "size": 100, "color": "#000000", "alpha": 0.2, "distance": 5, "units": "ft" },
+  "background": { "src": "worlds/test/maps/tiny-cellar.webp", "offsetX": 0, "offsetY": 0 },
+  "darkness": 0.6,
+  "tokenVision": true,
+  "fog": { "exploration": true },
+  "walls": [
+    { "_id": "w1", "c": [100, 200, 200, 200], "move": 20, "sense": 20, "sight": 20, "sound": 20, "door": 0, "ds": 0 },
+    { "_id": "w2", "c": [200, 100, 200, 300], "move": 20, "sense": 20, "sight": 20, "sound": 20, "door": 0, "ds": 0 },
+    { "_id": "door-closed", "c": [200, 300, 300, 300], "move": 20, "sense": 20, "sight": 20, "sound": 20, "door": 1, "ds": 0 },
+    { "_id": "door-open", "c": [300, 100, 300, 200], "move": 20, "sense": 20, "sight": 20, "sound": 20, "door": 1, "ds": 1 },
+    { "_id": "no-sight", "c": [100, 100, 100, 300], "move": 20, "sense": 0, "sight": 0, "sound": 20, "door": 0, "ds": 0 },
+    { "_id": "zero-length", "c": [150, 150, 150, 150], "move": 20, "sight": 20, "door": 0, "ds": 0 }
+  ],
+  "lights": [],
+  "tokens": []
+}
