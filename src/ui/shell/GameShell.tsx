@@ -26,6 +26,7 @@ import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
 import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W } from './SideColumn'
 import { RollToast, SelectedTokenChip } from './Hud'
+import { GmCallout } from '../onboarding/GmCallout'
 
 interface DesktopLayout {
   left: { width: number; open: boolean }
@@ -154,6 +155,7 @@ export function GameShell({ controller }: { controller: GameController }) {
           {bp !== 'desktop' && <SelectedTokenChip onOpen={() => openPanel('character')} />}
           <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
         </div>
+        {isGm && <GmCallout />}
         {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />

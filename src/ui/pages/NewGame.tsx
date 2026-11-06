@@ -9,6 +9,7 @@ import { useSession } from '../session'
 import { startGame } from '../bootstrap'
 import { BUILTIN_PACKS } from '@/rules'
 import { TEMPLATES, applyTemplate, templateById, type GameTemplate } from '../templates'
+import { useCoarsePointer, verb } from '../useMediaQuery'
 import type { GameController } from '../controller'
 
 const css = `
@@ -37,6 +38,7 @@ type Phase = 'idle' | 'creating' | 'applying' | 'done'
 
 export function NewGame() {
   const { setController } = useSession()
+  const coarse = useCoarsePointer()
   const [name, setName] = useState('My table')
   const [displayName, setDisplayName] = useState('GM')
   const [templateId, setTemplateId] = useState(TEMPLATES[0]!.id)
@@ -86,7 +88,9 @@ export function NewGame() {
       <div className="ng">
         <Step n={1} title="Who is playing" />
         <label>Game name<input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" disabled={busy} /></label>
-        <label>Your name<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="nickname" disabled={busy} /></label>
+        <label>Your name<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="nickname" disabled={busy} aria-describedby="ng-name-hint" />
+          <span id="ng-name-hint" className="muted small">Shown to players in chat and the Players list.</span>
+        </label>
 
         <Step n={2} title="Pick a start" />
         <div className="ng-cards" role="radiogroup" aria-label="Template">
@@ -104,7 +108,7 @@ export function NewGame() {
 
         <Step n={3} title="Open the table" />
         <p className="muted small" style={{ margin: '4px 0 0' }}>
-          You will get an invite link to share from the table. Players join from any browser.
+          {verb(coarse)} <strong>Create and open table</strong>. You will get an invite link to share from the table; players join from any browser.
         </p>
         {error && <p className="error">{error}</p>}
         <div className="ng-progress" aria-live="polite">

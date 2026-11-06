@@ -21,6 +21,8 @@ import { LIBRARY_BASE, loadLibraryIndex } from './library'
 export interface StarterToken {
   /** Key of the SPAWN_* point (without the prefix), e.g. 'player', 'barkeep'. */
   spawn: string
+  /** Cells away from the spawn along x and z, for tokens the scene has no spawn point of their own for. */
+  offset?: { dx: number; dz: number }
   name: string
   color: string
   /** Vision and light radius in cells. */
@@ -29,10 +31,17 @@ export interface StarterToken {
   /** Roll a character sheet with the pack's chargen and link it to the token. */
   generateCharacter?: boolean
   /**
-   * 'player': left unowned so a player can claim it (`token.claim`) when they join.
-   * Omitted: an NPC, owned by the GM who creates the game.
+   * Fixed sheet values keyed by attribute or resource id (`{ hp: 3 }` sets current and max), laid
+   * over the pack's blank character so the sheet has every field the pack's views expect.
    */
-  owner?: 'player'
+  sheet?: Record<string, number>
+  /**
+   * Who runs the token. The GM is never handed a character of their own:
+   *   'player'  unowned so a player can claim it (`token.claim`) when they join.
+   *   'npc'     unowned too; the GM moves it like anything else and may assign it later.
+   *   'enemy'   owned by the GM, so the claim prompt never offers it as a character to play.
+   */
+  role: 'player' | 'npc' | 'enemy'
 }
 
 export interface GameTemplate {
@@ -56,17 +65,20 @@ export interface GameTemplate {
 const SQUARE = (origin: Vec3): GridSpec => ({ type: 'square', cellSize: 1.5, origin })
 const HEX_Z = 1.5 * Math.sqrt(3) / 2 // row spacing of a pointy-top hex grid with 1.5 m cells
 
+/** A sewer rat from the Mausritter bestiary: the obvious first target, with a sheet so damage lands. */
+const RAT = { name: 'Sewer Rat', color: '#6c7a8a', vision: 2, light: 0, role: 'enemy', sheet: { str: 8, dex: 12, wil: 6, hp: 3 } } as const satisfies Omit<StarterToken, 'spawn'>
+
 const MICE: StarterToken[] = [
-  { spawn: 'player', name: 'Pip Thistledown', color: '#d98f3e', vision: 4, light: 2, generateCharacter: true, owner: 'player' },
-  { spawn: 'player', name: 'Bramble Oakhollow', color: '#7cc4ff', vision: 4, light: 0, generateCharacter: true, owner: 'player' },
-  { spawn: 'player', name: 'Nettle Quickwhisker', color: '#9fd356', vision: 4, light: 0, generateCharacter: true, owner: 'player' },
+  { spawn: 'player', name: 'Pip Thistledown', color: '#d98f3e', vision: 4, light: 2, generateCharacter: true, role: 'player' },
+  { spawn: 'player', name: 'Bramble Oakhollow', color: '#7cc4ff', vision: 4, light: 0, generateCharacter: true, role: 'player' },
+  { spawn: 'player', name: 'Nettle Quickwhisker', color: '#9fd356', vision: 4, light: 0, generateCharacter: true, role: 'player' },
 ]
 
 export const TEMPLATES: readonly GameTemplate[] = [
   {
     id: 'mausritter-tavern',
     name: 'Mausritter: Tavern start',
-    description: 'Three mice with fresh sheets meet in a firelit common room. The barkeep has rumours.',
+    description: 'Three mice with fresh sheets in a firelit common room. The barkeep has rumours, a rat the scraps.',
     packId: 'mausritter',
     sceneFile: 'scenes/tavern.glb',
     sceneName: 'The Thistle & Thimble',
@@ -81,7 +93,9 @@ export const TEMPLATES: readonly GameTemplate[] = [
     },
     starterTokens: [
       ...MICE,
-      { spawn: 'barkeep', name: 'Old Barley', color: '#b8a98a', vision: 3, light: 0 },
+      { spawn: 'barkeep', name: 'Old Barley', color: '#b8a98a', vision: 3, light: 0, role: 'npc' },
+      // By the south wall between the door and the nearest table: two cells east, one south of the party.
+      { ...RAT, spawn: 'player', offset: { dx: 2, dz: 1 } },
     ],
   },
   {
@@ -108,14 +122,14 @@ export const TEMPLATES: readonly GameTemplate[] = [
       { ...MICE[0]!, spawn: 'player' },
       { ...MICE[1]!, spawn: 'player_2' },
       { ...MICE[2]!, spawn: 'player_3' },
-      { spawn: 'enemy_rat', name: 'Sewer Rat', color: '#6c7a8a', vision: 2, light: 0 },
-      { spawn: 'enemy_brute', name: 'Rat Brute', color: '#4b4f5a', vision: 2, light: 0 },
+      { ...RAT, spawn: 'enemy_rat' },
+      { spawn: 'enemy_brute', name: 'Rat Brute', color: '#4b4f5a', vision: 2, light: 0, role: 'enemy', sheet: { str: 12, dex: 8, wil: 6, hp: 6 } },
     ],
   },
   {
     id: 'mausritter-forest',
     name: 'Mausritter: Forest camp',
-    description: 'A campfire in a clearing under the trees, hex grid. Three mice rest before the road.',
+    description: 'A campfire in a clearing under the trees, hex grid. Three mice rest; something rustles nearby.',
     packId: 'mausritter',
     sceneFile: 'scenes/forest.glb',
     sceneName: 'Clearing by the Old Oak',
@@ -132,6 +146,8 @@ export const TEMPLATES: readonly GameTemplate[] = [
       { ...MICE[0]!, spawn: 'player' },
       { ...MICE[1]!, spawn: 'player_2' },
       { ...MICE[2]!, spawn: 'player' },
+      // Three hexes east of the fire, under the lone tree at the edge of the firelight.
+      { ...RAT, spawn: 'player', offset: { dx: 3, dz: 0 } },
     ],
   },
   {
@@ -179,7 +195,7 @@ export function spawnOffset(n: number, cellSize: number): Vec3 {
 /** The subset of GameController that applyTemplate needs; tests pass a fake. */
 export interface TemplateController {
   dispatch(intent: Intent): Promise<void>
-  rules: Pick<RulesEngine, 'generateCharacter'> | null
+  rules: Pick<RulesEngine, 'generateCharacter' | 'blankCharacter'> | null
   pubkey: PlayerPubkey
 }
 
@@ -238,8 +254,12 @@ export async function applyTemplate(
   for (const starter of template.starterTokens) {
     const base = template.spawns[starter.spawn]
     if (!base) throw new Error(`Template ${template.id}: no spawn point "${starter.spawn}".`)
-    const n = used.get(starter.spawn) ?? 0
-    used.set(starter.spawn, n + 1)
+    const dx = starter.offset?.dx ?? 0
+    const dz = starter.offset?.dz ?? 0
+    // Tokens sharing a spot fan out; an offset token has its own spot and does not push the others.
+    const spot = `${starter.spawn}@${dx},${dz}`
+    const n = used.get(spot) ?? 0
+    used.set(spot, n + 1)
     const off = spawnOffset(n, grid.cellSize)
 
     progress(`Placing ${starter.name}…`)
@@ -248,7 +268,7 @@ export async function applyTemplate(
       scene: sceneId,
       name: starter.name,
       color: starter.color,
-      position: { x: base.x + off.x, y: base.y, z: base.z + off.z },
+      position: { x: base.x + dx * grid.cellSize + off.x, y: base.y, z: base.z + dz * grid.cellSize + off.z },
       rotationY: 0,
       scale: 1,
       vision: starter.vision,
@@ -256,15 +276,21 @@ export async function applyTemplate(
       hidden: false,
       conditions: [],
     }
-    if (starter.owner !== 'player') token.owner = controller.pubkey
+    if (starter.role === 'enemy') token.owner = controller.pubkey
     await controller.dispatch({ type: 'token.add', token })
     result.tokens.push(token.id)
 
+    let character: Character | null = null
     if (starter.generateCharacter && controller.rules) {
       progress(`Rolling up ${starter.name}…`)
-      const rolled = await controller.rules.generateCharacter(newSeed(), starter.name)
-      const character: Character = { ...rolled, name: starter.name }
-      if (starter.owner !== 'player') character.owner = controller.pubkey
+      character = { ...(await controller.rules.generateCharacter(newSeed(), starter.name)), name: starter.name }
+    } else if (starter.sheet && controller.rules) {
+      character = controller.rules.blankCharacter(newId<'CharacterId'>(), starter.name)
+      for (const [k, v] of Object.entries(starter.sheet)) character.data[k] = { current: v, max: v }
+    }
+    if (character) {
+      // The sheet follows the token's owner, as it does after `token.claim`.
+      if (token.owner) character.owner = token.owner
       await controller.dispatch({ type: 'character.upsert', character })
       await controller.dispatch({ type: 'token.update', token: token.id, patch: { character: character.id } })
       result.characters.push(character.id)

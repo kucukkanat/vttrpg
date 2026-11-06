@@ -7,6 +7,8 @@ import type { CharacterId, PlayerPubkey } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import type { LibraryEntry } from '@/assets'
 import { BUILTIN_PACKS } from '@/rules'
+import { createRulesEngine } from '@/rules/engine'
+import { loadMausritter } from '@/rules/test-helpers'
 import { interpretScene } from '@/table/sceneLoader'
 import {
   TEMPLATES, applyTemplate, findSceneEntry, sceneAssetRef, spawnOffset, templateById, type TemplateController,
@@ -31,6 +33,9 @@ function fakeController(opts: { rules?: boolean } = {}) {
       async generateCharacter(seed: string, name: string): Promise<Character> {
         n++
         return { id: `mausritter-${seed.slice(0, 12)}` as CharacterId, name: `${name} (rolled ${n})`, data: { str: { current: 9, max: 9 } } }
+      },
+      blankCharacter(id: string, name: string): Character {
+        return { id: id as CharacterId, name, data: { str: { current: 0, max: 0 }, hp: { current: 0, max: 0 }, conditions: [], notes: '' } }
       },
     },
     async dispatch(intent) { intents.push(intent) },
@@ -59,10 +64,23 @@ describe('template list', () => {
     for (const t of TEMPLATES.filter((t) => t.id.startsWith('mausritter-'))) {
       const mice = t.starterTokens.filter((s) => s.generateCharacter)
       expect(mice, t.id).toHaveLength(3)
-      for (const m of mice) expect(m.owner).toBe('player')
+      for (const m of mice) expect(m.role).toBe('player')
     }
-    expect(templateById('mausritter-tavern')!.starterTokens.map((s) => s.spawn)).toEqual(['player', 'player', 'player', 'barkeep'])
+    expect(templateById('mausritter-tavern')!.starterTokens.map((s) => s.spawn)).toEqual(['player', 'player', 'player', 'barkeep', 'player'])
     expect(templateById('mausritter-dungeon')!.starterTokens.filter((s) => s.spawn.startsWith('enemy_'))).toHaveLength(2)
+  })
+
+  it('never hands the GM a player character and gives every scene an enemy with a sheet', () => {
+    for (const t of TEMPLATES.filter((t) => t.sceneFile)) {
+      for (const s of t.starterTokens) {
+        // A rolled sheet is a player character: it must be claimable, never pre-owned.
+        if (s.generateCharacter) expect(s.role, `${t.id}: ${s.name}`).toBe('player')
+        if (s.role === 'enemy') expect(s.sheet, `${t.id}: ${s.name} needs a sheet`).toBeDefined()
+      }
+      const enemies = t.starterTokens.filter((s) => s.role === 'enemy' && s.sheet)
+      expect(enemies.length, `${t.id}: enemy with a sheet`).toBeGreaterThanOrEqual(1)
+      for (const e of enemies) expect(e.sheet!.hp, `${t.id}: ${e.name} hp`).toBeGreaterThan(0)
+    }
   })
 })
 
@@ -136,6 +154,7 @@ describe('applyTemplate', () => {
       'token.add', 'character.upsert', 'token.update',
       'token.add', 'character.upsert', 'token.update',
       'token.add',
+      'token.add', 'character.upsert', 'token.update',
     ])
     const add = intents[0] as Extract<Intent, { type: 'scene.add' }>
     expect(add.scene.id).toBe(r.sceneId)
@@ -150,24 +169,28 @@ describe('applyTemplate', () => {
     expect((intents[1] as Extract<Intent, { type: 'scene.activate' }>).scene).toBe(r.sceneId)
 
     const tokens = intents.filter((i): i is Extract<Intent, { type: 'token.add' }> => i.type === 'token.add').map((i) => i.token)
-    expect(tokens).toHaveLength(4)
+    expect(tokens).toHaveLength(5)
     expect(r.tokens).toEqual(tokens.map((tk) => tk.id))
     for (const tk of tokens) expect(tk.scene).toBe(r.sceneId)
-    // Three mice fan out from SPAWN_player; the barkeep stands behind the counter and belongs to the GM.
+    // Three mice fan out from SPAWN_player; the barkeep stands behind the counter. Neither belongs to the GM.
     expect(tokens.slice(0, 3).map((tk) => tk.position)).toEqual([
       { x: -3.75, y: 0, z: 2.25 }, { x: -2.25, y: 0, z: 2.25 }, { x: -5.25, y: 0, z: 2.25 },
     ])
-    for (const tk of tokens.slice(0, 3)) expect(tk.owner).toBeUndefined()
-    expect(tokens[3]).toMatchObject({ name: 'Old Barley', owner: GM, position: { x: 5.25, y: 0, z: -0.75 }, vision: 3 })
+    for (const tk of tokens.slice(0, 4)) expect(tk.owner).toBeUndefined()
+    expect(tokens[3]).toMatchObject({ name: 'Old Barley', position: { x: 5.25, y: 0, z: -0.75 }, vision: 3 })
+    // The rat sits two cells east and one south of the party, on its own spot, and is the GM's to run.
+    expect(tokens[4]).toMatchObject({ name: 'Sewer Rat', owner: GM, position: { x: -0.75, y: 0, z: 3.75 } })
 
     const sheets = intents.filter((i): i is Extract<Intent, { type: 'character.upsert' }> => i.type === 'character.upsert').map((i) => i.character)
-    expect(sheets.map((c) => c.name)).toEqual(['Pip Thistledown', 'Bramble Oakhollow', 'Nettle Quickwhisker'])
-    expect(new Set(sheets.map((c) => c.id)).size).toBe(3)
-    for (const c of sheets) expect(c.owner).toBeUndefined()
+    expect(sheets.map((c) => c.name)).toEqual(['Pip Thistledown', 'Bramble Oakhollow', 'Nettle Quickwhisker', 'Sewer Rat'])
+    expect(new Set(sheets.map((c) => c.id)).size).toBe(4)
+    for (const c of sheets.slice(0, 3)) expect(c.owner).toBeUndefined()
+    expect(sheets[3]).toMatchObject({ owner: GM, data: { hp: { current: 3, max: 3 }, str: { current: 8, max: 8 }, conditions: [] } })
     expect(r.characters).toEqual(sheets.map((c) => c.id))
 
     const links = intents.filter((i): i is Extract<Intent, { type: 'token.update' }> => i.type === 'token.update')
-    expect(links.map((l) => [l.token, l.patch.character])).toEqual(sheets.map((c, i) => [tokens[i]!.id, c.id]))
+    const withSheets = [tokens[0]!, tokens[1]!, tokens[2]!, tokens[4]!]
+    expect(links.map((l) => [l.token, l.patch.character])).toEqual(sheets.map((c, i) => [withSheets[i]!.id, c.id]))
 
     expect(progress[0]).toMatch(/library/)
     expect(progress).toContain('Rolling up Pip Thistledown…')
@@ -194,6 +217,24 @@ describe('applyTemplate', () => {
     expect(tokens[0]!.position.x).toBeCloseTo(0.75)
     expect(tokens[1]!.position.x).toBeCloseTo(-0.75)
     expect(tokens[2]!.position.x).toBeCloseTo(2.25) // second mouse on SPAWN_player, one cell east
+    expect(tokens[3]!.name).toBe('Sewer Rat')
+    expect(tokens[3]!.position.x).toBeCloseTo(5.25) // three hexes east of SPAWN_player, not part of the fan-out
+    expect(tokens[3]!.position.z).toBeCloseTo(tokens[0]!.position.z)
+  })
+
+  it('builds enemy sheets on the real Mausritter blank character so the pack can evaluate them', async () => {
+    const engine = createRulesEngine(await loadMausritter())
+    const intents: Intent[] = []
+    const controller: TemplateController = { pubkey: GM, rules: engine, async dispatch(i) { intents.push(i) } }
+    await applyTemplate(controller, templateById('mausritter-dungeon')!, { index, baseHref: 'http://localhost/' })
+    const sheets = intents.filter((i): i is Extract<Intent, { type: 'character.upsert' }> => i.type === 'character.upsert').map((i) => i.character)
+    const rat = sheets.find((c) => c.name === 'Sewer Rat')!
+    const brute = sheets.find((c) => c.name === 'Rat Brute')!
+    expect(engine.evaluateNow('hp.current', rat)).toBe(3)
+    expect(engine.evaluateNow('str.max', rat)).toBe(8)
+    expect(engine.evaluateNow('hp.max', brute)).toBe(6)
+    expect(rat.data.pips).toEqual({ current: 0, max: 0 })
+    expect(rat.data.conditions).toEqual([])
   })
 
   it('fails clearly when the scene is missing from the index', async () => {
