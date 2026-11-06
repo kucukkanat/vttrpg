@@ -45,12 +45,26 @@ both.
 5. Lights named `LIGHT_*`; torches get `flicker` and `color_temp`.
 6. Export as `.glb` with custom properties and lights enabled, Draco compression on.
 
-## Dev room
+## Generated scenes
 
-`dev-room.glb` is generated, not authored: `node scripts/make-dev-room.mjs` writes it using the same
-convention (four `COL_` walls plus a pillar, a floor, two flickering `LIGHT_` torches,
-`SPAWN_player`, `GRID` with `cell_size` 1.5, a `FOG_east` region). It is the scene behind
-`#/dev/table`.
+The starter scenes are generated, not authored, with three's `GLTFExporter` in Node:
+
+| File | Script | What it is |
+|---|---|---|
+| `tavern.glb` | `scripts/make-scenes/tavern.mjs` | 12 x 9 m common room: bar, four tables with benches, fireplace (`LIGHT_fire`), three sconces, a door. `SPAWN_player` a cell inside the door, `SPAWN_barkeep` behind the counter. Square grid, `ambient_preset: tavern`. |
+| `dungeon.glb` | `scripts/make-scenes/dungeon.mjs` | Entrance corridor, two side rooms, pillar hall, built from a cell map; every floor/rock edge is a `COL_` wall run. Two torches, `FOG_` over both rooms and the hall, `SPAWN_player` (+ `_2`, `_3` up the corridor), `SPAWN_enemy_rat`, `SPAWN_enemy_brute`. `ambient_preset: cave`. |
+| `forest.glb` | `scripts/make-scenes/forest.mjs` | ~20 x 20 m clearing ringed by low-poly trees (vertex colours; trunks are `COL_`), a campfire (`LIGHT_campfire`), a path, boulders. Hex grid with its origin at the fire, `SPAWN_player` and `SPAWN_player_2` beside it. `ambient_preset: forest`. |
+| `dev-room.glb` | `scripts/make-dev-room.mjs` | Small stone room behind `#/dev/table`: four `COL_` walls plus a pillar, two flickering torches, `FOG_east`. |
+
+`npm run scenes` regenerates all four and rebuilds `index.json`. Shared helpers (walls, props, lights,
+spawns, grid, fog, the FileReader shim the exporter needs) live in `scripts/make-scenes/lib.mjs`;
+`scripts/make-scenes/scenes.test.ts` loads every file through the table's loader and checks the
+convention. The quick-start templates in `src/ui/templates.ts` hardcode each scene's spawn points
+and grid origin; `src/ui/templates.test.ts` cross-checks them against the generated files, so
+moving a spawn in a script means updating the template too.
+
+`ambient_preset` is a scene custom property naming one of the built-in procedural ambiences
+(`src/audio`); scenes that set it leave `ambient_audio` unset.
 
 ## License
 
