@@ -30,6 +30,10 @@ export interface GameConnection {
   gm: PlayerPubkey
   isGm: boolean
   status: 'connecting' | 'connected' | 'offline'
+  /** Relays this connection was opened with. */
+  relays: string[]
+  /** Number of relays with an open socket right now (for a "3/4 relays" indicator). */
+  relayCount: number
   /** Non-GM: send an intent to the GM. GM: delivered to `onIntent`. */
   sendIntent(intent: IntentEnvelope): void
   onIntent(cb: (intent: IntentEnvelope) => void): () => void
@@ -53,3 +57,5 @@ export interface InviteInfo {
 }
 
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
+export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
+export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'

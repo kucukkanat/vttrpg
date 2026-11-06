@@ -16,8 +16,31 @@ export function parseRoute(hash: string): Route {
   return { name: 'home' }
 }
 
+/**
+ * Set when the page loaded straight onto `#/game` (a reload mid-session). No controller
+ * can exist yet, so the home page offers to reconnect to the most recent game instead of
+ * the game screen bouncing to an empty home.
+ */
+let reloadedIntoGame = false
+
+/** True once, if this page load started on `#/game`. */
+export function takeReloadedIntoGame(): boolean {
+  const v = reloadedIntoGame
+  reloadedIntoGame = false
+  return v
+}
+
+function initialRoute(): Route {
+  const route = parseRoute(window.location.hash)
+  if (route.name !== 'game') return route
+  reloadedIntoGame = true
+  // Rewrite the hash without a hashchange so a later navigate('/game') still changes it.
+  history.replaceState(null, '', window.location.pathname + window.location.search + '#/')
+  return { name: 'home' }
+}
+
 export function useRoute(): Route {
-  const [route, setRoute] = useState(() => parseRoute(window.location.hash))
+  const [route, setRoute] = useState(initialRoute)
   useEffect(() => {
     const on = () => setRoute(parseRoute(window.location.hash))
     window.addEventListener('hashchange', on)
