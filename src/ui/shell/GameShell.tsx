@@ -102,6 +102,7 @@ export function GameShell({ controller }: { controller: GameController }) {
     toggleLeft: () => setDesktop((d) => ({ ...d, left: { ...d.left, open: !d.left.open } })),
     toggleRight: () => setDesktop((d) => ({ ...d, right: { ...d.right, open: !d.right.open } })),
     focusChat: () => { openPanel('chat'); requestAnimationFrame(() => focusChatInput()) },
+    openPanel,
     togglePanel: (n: number) => {
       const def = panels[n - 1]
       if (def) setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [def.id]: !d.collapsed[def.id] } }))

@@ -17,7 +17,7 @@ import {
   clamp, degToRad, displayDeg, effectiveNodeTransform, IDENTITY_TRANSFORM, mergeOverride, placementPoint, resetOverride, roundTo,
   SCALE_LIMITS, TOKEN_SIZE_LIMITS, useTableUi, type GizmoMode,
 } from '@/table'
-import { libraryRef, loadLibraryIndex } from '../library'
+import { CATEGORY_LABEL, libraryModels, libraryRef, loadLibraryIndex, type LibraryCategory } from '../library'
 
 const TOUCH = 44
 
@@ -197,13 +197,19 @@ function TokenEditor({ controller, token, editable, onDeselect }: { controller: 
         controller={controller}
         title="Token model"
         actionLabel="Use"
+        kinds={TOKEN_KINDS}
         current={token.model ? (token.model.name?.replace(/\.glb$/i, '') ?? 'custom model') : 'disc with initials'}
+        hint="Models are fitted to one cell; Size scales from there."
         onPick={(model) => patch({ model })}
         onClear={token.model ? () => patch({ model: undefined }) : undefined}
       />
     </div>
   )
 }
+
+/** What each picker offers; whole scenes never show up here (the Scenes panel owns those). */
+const TOKEN_KINDS: LibraryCategory[] = ['mini', 'prop']
+const PROP_KINDS: LibraryCategory[] = ['prop', 'mini']
 
 function PropEditor({ controller, prop, cell, editable, onDeselect }: { controller: GameController; prop: Prop; cell: number; editable: boolean; onDeselect(): void }) {
   const patch = (p: Partial<Prop>) => void controller.dispatch({ type: 'prop.update', prop: prop.id, patch: p })
@@ -318,12 +324,15 @@ function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }:
   )
 }
 
-/** Library GLBs (scene models listed separately) or an uploaded .glb, placed where the camera looks. */
-/** Library dropdown + upload. Calls `onPick` with the chosen model; never adds anything itself. */
-export function ModelPicker({ controller, title, actionLabel, hint, current, onPick, onClear }: {
+/**
+ * Library dropdown (only the given model categories, grouped in that order) plus an upload.
+ * Calls `onPick` with the chosen model; never adds anything itself.
+ */
+export function ModelPicker({ controller, title, actionLabel, kinds, hint, current, onPick, onClear }: {
   controller: GameController
   title: string
   actionLabel: string
+  kinds: readonly LibraryCategory[]
   hint?: string
   current?: string
   onPick(model: ReturnType<typeof libraryRef>, name: string): void
@@ -333,8 +342,7 @@ export function ModelPicker({ controller, title, actionLabel, hint, current, onP
   const [choice, setChoice] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   useEffect(() => { void loadLibraryIndex().then((l) => setLibrary(l.filter((e) => e.kind === 'glb'))) }, [])
-  const models = library.filter((e) => !e.path.startsWith('scenes/'))
-  const scenes = library.filter((e) => e.path.startsWith('scenes/'))
+  const groups = kinds.map((k) => ({ kind: k, entries: libraryModels(library, k) })).filter((g) => g.entries.length > 0)
   const pickFromLibrary = () => {
     const entry = library.find((e) => e.sha256 === choice)
     if (entry) onPick(libraryRef(entry), entry.name.replace(/\.glb$/i, ''))
@@ -360,12 +368,15 @@ export function ModelPicker({ controller, title, actionLabel, hint, current, onP
           {onClear && <button type="button" style={{ minHeight: 40 }} onClick={onClear}>Use disc</button>}
         </div>
       )}
-      {library.length > 0 && (
+      {groups.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6 }}>
           <select value={choice} style={{ minHeight: 40 }} onChange={(e) => setChoice(e.target.value)} aria-label={`${title} library`}>
             <option value="">Pick a model…</option>
-            {models.length > 0 && <optgroup label="Models">{models.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
-            {scenes.length > 0 && <optgroup label="Scene models">{scenes.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
+            {groups.map((g) => (
+              <optgroup key={g.kind} label={CATEGORY_LABEL[g.kind]}>
+                {g.entries.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '').replace(/-/g, ' ')}</option>)}
+              </optgroup>
+            ))}
           </select>
           <button type="button" style={{ minHeight: 40, touchAction: 'manipulation' }} disabled={!choice} onClick={pickFromLibrary}>{actionLabel}</button>
         </div>
@@ -396,9 +407,10 @@ function AddProp({ controller, sceneId, scene }: { controller: GameController; s
   return (
     <ModelPicker
       controller={controller}
-      title="Add a separate prop"
+      title="Add a prop"
       actionLabel="Add"
-      hint="Props are scenery, not tokens. They land where the camera looks, at scale 1; turn on edit mode to move, turn and resize them."
+      kinds={PROP_KINDS}
+      hint="Props are scenery, not tokens. They land where the camera looks and are kept within one cell; turn on edit mode to move, turn and resize them."
       onPick={add}
     />
   )

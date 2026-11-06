@@ -1,6 +1,8 @@
 // Regenerates public/library/index.json by hashing every file under public/library/.
 // Skips index.json, *.md, license.txt and dotfiles. License per entry: first line of a
 // `license.txt` in the same folder or the nearest parent folder, default CC0-1.0.
+// Models under scenes/, props/ and minis/ get a `category` so the pickers can tell a whole room
+// from a crate or a miniature; `kind` stays the asset kind (glb, image, audio, json).
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
@@ -21,6 +23,12 @@ const TYPES = {
   wav: ['audio', 'audio/wav'],
   m4a: ['audio', 'audio/mp4'],
   json: ['json', 'application/json'],
+}
+
+/** What a model is for, from its top-level folder; other folders get none. */
+const CATEGORIES = { scenes: 'scene', props: 'prop', minis: 'mini' }
+function categoryFor(rel) {
+  return CATEGORIES[rel.split('/')[0]]
 }
 
 function licenseFor(dir) {
@@ -49,10 +57,12 @@ for (const file of walk(root)) {
   const bytes = readFileSync(file)
   const ext = base.split('.').pop().toLowerCase()
   const [kind, mime] = TYPES[ext] ?? ['other', 'application/octet-stream']
+  const category = kind === 'glb' ? categoryFor(rel) : undefined
   entries.push({
     sha256: createHash('sha256').update(bytes).digest('hex'),
     path: rel,
     kind,
+    ...(category ? { category } : {}),
     mime,
     size: bytes.length,
     name: base,

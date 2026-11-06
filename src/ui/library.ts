@@ -5,10 +5,32 @@ import type { LibraryEntry } from '@/assets'
 
 export const LIBRARY_BASE = import.meta.env.BASE_URL + 'library/'
 
+/** What a model in the library is for. `kind` stays the asset type (glb, image, audio). */
+export type LibraryCategory = 'scene' | 'prop' | 'mini'
+
+export const CATEGORY_LABEL: Record<LibraryCategory, string> = { scene: 'Scene models', prop: 'Props', mini: 'Minis' }
+
+const FOLDER_CATEGORY: Record<string, LibraryCategory> = { scenes: 'scene', props: 'prop', minis: 'mini' }
+
 let cache: Promise<LibraryEntry[]> | null = null
 export function loadLibraryIndex(): Promise<LibraryEntry[]> {
   cache ??= fetch(LIBRARY_BASE + 'index.json').then((r) => (r.ok ? r.json() : [])).catch(() => [])
   return cache
+}
+
+/**
+ * Category of a library entry: the `category` the index builder writes, or, for an index built
+ * before that field existed, the top-level folder. Anything else (audio, placeholder) has none.
+ */
+export function libraryCategory(e: Pick<LibraryEntry, 'path'> & { category?: string }): LibraryCategory | undefined {
+  const c = e.category
+  if (c === 'scene' || c === 'prop' || c === 'mini') return c
+  return FOLDER_CATEGORY[e.path.split('/')[0] ?? '']
+}
+
+/** GLB entries of one category, so a token or prop picker never offers a whole room. */
+export function libraryModels(entries: readonly LibraryEntry[], category: LibraryCategory): LibraryEntry[] {
+  return entries.filter((e) => e.kind === 'glb' && libraryCategory(e) === category)
 }
 
 export function libraryRef(e: LibraryEntry): AssetRef {

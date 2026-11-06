@@ -1,0 +1,6 @@
+/* Tokens panel: thumb-sized rows on every pointer, a filter above long lists, a row-level Edit shortcut. */
+.tokens-list li { min-height: 44px; }
+.tokens-list li .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tokens-list.long { max-height: min(50vh, 440px); overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.tokens-filter { display: block; width: 100%; min-height: 40px; margin: 0 0 var(--sp-2); }
+.tokens-empty { margin: var(--sp-2) 0; }

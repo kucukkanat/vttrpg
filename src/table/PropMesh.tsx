@@ -12,6 +12,7 @@ import type { SceneId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
 import { footprintWalls, snapTranslation } from './editing'
+import { fitObjectToCell, PROP_FIT } from './fitScale'
 import { useTableUi } from './tableState'
 import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetUrl } from './TokenMesh'
 
@@ -72,16 +73,18 @@ export function PropMesh({ prop }: { prop: Prop }) {
   const position = preview?.position ?? prop.position
   const rotation = preview ? { x: prop.rotation.x, y: preview.rotationY, z: prop.rotation.z } : prop.rotation
   const scale = preview?.scale ?? prop.scale
+  const cell = grid.cellSize
 
-  // Selection outline from the model's own bounds; footprint for line-of-sight from the world
-  // bounds, republished whenever the model or transform changes.
+  // Selection outline from the model's own bounds (times the cell fit GlbMini applies); footprint
+  // for line-of-sight from the world bounds, republished whenever the model or transform changes.
   const local = useMemo(() => (object ? localBounds(object) : null), [object])
+  const fit = useMemo(() => (object ? fitObjectToCell(object, cell, PROP_FIT) : 1), [object, cell])
   const outline = useMemo(() => {
     if (!local || local.isEmpty()) return null
-    const w = Math.max(0.1, local.max.x - local.min.x) * 1.04
-    const d = Math.max(0.1, local.max.z - local.min.z) * 1.04
-    return { geometry: new EdgesGeometry(new PlaneGeometry(w, d)), cx: (local.min.x + local.max.x) / 2, cz: (local.min.z + local.max.z) / 2 }
-  }, [local])
+    const w = Math.max(0.1, (local.max.x - local.min.x) * fit) * 1.04
+    const d = Math.max(0.1, (local.max.z - local.min.z) * fit) * 1.04
+    return { geometry: new EdgesGeometry(new PlaneGeometry(w, d)), cx: (local.min.x + local.max.x) / 2 * fit, cz: (local.min.z + local.max.z) / 2 * fit }
+  }, [local, fit])
   useEffect(() => () => outline?.geometry.dispose(), [outline])
 
   const removeWalls = useCallback(() => {
@@ -168,7 +171,6 @@ export function PropMesh({ prop }: { prop: Prop }) {
   }
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cell = grid.cellSize
   return (
     <group
       ref={group}
@@ -187,7 +189,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
         {url ? (
           <ModelBoundary fallback={<Crate cell={cell} tone="error" />}>
             <Suspense fallback={<Crate cell={cell} tone="loading" />}>
-              <GlbMini url={url} scale={1} onObject={setObject} />
+              <GlbMini url={url} scale={1} fitCell={cell} fitRange={PROP_FIT} onObject={setObject} />
             </Suspense>
           </ModelBoundary>
         ) : (
