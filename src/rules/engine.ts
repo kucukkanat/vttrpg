@@ -129,7 +129,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const scope = contextScope(context)
     const value = await evaluate(formula, scope, stream)
     const dice = stream.dice
-    const total = toNumber(value)
+    // A comparison formula ("d20 <= str") yields the verdict; the number people read is the dice sum.
+    const total = typeof value === 'boolean' ? dice.reduce((n, d) => n + d.value, 0) : toNumber(value)
     let target: number | undefined
     if (typeof context.target === 'number') target = context.target
     else if (typeof context.dc === 'number') target = context.dc

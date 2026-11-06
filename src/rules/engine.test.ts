@@ -51,7 +51,7 @@ describe('roll', () => {
   it('uses a boolean formula as the success flag', async () => {
     const c = mouse('c', 'Pip', { str: 11 })
     const r = await engine.roll('d20 <= str', SEED_A, { character: c })
-    expect(r.total).toBe(r.dice[0].value <= 11 ? 1 : 0)
+    expect(r.total).toBe(r.dice[0].value)
     expect(r.outcome?.success).toBe(r.dice[0].value <= 11)
   })
 

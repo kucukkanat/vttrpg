@@ -43,3 +43,15 @@ describe.each(BUILTIN_PACKS)('sheet rolls: $id', ({ url }) => {
     await expect(engine.roll(field.formula, SEED_A)).rejects.toThrow()
   })
 })
+
+describe('comparison formulas', () => {
+  it('report the dice sum as the total and the verdict as the outcome', async () => {
+    const pack = await loadPack(BUILTIN_PACKS[0]!.url, fileFetch)
+    const rules = createRulesEngine(pack)
+    const character = await rules.generateCharacter('seed-cmp', 'Pip')
+    const r = await rules.roll('d20 <= str', 'cmp-seed-1', { character })
+    expect(r.dice).toHaveLength(1)
+    expect(r.total).toBe(r.dice[0]!.value)
+    expect(typeof r.outcome?.success).toBe('boolean')
+  })
+})

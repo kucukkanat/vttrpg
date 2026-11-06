@@ -31,7 +31,9 @@ const css = `
   animation: gm-callout-in .25s ease;
 }
 .gm-callout--bottom { bottom: calc(var(--sp-4) + var(--sab)); }
-.gm-callout--top { top: var(--sp-2); }
+.gm-callout--top { top: var(--sp-2); left: calc(var(--sp-2) + var(--sal)); transform: none; max-width: calc(100% - 84px - var(--sal) - var(--sar)); }
+.gm-callout--top.gm-callout { animation-name: gm-callout-in-top; }
+@keyframes gm-callout-in-top { from { opacity: 0; transform: translateY(6px); } }
 .gm-callout p { margin: 0; font-size: var(--fs-md); line-height: 1.4; }
 .gm-callout p strong { color: var(--accent); }
 .gm-callout button { flex: none; min-width: 44px; min-height: 44px; padding: 0 var(--sp-3); border-radius: var(--r-md); }
