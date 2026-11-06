@@ -67,6 +67,11 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         scenes.set(intent.scene, merge(s, { ...intent.patch, id: s.id }))
         break
       }
+      case 'scene.remove':
+        // The live scene stays: switching first is the only way to remove it.
+        if (meta.get('activeScene') === intent.scene) return
+        scenes.delete(intent.scene)
+        break
       case 'character.upsert':
         characters.set(intent.character.id, intent.character as unknown as Record<string, unknown>)
         break
@@ -151,12 +156,17 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         const f = fog.get(intent.scene) ?? { scene: intent.scene, revealed: [] }
         const set = new Set(f.revealed)
         for (const c of intent.cells) set.add(c)
-        if (set.size !== f.revealed.length) fog.set(intent.scene, { scene: intent.scene, revealed: [...set] })
+        if (set.size !== f.revealed.length) fog.set(intent.scene, { ...f, scene: intent.scene, revealed: [...set] })
         break
       }
       case 'fog.reset':
         fog.set(intent.scene, { scene: intent.scene, revealed: [] })
         break
+      case 'fog.revealAll': {
+        const f = fog.get(intent.scene) ?? { scene: intent.scene, revealed: [] }
+        if (!f.revealAll) fog.set(intent.scene, { ...f, revealAll: true })
+        break
+      }
     }
   }, from)
 }

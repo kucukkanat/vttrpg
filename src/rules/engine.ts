@@ -170,8 +170,10 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
   }
 
   function validate(intent: Intent, actor: { isGm: boolean; pubkey: string }, docRaw: unknown): string | null {
-    if (actor.isGm) return null
     const doc = docRaw as GameDocShape
+    // Holds for the GM too: the table always has a live scene to show.
+    if (intent.type === 'scene.remove' && doc.meta?.activeScene === intent.scene) return 'switch to another scene before removing the live one'
+    if (actor.isGm) return null
     switch (intent.type) {
       case 'roll':
       case 'chat.say':

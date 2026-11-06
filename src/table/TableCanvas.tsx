@@ -31,9 +31,9 @@ import { GridOverlay } from './GridOverlay'
 import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { Props } from './PropMesh'
-import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
+import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
-import { tableRuntime, useTableUi } from './tableState'
+import { setSceneError, tableRuntime, useTableUi } from './tableState'
 import { stagedSummary, stageTargeting } from './targeting'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import './TargetingBar.css'
@@ -88,6 +88,16 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const [url, setUrl] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<LoadedScene | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Bumped by Retry: resolves and loads the model again without changing the scene.
+  const [modelRetry, setModelRetry] = useState(0)
+  const retryModel = useCallback(() => setModelRetry((n) => n + 1), [])
+  // One readable line on screen and in the Scenes list; the raw error goes to the console.
+  const failLoad = useCallback((stage: string, e: unknown) => {
+    console.error(`scene ${sceneId} ${stage}:`, e)
+    const text = describeLoadError(e)
+    setError(text)
+    setSceneError(sceneId, text)
+  }, [sceneId])
   const uiSet = useTableUi((s) => s.set)
   const gridOn = useTableUi((s) => s.showGrid)
   const cameraOverride = useTableUi((s) => s.cameraOverride)
@@ -115,13 +125,15 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     setUrl(null)
     setLoaded(null)
     setError(null)
+    setSceneError(sceneId, null)
     const m = modelRef.current
     if (!m) return // image-based or empty scene: nothing to load, the placeholder floor is used
-    resolveRef.current(m).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) setError(`asset: ${String(e)}`) })
+    resolveRef.current(m).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) failLoad('asset', e) })
     return () => { live = false }
-  }, [modelKey])
+  }, [modelKey, modelRetry, sceneId, failLoad])
 
-  const handleLoaded = useCallback((s: LoadedScene) => { setLoaded(s); onSceneLoaded?.(s.report) }, [onSceneLoaded])
+  const handleLoaded = useCallback((s: LoadedScene) => { setLoaded(s); setSceneError(sceneId, null); onSceneLoaded?.(s.report) }, [onSceneLoaded, sceneId])
+  const handleLoadError = useCallback((e: unknown) => failLoad('model', e), [failLoad])
 
   // Keyboard shortcuts.
   const cancelTargeting = targeting?.onCancel
@@ -231,7 +243,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
       >
         <color attach="background" args={['#0b0b10']} />
         <TableContext.Provider value={ctx}>
-          {url && <SceneLoaderBridge url={url} onLoaded={handleLoaded} onError={setError} />}
+          {url && <SceneLoaderBridge key={modelRetry} url={url} onLoaded={handleLoaded} onError={handleLoadError} />}
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
@@ -248,7 +260,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
         </TableContext.Provider>
       </Canvas>
       {model && !loaded && !error && <Overlay>Loading scene…</Overlay>}
-      {error && <Overlay tone="error">{error}</Overlay>}
+      {error && <SceneLoadError sceneId={sceneId} name={scene.name} detail={error} gm={gm} onRetry={retryModel} onSwitch={(id) => onIntent({ type: 'scene.activate', scene: id })} />}
       {image && imageStatus?.kind === 'loading' && <Overlay>Loading map…</Overlay>}
       {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
@@ -365,14 +377,14 @@ function CameraShake({ cellSize }: { cellSize: number }) {
 }
 
 /** Loads the GLB inside the canvas so the renderer is available for KTX2 detection. */
-function SceneLoaderBridge({ url, onLoaded, onError }: { url: string; onLoaded(s: LoadedScene): void; onError(msg: string): void }) {
+function SceneLoaderBridge({ url, onLoaded, onError }: { url: string; onLoaded(s: LoadedScene): void; onError(e: unknown): void }) {
   const gl = useThree((s) => s.gl)
   useEffect(() => {
     let live = true
     let result: LoadedScene | null = null
     loadSceneModel(url, { renderer: gl }).then(
       (s) => { if (live) { result = s; onLoaded(s) } else disposeScene(s) },
-      (e: unknown) => { if (live) onError(`scene: ${e instanceof Error ? e.message : String(e)}`) },
+      (e: unknown) => { if (live) onError(e) },
     )
     return () => { live = false; if (result) disposeScene(result) }
   }, [url, gl, onLoaded, onError])
@@ -454,6 +466,35 @@ function MapImageError({ status, onRetry }: { status: Extract<ImageFloorStatus, 
         minHeight: 36, padding: '0 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
         color: '#f3ead8', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
       }}>Retry</button>
+    </div>
+  )
+}
+
+/**
+ * The scene model could not be loaded: says which scene in plain words, offers to try again and,
+ * for the GM, to switch to another scene that is not known to be broken. Details are in the console.
+ */
+function SceneLoadError({ sceneId, name, detail, gm, onRetry, onSwitch }: {
+  sceneId: SceneId; name: string; detail: string; gm: boolean; onRetry(): void; onSwitch(id: SceneId): void
+}) {
+  const scenes = useGame((s) => s.scenes)
+  const sceneErrors = useTableUi((s) => s.sceneErrors)
+  const other = Object.values(scenes).find((s) => s.id !== sceneId && !sceneErrors[s.id]) ?? Object.values(scenes).find((s) => s.id !== sceneId)
+  const button = {
+    minHeight: 44, padding: '0 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
+    color: '#f3ead8', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+  } as const
+  return (
+    <div role="alert" style={{
+      position: 'absolute', left: 12, bottom: 12, maxWidth: 'min(440px, calc(100% - 24px))', padding: '8px 10px', borderRadius: 6, fontSize: 13,
+      background: 'rgba(120,30,30,0.9)', color: '#f3ead8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+    }}>
+      <span style={{ flex: '1 1 160px', minWidth: 0 }}>
+        <strong>Couldn't load {name}</strong>
+        <span style={{ display: 'block', opacity: 0.85, overflowWrap: 'anywhere' }}>{detail}</span>
+      </span>
+      <button type="button" onClick={onRetry} style={button}>Retry</button>
+      {gm && other && <button type="button" onClick={() => onSwitch(other.id)} style={button}>Switch scene</button>}
     </div>
   )
 }

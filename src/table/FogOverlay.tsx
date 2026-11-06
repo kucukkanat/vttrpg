@@ -11,7 +11,7 @@ import type { Token } from '@/core/doc'
 import type { Bounds2 } from './grid'
 import { revealsFor, useTable } from './context'
 import { useTableUi } from './tableState'
-import { computeVisibleCells, fogRasterLayout, rasterizeFog, type Viewer2D } from './vision'
+import { ALL_CELLS, computeVisibleCells, exploredCells, fogRasterLayout, fogStrength, isFogEnabled, rasterizeFog, type CellSet, type Viewer2D } from './vision'
 import type { WallSegment } from './walls'
 
 const noRaycast = () => undefined
@@ -76,13 +76,18 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, sceneTokens, viewer, visibleReveal, walls, drag])
 
-  const explored = useMemo(() => new Set(fog?.revealed ?? []), [fog])
+  const explored = useMemo(() => exploredCells(fog), [fog])
+  const fogOn = isFogEnabled(scene)
 
   // Optimistically remember what we already asked to reveal, so we do not re-send every render.
-  const pending = useRef<{ scene: string; cells: Set<string> }>({ scene: sceneId, cells: new Set() })
+  const pending = useRef<{ scene: string; cells: Set<string>; explored: number }>({ scene: sceneId, cells: new Set(), explored: 0 })
   useEffect(() => {
-    if (pending.current.scene !== sceneId) pending.current = { scene: sceneId, cells: new Set() }
-    if (drag) return // wait for the drop; the committed position decides what was revealed
+    if (pending.current.scene !== sceneId) pending.current = { scene: sceneId, cells: new Set(), explored: 0 }
+    // The explored set shrank (fog reset): forget what was sent so the cells in sight go out again.
+    const count = fog?.revealed.length ?? 0
+    if (count < pending.current.explored) pending.current.cells.clear()
+    pending.current.explored = count
+    if (drag || !fogOn || explored === ALL_CELLS) return // wait for the drop; the committed position decides what was revealed
     const fresh: string[] = []
     for (const k of visibleReveal) {
       if (explored.has(k) || pending.current.cells.has(k)) continue
@@ -90,7 +95,7 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
       fresh.push(k)
     }
     if (fresh.length) onIntent({ type: 'fog.reveal', scene: sceneId, cells: fresh })
-  }, [visibleReveal, explored, sceneId, drag, onIntent])
+  }, [visibleReveal, explored, fog, fogOn, sceneId, drag, onIntent])
 
   const layout = useMemo(() => fogRasterLayout(grid, bounds, 4), [grid, bounds])
   const texture = useMemo(() => {
@@ -117,23 +122,27 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
   useEffect(() => () => material.dispose(), [material])
 
   useEffect(() => {
-    const all = new Set(explored)
-    for (const k of pending.current.cells) all.add(k)
+    let all: CellSet = explored
+    if (explored instanceof Set) {
+      const merged = new Set(explored)
+      for (const k of pending.current.cells) merged.add(k)
+      all = merged
+    }
     rasterizeFog(grid, layout, visibleDisplay, all, texture.image.data as Uint8Array)
     texture.needsUpdate = true
   }, [grid, layout, visibleDisplay, explored, texture])
 
-  const darkness = Math.min(1, Math.max(0, scene.darkness))
+  const strength = fogStrength(scene)
   const gm = !viewer || viewer.isGm
   const uiSet = useTableUi((s) => s.set)
   useEffect(() => {
-    uiSet({ visible: darkness > 0 ? visibleDisplay : null })
+    uiSet({ visible: fogOn ? visibleDisplay : null })
     return () => uiSet({ visible: null })
-  }, [visibleDisplay, darkness, uiSet])
-  material.uniforms.uDark!.value = (gm ? (brightFloor ? 0.6 : 0.4) : (brightFloor ? 0.97 : 0.94)) * darkness
-  material.uniforms.uDim!.value = (gm ? (brightFloor ? 0.3 : 0.18) : (brightFloor ? 0.72 : 0.6)) * darkness
+  }, [visibleDisplay, fogOn, uiSet])
+  material.uniforms.uDark!.value = (gm ? (brightFloor ? 0.6 : 0.4) : (brightFloor ? 0.97 : 0.94)) * strength
+  material.uniforms.uDim!.value = (gm ? (brightFloor ? 0.3 : 0.18) : (brightFloor ? 0.72 : 0.6)) * strength
 
-  if (darkness <= 0) return null
+  if (!fogOn) return null
   const w = bounds.maxX - bounds.minX
   const h = bounds.maxZ - bounds.minZ
   return (

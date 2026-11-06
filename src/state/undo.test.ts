@@ -56,6 +56,26 @@ describe('captureUndo', () => {
     expect(captureUndo({ type: 'fog.reset', scene }, snapshot({ fog: {} }))).toBeNull()
     expect(captureUndo({ type: 'fog.reset', scene }, snapshot({ fog: { [scene]: { scene, revealed: [] } } }))).toBeNull()
   })
+  it('inverts scene.remove into scene.add, except for the live scene', () => {
+    const e = captureUndo({ type: 'scene.remove', scene }, snapshot(), 7)
+    expect(e?.label).toBe('Removed Dungeon')
+    expect(e?.inverse).toEqual([{ type: 'scene.add', scene: snapshot().scenes[scene] }])
+    expect(captureUndo({ type: 'scene.remove', scene }, snapshot({ meta: { activeScene: scene } }))).toBeNull()
+    expect(captureUndo({ type: 'scene.remove', scene: 'nope' as SceneId }, snapshot())).toBeNull()
+  })
+  it('inverts fog.revealAll into a reset followed by the cells explored before', () => {
+    const e = captureUndo({ type: 'fog.revealAll', scene }, snapshot())
+    expect(e?.label).toBe('Revealed all of Dungeon')
+    expect(e?.inverse).toEqual([{ type: 'fog.reset', scene }, { type: 'fog.reveal', scene, cells: ['0,0', '1,0', '1,1'] }])
+    expect(captureUndo({ type: 'fog.revealAll', scene }, snapshot({ fog: {} }))?.inverse).toEqual([{ type: 'fog.reset', scene }])
+    expect(captureUndo({ type: 'fog.revealAll', scene }, snapshot({ fog: { [scene]: { scene, revealed: [], revealAll: true } } }))).toBeNull()
+  })
+  it('restores a full reveal when a reset is undone', () => {
+    const e = captureUndo({ type: 'fog.reset', scene }, snapshot({ fog: { [scene]: { scene, revealed: ['0,0'], revealAll: true } } }))
+    expect(e?.inverse).toEqual([{ type: 'fog.reveal', scene, cells: ['0,0'] }, { type: 'fog.revealAll', scene }])
+    const only = captureUndo({ type: 'fog.reset', scene }, snapshot({ fog: { [scene]: { scene, revealed: [], revealAll: true } } }))
+    expect(only?.inverse).toEqual([{ type: 'fog.revealAll', scene }])
+  })
   it('ignores non-destructive intents', () => {
     expect(captureUndo({ type: 'token.add', token }, snapshot())).toBeNull()
     expect(captureUndo({ type: 'token.move', token: token.id, position: { x: 0, y: 0, z: 0 } }, snapshot())).toBeNull()

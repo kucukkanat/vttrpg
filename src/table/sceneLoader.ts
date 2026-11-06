@@ -100,6 +100,21 @@ export function createGltfLoader(opts: LoadSceneOptions = {}): GLTFLoader {
   return loader
 }
 
+/**
+ * One readable sentence for a failed scene load, for the table banner and the Scenes list. The raw
+ * error (asset resolution trail, HTTP status, parser output) belongs in the console, not on screen.
+ */
+export function describeLoadError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e)
+  const msg = raw.toLowerCase()
+  if (/404|not found|could not resolve|no sources/.test(msg)) return 'The model file could not be found.'
+  if (/hash mismatch|checksum/.test(msg)) return 'The downloaded file does not match the one the scene expects.'
+  if (/failed to fetch|network|load failed|timed out|offline/.test(msg)) return 'The model could not be downloaded. Check the connection and try again.'
+  if (/abort/.test(msg)) return 'Loading was interrupted.'
+  if (/gltf|glb|json|unexpected|parse|invalid|magic|version|draco|ktx|basis|extension/.test(msg)) return 'The file is not a GLB this app can read.'
+  return raw.length > 120 ? `${raw.slice(0, 119)}…` : raw
+}
+
 export async function loadSceneModel(url: string, opts: LoadSceneOptions = {}): Promise<LoadedScene> {
   const loader = createGltfLoader(opts)
   const gltf = await loader.loadAsync(url)

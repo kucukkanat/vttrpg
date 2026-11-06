@@ -77,7 +77,12 @@ export const useGame = create<GameState>((set) => ({
   selection: null,
   setSelection: (sel) => set({ selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null }),
   setPresence: (p) => set((s) => ({ presence: { ...s.presence, [p.pubkey]: p } })),
-  _replaceFromDoc: (partial) => set(partial),
+  // A scene switch drops the selection: the selected object belongs to the scene that was live.
+  _replaceFromDoc: (partial) => set((s) => {
+    const next = 'meta' in partial ? partial.meta?.activeScene ?? null : s.meta?.activeScene ?? null
+    const prev = s.meta?.activeScene ?? null
+    return next !== prev && s.selection ? { ...partial, selection: null, selectedToken: null } : partial
+  }),
 }))
 
 /**

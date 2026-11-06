@@ -27,6 +27,34 @@ describe('applyIntent', () => {
     applyIntent(doc, env({ type: 'fog.reveal', scene: 's1' as SceneId, cells: ['1,0', '2,0'] }))
     expect(doc.getMap('fog').get('s1')).toMatchObject({ revealed: ['0,0', '1,0', '2,0'] })
   })
+  it('marks the whole map revealed and keeps the flag across reveals until a reset', () => {
+    const doc = new Y.Doc()
+    const scene = 's1' as SceneId
+    applyIntent(doc, env({ type: 'fog.reveal', scene, cells: ['0,0'] }))
+    applyIntent(doc, env({ type: 'fog.revealAll', scene }))
+    expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: ['0,0'], revealAll: true })
+    applyIntent(doc, env({ type: 'fog.reveal', scene, cells: ['1,0'] }))
+    expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: ['0,0', '1,0'], revealAll: true })
+    applyIntent(doc, env({ type: 'fog.reset', scene }))
+    expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: [] })
+  })
+  it('removes a scene but never the live one, and leaves its tokens in place', () => {
+    const doc = new Y.Doc()
+    const grid = { type: 'square' as const, cellSize: 1, origin: { x: 0, y: 0, z: 0 } }
+    const s1 = { id: 's1' as SceneId, name: 'One', grid, cameraMode: 'orbit' as const, darkness: 0.5 }
+    const s2 = { id: 's2' as SceneId, name: 'Two', grid, cameraMode: 'orbit' as const, darkness: 0.5 }
+    applyIntent(doc, env({ type: 'scene.add', scene: s1 }))
+    applyIntent(doc, env({ type: 'scene.add', scene: s2 }))
+    applyIntent(doc, env({ type: 'scene.activate', scene: s1.id }))
+    applyIntent(doc, env({ type: 'token.add', token: { ...token, scene: s2.id } }))
+    applyIntent(doc, env({ type: 'scene.remove', scene: s1.id }))
+    expect(doc.getMap('scenes').has(s1.id)).toBe(true)
+    applyIntent(doc, env({ type: 'scene.remove', scene: s2.id }))
+    expect(doc.getMap('scenes').has(s2.id)).toBe(false)
+    expect(doc.getMap<Token>('tokens').get(token.id)?.scene).toBe(s2.id)
+    applyIntent(doc, env({ type: 'scene.add', scene: s2 }))
+    expect(doc.getMap('scenes').get(s2.id)).toEqual(s2)
+  })
   it('records rolls in chat', () => {
     const doc = new Y.Doc()
     applyIntent(doc, env({ type: 'roll', formula: 'd20', seed: 'x' }), {

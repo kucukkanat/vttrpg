@@ -1,0 +1,25 @@
+/* Scenes panel: scene rows with Live / Switch, camera and remove controls, and the fog block. */
+
+.scenes-list li { cursor: default; }
+@media (hover: hover) { .scenes-list li:not(.selected):hover { background: transparent; } }
+.scenes-list li:not(.selected):active { background: transparent; }
+/* The live row has to read as live at a glance, not as a faint tint. */
+.scenes-list li.selected { box-shadow: inset 3px 0 0 var(--accent); }
+
+.scene-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-1); }
+.scene-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scene-warn { flex: none; color: var(--danger); font-size: var(--fs-md); line-height: 1; }
+
+.scene-live {
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  background: var(--accent); color: var(--accent-fg);
+}
+/* Switching is the main action on a row: always a comfortable target, even with a mouse. */
+.scene-switch { flex: none; min-height: 44px; min-width: 44px; }
+.scene-camera svg { display: block; }
+.scene-remove:disabled { opacity: .35; }
+
+.fog-block { margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); }
+.fog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.fog-block .row { margin-top: 0; }

@@ -43,3 +43,12 @@ export function libraryRef(e: LibraryEntry): AssetRef {
     sources: [new URL(LIBRARY_BASE + e.path, window.location.href).toString()],
   }
 }
+
+/**
+ * Display name for a library file: "forest-clearing.glb" -> "Forest clearing". Separators become
+ * spaces, the first letter is capitalised and the rest is left alone (so "Old Mill" stays).
+ */
+export function titleCase(fileName: string): string {
+  const base = fileName.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+  return base ? base[0]!.toUpperCase() + base.slice(1) : fileName
+}

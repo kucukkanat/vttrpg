@@ -17,6 +17,12 @@ export type Intent =
   | { type: 'scene.add'; scene: Scene }
   | { type: 'scene.activate'; scene: SceneId }
   | { type: 'scene.update'; scene: SceneId; patch: Partial<Scene> }
+  /**
+   * GM only; the active scene cannot be removed. Deletes the scene record only: its tokens, props
+   * and fog state stay in the document (nothing renders them while the scene is gone), so undoing
+   * with `scene.add` brings the scene back exactly as it was.
+   */
+  | { type: 'scene.remove'; scene: SceneId }
   | { type: 'character.upsert'; character: Character }
   | { type: 'character.remove'; character: CharacterId }
   | { type: 'chat.say'; text: string; to?: PlayerPubkey[] }
@@ -24,6 +30,8 @@ export type Intent =
   | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string }
   | { type: 'fog.reveal'; scene: SceneId; cells: string[] }
   | { type: 'fog.reset'; scene: SceneId }
+  /** GM only: mark the whole scene explored (sets `FogState.revealAll`); `fog.reset` clears it again. */
+  | { type: 'fog.revealAll'; scene: SceneId }
   /** A player takes an unowned token (or the GM assigns an owner). */
   | { type: 'token.claim'; token: TokenId; owner?: PlayerPubkey }
   /** GM soundboard: one-shot sound for everyone. */

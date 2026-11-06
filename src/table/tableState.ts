@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 import type { CameraMode } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
-import type { PropId, TokenId } from '@/core/ids'
+import type { PropId, SceneId, TokenId } from '@/core/ids'
 import type { Selection } from '@/state/store'
 import type { GizmoMode, NodeBase } from './editing'
 import type { WallSegment } from './walls'
@@ -97,6 +97,8 @@ export interface TableUiState {
    * Null while no table is mounted.
    */
   cameraActive: { mode: CameraMode; canFollow: boolean } | null
+  /** Scenes whose model failed to load on this client, with the reason; cleared when a load succeeds. */
+  sceneErrors: Record<SceneId, string>
   set(partial: Partial<Omit<TableUiState, 'set' | 'focusToken'>>): void
 }
 
@@ -119,6 +121,7 @@ export const useTableUi = create<TableUiState>((set) => ({
   propWalls: {} as Record<PropId, WallSegment[]>,
   focusToken: (id) => set((s) => ({ focusRequest: { id, n: (s.focusRequest?.n ?? 0) + 1 } })),
   cameraActive: null,
+  sceneErrors: {} as Record<SceneId, string>,
   set: (partial) => set(partial),
 }))
 
@@ -140,6 +143,16 @@ export function clearPendingMove(token: TokenId): void {
     delete pending[token]
     return { pending }
   })
+}
+
+/** Record (or with `error` null, clear) a scene model load failure for the Scenes list and the table banner. */
+export function setSceneError(scene: SceneId, error: string | null): void {
+  const { sceneErrors, set } = useTableUi.getState()
+  if (error === null ? !(scene in sceneErrors) : sceneErrors[scene] === error) return
+  const next = { ...sceneErrors }
+  if (error === null) delete next[scene]
+  else next[scene] = error
+  set({ sceneErrors: next })
 }
 
 /**

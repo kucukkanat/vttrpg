@@ -2,9 +2,48 @@
  * Fog of war: which cells a set of viewers can see, and a rasteriser that turns cell states into
  * a texture the fog overlay samples. Pure; no three.js.
  */
+import type { FogState, Scene } from '@/core/doc'
 import type { GridSpec } from '@/core/geometry'
 import { cellKey, cellsWithinRadius, cellToWorld, worldToCell, type Bounds2 } from './grid'
 import { hasLineOfSight, type WallSegment } from './walls'
+
+/** Anything with `has(key)`: a Set of cell keys, or `ALL_CELLS`. */
+export interface CellSet { has(key: string): boolean }
+
+/** The explored set once the GM has revealed the whole map. */
+export const ALL_CELLS: CellSet = { has: () => true }
+
+/**
+ * Whether fog of war is on for a scene. `fogEnabled` decides when set; before it existed fog
+ * followed the darkness slider (any darkness = fog), and scenes without the flag keep that rule.
+ */
+export function isFogEnabled(scene: Pick<Scene, 'darkness' | 'fogEnabled'>): boolean {
+  return scene.fogEnabled ?? scene.darkness > 0
+}
+
+/**
+ * How opaque the fog draws, 0..1. Legacy scenes scale it by darkness as they always did; once the
+ * GM has set the toggle the fog is a real fog even on a bright scene, so it never drops below half.
+ */
+export function fogStrength(scene: Pick<Scene, 'darkness' | 'fogEnabled'>): number {
+  if (!isFogEnabled(scene)) return 0
+  const d = Math.min(1, Math.max(0, scene.darkness))
+  return scene.fogEnabled === undefined ? d : Math.max(0.5, d)
+}
+
+/** The cells a viewer has explored according to the document: everything after `fog.revealAll`. */
+export function exploredCells(fog: FogState | undefined): CellSet {
+  if (fog?.revealAll) return ALL_CELLS
+  return new Set(fog?.revealed ?? [])
+}
+
+/** One-line fog status for the Scenes panel: "fog off", "fog on · all revealed", "fog on · 42 cells explored". */
+export function fogStatus(scene: Pick<Scene, 'darkness' | 'fogEnabled'>, fog: FogState | undefined): string {
+  if (!isFogEnabled(scene)) return 'fog off'
+  if (fog?.revealAll) return 'fog on · all revealed'
+  const n = fog?.revealed.length ?? 0
+  return `fog on · ${n} ${n === 1 ? 'cell' : 'cells'} explored`
+}
 
 export interface Viewer2D {
   x: number
@@ -58,8 +97,8 @@ export function fogRasterLayout(grid: GridSpec, bounds: Bounds2, texelsPerCell =
 export function rasterizeFog(
   grid: GridSpec,
   layout: Omit<FogRaster, 'data'>,
-  visible: ReadonlySet<string>,
-  explored: ReadonlySet<string>,
+  visible: CellSet,
+  explored: CellSet,
   data: Uint8Array = new Uint8Array(layout.width * layout.height),
 ): FogRaster {
   const { width, height, bounds } = layout
