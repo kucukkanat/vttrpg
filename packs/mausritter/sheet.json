@@ -1,0 +1,68 @@
+{
+  "sections": [
+    {
+      "title": "Identity",
+      "columns": 2,
+      "fields": [
+        { "kind": "text", "bind": "name", "label": "Name" },
+        { "kind": "text", "bind": "background", "label": "Background" },
+        { "kind": "text", "bind": "birthsign", "label": "Birthsign" },
+        { "kind": "text", "bind": "disposition", "label": "Disposition" },
+        { "kind": "text", "bind": "coat.color", "label": "Coat color" },
+        { "kind": "text", "bind": "coat.pattern", "label": "Coat pattern" },
+        { "kind": "text", "bind": "detail", "label": "Physical detail" },
+        { "kind": "number", "bind": "level", "label": "Level" },
+        { "kind": "number", "bind": "xp", "label": "XP" },
+        { "kind": "number", "bind": "grit", "label": "Grit" }
+      ]
+    },
+    {
+      "title": "Stats",
+      "columns": 3,
+      "fields": [
+        { "kind": "resource", "bind": "str", "label": "STR" },
+        { "kind": "resource", "bind": "dex", "label": "DEX" },
+        { "kind": "resource", "bind": "wil", "label": "WIL" },
+        { "kind": "roll", "label": "STR save", "formula": "d20 <= str" },
+        { "kind": "roll", "label": "DEX save", "formula": "d20 <= dex" },
+        { "kind": "roll", "label": "WIL save", "formula": "d20 <= wil" }
+      ]
+    },
+    {
+      "title": "Vitals",
+      "columns": 2,
+      "fields": [
+        { "kind": "resource", "bind": "hp", "label": "Hit Protection" },
+        { "kind": "resource", "bind": "pips", "label": "Pips" }
+      ]
+    },
+    {
+      "title": "Inventory",
+      "fields": [
+        {
+          "kind": "inventory-grid",
+          "bind": "inventory",
+          "label": "Carried",
+          "cols": 2,
+          "rows": 5,
+          "slotLabels": ["Main paw", "Off paw", "Body", "Body"]
+        }
+      ]
+    },
+    {
+      "title": "Conditions",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "conditions",
+          "label": "Active conditions",
+          "item": [{ "kind": "text", "bind": ".", "label": "Condition" }]
+        }
+      ]
+    },
+    {
+      "title": "Notes",
+      "fields": [{ "kind": "text", "bind": "notes", "label": "Notes", "multiline": true }]
+    }
+  ]
+}

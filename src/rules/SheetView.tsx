@@ -172,7 +172,7 @@ function Field({ field, character, onChange, onRoll, readOnly }: { field: SheetF
               </div>
             ))}
             {!readOnly && (
-              <button type="button" onClick={() => update([...items, {}])}>
+              <button type="button" onClick={() => update([...items, isScalarList(field.item) ? '' : {}])}>
                 Add
               </button>
             )}
@@ -189,7 +189,12 @@ function Field({ field, character, onChange, onRoll, readOnly }: { field: SheetF
   }
 }
 
+/** A list whose single item field binds to "." holds plain values (e.g. condition ids) instead of objects. */
+function isScalarList(item: SheetField[]): boolean {
+  return item.length === 1 && item[0].kind !== 'roll' && item[0].bind === '.'
+}
+
 function prefixBind(field: SheetField, prefix: string): SheetField {
   if (field.kind === 'roll') return field
-  return { ...field, bind: `${prefix}.${field.bind}` } as SheetField
+  return { ...field, bind: field.bind === '.' ? prefix : `${prefix}.${field.bind}` } as SheetField
 }

@@ -450,9 +450,10 @@ export class DiceStream {
   }
 
   async run<T>(fn: (dice: SyncDice) => T): Promise<T> {
+    const base = this.committed.length
     let known = this.committed
     for (;;) {
-      let i = 0
+      let i = base
       const source: SyncDice = {
         next: (sides) => {
           if (i < known.length) {
