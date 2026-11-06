@@ -140,8 +140,8 @@ describe('applyTemplate', () => {
     const add = intents[0] as Extract<Intent, { type: 'scene.add' }>
     expect(add.scene.id).toBe(r.sceneId)
     expect(add.scene.name).toBe('The Thistle & Thimble')
-    expect(add.scene.model.sha256).toBe(findSceneEntry(index, t)!.sha256)
-    expect(add.scene.model.sources).toEqual(['http://localhost:5173/library/scenes/tavern.glb'])
+    expect(add.scene.model!.sha256).toBe(findSceneEntry(index, t)!.sha256)
+    expect(add.scene.model!.sources).toEqual(['http://localhost:5173/library/scenes/tavern.glb'])
     expect(add.scene.grid).toEqual(t.grid)
     expect(add.scene.cameraMode).toBe('orbit')
     expect(add.scene.darkness).toBe(0.7)

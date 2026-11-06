@@ -4,8 +4,9 @@
  * optimistically and roll back if the GM's delta disagrees.
  */
 import type { Vec3 } from './geometry'
-import type { CharacterId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop } from './doc'
+import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
+import type { Token, Character, Scene, Prop, Note } from './doc'
+import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
 export type Intent =
@@ -33,6 +34,12 @@ export type Intent =
   | { type: 'prop.add'; prop: Prop }
   | { type: 'prop.update'; prop: PropId; patch: Partial<Prop> }
   | { type: 'prop.remove'; prop: PropId }
+  /** Journal and handouts (GM only). */
+  | { type: 'note.upsert'; note: Note }
+  | { type: 'note.remove'; note: NoteId }
+  /** Custom skills for this game (GM only). */
+  | { type: 'skill.upsert'; skill: SkillDef }
+  | { type: 'skill.remove'; skill: SkillId }
 
 export interface IntentEnvelope {
   id: string

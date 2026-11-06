@@ -101,7 +101,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
   // recreates `scene` on every document sync and the model must not reload for a chat message.
   const model = scene.model
-  const modelKey = `${model.sha256}|${model.sources.join(',')}`
+  const modelKey = model ? `${model.sha256}|${model.sources.join(',')}` : ''
   const modelRef = useRef(model)
   modelRef.current = model
   const resolveRef = useRef(resolve)
@@ -111,7 +111,9 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     setUrl(null)
     setLoaded(null)
     setError(null)
-    resolveRef.current(modelRef.current).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) setError(`asset: ${String(e)}`) })
+    const m = modelRef.current
+    if (!m) return // image-based or empty scene: nothing to load, the placeholder floor is used
+    resolveRef.current(m).then((u) => { if (live) setUrl(u) }, (e: unknown) => { if (live) setError(`asset: ${String(e)}`) })
     return () => { live = false }
   }, [modelKey])
 

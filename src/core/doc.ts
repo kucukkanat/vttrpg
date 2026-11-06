@@ -5,8 +5,8 @@
  */
 import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
-import type { CharacterId, PackId, PlayerPubkey, PropId, SceneId, TokenId } from './ids'
-import type { VfxCue } from './pack'
+import type { CharacterId, NoteId, PackId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
+import type { SkillDef, VfxCue } from './pack'
 
 export type CameraMode = 'orbit' | 'token'
 
@@ -22,8 +22,12 @@ export interface GameMeta {
 export interface Scene {
   id: SceneId
   name: string
-  /** GLB following the Blender naming convention (see PLAN.md). */
-  model: AssetRef
+  /** GLB following the Blender naming convention (see PLAN.md). Omitted for image-based scenes. */
+  model?: AssetRef
+  /** A flat map image used as the floor (imported battle maps). The grid is laid over it. */
+  image?: { asset: AssetRef; widthCells: number; heightCells: number; offset?: Vec3 }
+  /** Wall segments on the XZ plane for line-of-sight when there is no COL_* geometry (imported maps). */
+  walls?: { a: { x: number; z: number }; b: { x: number; z: number } }[]
   grid: GridSpec
   cameraMode: CameraMode
   ambientAudio?: AssetRef
@@ -136,6 +140,20 @@ export type GameEvent =
   | { id: string; at: number; kind: 'vfx'; cues: VfxCue[]; scene: SceneId; source?: TokenId; targets: TokenId[]; point?: Vec3; label?: string }
   | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
 
+/** GM journal entry or handout. Markdown body; optional image. */
+export interface Note {
+  id: NoteId
+  title: string
+  body: string
+  image?: AssetRef
+  /** 'gm' = private, 'all' = every player, or an explicit list of pubkeys. */
+  sharedWith: 'gm' | 'all' | PlayerPubkey[]
+  /** Pinned notes show as handouts at the top of the Journal panel. */
+  pinned?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
 export interface GameDocShape {
   meta: GameMeta
   scenes: Record<SceneId, Scene>
@@ -145,6 +163,9 @@ export interface GameDocShape {
   fog: Record<SceneId, FogState>
   events: GameEvent[]
   props: Record<PropId, Prop>
+  notes: Record<NoteId, Note>
+  /** Skills created or overridden in this game; merged over the pack's skills by id. */
+  customSkills: Record<SkillId, SkillDef>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills'] as const

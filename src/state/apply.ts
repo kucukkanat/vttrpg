@@ -3,7 +3,8 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, Prop, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, Note, Prop, RollResult, Scene, Token } from '@/core/doc'
+import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
 
@@ -31,6 +32,8 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const meta = doc.getMap<unknown>('meta')
   const events = doc.getArray<GameEvent>('events')
   const props = doc.getMap<Prop>('props')
+  const notes = doc.getMap<Note>('notes')
+  const customSkills = doc.getMap<SkillDef>('customSkills')
 
   doc.transact(() => {
     switch (intent.type) {
@@ -119,6 +122,18 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       }
       case 'prop.remove':
         props.delete(intent.prop)
+        break
+      case 'note.upsert':
+        notes.set(intent.note.id, intent.note)
+        break
+      case 'note.remove':
+        notes.delete(intent.note)
+        break
+      case 'skill.upsert':
+        customSkills.set(intent.skill.id, intent.skill)
+        break
+      case 'skill.remove':
+        customSkills.delete(intent.skill)
         break
       case 'event.prune': {
         const keep = events.toArray().filter((e) => e.at >= intent.before).length

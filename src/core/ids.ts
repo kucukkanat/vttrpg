@@ -10,6 +10,7 @@ export type AssetHash = Brand<string, 'AssetHash'> // sha256 hex
 export type PackId = Brand<string, 'PackId'>
 export type SkillId = Brand<string, 'SkillId'>
 export type PropId = Brand<string, 'PropId'>
+export type NoteId = Brand<string, 'NoteId'>
 
 export function newId<T extends string>(): Brand<string, T> {
   return crypto.randomUUID() as Brand<string, T>
