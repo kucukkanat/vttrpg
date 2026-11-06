@@ -25,6 +25,8 @@ export interface PanelDef {
   scope: 'all' | 'gm'
   /** Preferred desktop column. */
   side: 'left' | 'right'
+  /** Takes the remaining height when stacked with others (chat); default false. */
+  fill?: boolean
 }
 
 export const PANELS: PanelDef[] = [
@@ -35,5 +37,5 @@ export const PANELS: PanelDef[] = [
   { id: 'players', title: 'Players', short: 'Players', glyph: '👥', component: PlayersPanel, scope: 'all', side: 'left' },
   { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right' },
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: '✦', component: SkillsPanel, scope: 'all', side: 'right' },
-  { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right' },
+  { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right', fill: true },
 ]
