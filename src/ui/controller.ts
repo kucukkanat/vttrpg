@@ -43,7 +43,7 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events }
   }
 
   async function resolveContext(env: IntentEnvelope): Promise<ApplyContext> {
@@ -65,7 +65,7 @@ export function createController(opts: {
         .filter((c): c is Character => !!c)
       if (source) {
         const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed)
-        ctx.skill = { patches: r.patches, messages: r.messages }
+        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx }
       }
     }
     return ctx

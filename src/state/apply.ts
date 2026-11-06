@@ -3,14 +3,15 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, RollResult, Scene, Token } from '@/core/doc'
+import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
 
 export interface ApplyContext {
   /** Resolved roll for 'roll' intents (the GM computes it from the seed). */
   roll?: RollResult
   /** Character patches + messages produced by the rules engine for 'skill.use'. */
-  skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[] }
+  skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[] }
 }
 
 export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext = {}): void {
@@ -21,6 +22,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const chat = doc.getArray<ChatMessage>('chat')
   const fog = doc.getMap<FogState>('fog')
   const meta = doc.getMap<unknown>('meta')
+  const events = doc.getArray<GameEvent>('events')
 
   doc.transact(() => {
     switch (intent.type) {
@@ -83,6 +85,25 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         for (const text of ctx.skill?.messages ?? []) {
           chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text }])
         }
+        const src = tokens.get(intent.source)
+        if (ctx.skill?.vfx?.length && src) {
+          events.push([{ id: env.id, at, kind: 'vfx', cues: ctx.skill.vfx, scene: src.scene, source: intent.source, targets: intent.targets, point: intent.point, label: intent.skill }])
+        }
+        break
+      }
+      case 'token.claim': {
+        const t = tokens.get(intent.token)
+        if (!t) return
+        tokens.set(intent.token, { ...t, owner: intent.owner ?? from })
+        break
+      }
+      case 'audio.play':
+        events.push([{ id: env.id, at, kind: 'audio', asset: intent.asset, volume: intent.volume, by: from }])
+        break
+      case 'event.prune': {
+        const keep = events.toArray().filter((e) => e.at >= intent.before).length
+        const drop = events.length - keep
+        if (drop > 0) events.delete(0, drop)
         break
       }
       case 'fog.reveal': {

@@ -164,6 +164,12 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       case 'roll':
       case 'chat.say':
         return null
+      case 'token.claim': {
+        const t = doc.tokens?.[intent.token]
+        if (!t) return 'unknown token'
+        if (intent.owner && intent.owner !== actor.pubkey) return 'only the GM may assign tokens to others'
+        return t.owner && t.owner !== actor.pubkey ? 'that token already has an owner' : null
+      }
       case 'token.move':
       case 'token.update': {
         const t = doc.tokens?.[intent.token]

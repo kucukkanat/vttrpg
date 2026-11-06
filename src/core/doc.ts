@@ -6,6 +6,7 @@
 import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
 import type { CharacterId, PackId, PlayerPubkey, SceneId, TokenId } from './ids'
+import type { VfxCue } from './pack'
 
 export type CameraMode = 'orbit' | 'token'
 
@@ -28,6 +29,8 @@ export interface Scene {
   ambientAudio?: AssetRef
   /** Fog regions that start hidden; cells revealed are tracked in `fog`. */
   darkness: number // 0..1, 0 = fully lit outdoors
+  /** Weather preset rendered by the table's WeatherLayer. */
+  weather?: 'none' | 'rain' | 'snow' | 'fog' | 'embers'
 }
 
 export interface Token {
@@ -89,6 +92,14 @@ export interface FogState {
   revealed: string[]
 }
 
+/**
+ * Transient, broadcast-once happenings: VFX to play, one-shot sounds. Appended by the GM,
+ * rendered by every client once (ignore events older than your join time), pruned by the GM.
+ */
+export type GameEvent =
+  | { id: string; at: number; kind: 'vfx'; cues: VfxCue[]; scene: SceneId; source?: TokenId; targets: TokenId[]; point?: Vec3; label?: string }
+  | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
+
 export interface GameDocShape {
   meta: GameMeta
   scenes: Record<SceneId, Scene>
@@ -96,6 +107,7 @@ export interface GameDocShape {
   characters: Record<CharacterId, Character>
   chat: ChatMessage[]
   fog: Record<SceneId, FogState>
+  events: GameEvent[]
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events'] as const

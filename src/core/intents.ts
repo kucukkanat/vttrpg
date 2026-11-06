@@ -6,6 +6,7 @@
 import type { Vec3 } from './geometry'
 import type { CharacterId, PlayerPubkey, SceneId, SkillId, TokenId } from './ids'
 import type { Token, Character, Scene } from './doc'
+import type { AssetRef } from './assets'
 
 export type Intent =
   | { type: 'token.move'; token: TokenId; position: Vec3; rotationY?: number }
@@ -22,6 +23,12 @@ export type Intent =
   | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string }
   | { type: 'fog.reveal'; scene: SceneId; cells: string[] }
   | { type: 'fog.reset'; scene: SceneId }
+  /** A player takes an unowned token (or the GM assigns an owner). */
+  | { type: 'token.claim'; token: TokenId; owner?: PlayerPubkey }
+  /** GM soundboard: one-shot sound for everyone. */
+  | { type: 'audio.play'; asset: AssetRef; volume?: number }
+  /** GM housekeeping: drop events older than `before`. */
+  | { type: 'event.prune'; before: number }
 
 export interface IntentEnvelope {
   id: string
