@@ -1,8 +1,20 @@
+import { useRoute } from './router'
+import { Home } from './pages/Home'
+import { NewGame } from './pages/NewGame'
+import { JoinGame } from './pages/JoinGame'
+import { GameScreen } from './pages/GameScreen'
+import { DevStories } from './pages/DevStories'
+import { SessionProvider } from './session'
+
 export function App() {
+  const route = useRoute()
   return (
-    <main style={{ fontFamily: 'system-ui', padding: 24, color: '#eee', background: '#111', minHeight: '100vh' }}>
-      <h1>VTTRPG</h1>
-      <p>Scaffold. Modules land on their own branches; see PLAN.md.</p>
-    </main>
+    <SessionProvider>
+      {route.name === 'home' && <Home />}
+      {route.name === 'new' && <NewGame />}
+      {route.name === 'join' && <JoinGame invite={route.invite} />}
+      {route.name === 'game' && <GameScreen />}
+      {route.name === 'dev' && <DevStories story={route.story} />}
+    </SessionProvider>
   )
 }
