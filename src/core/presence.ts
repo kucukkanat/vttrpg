@@ -12,7 +12,19 @@ export interface Presence {
   dragging?: { token: TokenId; position: Vec3 }
   /** Dice roll in flight: commit hash first, then the seed. */
   rollCommit?: string
+  /** A ping on the table (see table/ping.ts); clients play each distinct `at` once. */
+  ping?: PresencePing
   lastSeen: number
+}
+
+/** "Look here": a floor point in a scene, when it was pinged and the pinger's colour. */
+export interface PresencePing {
+  x: number
+  z: number
+  scene: SceneId
+  /** Sender clock, ms; identifies the ping so a beacon that still carries it is not replayed. */
+  at: number
+  color: string
 }
 
 /** Players treat the GM as away once this long has passed without a presence event from them. */

@@ -58,6 +58,9 @@ export interface EditPreview {
   elevation?: number
 }
 
+/** Floor tools from the HUD: 'ruler' measures distances, 'ping' arms one ping for the next tap. */
+export type TableTool = 'ruler' | 'ping'
+
 export interface TableUiState {
   hovered: TokenId | null
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
@@ -73,6 +76,8 @@ export interface TableUiState {
   visible: ReadonlySet<string> | null
   /** Non-null while the host is aiming a skill on the table. */
   targeting: TargetingUi | null
+  /** Active floor tool (HUD buttons, M key); null while the pointer selects and drags as usual. */
+  tool: TableTool | null
   /** GM edit mode: gizmo on the selection, scene nodes selectable. */
   editMode: boolean
   /** Snap gizmo translation / rotation / scale to steps (Alt held = free). */
@@ -112,6 +117,7 @@ export const useTableUi = create<TableUiState>((set) => ({
   showGrid: true,
   visible: null,
   targeting: null,
+  tool: null,
   editMode: false,
   snap: true,
   gizmoMode: 'translate',

@@ -4,7 +4,9 @@
  *   UI/table intents  ->  GM: validate (rules) + apply (state)  |  player: sendIntent (net)
  */
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
+import { takePing } from '@/table/ping'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
+import { vfxBus } from '@/table/vfx/bus'
 import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
@@ -138,9 +140,12 @@ export function createController(opts: {
   rememberName(me.pubkey, me.name)
 
   const offIntent = connection.isGm ? connection.onIntent((env) => void gmApply(env)) : () => {}
+  const pingsSeen = new Map<string, number>()
   const offPresence = connection.onPresence((p) => {
     useGame.getState().setPresence(p)
     rememberName(p.pubkey, p.name)
+    const ping = takePing(pingsSeen, p)
+    if (ping) vfxBus.emit('ping', ping)
   })
 
   const dispatch = async (intent: Intent): Promise<void> => {
