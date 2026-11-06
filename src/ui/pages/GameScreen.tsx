@@ -9,6 +9,7 @@ import { TokensPanel } from '../panels/TokensPanel'
 import { PlayersPanel } from '../panels/PlayersPanel'
 import { ScenesPanel } from '../panels/ScenesPanel'
 import { CharacterPanel } from '../panels/CharacterPanel'
+import { SkillsPanel, useSkillTargeting } from '../panels/SkillsPanel'
 import { TopBar } from '../panels/TopBar'
 
 export function GameScreen() {
@@ -16,6 +17,7 @@ export function GameScreen() {
   const meta = useGame((s) => s.meta)
   const chat = useGame((s) => s.chat)
   const [shownRoll, setShownRoll] = useState<string | null>(null)
+  const targeting = useSkillTargeting(controller)
   useEffect(() => { if (!controller) navigate('/') }, [controller])
 
   // Animate the most recent roll once; clear the tray a few seconds after it settles.
@@ -33,13 +35,15 @@ export function GameScreen() {
         <TokensPanel controller={controller} />
         <PlayersPanel controller={controller} />
       </aside>
-      <section className="table">
+      {/* min-height 0 lets the grid row shrink below the canvas's pixel height at phone widths */}
+      <section className="table" style={{ minHeight: 0 }}>
         {meta?.activeScene ? (
           <TableCanvas
             onIntent={(i) => void controller.dispatch(i)}
             onPresence={(p) => controller.presence(p)}
             resolveAsset={(ref) => controller.assets.resolve(ref)}
             viewer={viewer}
+            targeting={targeting}
           />
         ) : (
           <div className="empty">No active scene. {controller.connection.isGm ? 'Add one from the Scenes panel.' : 'Waiting for the GM.'}</div>
@@ -50,8 +54,10 @@ export function GameScreen() {
           onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
         />
       </section>
-      <aside className="right">
+      {/* min-height keeps the column on screen at phone widths, where the grid row would otherwise collapse */}
+      <aside className="right" style={{ minHeight: '35vh' }}>
         <CharacterPanel controller={controller} />
+        <SkillsPanel controller={controller} />
         <ChatPanel controller={controller} />
       </aside>
     </div>

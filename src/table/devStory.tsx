@@ -4,11 +4,20 @@
  */
 import { useEffect, useState } from 'react'
 import type { Scene, Token } from '@/core/doc'
+import type { TargetShape } from '@/core/geometry'
 import type { AssetHash, PlayerPubkey, SceneId, TokenId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import { useGame } from '@/state/store'
 import { TableCanvas } from './TableCanvas'
 import type { SceneValidationReport } from './sceneLoader'
+
+/** Shapes to try the targeting preview with (no rules pack in this story). */
+const AIM_SHAPES: Record<string, TargetShape> = {
+  fireball: { kind: 'radius', range: 6, radius: 2 },
+  missile: { kind: 'single', range: 8 },
+  breath: { kind: 'cone', range: 5, angle: 90 },
+  bolt: { kind: 'line', range: 8, width: 1 },
+}
 
 const SCENE = 'dev-room' as SceneId
 const GM = 'gm'.padEnd(64, '0') as PlayerPubkey
@@ -86,6 +95,7 @@ export function DevStory() {
   const gridType = useGame((s) => s.scenes[SCENE]?.grid.type ?? 'square')
   const revealed = useGame((s) => s.fog[SCENE]?.revealed.length ?? 0)
   const selected = useGame((s) => s.selectedToken)
+  const [aim, setAim] = useState<string | null>(null)
 
   useEffect(() => { seedStore(); setReady(true) }, [])
 
@@ -108,6 +118,10 @@ export function DevStory() {
           grid: {gridType}
         </button>
         <button onClick={() => useGame.getState()._replaceFromDoc({ fog: {} })}>reset fog</button>
+        <span>aim:</span>
+        {Object.keys(AIM_SHAPES).map((k) => (
+          <button key={k} onClick={() => setAim(aim === k ? null : k)} style={aim === k ? { borderColor: '#e0a458' } : undefined}>{k}</button>
+        ))}
         <span>revealed {revealed} · selected {selected ?? '—'}</span>
         <span style={{ opacity: 0.7 }}>G grid · F first person · Esc deselect · drag tokens · right-click / long-press selects</span>
       </div>
@@ -117,6 +131,12 @@ export function DevStory() {
           onPresence={() => {}}
           viewer={{ pubkey: asGm ? GM : PLAYER, isGm: asGm }}
           onSceneLoaded={setReport}
+          targeting={aim ? {
+            shape: AIM_SHAPES[aim]!,
+            source: 'tok-mouse' as TokenId,
+            onPick: (r) => { setLog((l) => [`pick ${aim}: [${r.targets.join(', ')}] @ ${r.point ? `${r.point.x.toFixed(1)},${r.point.z.toFixed(1)}` : '-'}`, ...l].slice(0, 6)); setAim(null) },
+            onCancel: () => { setLog((l) => [`cancel ${aim}`, ...l].slice(0, 6)); setAim(null) },
+          } : undefined}
         />
       </div>
       <div style={{ ...bar, justifyContent: 'space-between' }}>

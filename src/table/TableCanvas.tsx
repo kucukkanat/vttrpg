@@ -7,9 +7,10 @@
  * Mouse: drag a token to move it (snaps to cells), click / right-click selects, drag empty
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
  * two fingers pan, pinch zooms, long-press selects.
+ * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
  */
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Box3, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
 import type { CameraMode, Scene, Token } from '@/core/doc'
@@ -26,7 +27,9 @@ import { GridOverlay } from './GridOverlay'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
 import { useTableUi } from './tableState'
+import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import { DragGhostMesh, TokenMesh } from './TokenMesh'
+import * as vfx from './vfx'
 import type { WallSegment } from './walls'
 
 export interface TableCanvasProps {
@@ -45,6 +48,11 @@ export interface TableCanvasProps {
   showGrid?: boolean
   /** Called with the loader's validation report when the scene model finishes loading. */
   onSceneLoaded?(report: SceneValidationReport): void
+  /**
+   * Aim a skill: the shape previews on the floor under the pointer, tokens inside light up, a tap
+   * (or touch drag + confirm) calls `onPick`; Esc, Cancel or a tap on the source calls `onCancel`.
+   */
+  targeting?: TargetingProps
   className?: string
   style?: CSSProperties
 }
@@ -63,8 +71,11 @@ export function TableCanvas(props: TableCanvasProps) {
   return <TableInner key={sceneId} sceneId={sceneId} scene={scene} {...props} />
 }
 
-function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, className, style }: TableCanvasProps & { sceneId: SceneId; scene: Scene }) {
+function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting, className, style }: TableCanvasProps & { sceneId: SceneId; scene: Scene }) {
   const resolve = resolveAsset ?? defaultResolveAsset
+  /** Events older than the canvas are never replayed. */
+  const mountedAt = useRef(Date.now()).current
+  const events = useGame((s) => s.events)
   const [url, setUrl] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<LoadedScene | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -89,11 +100,21 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const handleLoaded = useCallback((s: LoadedScene) => { setLoaded(s); onSceneLoaded?.(s.report) }, [onSceneLoaded])
 
   // Keyboard shortcuts.
+  const cancelTargeting = targeting?.onCancel
+  // The pick unmounts the targeting layer between pointerup and click, so that click would count
+  // as a miss and drop the selection. Ignore misses briefly after targeting ends.
+  const wasTargeting = useRef(false)
+  const ignoreMissUntil = useRef(0)
+  useEffect(() => {
+    if (wasTargeting.current && !targeting) ignoreMissUntil.current = performance.now() + 500
+    wasTargeting.current = !!targeting
+  }, [targeting])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       const ui = useTableUi.getState()
+      if (e.key === 'Escape' && cancelTargeting) { cancelTargeting(); return }
       switch (e.key) {
         case 'g': case 'G': ui.set({ showGrid: !ui.showGrid }); break
         case 'f': case 'F': ui.set({ firstPerson: !ui.firstPerson }); break
@@ -107,7 +128,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cameraMode, scene.cameraMode, setSelected])
+  }, [cameraMode, scene.cameraMode, setSelected, cancelTargeting])
 
   const grid: GridSpec = scene.grid
   const floorY = loaded?.floorY ?? 0
@@ -117,6 +138,10 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     return { minX: b.min.x - pad, minZ: b.min.z - pad, maxX: b.max.x + pad, maxZ: b.max.z + pad }
   }, [loaded, grid.cellSize])
   const bounds3 = useMemo(() => loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8)), [loaded])
+  const weatherBounds = useMemo(
+    () => ({ min: [bounds3.min.x, bounds3.min.y, bounds3.min.z] as [number, number, number], max: [bounds3.max.x, bounds3.max.y, bounds3.max.z] as [number, number, number] }),
+    [bounds3],
+  )
 
   const ctx: TableContextValue = useMemo(
     () => ({ sceneId, scene, grid, floorY, loaded, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve }),
@@ -133,7 +158,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
         camera={CAMERA_OPTS}
         gl={GL_OPTS}
         style={CANVAS_STYLE}
-        onPointerMissed={(e) => { if (e.button === 0) setSelected(null) }}
+        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelected(null) }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <color attach="background" args={['#0b0b10']} />
@@ -144,13 +169,110 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={loaded?.walls ?? []} />
+          {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
+          <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
+          <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={loaded?.walls ?? []} />
+          <CameraShake cellSize={grid.cellSize} />
         </TableContext.Provider>
       </Canvas>
       {!loaded && !error && <Overlay>Loading scene…</Overlay>}
       {error && <Overlay tone="error">{error}</Overlay>}
+      {targeting && <TargetingBar targeting={targeting} />}
     </div>
   )
+}
+
+/**
+ * HTML controls for targeting: what is being aimed, Cancel, and on touch the Confirm button for
+ * the staged pick. Big hit areas; sits at the bottom of the table above the canvas.
+ */
+function TargetingBar({ targeting }: { targeting: TargetingProps }) {
+  const candidate = useTableUi((s) => s.targeting?.candidate ?? null)
+  const uiSet = useTableUi((s) => s.set)
+  const btn: CSSProperties = {
+    minHeight: 44, minWidth: 96, padding: '0 18px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)',
+    background: 'rgba(40,40,48,0.92)', color: '#f3ead8', fontSize: 15, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+  }
+  const confirm = () => {
+    if (!candidate) return
+    const t = useTableUi.getState().targeting
+    uiSet({ targeting: t ? { ...t, candidate: null } : null })
+    targeting.onPick(candidate)
+  }
+  const n = candidate?.targets.length ?? 0
+  return (
+    <div style={{
+      position: 'absolute', left: 0, right: 0, bottom: 'max(12px, env(safe-area-inset-bottom, 0px))', display: 'flex', justifyContent: 'center',
+      gap: 10, padding: '0 12px', pointerEvents: 'none', flexWrap: 'wrap',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 14, background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(6px)', pointerEvents: 'auto', maxWidth: '100%',
+      }}>
+        <span style={{ color: '#f3ead8', fontSize: 14, padding: '0 6px', opacity: 0.9 }}>
+          {candidate ? (n === 0 ? 'No one in the area' : `${n} target${n === 1 ? '' : 's'}`) : describeShape(targeting.shape)}
+        </span>
+        {candidate && (
+          <button type="button" style={{ ...btn, background: '#e0a458', color: '#1a1612', borderColor: '#e0a458' }} onClick={confirm}>
+            Confirm
+          </button>
+        )}
+        <button type="button" style={btn} onClick={() => targeting.onCancel()}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+type ShakeEvent = { intensity?: number; duration?: number } | undefined
+type ShakeBus = {
+  on?(event: string, handler: (e: ShakeEvent) => void): unknown
+  off?(event: string, handler: (e: ShakeEvent) => void): unknown
+  addEventListener?(event: string, handler: (e: Event) => void): void
+  removeEventListener?(event: string, handler: (e: Event) => void): void
+}
+
+/**
+ * Subscribe to camera shakes from the vfx module's bus when it exports one. The vfx layer is
+ * built in parallel; until `vfxBus` lands this is a no-op, so the import stays typed-optional.
+ */
+function subscribeShake(handler: (e: ShakeEvent) => void): () => void {
+  const bus = (vfx as Record<string, unknown>).vfxBus as ShakeBus | undefined
+  if (!bus) return () => {}
+  if (typeof bus.on === 'function') {
+    const off = bus.on('shake', handler)
+    return () => { if (typeof off === 'function') off(); else bus.off?.('shake', handler) }
+  }
+  if (typeof bus.addEventListener === 'function') {
+    const h = (e: Event) => handler((e as CustomEvent<ShakeEvent>).detail)
+    bus.addEventListener('shake', h)
+    return () => bus.removeEventListener?.('shake', h)
+  }
+  return () => {}
+}
+
+/** Brief camera jitter on `shake`; the offset is removed before the controls run and re-applied after the rig. */
+function CameraShake({ cellSize }: { cellSize: number }) {
+  const camera = useThree((s) => s.camera)
+  const st = useRef({ until: 0, duration: 1, intensity: 0, offset: new Vector3() })
+  useEffect(() => subscribeShake((e) => {
+    const now = performance.now()
+    const duration = Math.max(50, e?.duration ?? 300)
+    st.current.until = Math.max(st.current.until, now + duration)
+    st.current.duration = duration
+    st.current.intensity = Math.max(st.current.intensity, e?.intensity ?? 1)
+  }), [])
+  useFrame(() => { camera.position.sub(st.current.offset); st.current.offset.set(0, 0, 0) }, -10)
+  useFrame(() => {
+    const s = st.current
+    const now = performance.now()
+    if (now >= s.until) { s.intensity = 0; return }
+    const k = (s.until - now) / s.duration
+    const amp = 0.06 * cellSize * s.intensity * k
+    s.offset.set((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp)
+    camera.position.add(s.offset)
+  })
+  return null
 }
 
 /** Loads the GLB inside the canvas so the renderer is available for KTX2 detection. */
@@ -238,4 +360,5 @@ function Overlay({ children, tone }: { children: React.ReactNode; tone?: 'error'
 }
 
 export type { ViewerInfo }
+export type { TargetingProps }
 export type { PlayerPubkey as TableViewerPubkey }
