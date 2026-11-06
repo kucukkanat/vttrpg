@@ -24,18 +24,12 @@ import { TabBar } from './TabBar'
 import { MoreList } from './MoreList'
 import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
 import { Drawer } from './Drawer'
-import { SideColumn, RAIL_W } from './SideColumn'
+import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
 import { RollToast, SelectedTokenChip } from './Hud'
 import { GameNotices } from './GameNotices'
 
-interface DesktopLayout {
-  left: { width: number; open: boolean }
-  right: { width: number; open: boolean }
-  collapsed: Record<string, boolean>
-}
 interface TabletLayout { tab: string; open: boolean; pinned: boolean }
 
-const DESKTOP_DEFAULT: DesktopLayout = { left: { width: 260, open: true }, right: { width: 340, open: true }, collapsed: {} }
 const TABLET_DEFAULT: TabletLayout = { tab: 'chat', open: true, pinned: true }
 const DRAWER_W = 360
 
@@ -55,7 +49,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   const [phoneTab, setPhoneTab] = useState<string | null>(null)
   const [sheetSize, setSheetSize] = useState<SheetSize>('half')
   const [tablet, setTablet] = usePersisted<TabletLayout>('vtt.shell.tablet', TABLET_DEFAULT)
-  const [desktop, setDesktop] = usePersisted<DesktopLayout>('vtt.shell.desktop', DESKTOP_DEFAULT)
+  const [desktop, setDesktop] = usePersisted<DesktopLayout>('vtt.shell.desktop', DESKTOP_DEFAULT, { version: DESKTOP_LAYOUT_VERSION, migrate: migrateDesktopLayout })
 
   const byId = (id: string | null): PanelDef | undefined => panels.find((p) => p.id === id)
   const phonePanel = byId(phoneTab)

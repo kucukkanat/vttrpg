@@ -186,6 +186,8 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 
 /* ---------------------------------------------------------------------------------------------
    Desktop columns: resizable, collapsible, sections
+   Column budget: Chat (`.fill`) keeps at least 40 % of the column, list panels stop at 40 vh and
+   scroll inside, and the grabber on the inner edge is visible, focusable and carries a hide button.
    --------------------------------------------------------------------------------------------- */
 .col { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); }
 .col-left { border-right: 1px solid var(--border); } .col-right { border-left: 1px solid var(--border); }
@@ -193,7 +195,7 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .col.rail { align-items: center; padding-top: var(--sp-2); }
 .col.rail .icon { min-width: 24px; padding: 0; }
 .section { display: flex; flex-direction: column; flex: 0 0 auto; min-height: 0; border-bottom: 1px solid var(--border); }
-.section.fill:not(.collapsed) { flex: 1 1 auto; min-height: 180px; }
+.section.fill:not(.collapsed) { flex: 1 1 auto; min-height: max(180px, 40%); }
 .section.fill:not(.collapsed) .hosted { flex: 1; min-height: 0; }
 .section-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: var(--head-h); padding: 0 var(--sp-3); background: transparent; border: 0; border-radius: 0; text-align: left; color: var(--muted); justify-content: flex-start; }
 @media (hover: hover) { .section-head:hover { background: var(--panel-2); border-color: transparent; } }
@@ -201,11 +203,19 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .section .hosted > .panel { flex: 0 0 auto; overflow: visible; }
 .section.fill .hosted > .panel { flex: 1; min-height: 0; overflow: hidden; }
 .section .hosted > .panel.sheet { max-height: 50vh; overflow: auto; }
+/* List panels: cap the section and scroll the list inside it instead of growing the column. */
+.section .hosted[data-panel="scenes"] > .panel, .section .hosted[data-panel="tokens"] > .panel,
+.section .hosted[data-panel="players"] > .panel, .section .hosted[data-panel="journal"] > .panel { max-height: 40vh; overflow: auto; }
 .section.collapsed .hosted > .panel { display: none; }
-.handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 3; touch-action: none; }
-.col-left .handle { right: -5px; } .col-right .handle { left: -5px; }
-.handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .15s; }
-.handle:hover::after, .handle:active::after { background: var(--accent); }
+/* Grabber: a 6 px strip on the inner edge with a 2 px grip at rest, accent on hover, drag and focus. */
+.handle { position: absolute; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
+.col-left .handle { right: -3px; } .col-right .handle { left: -3px; }
+.handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px; background: var(--border); transition: background .15s, left .15s, width .15s; }
+.handle:hover::after, .handle:active::after, .handle:focus-visible::after { left: 1px; width: 4px; background: var(--accent); }
+/* Hide button at the grabber's top, centred on the column edge. */
+.col-hide { position: absolute; top: var(--sp-2); width: 16px; min-width: 0; min-height: 0; height: 32px; padding: 0; z-index: 4; font-size: var(--fs-sm); line-height: 1; color: var(--muted); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.col-left .col-hide { right: -8px; } .col-right .col-hide { left: -8px; }
+@media (hover: hover) { .col-hide:hover { color: var(--fg); border-color: var(--accent); background: var(--panel-2); } }
 
 /* ---------------------------------------------------------------------------------------------
    Tablet drawer

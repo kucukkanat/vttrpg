@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { breakpointFor } from './useBreakpoint'
 import { snapSheet } from './BottomSheet'
-import { clampWidth, COL_MAX, COL_MIN } from './SideColumn'
+import { clampWidth, COL_MAX, COL_MIN, DEFAULT_COLLAPSED, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, KEY_STEP, keyResize, migrateDesktopLayout } from './SideColumn'
+import { loadPersisted } from './usePersisted'
 import { keyboardInset } from './useKeyboardInset'
 import { unreadCount, unreadNoteCount } from './useUnread'
 import { MORE_ID, nextPhoneTab, splitPhoneTabs, sumBadges } from './phoneTabs'
@@ -43,6 +44,75 @@ describe('desktop columns', () => {
     expect(clampWidth(10)).toBe(COL_MIN)
     expect(clampWidth(10_000)).toBe(COL_MAX)
     expect(clampWidth(300.4)).toBe(300)
+  })
+  it('starts with the authoring and reference sections folded', () => {
+    expect(DESKTOP_DEFAULT.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: true })
+    expect(DESKTOP_DEFAULT.collapsed.chat).toBeUndefined()
+    expect(DESKTOP_DEFAULT.version).toBe(DESKTOP_LAYOUT_VERSION)
+  })
+  it('resizes by 16 px per arrow key toward the table, clamped', () => {
+    expect(keyResize('left', 'ArrowRight', 260)).toBe(260 + KEY_STEP)
+    expect(keyResize('left', 'ArrowLeft', 260)).toBe(260 - KEY_STEP)
+    expect(keyResize('right', 'ArrowLeft', 340)).toBe(340 + KEY_STEP)
+    expect(keyResize('right', 'ArrowRight', 340)).toBe(340 - KEY_STEP)
+    expect(keyResize('left', 'ArrowLeft', COL_MIN)).toBe(COL_MIN)
+    expect(keyResize('right', 'ArrowLeft', COL_MAX)).toBe(COL_MAX)
+    expect(keyResize('left', 'Home', 300)).toBe(COL_MIN)
+    expect(keyResize('left', 'End', 300)).toBe(COL_MAX)
+    expect(keyResize('left', 'ArrowUp', 300)).toBeNull()
+    expect(keyResize('left', 'a', 300)).toBeNull()
+  })
+})
+
+describe('desktop layout migration', () => {
+  const options = { version: DESKTOP_LAYOUT_VERSION, migrate: migrateDesktopLayout }
+
+  it('gives a fresh browser the defaults', () => {
+    expect(loadPersisted(null, DESKTOP_DEFAULT, options)).toEqual(DESKTOP_DEFAULT)
+    expect(loadPersisted('not json', DESKTOP_DEFAULT, options)).toEqual(DESKTOP_DEFAULT)
+  })
+
+  it('folds the new defaults for a version-0 layout the user never touched', () => {
+    const raw = JSON.stringify({ left: { width: 300, open: true }, right: { width: 340, open: false }, collapsed: {} })
+    const out = loadPersisted(raw, DESKTOP_DEFAULT, options)
+    expect(out.version).toBe(DESKTOP_LAYOUT_VERSION)
+    expect(out.left).toEqual({ width: 300, open: true })
+    expect(out.right).toEqual({ width: 340, open: false })
+    expect(out.collapsed).toEqual(DEFAULT_COLLAPSED)
+  })
+
+  it('keeps the sections a version-0 user toggled, in either direction', () => {
+    const raw = JSON.stringify({ left: { width: 260, open: true }, right: { width: 340, open: true }, collapsed: { journal: false, skills: true, chat: false } })
+    const out = loadPersisted(raw, DESKTOP_DEFAULT, options)
+    expect(out.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: false, skills: true, chat: false })
+  })
+
+  it('survives a version-0 object with no collapsed map', () => {
+    const out = loadPersisted(JSON.stringify({ left: { width: 220, open: true } }), DESKTOP_DEFAULT, options)
+    expect(out.collapsed).toEqual(DEFAULT_COLLAPSED)
+    expect(out.right).toEqual(DESKTOP_DEFAULT.right)
+    expect(out.left.width).toBe(220)
+  })
+
+  it('reads a current-version layout as stored, without re-applying defaults', () => {
+    const stored = { version: DESKTOP_LAYOUT_VERSION, left: { width: 200, open: true }, right: { width: 480, open: true }, collapsed: { prep: false } }
+    const out = loadPersisted(JSON.stringify(stored), DESKTOP_DEFAULT, options)
+    expect(out).toEqual(stored)
+  })
+
+  it('runs the migration only when the version differs', () => {
+    let calls = 0
+    type Probe = { version: number; a: number }
+    const probe = { version: 2, migrate: (s: Record<string, unknown>): Probe => { calls++; return { version: 2, a: Number(s.a) } } }
+    loadPersisted(JSON.stringify({ version: 2, a: 1 }), { version: 2, a: 0 }, probe)
+    expect(calls).toBe(0)
+    expect(loadPersisted(JSON.stringify({ version: 1, a: 1 }), { version: 2, a: 0 }, probe)).toEqual({ version: 2, a: 1 })
+    expect(calls).toBe(1)
+  })
+
+  it('still shallow-merges stored objects over defaults without options', () => {
+    expect(loadPersisted(JSON.stringify({ tab: 'chat' }), { tab: 'x', open: true, pinned: true })).toEqual({ tab: 'chat', open: true, pinned: true })
+    expect(loadPersisted('[1,2]', [0])).toEqual([1, 2])
   })
 })
 
