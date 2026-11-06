@@ -16,6 +16,10 @@ import { flickerNoise } from './SceneModel'
 import { useTableUi } from './tableState'
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
+
+/** R3F routes captured pointer events to the object; its `target` is typed as a bare EventTarget. */
+type CaptureTarget = { setPointerCapture(id: number): void; releasePointerCapture(id: number): void }
+const capture = (e: ThreeEvent<PointerEvent>) => e.target as unknown as CaptureTarget
 const DRAG_THRESHOLD_PX = 6
 const LONG_PRESS_MS = 450
 
@@ -179,8 +183,7 @@ export function TokenMesh({ token }: { token: Token }) {
     if (e.button === 2) { select(); return }
     if (e.button !== 0) return
     if (!controllable) { select(); return }
-    const target = e.nativeEvent.target as Element | null
-    target?.setPointerCapture?.(e.pointerId)
+    capture(e).setPointerCapture(e.pointerId)
     uiSet({ grab: token.id })
     drag.current = {
       pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false,
@@ -222,8 +225,7 @@ export function TokenMesh({ token }: { token: Token }) {
     const d = drag.current
     if (!d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
-    const target = e.nativeEvent.target as Element | null
-    target?.releasePointerCapture?.(e.pointerId)
+    capture(e).releasePointerCapture(e.pointerId)
     const wasClick = !d.moved
     endDrag(true)
     if (wasClick) select()

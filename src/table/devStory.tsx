@@ -83,6 +83,7 @@ export function DevStory() {
   const [report, setReport] = useState<SceneValidationReport | null>(null)
   const [log, setLog] = useState<string[]>([])
   const cameraMode = useGame((s) => s.scenes[SCENE]?.cameraMode ?? 'orbit')
+  const gridType = useGame((s) => s.scenes[SCENE]?.grid.type ?? 'square')
   const revealed = useGame((s) => s.fog[SCENE]?.revealed.length ?? 0)
   const selected = useGame((s) => s.selectedToken)
 
@@ -103,6 +104,9 @@ export function DevStory() {
           camera: {cameraMode} (C)
         </button>
         <button onClick={() => setAsGm((v) => !v)}>view: {asGm ? 'GM' : 'player (owns Pip)'}</button>
+        <button onClick={() => applyLocally({ type: 'scene.update', scene: SCENE, patch: { grid: { ...scene.grid, type: gridType === 'square' ? 'hex' : 'square' } } })}>
+          grid: {gridType}
+        </button>
         <button onClick={() => useGame.getState()._replaceFromDoc({ fog: {} })}>reset fog</button>
         <span>revealed {revealed} · selected {selected ?? '—'}</span>
         <span style={{ opacity: 0.7 }}>G grid · F first person · Esc deselect · drag tokens · right-click / long-press selects</span>

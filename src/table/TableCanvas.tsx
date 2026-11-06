@@ -19,14 +19,15 @@ import type { Intent } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import { useGame } from '@/state/store'
 import { CameraRig } from './CameraRig'
-import { defaultResolveAsset, TableContext, type TableContextValue, type ViewerInfo } from './context'
+import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
 import { FogOverlay } from './FogOverlay'
-import type { Bounds2 } from './grid'
+import { cellKey, worldToCell, type Bounds2 } from './grid'
 import { GridOverlay } from './GridOverlay'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
 import { useTableUi } from './tableState'
 import { DragGhostMesh, TokenMesh } from './TokenMesh'
+import type { WallSegment } from './walls'
 
 export interface TableCanvasProps {
   onIntent(intent: Intent): void
@@ -47,6 +48,11 @@ export interface TableCanvasProps {
   className?: string
   style?: CSSProperties
 }
+
+// Stable objects: R3F re-applies `camera` / `gl` props whenever the object identity changes.
+const CAMERA_OPTS = { fov: 50, near: 0.05, far: 500, position: [8, 8, 8] as [number, number, number] }
+const GL_OPTS = { antialias: true, powerPreference: 'high-performance' as const }
+const CANVAS_STYLE = { touchAction: 'none' } as const
 
 export function TableCanvas(props: TableCanvasProps) {
   const sceneId = useGame((s) => s.meta?.activeScene ?? null)
@@ -107,7 +113,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const floorY = loaded?.floorY ?? 0
   const bounds2: Bounds2 = useMemo(() => {
     const b = loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))
-    const pad = grid.cellSize
+    const pad = grid.cellSize * 0.5
     return { minX: b.min.x - pad, minZ: b.min.z - pad, maxX: b.max.x + pad, maxZ: b.max.z + pad }
   }, [loaded, grid.cellSize])
   const bounds3 = useMemo(() => loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8)), [loaded])
@@ -122,11 +128,11 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background: '#0b0b10', ...style }}>
       <Canvas
-        shadows
+        shadows="percentage"
         dpr={[1, 1.5]}
-        camera={{ fov: 50, near: 0.05, far: 500, position: [8, 8, 8] }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-        style={{ touchAction: 'none' }}
+        camera={CAMERA_OPTS}
+        gl={GL_OPTS}
+        style={CANVAS_STYLE}
         onPointerMissed={(e) => { if (e.button === 0) setSelected(null) }}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -138,7 +144,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={loaded?.walls ?? []} />
-          <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} />
+          <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={loaded?.walls ?? []} />
         </TableContext.Provider>
       </Canvas>
       {!loaded && !error && <Overlay>Loading scene…</Overlay>}
@@ -186,7 +192,14 @@ function PlaceholderFloor({ bounds }: { bounds: Bounds2 }) {
 function Tokens({ sceneId, viewer }: { sceneId: SceneId; viewer: ViewerInfo | null }) {
   const tokens = useGame((s) => s.tokens)
   const presence = useGame((s) => s.presence)
-  const list = useMemo(() => Object.values(tokens).filter((t) => t.scene === sceneId), [tokens, sceneId])
+  const visible = useTableUi((s) => s.visible)
+  const { grid } = useTable()
+  // Players only see tokens standing in cells they can see (their own always).
+  const list = useMemo(() => Object.values(tokens).filter((t) => {
+    if (t.scene !== sceneId) return false
+    if (!visible || !viewer || viewer.isGm || canControl(viewer, t)) return true
+    return visible.has(cellKey(worldToCell(grid, t.position.x, t.position.z)))
+  }), [tokens, sceneId, visible, viewer, grid])
   const ghosts = useMemo(
     () => Object.values(presence).filter((p) => p.dragging && p.pubkey !== viewer?.pubkey && tokens[p.dragging.token]?.scene === sceneId),
     [presence, tokens, sceneId, viewer],
@@ -202,7 +215,7 @@ function Tokens({ sceneId, viewer }: { sceneId: SceneId; viewer: ViewerInfo | nu
 }
 
 /** Picks the token the shoulder camera follows: selected, else owned, else the first in the scene. */
-function CameraRigFromStore({ mode, sceneId, viewer, bounds, floorY, cellSize }: { mode: CameraMode; sceneId: SceneId; viewer: ViewerInfo | null; bounds: Box3; floorY: number; cellSize: number }) {
+function CameraRigFromStore({ mode, sceneId, viewer, bounds, floorY, cellSize, walls }: { mode: CameraMode; sceneId: SceneId; viewer: ViewerInfo | null; bounds: Box3; floorY: number; cellSize: number; walls: readonly WallSegment[] }) {
   const tokens = useGame((s) => s.tokens)
   const selectedId = useGame((s) => s.selectedToken)
   const follow: Token | null = useMemo(() => {
@@ -212,7 +225,7 @@ function CameraRigFromStore({ mode, sceneId, viewer, bounds, floorY, cellSize }:
     const owned = viewer ? inScene.find((t) => t.owner === viewer.pubkey) : undefined
     return owned ?? inScene[0] ?? null
   }, [tokens, sceneId, selectedId, viewer])
-  return <CameraRig mode={mode} follow={follow} bounds={bounds} floorY={floorY} cellSize={cellSize} />
+  return <CameraRig mode={mode} follow={follow} bounds={bounds} floorY={floorY} cellSize={cellSize} walls={walls} />
 }
 
 function Overlay({ children, tone }: { children: React.ReactNode; tone?: 'error' }) {

@@ -4,13 +4,14 @@
  *  - token: third-person shoulder camera following a token; F toggles first person.
  * In token mode a drag on empty space turns the camera, the wheel / pinch changes distance.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Box3, MathUtils, MOUSE, TOUCH, Vector3 } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
 import { useTableUi } from './tableState'
+import { castRay, type WallSegment } from './walls'
 
 export interface CameraRigProps {
   mode: CameraMode
@@ -19,6 +20,8 @@ export interface CameraRigProps {
   bounds: Box3
   floorY: number
   cellSize: number
+  /** Walls the shoulder camera must not pass through. */
+  walls: readonly WallSegment[]
 }
 
 interface RigState {
@@ -45,13 +48,15 @@ function overviewPose(bounds: Box3, floorY: number): { pos: Vector3; target: Vec
   return { pos, target }
 }
 
-export function CameraRig({ mode, follow, bounds, floorY, cellSize }: CameraRigProps) {
+export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: CameraRigProps) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
   const controls = useRef<OrbitControlsImpl>(null)
   const firstPerson = useTableUi((s) => s.firstPerson)
   const dragging = useTableUi((s) => s.drag !== null)
   const effectiveMode: CameraMode = mode === 'token' && follow ? 'token' : 'orbit'
+  // Mirrors rig.settled so OrbitControls re-renders when the transition finishes.
+  const [orbitReady, setOrbitReady] = useState(false)
 
   const rig = useRef<RigState>({
     target: new Vector3(), yaw: 0, pitch: 0.42, dist: 3 * cellSize, orbitPose: null, settled: false, lastMode: null, lastFollow: null,
@@ -63,11 +68,13 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize }: CameraRigP
     if (r.lastMode === 'orbit' && effectiveMode === 'token') {
       r.orbitPose = { pos: camera.position.clone(), target: controls.current?.target.clone() ?? r.target.clone() }
     }
-    if (effectiveMode === 'token' && follow && r.lastFollow !== follow.id) {
-      r.yaw = follow.rotationY + Math.PI
+    if (effectiveMode === 'token' && follow && (r.lastMode !== 'token' || r.lastFollow !== follow.id)) {
+      // start behind the token (+Z local is its back)
+      r.yaw = follow.rotationY
+      r.pitch = 0.42
       r.dist = 3 * cellSize * Math.max(0.6, follow.scale)
     }
-    if (r.lastMode !== effectiveMode || (follow && r.lastFollow !== follow.id)) r.settled = false
+    if (r.lastMode !== effectiveMode || (follow && r.lastFollow !== follow.id)) { r.settled = false; setOrbitReady(false) }
     r.lastMode = effectiveMode
     r.lastFollow = follow?.id ?? null
   }, [effectiveMode, follow, camera, cellSize])
@@ -149,6 +156,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize }: CameraRigP
           camera.position.copy(pose.pos)
           r.target.copy(pose.target)
           if (c) { c.target.copy(pose.target); c.update() }
+          setOrbitReady(true)
         }
       } else if (c) {
         // never under the floor
@@ -171,6 +179,13 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize }: CameraRigP
       r.target.lerp(tmpDest.clone().add(look.multiplyScalar(5)), step)
     } else {
       tmpDest.copy(base).addScaledVector(tmpDir, r.dist)
+      // pull the camera in front of any wall between the token and the desired spot
+      const hit = castRay({ x: base.x, z: base.z }, { x: tmpDest.x, z: tmpDest.z }, walls)
+      if (hit < 1) {
+        const f = Math.max(0.12, hit - (0.35 * cellSize) / r.dist)
+        tmpDest.x = base.x + (tmpDest.x - base.x) * f
+        tmpDest.z = base.z + (tmpDest.z - base.z) * f
+      }
       tmpDest.y += eye * 0.9
       if (tmpDest.y < floorY + 0.2 * cellSize) tmpDest.y = floorY + 0.2 * cellSize
       camera.position.lerp(tmpDest, step)
@@ -184,7 +199,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize }: CameraRigP
     <OrbitControls
       ref={controls}
       makeDefault
-      enabled={effectiveMode === 'orbit' && rig.current.settled && !dragging}
+      enabled={effectiveMode === 'orbit' && orbitReady && !dragging}
       enableDamping
       dampingFactor={0.12}
       maxPolarAngle={Math.PI / 2 - 0.08}

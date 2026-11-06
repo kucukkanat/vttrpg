@@ -22,6 +22,8 @@ export interface TableUiState {
   /** Local override of the scene's camera mode (C key); null follows the scene. */
   cameraOverride: CameraMode | null
   showGrid: boolean
+  /** Cells the local viewer can currently see; null when fog is off (everything visible). */
+  visible: ReadonlySet<string> | null
   set(partial: Partial<Omit<TableUiState, 'set'>>): void
 }
 
@@ -32,5 +34,6 @@ export const useTableUi = create<TableUiState>((set) => ({
   firstPerson: false,
   cameraOverride: null,
   showGrid: true,
+  visible: null,
   set: (partial) => set(partial),
 }))

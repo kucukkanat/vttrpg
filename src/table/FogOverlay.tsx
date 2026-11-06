@@ -121,6 +121,11 @@ export function FogOverlay({ bounds, walls }: { bounds: Bounds2; walls: readonly
 
   const darkness = Math.min(1, Math.max(0, scene.darkness))
   const gm = !viewer || viewer.isGm
+  const uiSet = useTableUi((s) => s.set)
+  useEffect(() => {
+    uiSet({ visible: darkness > 0 ? visibleDisplay : null })
+    return () => uiSet({ visible: null })
+  }, [visibleDisplay, darkness, uiSet])
   material.uniforms.uDark!.value = (gm ? 0.4 : 0.94) * darkness
   material.uniforms.uDim!.value = (gm ? 0.18 : 0.6) * darkness
 
