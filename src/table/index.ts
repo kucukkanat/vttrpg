@@ -8,3 +8,10 @@ export { resolveShape, tokensInShape, tokensInRange, cellsInShape, pointInShape 
 export type { ResolvedShape } from './targeting'
 export { loadSceneModel } from './sceneLoader'
 export type { LoadedScene, SceneValidationReport, WallSegment } from './sceneLoader'
+export { useTableUi, placementPoint, tableRuntime } from './tableState'
+export type { TableUiState, EditPreview } from './tableState'
+export {
+  SNAP, SCALE_LIMITS, TOKEN_SIZE_LIMITS, IDENTITY_TRANSFORM, radToDeg, degToRad, displayDeg, normalizeDeg, roundTo, clamp,
+  snapAngle, snapScale, snapTranslation, mergeOverride, resetOverride, isIdentityTransform, effectiveNodeTransform,
+} from './editing'
+export type { GizmoMode, NodeBase, NodeTransform } from './editing'

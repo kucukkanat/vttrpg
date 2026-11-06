@@ -10,7 +10,7 @@ import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Box3, MathUtils, MOUSE, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
-import { useTableUi } from './tableState'
+import { tableRuntime, useTableUi } from './tableState'
 import { castRay, type WallSegment } from './walls'
 
 export interface CameraRigProps {
@@ -68,7 +68,8 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
   const gl = useThree((s) => s.gl)
   const controls = useRef<OrbitControlsImpl>(null)
   const firstPerson = useTableUi((s) => s.firstPerson)
-  const dragging = useTableUi((s) => s.drag !== null)
+  // Token drags, prop drags and gizmo handles all own the pointer while they last.
+  const dragging = useTableUi((s) => s.drag !== null || s.editDrag)
   const effectiveMode: CameraMode = mode === 'token' && follow ? 'token' : 'orbit'
   // Mirrors rig.settled so OrbitControls re-renders when the transition finishes.
   const [orbitReady, setOrbitReady] = useState(false)
@@ -132,7 +133,8 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     let pinch = 0
     const r = rig.current
     const onDown = (e: PointerEvent) => {
-      if (useTableUi.getState().grab) return // a token drag is starting
+      const ui = useTableUi.getState()
+      if (ui.grab || ui.editDrag) return // a token / prop drag or a gizmo handle is starting
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()]
@@ -173,9 +175,14 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     }
   }, [effectiveMode, gl, cellSize])
 
+  const controlsEnabled = effectiveMode === 'orbit' && orbitReady && !dragging
   useFrame((_, dt) => {
     const r = rig.current
     const c = controls.current
+    // Gizmo handles flip `controls.enabled` imperatively on their own; keep the React value authoritative.
+    if (c && c.enabled !== controlsEnabled && !dragging) c.enabled = controlsEnabled
+    const look = c && effectiveMode === 'orbit' ? c.target : r.target
+    tableRuntime.cameraTarget = { x: look.x, y: look.y, z: look.z }
     const step = 1 - Math.exp(-dt * (r.settled ? 10 : 4))
     if (effectiveMode === 'orbit') {
       if (!r.settled) {
@@ -231,7 +238,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     <OrbitControls
       ref={controls}
       makeDefault
-      enabled={effectiveMode === 'orbit' && orbitReady && !dragging}
+      enabled={controlsEnabled}
       enableDamping
       dampingFactor={0.12}
       maxPolarAngle={Math.PI / 2 - 0.08}

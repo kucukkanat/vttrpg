@@ -23,15 +23,15 @@ const PRESENCE_INTERVAL_MS = 66 // ~15/s
  * recorded the capture by then, so swallowing the error keeps routing intact.
  */
 type CaptureTarget = { setPointerCapture(id: number): void; releasePointerCapture(id: number): void }
-const capture = (e: ThreeEvent<PointerEvent>) => {
+export const capture = (e: ThreeEvent<PointerEvent>) => {
   const t = e.target as unknown as CaptureTarget
   return {
     setPointerCapture(id: number) { try { t.setPointerCapture(id) } catch { /* see above */ } },
     releasePointerCapture(id: number) { try { t.releasePointerCapture(id) } catch { /* see above */ } },
   }
 }
-const DRAG_THRESHOLD_PX = 6
-const LONG_PRESS_MS = 450
+export const DRAG_THRESHOLD_PX = 6
+export const LONG_PRESS_MS = 450
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -74,19 +74,35 @@ function hashPhase(id: string): number {
   return (h >>> 0) / 4294967295 * Math.PI * 2
 }
 
-class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+/** Swaps in `fallback` when loading the model throws (bad URL, unsupported file). */
+export class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
   render() { return this.state.failed ? this.props.fallback : this.props.children }
 }
 
-function GlbMini({ url, scale }: { url: string; scale: number }) {
+/**
+ * A GLB instance with shadows on. Scene-convention helpers (`COL_*`, `FOG_*`) inside the file
+ * are hidden so a scene model can double as a prop. `onObject` reports the clone once it exists.
+ */
+export function GlbMini({ url, scale, onObject }: { url: string; scale: number; onObject?(o: Group | null): void }) {
   const gltf = useGLTF(url)
   const object = useMemo(() => {
-    const o = gltf.scene.clone(true)
-    o.traverse((m) => { if (m instanceof Mesh) { m.castShadow = true; m.receiveShadow = true } })
+    const o = gltf.scene.clone(true) as Group
+    o.traverse((m) => {
+      if (m instanceof Mesh) {
+        if (/^(COL|FOG)_/.test(m.name)) { m.visible = false; return }
+        m.castShadow = true
+        m.receiveShadow = true
+      }
+      if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
+    })
     return o
   }, [gltf])
+  useEffect(() => {
+    onObject?.(object)
+    return () => onObject?.(null)
+  }, [object, onObject])
   return <primitive object={object} scale={scale} />
 }
 
@@ -108,7 +124,7 @@ function Disc({ token, radius, dimmed }: { token: Token; radius: number; dimmed:
   )
 }
 
-function useAssetUrl(ref: Token['model']): string | null {
+export function useAssetUrl(ref: Token['model']): string | null {
   const { resolveAsset } = useTable()
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -131,35 +147,44 @@ export function TokenMesh({ token }: { token: Token }) {
   const targetInside = useTableUi((s) => s.targeting?.inside.has(token.id) ?? false)
   const targetOutOfRange = useTableUi((s) => (s.targeting ? !s.targeting.inRange.has(token.id) : false))
   const uiSet = useTableUi((s) => s.set)
+  // Live transform while the edit gizmo drags this token.
+  const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'token' && s.editPreview.target.id === token.id ? s.editPreview : null))
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const modelUrl = useAssetUrl(token.model)
 
   const group = useRef<Group>(null)
+  const body = useRef<Group>(null)
   const light = useRef<PointLight>(null)
   const controllable = canControl(viewer, token)
   useCursor(hovered && controllable, 'grab')
   useCursor(dragGhost !== null, 'grabbing')
 
   const cell = grid.cellSize
-  const radius = 0.38 * cell * token.scale
+  const scale = preview?.scale ?? token.scale
+  const rotationY = preview?.rotationY ?? token.rotationY
+  const elevation = Math.max(0, preview?.elevation ?? token.elevation ?? 0)
+  const radius = 0.38 * cell * scale
   const phase = useMemo(() => hashPhase(token.id), [token.id])
   const gmView = !viewer || viewer.isGm
 
-  // Smoothly follow the committed position (or the drag ghost), with an idle bob.
+  // Smoothly follow the committed position (or the drag ghost / edit preview), with an idle bob.
   const current = useRef(new Vector3(token.position.x, floorY, token.position.z))
   useFrame(({ clock }, dt) => {
     const g = group.current
     if (!g) return
-    const tx = dragGhost ? dragGhost.x : token.position.x
-    const tz = dragGhost ? dragGhost.z : token.position.z
-    const k = 1 - Math.exp(-dt * (dragGhost ? 18 : 10))
+    const tx = dragGhost ? dragGhost.x : preview ? preview.position.x : token.position.x
+    const tz = dragGhost ? dragGhost.z : preview ? preview.position.z : token.position.z
+    const k = 1 - Math.exp(-dt * (dragGhost || preview ? 18 : 10))
     current.current.x += (tx - current.current.x) * k
     current.current.z += (tz - current.current.z) * k
     const t = clock.elapsedTime
     const bob = Math.sin(t * 1.6 + phase) * 0.012 * cell
     const lift = dragGhost ? 0.25 * cell : 0
-    g.position.set(current.current.x, floorY + bob + lift, current.current.z)
-    g.rotation.y = token.rotationY
+    g.position.set(current.current.x, floorY, current.current.z)
+    if (body.current) {
+      body.current.position.y = bob + lift + elevation
+      body.current.rotation.y = rotationY
+    }
     if (light.current && token.light > 0) {
       light.current.intensity = 5 * cell * cell * (1 + 0.3 * flickerNoise(t, phase))
     }
@@ -263,37 +288,58 @@ export function TokenMesh({ token }: { token: Token }) {
       onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); uiSet({ hovered: token.id }) }}
       onPointerOut={() => { if (useTableUi.getState().hovered === token.id) uiSet({ hovered: null }) }}
     >
-      {modelUrl ? (
-        <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
-          <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
-            <GlbMini url={modelUrl} scale={token.scale} />
-          </Suspense>
-        </ModelBoundary>
-      ) : (
-        <Disc token={token} radius={radius} dimmed={dimmed} />
-      )}
-      {(selected || hovered) && !targeting && (
-        <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>
-          <ringGeometry args={[radius * 1.12, radius * (selected ? 1.3 : 1.22), 48]} />
-          <meshBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
-        </mesh>
-      )}
-      {targetInside && (
-        <mesh rotation-x={-Math.PI / 2} position-y={0.012} renderOrder={6} raycast={() => undefined}>
-          <ringGeometry args={[radius * 1.1, radius * 1.45, 48]} />
-          <meshBasicMaterial color="#ff5a1f" transparent opacity={0.95} depthWrite={false} />
-        </mesh>
-      )}
-      {token.light > 0 && (
-        <pointLight
-          ref={light}
-          position={[0, 0.8 * cell, 0]}
-          color="#ffb46b"
-          distance={token.light * cell}
-          decay={2}
-          intensity={5 * cell * cell}
-        />
-      )}
+      {/* Lifted part: the mini, its rings and light. The group below stays on the floor. */}
+      <group ref={body} position-y={elevation} rotation-y={rotationY}>
+        {modelUrl ? (
+          <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
+            <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
+              <GlbMini url={modelUrl} scale={scale} />
+            </Suspense>
+          </ModelBoundary>
+        ) : (
+          <Disc token={token} radius={radius} dimmed={dimmed} />
+        )}
+        {(selected || hovered) && !targeting && (
+          <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>
+            <ringGeometry args={[radius * 1.12, radius * (selected ? 1.3 : 1.22), 48]} />
+            <meshBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
+          </mesh>
+        )}
+        {targetInside && (
+          <mesh rotation-x={-Math.PI / 2} position-y={0.012} renderOrder={6} raycast={() => undefined}>
+            <ringGeometry args={[radius * 1.1, radius * 1.45, 48]} />
+            <meshBasicMaterial color="#ff5a1f" transparent opacity={0.95} depthWrite={false} />
+          </mesh>
+        )}
+        {token.light > 0 && (
+          <pointLight
+            ref={light}
+            position={[0, 0.8 * cell, 0]}
+            color="#ffb46b"
+            distance={token.light * cell}
+            decay={2}
+            intensity={5 * cell * cell}
+          />
+        )}
+      </group>
+      {elevation > 0.01 && <ElevationMarker elevation={elevation} radius={radius} cell={cell} />}
+    </group>
+  )
+}
+
+/** Thin plumb line from the floor up to a lifted token plus a soft shadow disc, so height reads at a glance. */
+function ElevationMarker({ elevation, radius, cell }: { elevation: number; radius: number; cell: number }) {
+  const shadow = Math.max(0.12, 1 - elevation / (6 * cell))
+  return (
+    <group raycast={() => undefined}>
+      <mesh position-y={elevation / 2} raycast={() => undefined}>
+        <cylinderGeometry args={[0.012 * cell, 0.012 * cell, elevation, 6]} />
+        <meshBasicMaterial color="#f3ead8" transparent opacity={0.55} depthWrite={false} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position-y={0.006} renderOrder={2} raycast={() => undefined}>
+        <circleGeometry args={[radius * (0.9 + 0.1 * (1 - shadow)), 40]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.4 * shadow} depthWrite={false} />
+      </mesh>
     </group>
   )
 }

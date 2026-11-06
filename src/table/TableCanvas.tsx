@@ -8,6 +8,8 @@
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
  * two fingers pan, pinch zooms, long-press selects.
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
+ * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
+ * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -21,12 +23,15 @@ import type { Presence } from '@/core/presence'
 import { useGame } from '@/state/store'
 import { CameraRig } from './CameraRig'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
+import { EditGizmo } from './EditGizmo'
+import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
 import { GridOverlay } from './GridOverlay'
+import { Props } from './PropMesh'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
-import { useTableUi } from './tableState'
+import { tableRuntime, useTableUi } from './tableState'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import { DragGhostMesh, TokenMesh } from './TokenMesh'
 import * as vfx from './vfx'
@@ -82,10 +87,16 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
   const uiSet = useTableUi((s) => s.set)
   const gridOn = useTableUi((s) => s.showGrid)
   const cameraOverride = useTableUi((s) => s.cameraOverride)
-  const setSelected = useGame((s) => s.setSelectedToken)
+  const propWalls = useTableUi((s) => s.propWalls)
+  const setSelection = useGame((s) => s.setSelection)
+  const gm = !viewer || viewer.isGm
 
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
-  useEffect(() => { uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null }) }, [sceneId, uiSet])
+  useEffect(() => {
+    uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
+  }, [sceneId, uiSet])
+  // Edit mode is a GM tool; a player view never shows it.
+  useEffect(() => { if (!gm) uiSet({ editMode: false }) }, [gm, uiSet])
 
   // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
   // recreates `scene` on every document sync and the model must not reload for a chat message.
@@ -122,29 +133,51 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       const ui = useTableUi.getState()
       if (e.key === 'Escape' && cancelTargeting) { cancelTargeting(); return }
+      if (e.metaKey || e.ctrlKey) return
       switch (e.key) {
-        case 'g': case 'G': ui.set({ showGrid: !ui.showGrid }); break
+        // In edit mode G / R / S pick the gizmo mode (Blender habits); otherwise G toggles the grid.
+        case 'g': case 'G': if (ui.editMode) ui.set({ gizmoMode: 'translate' }); else ui.set({ showGrid: !ui.showGrid }); break
+        case 'r': case 'R': if (ui.editMode) ui.set({ gizmoMode: 'rotate' }); break
+        case 's': case 'S': if (ui.editMode) ui.set({ gizmoMode: 'scale' }); break
         case 'f': case 'F': ui.set({ firstPerson: !ui.firstPerson }); break
         case 'c': case 'C': {
           const current = ui.cameraOverride ?? cameraMode ?? scene.cameraMode
           ui.set({ cameraOverride: current === 'orbit' ? 'token' : 'orbit' })
           break
         }
-        case 'Escape': setSelected(null); break
+        case 'Delete': case 'Backspace': {
+          const sel = useGame.getState().selection
+          if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'prop.remove', prop: sel.id }); setSelection(null) }
+          break
+        }
+        case 'Escape': setSelection(null); break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cameraMode, scene.cameraMode, setSelected, cancelTargeting])
+  }, [cameraMode, scene.cameraMode, setSelection, cancelTargeting, gm, onIntent])
 
   const grid: GridSpec = scene.grid
-  const floorY = loaded?.floorY ?? 0
+  // The scene's in-game transform moves the floor, the bounds and the walls along with the model.
+  const transform = scene.transform
+  const floorY = (loaded?.floorY ?? 0) * (transform?.scale ?? 1) + (transform?.offset.y ?? 0)
+  const bounds3 = useMemo(() => {
+    const b = (loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))).clone()
+    return transform ? b.applyMatrix4(sceneTransformMatrix(transform)) : b
+  }, [loaded, transform])
   const bounds2: Bounds2 = useMemo(() => {
-    const b = loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))
     const pad = grid.cellSize * 0.5
-    return { minX: b.min.x - pad, minZ: b.min.z - pad, maxX: b.max.x + pad, maxZ: b.max.z + pad }
-  }, [loaded, grid.cellSize])
-  const bounds3 = useMemo(() => loaded?.bounds ?? new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8)), [loaded])
+    return { minX: bounds3.min.x - pad, minZ: bounds3.min.z - pad, maxX: bounds3.max.x + pad, maxZ: bounds3.max.z + pad }
+  }, [bounds3, grid.cellSize])
+  const walls = useMemo(
+    () => [...transformWalls(loaded?.walls ?? [], transform), ...Object.values(propWalls).flat()],
+    [loaded, transform, propWalls],
+  )
+  useEffect(() => {
+    const c = bounds3.getCenter(new Vector3())
+    tableRuntime.sceneCenter = { x: c.x, y: floorY, z: c.z }
+    tableRuntime.floorY = floorY
+  }, [bounds3, floorY])
   const weatherBounds = useMemo(
     () => ({ min: [bounds3.min.x, bounds3.min.y, bounds3.min.z] as [number, number, number], max: [bounds3.max.x, bounds3.max.y, bounds3.max.z] as [number, number, number] }),
     [bounds3],
@@ -165,7 +198,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
         camera={CAMERA_OPTS}
         gl={GL_OPTS}
         style={CANVAS_STYLE}
-        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelected(null) }}
+        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null) }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <color attach="background" args={['#0b0b10']} />
@@ -174,12 +207,14 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : <PlaceholderFloor bounds={bounds2} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
+          <Props sceneId={sceneId} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
-          <FogOverlay bounds={bounds2} walls={loaded?.walls ?? []} />
+          <FogOverlay bounds={bounds2} walls={walls} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
-          <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={loaded?.walls ?? []} />
+          <EditGizmo />
+          <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />
         </TableContext.Provider>
       </Canvas>
