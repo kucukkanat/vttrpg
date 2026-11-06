@@ -1,0 +1,123 @@
+/* Scene transition: the table fades to black with the next scene's name centred, swaps unseen and
+   fades back in once the new scene has loaded. The preview bar sits over the top edge while the GM
+   looks at a scene the players are not on. Both are DOM overlays inside the table section. */
+
+.scene-transition {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+  background: #000;
+  color: #f3ead8;
+  text-align: center;
+}
+
+.scene-transition--out { animation: scene-transition-cover 300ms ease-out forwards; }
+.scene-transition--swap { opacity: 1; }
+.scene-transition--in { animation: scene-transition-reveal 300ms ease-in forwards; pointer-events: none; }
+
+@keyframes scene-transition-cover { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scene-transition-reveal { from { opacity: 1; } to { opacity: 0; } }
+
+.scene-transition__name {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(22px, 4.5vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+/* "Loading…" only when the swap takes a moment, so a quick switch shows the name alone. */
+.scene-transition__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  font-size: 13px;
+  opacity: 0;
+  animation: scene-transition-hint 200ms ease-out 1s forwards;
+}
+@keyframes scene-transition-hint { to { opacity: 0.75; } }
+
+/* Reduced motion: no fades. The table swaps under an instant black cover while it loads, the cover
+   drops at once and the name stays a moment longer over the new scene. */
+.scene-transition--reduced,
+.scene-transition--reduced .scene-transition__hint { animation: none; }
+.scene-transition--reduced.scene-transition--out,
+.scene-transition--reduced.scene-transition--swap { opacity: 1; }
+.scene-transition--reduced .scene-transition__hint { opacity: 0.75; }
+.scene-transition--reduced.scene-transition--in { opacity: 1; background: transparent; }
+
+/* --- preview bar ------------------------------------------------------------------------------ */
+
+.scene-preview-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  background: rgba(0, 0, 0, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f3ead8;
+  font-size: 14px;
+}
+
+.scene-preview-bar__text {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.scene-preview-bar__text b { font-weight: 600; }
+
+.scene-preview-bar__actions {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.scene-preview-bar__btn {
+  flex: 1 1 0;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(40, 40, 48, 0.92);
+  color: #f3ead8;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.scene-preview-bar__btn:focus-visible {
+  outline: 2px solid var(--accent, #e0a458);
+  outline-offset: 2px;
+}
+
+.scene-preview-bar__btn--primary {
+  background: var(--accent, #e0a458);
+  border-color: var(--accent, #e0a458);
+  color: var(--accent-fg, #1a1612);
+}
+
+@media (min-width: 600px) {
+  .scene-preview-bar__actions { flex: 0 0 auto; }
+  .scene-preview-bar__btn { flex: 0 0 auto; }
+}

@@ -58,6 +58,31 @@ export interface EditPreview {
   elevation?: number
 }
 
+/**
+ * The fade between scenes, for everyone on the table (`SceneTransition`):
+ * - `out`: the table fades to black with the next scene's name over it;
+ * - `swap`: black; the next scene is mounted and loading;
+ * - `in`: the new scene has loaded and the black fades away.
+ * `to` is the scene being shown next; `name` its title for the overlay. Null when nothing is in flight.
+ */
+export interface SceneTransition {
+  to: SceneId
+  name: string
+  phase: SceneTransitionPhase
+}
+export type SceneTransitionPhase = 'out' | 'swap' | 'in'
+
+/** What moves the transition on; see `stepSceneTransition`. */
+export type SceneTransitionEvent =
+  /** The scene to show changed (live scene switched, preview started or ended). */
+  | { type: 'change'; to: SceneId; name: string }
+  /** The fade to black finished: the table can swap scenes unseen. */
+  | { type: 'covered' }
+  /** `scene` finished loading (or failed, so its error banner should show). */
+  | { type: 'loaded'; scene: SceneId }
+  /** The fade back in finished. */
+  | { type: 'revealed' }
+
 export interface TableUiState {
   hovered: TokenId | null
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
@@ -99,6 +124,13 @@ export interface TableUiState {
   cameraActive: { mode: CameraMode; canFollow: boolean } | null
   /** Scenes whose model failed to load on this client, with the reason; cleared when a load succeeds. */
   sceneErrors: Record<SceneId, string>
+  /** The fade between scenes in progress on this client; null when the table is settled. */
+  transition: SceneTransition | null
+  /**
+   * GM only, never synced: the scene this client shows instead of the live one, so the GM can look
+   * at a scene before switching everyone to it. Cleared when it goes live or is removed.
+   */
+  previewScene: SceneId | null
   set(partial: Partial<Omit<TableUiState, 'set' | 'focusToken'>>): void
 }
 
@@ -122,8 +154,52 @@ export const useTableUi = create<TableUiState>((set) => ({
   focusToken: (id) => set((s) => ({ focusRequest: { id, n: (s.focusRequest?.n ?? 0) + 1 } })),
   cameraActive: null,
   sceneErrors: {} as Record<SceneId, string>,
+  transition: null,
+  previewScene: null,
   set: (partial) => set(partial),
 }))
+
+/**
+ * The scene transition state machine, as a pure step so it can be tested without timers:
+ * null --change--> out --covered--> swap --loaded(to)--> in --revealed--> null.
+ * A `change` while a fade is running retargets it: during `out` and `swap` the fade keeps going
+ * towards the new scene; during `in` the table fades out again. Events that do not apply to the
+ * current phase (a stale `loaded` for another scene, a late `revealed`) leave the state as it is,
+ * and the same object comes back when nothing changed so subscribers do not re-render.
+ */
+export function stepSceneTransition(t: SceneTransition | null, e: SceneTransitionEvent): SceneTransition | null {
+  switch (e.type) {
+    case 'change': {
+      const phase: SceneTransitionPhase = t === null || t.phase === 'in' ? 'out' : t.phase
+      if (t && t.to === e.to && t.name === e.name && t.phase === phase) return t
+      return { to: e.to, name: e.name, phase }
+    }
+    case 'covered':
+      return t?.phase === 'out' ? { ...t, phase: 'swap' } : t
+    case 'loaded':
+      return t?.phase === 'swap' && t.to === e.scene ? { ...t, phase: 'in' } : t
+    case 'revealed':
+      return t?.phase === 'in' ? null : t
+  }
+}
+
+/** Feed an event to the running scene transition (see `stepSceneTransition`). */
+export function sceneTransitionEvent(e: SceneTransitionEvent): void {
+  useTableUi.setState((s) => {
+    const next = stepSceneTransition(s.transition, e)
+    return next === s.transition ? s : { transition: next }
+  })
+}
+
+/** Drop any transition in flight (the table has nothing to show, or was unmounted). */
+export function clearSceneTransition(): void {
+  if (useTableUi.getState().transition) useTableUi.setState({ transition: null })
+}
+
+/** GM: look at `scene` on this client only (null: back to the live scene). */
+export function setPreviewScene(scene: SceneId | null): void {
+  if (useTableUi.getState().previewScene !== scene) useTableUi.setState({ previewScene: scene })
+}
 
 /** Ask the camera rig to frame `id` (orbit: glide the view onto it; token mode: it is followed already). */
 export function focusToken(id: TokenId): void {

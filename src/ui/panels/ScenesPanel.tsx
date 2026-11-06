@@ -6,6 +6,7 @@ import type { LibraryEntry } from '@/assets'
 import type { CameraMode, Scene } from '@/core/doc'
 import { createImageScene, importSceneFile, readImageSize, suggestColumns, type ImageSize, type ImportHooks } from '@/import'
 import { imageSceneLayout, pixelsPerCell, useTableUi } from '@/table'
+import { setPreviewScene } from '@/table/tableState'
 import { fogStatus, isFogEnabled } from '@/table/vision'
 import { libraryModels, libraryRef, loadLibraryIndex, titleCase } from '../library'
 import { pushToast } from '../toasts'
@@ -36,16 +37,18 @@ const CAMERA_HINT: Record<CameraMode, string> = {
 }
 
 /**
- * Scenes: the list (Live badge on the active one, Switch on the others), ways to add a scene, and
- * the active scene's weather, ambience, darkness and fog. Adding stages the scene without
- * switching; the GM switches when ready (a toast offers it). The first scene of a game goes live
- * at once, since there is nothing to interrupt.
+ * Scenes: the list (Live badge on the active one, Switch and Preview on the others), ways to add a
+ * scene, and the active scene's weather, ambience, darkness and fog. Preview shows a scene on the
+ * GM's table only (`tableState.previewScene`); the bar over the table offers the switch from there.
+ * Adding stages the scene without switching; the GM switches when ready (a toast offers it). The
+ * first scene of a game goes live at once, since there is nothing to interrupt.
  */
 export function ScenesPanel({ controller }: { controller: GameController }) {
   const scenes = useGame((s) => s.scenes)
   const meta = useGame((s) => s.meta)
   const activeFog = useGame((s) => (s.meta?.activeScene ? s.fog[s.meta.activeScene] : undefined))
   const sceneErrors = useTableUi((s) => s.sceneErrors)
+  const previewScene = useTableUi((s) => s.previewScene)
   const [library, setLibrary] = useState<LibraryEntry[]>([])
   const [mapImage, setMapImage] = useState<MapImageDraft | null>(null)
   const [imagePrompt, setImagePrompt] = useState<ImagePrompt | null>(null)
@@ -163,6 +166,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
       <ul className="list scenes-list">
         {Object.values(scenes).map((s) => {
           const live = s.id === meta?.activeScene
+          const previewing = s.id === previewScene
           const err = sceneErrors[s.id]
           return (
             <li key={s.id} className={live ? 'selected' : ''}>
@@ -173,7 +177,16 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
               </span>
               {live
                 ? <span className="scene-live" title="The scene everyone is looking at">Live</span>
-                : isGm && <button className="scene-switch" onClick={() => void switchTo(s.id)}>Switch</button>}
+                : isGm && (
+                  <>
+                    <button className="scene-switch" onClick={() => void switchTo(s.id)}>Switch</button>
+                    <button className={`scene-preview${previewing ? ' primary' : ''}`} aria-pressed={previewing}
+                      title={previewing ? 'Back to the live scene' : `Look at ${s.name} without switching the players`}
+                      onClick={() => setPreviewScene(previewing ? null : s.id)}>
+                      {previewing ? 'Previewing' : 'Preview'}
+                    </button>
+                  </>
+                )}
               {isGm && (
                 <button className="icon scene-camera" title={CAMERA_HINT[s.cameraMode]} aria-label={CAMERA_HINT[s.cameraMode]} onClick={() => toggleCamera(s.id)}>
                   <CameraIcon mode={s.cameraMode} />
