@@ -3,9 +3,11 @@
  * is set: an invisible floor plane follows the pointer, the shape preview is drawn on the floor,
  * tokens inside are highlighted (via `useTableUi().targeting`) and a tap picks.
  *
- * Mouse: move to aim, click to pick. Touch: drag to aim, lift to stage the pick; the host shows a
- * confirm button (`TargetingBar`) so a stray tap never fires a spell. A tap on the source token,
- * the Cancel button or Esc cancels. Tokens do not take pointer events while targeting is active.
+ * Every pointer type stages first: move or drag to aim, click or lift to stage the pick; the host
+ * shows the staged targets with Cast / Cancel (`TargetingBar`) so a stray click never fires a
+ * spell. A staged pick holds the preview until the next press re-aims. A tap on the source
+ * token, the Cancel button, right click or Esc cancels. Tokens do not take pointer events while
+ * targeting is active. The pure staging rules live in `stageTargeting`.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
@@ -17,13 +19,18 @@ import { useGame } from '@/state/store'
 import { useTable } from './context'
 import type { Bounds2 } from './grid'
 import { useTableUi } from './tableState'
-import { resolveShape, shapeOutline, tokenAt, tokensInRange, tokensInShape, type ResolvedShape } from './targeting'
+import { resolveShape, shapeOutline, stageTargeting, tokenAt, tokensInRange, tokensInShape, type ResolvedShape } from './targeting'
 
 export interface TargetingProps {
+  /** Skill name for the bar ("Fireball → Bramble, Nettle"). */
+  name: string
   shape: TargetShape
   source: TokenId
+  /** Called with the staged pick once the user confirms. */
   onPick(result: { targets: TokenId[]; point?: Vec3 }): void
   onCancel(): void
+  /** Marks tokens the bar should warn about before casting (another player's character). */
+  isPlayerCharacter?(id: TokenId): boolean
 }
 
 const DRAG_THRESHOLD_PX = 8
@@ -72,7 +79,7 @@ function circlePoints(c: Vec2, r: number, n = 64): Vec2[] {
 }
 
 export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProps; bounds: Bounds2 }) {
-  const { shape, source, onPick, onCancel } = targeting
+  const { shape, source, onCancel } = targeting
   const { grid, floorY, sceneId, viewer } = useTable()
   const tokens = useGame((s) => s.tokens)
   const uiSet = useTableUi((s) => s.set)
@@ -147,11 +154,12 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
     if (!e.ray.intersectPlane(plane, hit)) return null
     return { x: hit.x, y: hit.z }
   }
-  const stage = (p: Vec2, touch: boolean) => {
-    const result = pickAt(p)
-    if (!result) { uiSet({ targeting: { ...useTableUi.getState().targeting!, candidate: null } }); return }
-    if (touch) uiSet({ targeting: { ...useTableUi.getState().targeting!, candidate: result } })
-    else onPick(result)
+  /** A lift stages the pick for the bar's Cast button (or cancels on a plain tap on the caster). */
+  const stage = (p: Vec2, onCaster: boolean) => {
+    const ui = useTableUi.getState().targeting
+    const r = stageTargeting(ui?.candidate ?? null, { kind: 'lift', pick: pickAt(p), onCaster })
+    if (r.cancelled) { onCancel(); return }
+    if (ui) uiSet({ targeting: { ...ui, candidate: r.staged } })
   }
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
@@ -169,6 +177,8 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
     if (d && e.pointerId !== d.pointerId) return
     const p = pointAt(e)
     if (!p) return
+    // A staged pick holds the preview where it was aimed; the next press starts aiming again.
+    if (!d && useTableUi.getState().targeting?.candidate) return
     if (d) {
       e.stopPropagation()
       if (!d.moved && Math.hypot(e.nativeEvent.clientX - d.startX, e.nativeEvent.clientY - d.startY) >= DRAG_THRESHOLD_PX) d.moved = true
@@ -186,8 +196,7 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
     const p = pointAt(e) ?? pointer
     setPointer(p)
     // A plain tap on the caster cancels (an aimed drag that ends there does not).
-    if (!d.moved && shape.kind !== 'self' && tokenAt(p, candidates, grid.cellSize) === source) { onCancel(); return }
-    stage(p, d.touch)
+    stage(p, !d.moved && shape.kind !== 'self' && tokenAt(p, candidates, grid.cellSize) === source)
   }
   const onPointerCancel = () => {
     if (!drag.current) return

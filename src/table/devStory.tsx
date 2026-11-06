@@ -233,6 +233,7 @@ export function DevStory() {
           viewer={{ pubkey: asGm ? GM : PLAYER, isGm: asGm }}
           onSceneLoaded={setReport}
           targeting={aim ? {
+            name: aim,
             shape: AIM_SHAPES[aim]!,
             source: 'tok-mouse' as TokenId,
             onPick: (r) => { setLog((l) => [`pick ${aim}: [${r.targets.join(', ')}] @ ${r.point ? `${r.point.x.toFixed(1)},${r.point.z.toFixed(1)}` : '-'}`, ...l].slice(0, 6)); setAim(null) },

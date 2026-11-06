@@ -1,0 +1,89 @@
+/* Targeting bar: the staged skill pick with Cast / Cancel, floating over the bottom of the table.
+   Touch first: 44px buttons, safe-area insets, a single column that fits a 320px screen. */
+
+.targeting-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: center;
+  padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+
+.targeting-bar__card {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 560px);
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.66);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #f3ead8;
+  pointer-events: auto;
+}
+
+.targeting-bar__text {
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.targeting-bar__warn {
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #ffb3a7;
+  overflow-wrap: anywhere;
+}
+
+.targeting-bar__warn::before {
+  content: '\26A0\00A0';
+}
+
+.targeting-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.targeting-bar__btn {
+  flex: 1 1 0;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(40, 40, 48, 0.92);
+  color: #f3ead8;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.targeting-bar__btn:focus-visible {
+  outline: 2px solid var(--accent, #e0a458);
+  outline-offset: 2px;
+}
+
+.targeting-bar__btn--primary {
+  background: var(--accent, #e0a458);
+  border-color: var(--accent, #e0a458);
+  color: var(--accent-fg, #1a1612);
+}
+
+/* Wide tables: text on the left, buttons on the right, the warning on its own row. */
+@media (min-width: 600px) {
+  .targeting-bar__card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .targeting-bar__text { grid-row: 1; grid-column: 1; }
+  .targeting-bar__actions { grid-row: 1; grid-column: 2; }
+  .targeting-bar__warn { grid-row: 2; grid-column: 1 / -1; }
+  .targeting-bar__btn { flex: 0 0 auto; min-width: 96px; }
+}

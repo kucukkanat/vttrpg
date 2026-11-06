@@ -11,7 +11,7 @@ import type { Character } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { TokenId } from '@/core/ids'
 import type { TargetingProps } from '@/table'
-import { useTargeting } from '../targeting'
+import { isPlayerCharacter, useTargeting } from '../targeting'
 
 const TOAST_MS = 8000
 
@@ -140,7 +140,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
       {token && character && !mayUse && <p className="muted small">You do not control {token.name}.</p>}
       {pending && (
         <p className="small" style={{ color: 'var(--accent)', margin: '0 0 8px' }}>
-          Aiming {pending.name}: tap the table to pick, tap the caster or press Esc to cancel.
+          Aiming {pending.name}: pick on the table, then Cast. Tap the caster or press Esc to cancel.
         </p>
       )}
       {token && character && mayUse && (
@@ -173,7 +173,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   )
 }
 
-/** The table's `targeting` prop for the pending skill; dispatches `skill.use` when a target is picked. */
+/** The table's `targeting` prop for the pending skill; dispatches `skill.use` once the staged pick is confirmed. */
 export function useSkillTargeting(controller: GameController | null): TargetingProps | undefined {
   const pending = useTargeting((s) => s.pending)
   const sourceExists = useGame((s) => (pending ? !!s.tokens[pending.source] : true))
@@ -181,8 +181,14 @@ export function useSkillTargeting(controller: GameController | null): TargetingP
   return useMemo<TargetingProps | undefined>(() => {
     if (!pending || !controller) return undefined
     return {
+      name: pending.name,
       shape: pending.shape,
       source: pending.source,
+      isPlayerCharacter: (id) => {
+        const s = useGame.getState()
+        const t = s.tokens[id]
+        return t ? isPlayerCharacter(t, t.character ? s.characters[t.character] : undefined, s.meta?.gm) : false
+      },
       onPick: ({ targets, point }) => {
         const t = useTargeting.getState()
         t.markFired()

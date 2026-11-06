@@ -2,8 +2,56 @@ import { describe, expect, it } from 'vitest'
 import type { GridSpec } from '@/core/geometry'
 import { cellKey } from './grid'
 import {
-  cellsInShape, clampToRange, directionTo, pointInShape, resolveShape, shapeOutline, tokenAt, tokensInRange, tokensInShape,
+  cellsInShape, clampToRange, directionTo, pointInShape, resolveShape, shapeOutline, shapeSummary, stagedSummary, stageTargeting,
+  tokenAt, tokensInRange, tokensInShape,
 } from './targeting'
+
+describe('stageTargeting', () => {
+  const pick = { targets: ['a', 'b'], point: { x: 1, y: 0, z: 2 } }
+  const empty = { targets: [], point: { x: 5, y: 0, z: 5 } }
+
+  it('a lift stages the pick and never casts, for mouse and touch alike', () => {
+    expect(stageTargeting(null, { kind: 'lift', pick, onCaster: false })).toEqual({ staged: pick })
+  })
+
+  it('a later lift re-stages, or clears the stage when nothing valid is under the pointer', () => {
+    expect(stageTargeting(pick, { kind: 'lift', pick: empty, onCaster: false })).toEqual({ staged: empty })
+    expect(stageTargeting(pick, { kind: 'lift', pick: null, onCaster: false })).toEqual({ staged: null })
+  })
+
+  it('a plain tap on the caster cancels, even with a pick staged', () => {
+    expect(stageTargeting(pick, { kind: 'lift', pick, onCaster: true })).toEqual({ staged: null, cancelled: true })
+  })
+
+  it('confirm casts the staged pick only', () => {
+    expect(stageTargeting(pick, { kind: 'confirm' })).toEqual({ staged: null, cast: pick })
+    expect(stageTargeting(empty, { kind: 'confirm' })).toEqual({ staged: null, cast: empty })
+    expect(stageTargeting(null, { kind: 'confirm' })).toEqual({ staged: null })
+  })
+
+  it('cancel drops the stage', () => {
+    expect(stageTargeting(pick, { kind: 'cancel' })).toEqual({ staged: null, cancelled: true })
+  })
+})
+
+describe('bar summaries', () => {
+  it('names the skill, the targets and the shape', () => {
+    expect(stagedSummary('Fireball', { kind: 'radius', range: 6, radius: 2 }, ['Bramble', 'Nettle'])).toBe('Fireball → Bramble, Nettle · 2-cell burst')
+    expect(stagedSummary('Magic Missile', { kind: 'single', range: 8 }, ['Bramble'])).toBe('Magic Missile → Bramble')
+    expect(stagedSummary('Rally', { kind: 'self' }, ['Hazel'])).toBe('Rally → Hazel')
+  })
+
+  it('says when an area catches no one', () => {
+    expect(stagedSummary('Fireball', { kind: 'radius', range: 6, radius: 2 }, [])).toBe('Fireball → 2-cell burst · no one in the area')
+    expect(stagedSummary('Breath', { kind: 'cone', range: 4, angle: 60 }, [])).toBe('Breath → 4-cell cone · no one in the area')
+    expect(stagedSummary('Bolt', { kind: 'single', range: 8 }, [])).toBe('Bolt → no target')
+  })
+
+  it('summarises every shape kind', () => {
+    expect(shapeSummary({ kind: 'line', range: 5, width: 1 })).toBe('5-cell line')
+    expect(shapeSummary({ kind: 'single', range: 1 })).toBe('')
+  })
+})
 
 const grid: GridSpec = { type: 'square', cellSize: 1, origin: { x: 0, y: 0, z: 0 } }
 const hex: GridSpec = { type: 'hex', cellSize: 1, origin: { x: 0, y: 0, z: 0 } }

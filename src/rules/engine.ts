@@ -353,6 +353,14 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       if (amount > 0) messages.push(`${src.name} spends ${amount} ${labelOf(cost.resource)} on ${skill.name}.`)
     }
 
+    // An area skill aimed at empty ground: the cost is paid and the vfx still plays, but there is
+    // nobody to save, damage or condition, so no roll is made against nothing.
+    const areaShape = skill.target.kind === 'radius' || skill.target.kind === 'cone' || skill.target.kind === 'line'
+    if (areaShape && tgts.length === 0) {
+      messages.push(`${skill.name} hits no one.`)
+      return { patches: patchesFor(), messages, vfx: skill.vfx }
+    }
+
     const applyEffect = async (e: Effect): Promise<void> => {
       switch (e.kind) {
         case 'roll': {
@@ -427,15 +435,20 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     }
     for (const e of skill.effects) await applyEffect(e)
 
-    const patches: { character: string; data: Data }[] = []
-    for (const [id, copy] of copies) {
-      const original = originals.get(id)!.data
-      const changed: Data = {}
-      for (const key of new Set([...Object.keys(original), ...Object.keys(copy.data)]))
-        if (JSON.stringify(original[key]) !== JSON.stringify(copy.data[key])) changed[key] = copy.data[key]
-      if (Object.keys(changed).length) patches.push({ character: id, data: changed })
+    return { patches: patchesFor(), messages, vfx: skill.vfx }
+
+    /** Changed top-level sheet keys per touched character. */
+    function patchesFor(): { character: string; data: Data }[] {
+      const patches: { character: string; data: Data }[] = []
+      for (const [id, copy] of copies) {
+        const original = originals.get(id)!.data
+        const changed: Data = {}
+        for (const key of new Set([...Object.keys(original), ...Object.keys(copy.data)]))
+          if (JSON.stringify(original[key]) !== JSON.stringify(copy.data[key])) changed[key] = copy.data[key]
+        if (Object.keys(changed).length) patches.push({ character: id, data: changed })
+      }
+      return patches
     }
-    return { patches, messages, vfx: skill.vfx }
   }
 
   function conditionName(id: string): string {

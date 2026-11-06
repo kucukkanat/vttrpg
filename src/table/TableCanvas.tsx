@@ -17,7 +17,7 @@ import { Box3, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
 import type { CameraMode, Scene, Token } from '@/core/doc'
 import type { GridSpec } from '@/core/geometry'
-import type { PlayerPubkey, SceneId } from '@/core/ids'
+import type { PlayerPubkey, SceneId, TokenId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import { useGame } from '@/state/store'
@@ -34,7 +34,9 @@ import { Props } from './PropMesh'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
 import { tableRuntime, useTableUi } from './tableState'
+import { stagedSummary, stageTargeting } from './targeting'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
+import './TargetingBar.css'
 import { DragGhostMesh, TokenMesh } from './TokenMesh'
 import * as vfx from './vfx'
 import type { WallSegment } from './walls'
@@ -249,41 +251,57 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
 }
 
 /**
- * HTML controls for targeting: what is being aimed, Cancel, and on touch the Confirm button for
- * the staged pick. Big hit areas; sits at the bottom of the table above the canvas.
+ * HTML controls for targeting: the skill being aimed, then the staged pick ("Fireball → Bramble,
+ * Nettle · 2-cell burst") with a warning when a target is a player character, and Cast / Cancel.
+ * Every pointer type stages first; Enter casts the staged pick, Esc cancels (TableInner). 44px
+ * buttons, safe-area aware, stacks on narrow screens (styles in TargetingBar.css).
  */
 function TargetingBar({ targeting }: { targeting: TargetingProps }) {
   const candidate = useTableUi((s) => s.targeting?.candidate ?? null)
   const uiSet = useTableUi((s) => s.set)
-  const btn: CSSProperties = {
-    minHeight: 44, minWidth: 96, padding: '0 18px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)',
-    background: 'rgba(40,40,48,0.92)', color: '#f3ead8', fontSize: 15, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
-  }
-  const confirm = () => {
-    if (!candidate) return
+  const tokens = useGame((s) => s.tokens)
+  const nameOf = useCallback((id: TokenId) => tokens[id]?.name ?? 'someone', [tokens])
+  const names = useMemo(() => (candidate?.targets ?? []).map(nameOf), [candidate, nameOf])
+  const players = useMemo(
+    () => (candidate?.targets ?? []).filter((id) => targeting.isPlayerCharacter?.(id) ?? false).map(nameOf),
+    [candidate, nameOf, targeting],
+  )
+  const cast = useCallback(() => {
     const t = useTableUi.getState().targeting
+    const r = stageTargeting(t?.candidate ?? null, { kind: 'confirm' })
+    if (!r.cast) return
     uiSet({ targeting: t ? { ...t, candidate: null } : null })
-    targeting.onPick(candidate)
-  }
-  const n = candidate?.targets.length ?? 0
+    targeting.onPick(r.cast)
+  }, [targeting, uiSet])
+  // Enter casts the staged pick. A focused button already fires its own click on Enter.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON' || el.isContentEditable)) return
+      if (!useTableUi.getState().targeting?.candidate) return
+      e.preventDefault()
+      cast()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cast])
+  const warning = players.length === 0 ? null : `${players.join(', ')} ${players.length === 1 ? 'is a player character' : 'are player characters'}`
   return (
-    <div style={{
-      position: 'absolute', left: 0, right: 0, bottom: 'max(12px, env(safe-area-inset-bottom, 0px))', display: 'flex', justifyContent: 'center',
-      gap: 10, padding: '0 12px', pointerEvents: 'none', flexWrap: 'wrap',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 14, background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(6px)', pointerEvents: 'auto', maxWidth: '100%',
-      }}>
-        <span style={{ color: '#f3ead8', fontSize: 14, padding: '0 6px', opacity: 0.9 }}>
-          {candidate ? (n === 0 ? 'No one in the area' : `${n} target${n === 1 ? '' : 's'}`) : describeShape(targeting.shape)}
-        </span>
-        {candidate && (
-          <button type="button" style={{ ...btn, background: '#e0a458', color: '#1a1612', borderColor: '#e0a458' }} onClick={confirm}>
-            Confirm
-          </button>
-        )}
-        <button type="button" style={btn} onClick={() => targeting.onCancel()}>Cancel</button>
+    <div className="targeting-bar" role="group" aria-label="Skill targeting">
+      <div className="targeting-bar__card">
+        <div className="targeting-bar__text" aria-live="polite">
+          {candidate ? stagedSummary(targeting.name, targeting.shape, names) : `${targeting.name} · ${describeShape(targeting.shape)}`}
+        </div>
+        {warning && <div className="targeting-bar__warn" role="alert">{warning}</div>}
+        <div className="targeting-bar__actions">
+          <button type="button" className="targeting-bar__btn" onClick={() => targeting.onCancel()}>Cancel</button>
+          {candidate && (
+            <button type="button" className="targeting-bar__btn targeting-bar__btn--primary" onClick={cast}>
+              Cast
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
