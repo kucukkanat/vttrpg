@@ -17,6 +17,19 @@ export type Selection =
   | { kind: 'node'; id: string }
   | { kind: 'scene'; id: SceneId }
 
+/**
+ * A local-only system line ("You are Pip", "GM is away"): shown in Chat interleaved by time,
+ * never written to the shared document. See ui/notices.ts for who appends them.
+ */
+export interface LocalNotice {
+  id: string
+  at: number
+  text: string
+}
+
+/** Oldest notices drop off past this many. */
+export const MAX_NOTICES = 200
+
 export interface GameState {
   meta: GameMeta | null
   scenes: Record<SceneId, Scene>
@@ -29,6 +42,8 @@ export interface GameState {
   notes: Record<NoteId, Note>
   customSkills: Record<SkillId, SkillDef>
   presence: Record<string, Presence>
+  notices: LocalNotice[]
+  pushNotice(text: string, at?: number): LocalNotice
   selectedToken: TokenId | null
   setSelectedToken(id: TokenId | null): void
   selection: Selection | null
@@ -36,6 +51,8 @@ export interface GameState {
   setPresence(p: Presence): void
   _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills'>>): void
 }
+
+let noticeSeq = 0
 
 export const useGame = create<GameState>((set) => ({
   meta: null,
@@ -49,6 +66,12 @@ export const useGame = create<GameState>((set) => ({
   notes: {} as Record<NoteId, Note>,
   customSkills: {} as Record<SkillId, SkillDef>,
   presence: {},
+  notices: [],
+  pushNotice: (text, at = Date.now()) => {
+    const notice: LocalNotice = { id: `notice-${++noticeSeq}`, at, text }
+    set((s) => ({ notices: [...s.notices, notice].slice(-MAX_NOTICES) }))
+    return notice
+  },
   selectedToken: null,
   setSelectedToken: (id) => set({ selectedToken: id, selection: id ? { kind: 'token', id } : null }),
   selection: null,

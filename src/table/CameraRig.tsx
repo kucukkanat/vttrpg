@@ -10,6 +10,7 @@ import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Box3, MathUtils, MOUSE, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
+import { useGame } from '@/state/store'
 import { tableRuntime, useTableUi } from './tableState'
 import { castRay, type WallSegment } from './walls'
 
@@ -94,6 +95,28 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     r.lastMode = effectiveMode
     r.lastFollow = follow?.id ?? null
   }, [effectiveMode, follow, camera, cellSize])
+
+  // A focus request (ui/notices.ts: "You are Pip") glides the orbit view onto the token, keeping the
+  // current viewing direction but no further than a few cells away. In token mode the rig already
+  // follows the selected token. The request is consumed either way so a remount does not replay it.
+  const focus = useTableUi((s) => s.focusToken)
+  useEffect(() => {
+    if (!focus) return
+    useTableUi.getState().set({ focusToken: null })
+    const token = useGame.getState().tokens[focus.id]
+    if (!token || effectiveMode !== 'orbit') return
+    const r = rig.current
+    const target = new Vector3(token.position.x, floorY, token.position.z)
+    const from = controls.current?.target ?? r.target
+    const offset = camera.position.clone().sub(from)
+    const maxDist = 5 * cellSize * Math.max(1, token.scale)
+    if (offset.length() > maxDist || offset.length() < 0.5 * cellSize) offset.setLength(maxDist)
+    if (offset.y < 1.5 * cellSize) offset.y = 1.5 * cellSize
+    r.orbitPose = { pos: target.clone().add(offset), target }
+    r.settled = false
+    setOrbitReady(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus])
 
   // Initial overview on mount.
   useEffect(() => {

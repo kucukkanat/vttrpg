@@ -69,6 +69,8 @@ export interface TableUiState {
   nodeBase: ({ name: string } & NodeBase) | null
   /** Footprints of solid props, merged into the line-of-sight walls. */
   propWalls: Record<PropId, WallSegment[]>
+  /** One-shot request to frame the camera on a token; `seq` makes repeats for the same id distinct. */
+  focusToken: { id: TokenId; seq: number } | null
   set(partial: Partial<Omit<TableUiState, 'set'>>): void
 }
 
@@ -88,8 +90,15 @@ export const useTableUi = create<TableUiState>((set) => ({
   editPreview: null,
   nodeBase: null,
   propWalls: {} as Record<PropId, WallSegment[]>,
+  focusToken: null,
   set: (partial) => set(partial),
 }))
+
+/** Ask the camera rig to frame `id` (orbit: glide the view onto it; token mode: it is followed already). */
+export function focusToken(id: TokenId): void {
+  const prev = useTableUi.getState().focusToken
+  useTableUi.getState().set({ focusToken: { id, seq: (prev?.seq ?? 0) + 1 } })
+}
 
 /**
  * Non-reactive values the canvas publishes for hosts (where the camera looks, where the scene

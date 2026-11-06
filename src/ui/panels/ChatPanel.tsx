@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GameController } from '../controller'
-import { useGame } from '@/state/store'
+import { useGame, type LocalNotice } from '@/state/store'
+import type { ChatMessage } from '@/core/doc'
 import { newSeed } from '@/dice'
 import type { PlayerPubkey } from '@/core/ids'
 import { findWhisperTarget, type Person } from './chatNames'
@@ -13,6 +14,7 @@ const HELP = [
 
 export function ChatPanel({ controller }: { controller: GameController }) {
   const chat = useGame((s) => s.chat)
+  const notices = useGame((s) => s.notices)
   const presence = useGame((s) => s.presence)
   const names = useGame((s) => s.meta?.names)
   const [text, setText] = useState('')
@@ -40,7 +42,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
     return [...seen.values()]
   }
 
-  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notice])
+  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notices.length, notice])
 
   const send = async () => {
     const t = text.trim()
@@ -76,11 +78,12 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   }
 
   const mineOrPublic = chat.filter((m) => !m.to || m.author === me || m.to.includes(me as PlayerPubkey) || controller.connection.isGm)
+  const lines = interleave(mineOrPublic, notices)
   return (
     <div className="panel chat">
       <h3>Chat</h3>
       <div className="log" ref={log}>
-        {mineOrPublic.map((m) => (
+        {lines.map((m) => 'kind' in m ? (
           <div key={m.id} className={`msg ${m.kind}`}>
             <span className="who">{name(m.author)}{m.to && <> → {m.to.map(name).join(', ')}</>}</span>{' '}
             {m.kind === 'roll' && m.roll ? (
@@ -89,6 +92,8 @@ export function ChatPanel({ controller }: { controller: GameController }) {
               </span>
             ) : m.text}
           </div>
+        ) : (
+          <div key={m.id} className="msg system notice">{m.text}</div>
         ))}
         {notice && (
           <div className="msg system chat-notice" role="status">
@@ -105,4 +110,16 @@ export function ChatPanel({ controller }: { controller: GameController }) {
       </form>
     </div>
   )
+}
+
+/** Shared chat and local notices in one list, by time; chat keeps its document order on ties. */
+export function interleave(chat: readonly ChatMessage[], notices: readonly LocalNotice[]): (ChatMessage | LocalNotice)[] {
+  if (notices.length === 0) return [...chat]
+  const out: (ChatMessage | LocalNotice)[] = []
+  let i = 0, j = 0
+  while (i < chat.length || j < notices.length) {
+    const c = chat[i], n = notices[j]
+    if (c && (!n || c.at <= n.at)) { out.push(c); i++ } else if (n) { out.push(n); j++ }
+  }
+  return out
 }
