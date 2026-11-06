@@ -1,0 +1,182 @@
+/**
+ * The game screen's layout. One tree for all breakpoints: the top bar, the table and the
+ * chrome slots are always at the same positions, so crossing a breakpoint re-arranges CSS grid
+ * areas without remounting the 3D canvas. See docs/UX.md.
+ */
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useGame } from '@/state/store'
+import type { AssetRef } from '@/core/assets'
+import { TableCanvas } from '@/table'
+import { DiceTrayOverlay } from '@/dice'
+import type { GameController } from '../controller'
+import { PANELS, type PanelDef } from '../panels/registry'
+import { TopBar } from '../panels/TopBar'
+import { useSkillTargeting } from '../panels/SkillsPanel'
+import { useBreakpoint } from './useBreakpoint'
+import { usePersisted } from './usePersisted'
+import { useKeyboardInset } from './useKeyboardInset'
+import { useUnread } from './useUnread'
+import { focusChatInput, useShortcuts } from './useShortcuts'
+import { BottomSheet, type SheetSize } from './BottomSheet'
+import { TabBar } from './TabBar'
+import { Drawer } from './Drawer'
+import { SideColumn, RAIL_W } from './SideColumn'
+import { RollToast, SelectedTokenChip } from './Hud'
+
+interface DesktopLayout {
+  left: { width: number; open: boolean }
+  right: { width: number; open: boolean }
+  collapsed: Record<string, boolean>
+}
+interface TabletLayout { tab: string; open: boolean; pinned: boolean }
+
+const DESKTOP_DEFAULT: DesktopLayout = { left: { width: 260, open: true }, right: { width: 340, open: true }, collapsed: {} }
+const TABLET_DEFAULT: TabletLayout = { tab: 'chat', open: true, pinned: true }
+const DRAWER_W = 360
+
+export function GameShell({ controller }: { controller: GameController }) {
+  const bp = useBreakpoint()
+  const isGm = controller.connection.isGm
+  const panels = useMemo(() => PANELS.filter((p) => p.scope === 'all' || isGm), [isGm])
+  const meta = useGame((s) => s.meta)
+  const chat = useGame((s) => s.chat)
+  const presence = useGame((s) => s.presence)
+  const targeting = useSkillTargeting(controller)
+  const keyboard = useKeyboardInset()
+
+  // Layout state per breakpoint. Phone tab is session-only; tablet and desktop persist.
+  const [phoneTab, setPhoneTab] = useState<string | null>(null)
+  const [sheetSize, setSheetSize] = useState<SheetSize>('half')
+  const [tablet, setTablet] = usePersisted<TabletLayout>('vtt.shell.tablet', TABLET_DEFAULT)
+  const [desktop, setDesktop] = usePersisted<DesktopLayout>('vtt.shell.desktop', DESKTOP_DEFAULT)
+
+  const byId = (id: string | null): PanelDef | undefined => panels.find((p) => p.id === id)
+  const phonePanel = byId(phoneTab)
+  const tabletTab = byId(tablet.tab) ? tablet.tab : (panels[0]?.id ?? 'chat')
+
+  // Open a panel wherever the current layout keeps it.
+  const openPanel = useCallback((id: string) => {
+    if (bp === 'phone') { setPhoneTab(id); setSheetSize('half') }
+    else if (bp === 'tablet') setTablet((t) => ({ ...t, tab: id, open: true }))
+    else {
+      const def = PANELS.find((p) => p.id === id)
+      setDesktop((d) => ({
+        ...d,
+        [def?.side ?? 'right']: { ...d[def?.side ?? 'right'], open: true },
+        collapsed: { ...d.collapsed, [id]: false },
+      }))
+    }
+  }, [bp, setTablet, setDesktop])
+
+  // Unread chat: messages appended while the chat panel is not on screen.
+  const chatOpen = bp === 'phone' ? phoneTab === 'chat'
+    : bp === 'tablet' ? tablet.open && tabletTab === 'chat'
+    : desktop.right.open && !desktop.collapsed.chat
+  const unread = useUnread(chat.length, chatOpen)
+  const badges = useMemo(() => ({ chat: unread }), [unread])
+
+  // Aiming a skill on a phone needs the whole table: drop the sheet, the table's own bar has Cancel.
+  useEffect(() => { if (bp === 'phone' && targeting) setPhoneTab(null) }, [bp, targeting])
+
+  // Dice: animate the most recent roll once; clear the tray a few seconds after it settles.
+  const [shownRoll, setShownRoll] = useState<string | null>(null)
+  const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length) ?? null, [chat])
+  useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
+  const dice = shownRoll ? (
+    <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} />
+  ) : null
+
+  const resolveAsset = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
+  const viewer = useMemo(() => ({ pubkey: controller.pubkey, isGm }), [controller.pubkey, isGm])
+  const who = useCallback((pk: string) => presence[pk]?.name ?? (pk === controller.connection.gm ? 'GM' : pk.slice(0, 6)), [presence, controller])
+
+  // Desktop shortcuts.
+  const shortcuts = useMemo(() => ({
+    toggleLeft: () => setDesktop((d) => ({ ...d, left: { ...d.left, open: !d.left.open } })),
+    toggleRight: () => setDesktop((d) => ({ ...d, right: { ...d.right, open: !d.right.open } })),
+    focusChat: () => { openPanel('chat'); requestAnimationFrame(() => focusChatInput()) },
+    togglePanel: (n: number) => {
+      const def = panels[n - 1]
+      if (def) setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [def.id]: !d.collapsed[def.id] } }))
+    },
+  }), [panels, openPanel, setDesktop])
+  useShortcuts(bp === 'desktop', shortcuts)
+
+  const style = {
+    '--kb': `${keyboard}px`,
+    '--left-w': `${desktop.left.open ? desktop.left.width : RAIL_W}px`,
+    '--right-w': `${desktop.right.open ? desktop.right.width : RAIL_W}px`,
+    '--drawer-w': `${tablet.open && tablet.pinned ? DRAWER_W : 0}px`,
+  } as CSSProperties
+  const cls = ['game', `game--${bp}`, keyboard > 0 ? 'kb' : '', bp === 'phone' && phonePanel ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
+
+  const drawerToggle = bp === 'tablet' ? (
+    <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
+      ☰{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
+    </button>
+  ) : null
+
+  return (
+    <div className={cls} style={style}>
+      <TopBar controller={controller} compact={bp === 'phone'} trailing={drawerToggle} />
+
+      {bp === 'desktop' ? (
+        <SideColumn side="left" panels={panels.filter((p) => p.side === 'left')} width={desktop.left.width} open={desktop.left.open}
+          collapsed={desktop.collapsed} controller={controller}
+          onWidth={(w) => setDesktop((d) => ({ ...d, left: { ...d.left, width: w } }))}
+          onOpen={(open) => setDesktop((d) => ({ ...d, left: { ...d.left, open } }))}
+          onToggleSection={(id) => setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [id]: !d.collapsed[id] } }))} />
+      ) : null}
+
+      <section className="table">
+        {meta?.activeScene ? (
+          <TableCanvas onIntent={(i) => void controller.dispatch(i)} onPresence={(p) => controller.presence(p)} resolveAsset={resolveAsset} viewer={viewer} targeting={targeting} />
+        ) : (
+          <div className="empty">
+            <div>
+              <p>No active scene.</p>
+              <p className="muted small">{isGm ? 'Add one from the Scenes panel.' : 'Waiting for the GM.'}</p>
+              {isGm && <button type="button" onClick={() => openPanel('scenes')}>Open Scenes</button>}
+            </div>
+          </div>
+        )}
+        <div className="hud">
+          {bp !== 'desktop' && <SelectedTokenChip onOpen={() => openPanel('character')} />}
+          <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
+        </div>
+        {bp !== 'phone' ? dice : null}
+      </section>
+
+      {bp === 'desktop' ? (
+        <SideColumn side="right" panels={panels.filter((p) => p.side === 'right')} width={desktop.right.width} open={desktop.right.open}
+          collapsed={desktop.collapsed} controller={controller}
+          onWidth={(w) => setDesktop((d) => ({ ...d, right: { ...d.right, width: w } }))}
+          onOpen={(open) => setDesktop((d) => ({ ...d, right: { ...d.right, open } }))}
+          onToggleSection={(id) => setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [id]: !d.collapsed[id] } }))} />
+      ) : null}
+
+      {bp === 'tablet' && tablet.open ? (
+        <Drawer panels={panels} active={tabletTab} badges={badges} pinned={tablet.pinned} controller={controller}
+          onSelect={(id) => setTablet((t) => ({ ...t, tab: id }))}
+          onPin={(pinned) => setTablet((t) => ({ ...t, pinned }))}
+          onClose={() => setTablet((t) => ({ ...t, open: false }))} />
+      ) : null}
+
+      {bp === 'phone' ? (
+        <TabBar panels={panels} active={phoneTab} badges={badges} onSelect={(id) => { if (id === phoneTab) setPhoneTab(null); else { setPhoneTab(id); setSheetSize('half') } }} />
+      ) : null}
+
+      {bp === 'phone' && phonePanel ? (
+        <BottomSheet key={phonePanel.id} def={phonePanel} controller={controller} size={sheetSize} keyboard={keyboard}
+          onSize={setSheetSize}
+          onClose={() => setPhoneTab(null)}
+          onSwipeTab={(dir) => {
+            const i = panels.findIndex((p) => p.id === phonePanel.id)
+            setPhoneTab(panels[(i + dir + panels.length) % panels.length]!.id)
+          }} />
+      ) : null}
+
+      {bp === 'phone' && dice ? <div className="dice-layer">{dice}</div> : null}
+    </div>
+  )
+}
