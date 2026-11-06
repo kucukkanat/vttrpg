@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateCharacter (Mausritter) > matches the golden snapshot 1`] = `
+{
+  "data": {
+    "background": "Riverbank scout",
+    "birthsign": "The Ember",
+    "coat": {
+      "color": "Silver",
+      "pattern": "Patched",
+    },
+    "conditions": [],
+    "detail": "Wide grin",
+    "dex": {
+      "current": 5,
+      "max": 5,
+    },
+    "disposition": "Warm, but reckless",
+    "grit": 0,
+    "hp": {
+      "current": 6,
+      "max": 6,
+    },
+    "inventory": [
+      {
+        "damage": "d10",
+        "name": "Spear",
+        "size": 2,
+        "slot": "paw",
+      },
+      {
+        "continuationOf": 0,
+      },
+      null,
+      null,
+      {
+        "name": "Reed flute",
+        "slot": "pack",
+      },
+      {
+        "name": "Waterproof satchel",
+        "slot": "pack",
+      },
+      {
+        "name": "Torches",
+        "slot": "pack",
+        "usage": 3,
+      },
+      {
+        "name": "Rations",
+        "slot": "pack",
+        "usage": 3,
+      },
+      null,
+      null,
+    ],
+    "level": 1,
+    "notes": "",
+    "pips": {
+      "current": 3,
+      "max": 250,
+    },
+    "str": {
+      "current": 12,
+      "max": 12,
+    },
+    "wil": {
+      "current": 6,
+      "max": 6,
+    },
+    "xp": 0,
+  },
+  "id": "mausritter-0123456789ab",
+  "name": "Pip",
+}
+`;

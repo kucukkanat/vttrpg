@@ -1,0 +1,16 @@
+{
+  "id": "heal",
+  "name": "Heal",
+  "description": "A steadying paw and a murmured charm knit a nearby mouse's wounds, restoring 2d6 Hit Protection up to their maximum. Casting costs one point of Willpower.",
+  "icon": "leaf",
+  "cost": [{ "resource": "wil", "amount": "1" }],
+  "target": { "kind": "single", "range": 1 },
+  "effects": [
+    { "kind": "message", "text": "{source.name} lays a paw on {target.name} and the bleeding slows." },
+    { "kind": "heal", "formula": "2d6", "resource": "hp" }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "aura", "from": "target", "color": "#7be0a0", "duration": 900 },
+    { "at": 200, "preset": "ring", "from": "target", "color": "#b8f5c9", "duration": 500 }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "fireball",
+  "name": "Fireball",
+  "description": "A bloom of flame bursts at a point the caster can see and scorches everything within two cells. A quick DEX save halves the damage. Casting costs one point of Willpower.",
+  "icon": "flame",
+  "cost": [{ "resource": "wil", "amount": "1" }],
+  "target": { "kind": "radius", "range": 6, "radius": 2 },
+  "effects": [
+    { "kind": "roll", "formula": "2d6", "label": "power" },
+    { "kind": "roll", "formula": "d20", "vs": "target.dex", "label": "DEX save" },
+    { "kind": "damage", "formula": "save.success ? floor(rolls.power.total / 2) : rolls.power.total", "resource": "hp" },
+    { "kind": "message", "text": "The fireball cast by {source.name} gutters out, leaving the ground blackened." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "projectile", "from": "source", "to": "point", "color": "#ff7a1a", "duration": 400 },
+    { "at": 400, "preset": "ring", "from": "point", "color": "#ff4500", "duration": 700 },
+    { "at": 400, "preset": "shake", "duration": 300 },
+    { "at": 450, "preset": "hit", "from": "target", "color": "#ffb347", "duration": 300 }
+  ]
+}
