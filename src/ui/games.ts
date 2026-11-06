@@ -5,7 +5,10 @@
  */
 import type { GameId, PlayerPubkey } from '@/core/ids'
 
-export const GAMES_STORAGE_KEY = 'vttrpg.games'
+import { profileSuffix } from '@/net'
+
+/** Per dev-profile registry so `?as=<name>` tabs keep their own games and roles. */
+export const GAMES_STORAGE_KEY = `vttrpg.games${profileSuffix()}`
 
 export interface SavedGame {
   gameId: GameId

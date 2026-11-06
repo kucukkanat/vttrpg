@@ -105,7 +105,13 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'token.claim': {
         const t = tokens.get(intent.token)
         if (!t) return
-        tokens.set(intent.token, { ...t, owner: intent.owner ?? from })
+        const owner = intent.owner ?? from
+        tokens.set(intent.token, { ...t, owner })
+        // The sheet follows the token so the new owner can edit it.
+        if (t.character) {
+          const c = characters.get(t.character)
+          if (c) characters.set(t.character, { ...c, owner })
+        }
         break
       }
       case 'audio.play':
