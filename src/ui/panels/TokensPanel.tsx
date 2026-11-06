@@ -5,6 +5,7 @@ import { newId } from '@/core/ids'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import type { Token } from '@/core/doc'
 import { ModelPicker } from './ObjectPanel'
+import { isTypingTarget } from '../shell/useShortcuts'
 
 const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
 
@@ -20,13 +21,13 @@ export function TokensPanel({ controller }: { controller: GameController }) {
     void controller.dispatch({ type: 'token.remove', token: id })
     if (selected === id) select(null)
   }
-  // Delete / Backspace removes the selected token when focus is not in a text field.
+  // Delete removes the selected token when focus is not in a field. Backspace is deliberately not a
+  // delete key: it is too easy to hit while the focus is on the canvas. Removal is undoable (Cmd/Ctrl+Z).
   useEffect(() => {
     if (!isGm) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      const el = document.activeElement
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable)) return
+      if (e.key !== 'Delete' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (isTypingTarget(document.activeElement)) return
       const id = useGame.getState().selectedToken
       if (id) { e.preventDefault(); remove(id) }
     }
@@ -112,7 +113,7 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
         onClear={token.model ? () => patch({ model: undefined }) : undefined}
       />
       {isGm && <button className="danger wide" onClick={() => void controller.dispatch({ type: 'token.remove', token: token.id })}>Remove token</button>}
-      <p className="muted small">Tip: Delete key removes the selected token.</p>
+      <p className="muted small">Tip: Delete removes the selected token; Cmd/Ctrl+Z brings it back.</p>
     </div>
   )
 }

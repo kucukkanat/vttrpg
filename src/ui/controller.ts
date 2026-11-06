@@ -12,7 +12,9 @@ import type { GameDocShape, RollResult } from '@/core/doc'
 import type { PlayerPubkey } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
+import { bindUndoDispatcher, recordUndo, undoLast } from '@/state/undo'
 import { rollFromSeed } from '@/dice'
+import { pushToast } from './toasts'
 
 export interface GameController {
   connection: GameConnection
@@ -106,16 +108,31 @@ export function createController(opts: {
   const offIntent = connection.isGm ? connection.onIntent((env) => void gmApply(env)) : () => {}
   const offPresence = connection.onPresence((p) => useGame.getState().setPresence(p))
 
+  const dispatch = async (intent: Intent): Promise<void> => {
+    const env: IntentEnvelope = { id: crypto.randomUUID(), from: me.pubkey, at: Date.now(), intent }
+    if (!connection.isGm) {
+      connection.sendIntent(env)
+      return
+    }
+    // Destructive intents from this client get an inverse on the undo stack and an Undo toast
+    // before they are applied; `undoLast()` dispatches the inverse through this same function.
+    bindUndoDispatcher(dispatch)
+    const undo = recordUndo(intent, useGame.getState())
+    if (undo) {
+      pushToast({
+        text: undo.label,
+        action: { label: 'Undo', run: () => void undoLast().then((e) => e && pushToast({ text: `Restored ${e.subject}`, ttl: 2500 })) },
+      })
+    }
+    await gmApply(env)
+  }
+
   return {
     connection,
     rules,
     assets,
     pubkey: opts.pubkey,
-    async dispatch(intent) {
-      const env: IntentEnvelope = { id: crypto.randomUUID(), from: me.pubkey, at: Date.now(), intent }
-      if (connection.isGm) await gmApply(env)
-      else connection.sendIntent(env)
-    },
+    dispatch,
     presence(partial) {
       Object.assign(me, partial, { lastSeen: Date.now() })
       connection.publishPresence(me)

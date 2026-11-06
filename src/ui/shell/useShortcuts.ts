@@ -3,6 +3,8 @@
  * held, so browser shortcuts and the table's own keys (G grid, F first person, C camera, Delete, Esc) keep working.
  */
 import { useEffect } from 'react'
+import { undoLast } from '@/state/undo'
+import { pushToast } from '../toasts'
 
 export interface ShortcutHandlers {
   toggleLeft(): void
@@ -18,7 +20,23 @@ export function isTypingTarget(el: Element | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable
 }
 
+/** Cmd/Ctrl+Z (no Shift/Alt) outside a field: undo the GM's last destructive action. */
+export function isUndoKey(e: KeyboardEvent): boolean {
+  return (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z'
+}
+
 export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
+  // Undo works on every layout with a keyboard; it is a no-op for players (nothing on the stack).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isUndoKey(e) || isTypingTarget(document.activeElement)) return
+      e.preventDefault()
+      void undoLast().then((entry) => entry && pushToast({ text: `Restored ${entry.subject}`, ttl: 2500 }))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   useEffect(() => {
     if (!enabled) return
     const onKey = (e: KeyboardEvent) => {

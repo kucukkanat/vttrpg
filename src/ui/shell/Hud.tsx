@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '@/state/store'
 import type { ChatMessage } from '@/core/doc'
+import { Toasts } from './Toasts'
 
 const TOAST_MS = 6000
 
@@ -31,17 +32,22 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
     const t = setTimeout(() => setShown(null), TOAST_MS)
     return () => clearTimeout(t)
   }, [roll])
-  if (!shown?.roll) return null
-  const r = shown.roll
-  const success = r.outcome && 'success' in r.outcome ? !!r.outcome.success : null
-  const critical = !!r.outcome?.critical
+  const r = shown?.roll
+  const success = r?.outcome && 'success' in r.outcome ? !!r.outcome.success : null
+  const critical = !!r?.outcome?.critical
+  // The general toast stack (ui/toasts.ts) rides along here so the shell mounts it in the HUD.
   return (
-    <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
-      <span className="muted small">{who(shown.author)}</span>
-      <span className="toast-formula">{shown.text}</span>
-      <span className="toast-total">{r.total}</span>
-      <span className="muted small">[{r.dice.map((d) => d.value).join(', ')}]</span>
-      {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
-    </button>
+    <>
+      <Toasts />
+      {shown && r && (
+        <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
+          <span className="muted small">{who(shown.author)}</span>
+          <span className="toast-formula">{shown.text}</span>
+          <span className="toast-total">{r.total}</span>
+          <span className="muted small">[{r.dice.map((d) => d.value).join(', ')}]</span>
+          {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
+        </button>
+      )}
+    </>
   )
 }

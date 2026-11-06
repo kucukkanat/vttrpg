@@ -1,0 +1,23 @@
+/* Toast stack over the table (shell/Toasts.tsx). Sits at the bottom of the table, above the tab bar
+   on phones; the .hud container is position:absolute over the table so `bottom` is table-relative. */
+.hud > .toasts, .toasts {
+  position: absolute; left: 0; right: 0; bottom: calc(var(--sp-3) + var(--sab));
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  padding: 0 calc(var(--sp-3) + var(--sar)) 0 calc(var(--sp-3) + var(--sal));
+  pointer-events: none;
+}
+/* The tab bar already carries the bottom inset on phones. */
+.game--phone .toasts { bottom: var(--sp-3); }
+.toast-item {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 44px; max-width: min(100%, 480px); padding: 0 var(--sp-1) 0 var(--sp-3);
+  border-radius: var(--r-md); background: rgba(0, 0, 0, .78); border: 1px solid var(--border);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: var(--fg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .4); animation: toast-up .2s ease;
+}
+.toast-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast-item button { min-height: 44px; min-width: 44px; }
+.toast-item .toast-action { background: transparent; border-color: transparent; color: var(--accent); font-weight: 600; padding: 0 var(--sp-3); }
+.toast-item .toast-close { padding: 0 var(--sp-2); }
+@keyframes toast-up { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .toast-item { animation: none; } }
