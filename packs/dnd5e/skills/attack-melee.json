@@ -1,0 +1,17 @@
+{
+  "id": "attack-melee",
+  "name": "Melee Attack",
+  "description": "Strike with the readied melee weapon: d20 + ability modifier + proficiency bonus against the target's Armor Class. A natural 20 always hits and doubles the weapon dice; a natural 1 always misses. Damage is the weapon's dice plus the same ability modifier (STR, or DEX for finesse weapons).",
+  "icon": "sword",
+  "target": { "kind": "single", "range": 1 },
+  "effects": [
+    { "kind": "message", "text": "{source.name} swings {melee.name} at {target.name}." },
+    { "kind": "roll", "formula": "d20 + melee_mod + pb", "vs": "target.ac", "label": "attack" },
+    {
+      "kind": "damage",
+      "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll(melee.damage) + (save.dice.0 == 20 ? roll(melee.damage) : 0) + melee_mod : 0",
+      "resource": "hp"
+    }
+  ],
+  "vfx": [{ "at": 0, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 250 }]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "cure-wounds",
+  "name": "Cure Wounds",
+  "description": "1st-level evocation, touch. A creature the caster touches regains hit points equal to 1d8 + the caster's spellcasting ability modifier, up to its maximum. No effect on undead or constructs. Costs one 1st-level spell slot.",
+  "icon": "heart-plus",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "single", "range": 1 },
+  "effects": [
+    { "kind": "message", "text": "{source.name} lays hands on {target.name}." },
+    { "kind": "heal", "formula": "d8 + spell_mod", "resource": "hp" }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "aura", "from": "target", "color": "#7be0a0", "duration": 900 },
+    { "at": 200, "preset": "ring", "from": "target", "color": "#b8f5c9", "duration": 500 }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "healing-word",
+  "name": "Healing Word",
+  "description": "1st-level evocation, bonus action, range 60 feet. A creature the caster can see regains hit points equal to 1d4 + the caster's spellcasting ability modifier, up to its maximum. No effect on undead or constructs. Costs one 1st-level spell slot.",
+  "icon": "message-heart",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "single", "range": 12 },
+  "effects": [
+    { "kind": "message", "text": "{source.name} calls a word of healing to {target.name}." },
+    { "kind": "heal", "formula": "d4 + spell_mod", "resource": "hp" }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "projectile", "from": "source", "to": "target", "color": "#b8f5c9", "duration": 300 },
+    { "at": 300, "preset": "aura", "from": "target", "color": "#7be0a0", "duration": 700 }
+  ]
+}

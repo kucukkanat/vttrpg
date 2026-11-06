@@ -1,0 +1,16 @@
+{
+  "id": "shield-of-faith",
+  "name": "Shield of Faith",
+  "description": "1st-level abjuration, bonus action, range 60 feet, concentration up to 10 minutes. A shimmering field surrounds one creature, granting it +2 to Armor Class for the duration. Applied as the Shield of Faith condition; remove it when concentration ends. Costs one 1st-level spell slot.",
+  "icon": "shield",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "single", "range": 12 },
+  "effects": [
+    { "kind": "condition", "add": ["shield-of-faith"] },
+    { "kind": "message", "text": "A shimmering field surrounds {target.name} (AC {target.ac})." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "ring", "from": "target", "color": "#ffe680", "duration": 500 },
+    { "at": 200, "preset": "aura", "from": "target", "color": "#fff1b8", "duration": 1200 }
+  ]
+}
