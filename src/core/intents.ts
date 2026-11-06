@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note } from './doc'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -48,6 +48,18 @@ export type Intent =
   /** Custom skills for this game (GM only). */
   | { type: 'skill.upsert'; skill: SkillDef }
   | { type: 'skill.remove'; skill: SkillId }
+  /**
+   * Initiative tracker (GM only). `start` carries the resolved order: the GM client rolls each
+   * combatant's score before dispatching (a pack initiative formula or a plain d20) and records
+   * the `seed` it used so the rolls can be re-derived. `apply` sorts the order highest first.
+   */
+  | { type: 'initiative.start'; order: InitiativeEntry[]; seed?: string }
+  /** Replace the order as given (reorder by hand, edit a score, add a combatant); the current combatant keeps its turn. */
+  | { type: 'initiative.set'; order: InitiativeEntry[] }
+  /** Advance one turn; past the last combatant the round increments and the first one is up again. */
+  | { type: 'initiative.next' }
+  | { type: 'initiative.remove'; token: TokenId }
+  | { type: 'initiative.end' }
 
 export interface IntentEnvelope {
   id: string

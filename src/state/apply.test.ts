@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
-import { applyIntent, skillNumbers } from './apply'
-import type { Character, GameEvent, Token } from '@/core/doc'
+import { applyIntent, nextTurn, skillNumbers, sortInitiative, withOrder, withoutToken } from './apply'
+import type { Character, GameEvent, InitiativeState, Token } from '@/core/doc'
 import type { CharacterId, PlayerPubkey, SceneId, SkillId, TokenId } from '@/core/ids'
 
 const from = 'aa'.repeat(32) as PlayerPubkey
@@ -127,5 +127,73 @@ describe('skill.use events', () => {
     applyIntent(doc, env(use), { skill: { patches: [], messages: [], vfx: [{ at: 0, preset: 'hit' }] } })
     const ev = (doc.getArray<GameEvent>('events').toJSON() as GameEvent[])[0]!
     expect('numbers' in ev).toBe(false)
+  })
+})
+
+describe('initiative', () => {
+  const t = (id: string) => id as TokenId
+  const entry = (id: string, score: number) => ({ token: t(id), score })
+  const read = (doc: Y.Doc) => doc.getMap('initiative').toJSON() as InitiativeState
+
+  it('sorts highest first and keeps ties in the given order', () => {
+    expect(sortInitiative([entry('a', 3), entry('b', 17), entry('c', 3), entry('d', 12)]).map((e) => e.token)).toEqual(['b', 'd', 'a', 'c'])
+  })
+  it('starts at round 1 on the top scorer and wraps the round on next', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: [entry('pip', 9), entry('rat', 15)], seed: 'abc' }))
+    expect(read(doc)).toEqual({ active: true, round: 1, turn: 0, order: [entry('rat', 15), entry('pip', 9)] })
+    applyIntent(doc, env({ type: 'initiative.next' }))
+    expect(read(doc)).toMatchObject({ round: 1, turn: 1 })
+    applyIntent(doc, env({ type: 'initiative.next' }))
+    expect(read(doc)).toMatchObject({ round: 2, turn: 0 })
+  })
+  it('ignores next, set and remove while nothing is running', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.next' }))
+    applyIntent(doc, env({ type: 'initiative.set', order: [entry('pip', 1)] }))
+    applyIntent(doc, env({ type: 'initiative.remove', token: t('pip') }))
+    expect(doc.getMap('initiative').size).toBe(0)
+  })
+  it('set replaces the order and the current combatant keeps the turn', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: [entry('a', 20), entry('b', 10), entry('c', 5)] }))
+    applyIntent(doc, env({ type: 'initiative.next' }))
+    // b is up; the GM moves b to the top and adds d.
+    applyIntent(doc, env({ type: 'initiative.set', order: [entry('b', 10), entry('a', 20), entry('d', 7), entry('c', 5)] }))
+    expect(read(doc)).toMatchObject({ turn: 0, round: 1 })
+    expect(read(doc).order.map((e) => e.token)).toEqual(['b', 'a', 'd', 'c'])
+  })
+  it('remove shifts the turn and hands it on when the current combatant leaves', () => {
+    const base: InitiativeState = { active: true, round: 1, turn: 1, order: [entry('a', 20), entry('b', 10), entry('c', 5)] }
+    expect(withoutToken(base, t('a'))).toMatchObject({ turn: 0, round: 1, order: [entry('b', 10), entry('c', 5)] })
+    expect(withoutToken(base, t('b'))).toMatchObject({ turn: 1, round: 1, order: [entry('a', 20), entry('c', 5)] })
+    expect(withoutToken({ ...base, turn: 2 }, t('c'))).toMatchObject({ turn: 0, round: 2 })
+    expect(withoutToken({ ...base, turn: 0, order: [entry('a', 20)] }, t('a'))).toMatchObject({ turn: 0, round: 1, order: [] })
+    expect(withoutToken(base, t('zzz'))).toBe(base)
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: base.order }))
+    applyIntent(doc, env({ type: 'initiative.remove', token: t('a') }))
+    expect(read(doc).order.map((e) => e.token)).toEqual(['b', 'c'])
+  })
+  it('deleting a token drops it from the order', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'token.add', token }))
+    applyIntent(doc, env({ type: 'initiative.start', order: [entry(token.id, 12), entry('other', 3)] }))
+    applyIntent(doc, env({ type: 'token.remove', token: token.id }))
+    expect(read(doc).order).toEqual([entry('other', 3)])
+    expect(doc.getMap('tokens').has(token.id)).toBe(false)
+  })
+  it('end clears the encounter', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: [entry('a', 1)] }))
+    applyIntent(doc, env({ type: 'initiative.end' }))
+    expect(read(doc)).toEqual({ active: false, round: 0, turn: 0, order: [] })
+  })
+  it('pure helpers leave inactive or empty state alone', () => {
+    const idle: InitiativeState = { active: false, round: 0, turn: 0, order: [] }
+    expect(nextTurn(idle)).toBe(idle)
+    expect(nextTurn({ ...idle, active: true })).toMatchObject({ turn: 0, round: 0 })
+    expect(withOrder({ active: true, round: 2, turn: 1, order: [entry('a', 1), entry('b', 2)] }, [])).toMatchObject({ turn: 0, order: [] })
+    expect(withOrder({ active: true, round: 2, turn: 1, order: [entry('a', 1), entry('b', 2)] }, [entry('a', 1)])).toMatchObject({ turn: 0 })
   })
 })

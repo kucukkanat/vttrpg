@@ -177,6 +177,24 @@ export interface Note {
   updatedAt: number
 }
 
+/** One combatant in the initiative order. */
+export interface InitiativeEntry {
+  token: TokenId
+  score: number
+}
+
+/**
+ * The initiative tracker, GM-driven. `order` is kept sorted by the GM's intents (highest score
+ * first unless reordered by hand); `turn` indexes into it and `round` counts from 1 while active.
+ * Stored as the fields of the `initiative` Y.Map; absent until the GM starts the first encounter.
+ */
+export interface InitiativeState {
+  active: boolean
+  round: number
+  turn: number
+  order: InitiativeEntry[]
+}
+
 export interface GameDocShape {
   meta: GameMeta
   scenes: Record<SceneId, Scene>
@@ -189,6 +207,8 @@ export interface GameDocShape {
   notes: Record<NoteId, Note>
   /** Skills created or overridden in this game; merged over the pack's skills by id. */
   customSkills: Record<SkillId, SkillDef>
+  /** Turn order; optional so documents from before the tracker existed still fit. */
+  initiative?: InitiativeState
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative'] as const

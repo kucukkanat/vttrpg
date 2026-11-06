@@ -149,6 +149,20 @@ describe('validate', () => {
     expect(engine.validate({ type: 'character.upsert', character: mouse('c-bob', 'Bob', {}, alice) }, asAlice, d)).toMatch(/someone else/)
     expect(engine.validate({ type: 'character.remove', character: 'c-bob' as never }, asAlice, d)).toMatch(/someone else/)
   })
+  it('keeps initiative to the GM', () => {
+    const d = doc()
+    const all: Intent[] = [
+      { type: 'initiative.start', order: [{ token: 't-alice' as TokenId, score: 12 }], seed: SEED_A },
+      { type: 'initiative.set', order: [] },
+      { type: 'initiative.next' },
+      { type: 'initiative.remove', token: 't-alice' as TokenId },
+      { type: 'initiative.end' },
+    ]
+    for (const i of all) {
+      expect(engine.validate(i, asAlice, d)).toMatch(/GM/)
+      expect(engine.validate(i, asGm, d)).toBeNull()
+    }
+  })
   it('always allows rolls and chat', () => {
     const d = doc()
     expect(engine.validate({ type: 'roll', formula: 'd20', seed: SEED_A }, asAlice, d)).toBeNull()

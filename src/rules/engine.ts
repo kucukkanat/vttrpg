@@ -214,6 +214,12 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         if (skill.target.kind === 'self' && intent.targets.some((t) => t !== intent.source)) return `${skill.name} only targets yourself`
         return costShortfall(skill, character)
       }
+      case 'initiative.start':
+      case 'initiative.set':
+      case 'initiative.next':
+      case 'initiative.remove':
+      case 'initiative.end':
+        return 'only the GM runs initiative'
       default:
         return 'only the GM may do that'
     }

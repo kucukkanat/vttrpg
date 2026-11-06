@@ -3,7 +3,7 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
@@ -52,6 +52,67 @@ export function skillNumbers(
   return out
 }
 
+// ----------------------------------------------------------------- initiative
+
+export const EMPTY_INITIATIVE: InitiativeState = { active: false, round: 0, turn: 0, order: [] }
+
+/** Highest score first; equal scores keep their given order. */
+export function sortInitiative(order: InitiativeEntry[]): InitiativeEntry[] {
+  return order
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => b.e.score - a.e.score || a.i - b.i)
+    .map(({ e }) => e)
+}
+
+/** One turn on: past the end the round increments and the first combatant is up again. */
+export function nextTurn(s: InitiativeState): InitiativeState {
+  if (!s.active || s.order.length === 0) return s
+  const turn = s.turn + 1
+  return turn >= s.order.length ? { ...s, turn: 0, round: s.round + 1 } : { ...s, turn }
+}
+
+/**
+ * The order replaced by `order`: the combatant whose turn it is keeps it when still listed;
+ * otherwise the turn index is clamped (an empty order wraps it to 0).
+ */
+export function withOrder(s: InitiativeState, order: InitiativeEntry[]): InitiativeState {
+  const current = s.order[s.turn]?.token
+  const idx = current === undefined ? -1 : order.findIndex((e) => e.token === current)
+  const turn = idx >= 0 ? idx : Math.min(s.turn, Math.max(0, order.length - 1))
+  return { ...s, order, turn }
+}
+
+/**
+ * A combatant dropped: turns before it shift down; removing the one whose turn it is hands the
+ * turn to the next in line, wrapping into a new round past the end.
+ */
+export function withoutToken(s: InitiativeState, token: TokenId): InitiativeState {
+  const idx = s.order.findIndex((e) => e.token === token)
+  if (idx < 0) return s
+  const order = s.order.filter((e) => e.token !== token)
+  if (idx < s.turn) return { ...s, order, turn: s.turn - 1 }
+  if (idx === s.turn && s.turn >= order.length) return { ...s, order, turn: 0, round: order.length ? s.round + 1 : s.round }
+  return { ...s, order }
+}
+
+function readInitiative(map: Y.Map<unknown>): InitiativeState {
+  const order = map.get('order')
+  if (!Array.isArray(order)) return EMPTY_INITIATIVE
+  return {
+    active: map.get('active') === true,
+    round: typeof map.get('round') === 'number' ? (map.get('round') as number) : 0,
+    turn: typeof map.get('turn') === 'number' ? (map.get('turn') as number) : 0,
+    order: order as InitiativeEntry[],
+  }
+}
+
+function writeInitiative(map: Y.Map<unknown>, s: InitiativeState): void {
+  map.set('active', s.active)
+  map.set('round', s.round)
+  map.set('turn', s.turn)
+  map.set('order', s.order)
+}
+
 /** Shallow merge that removes keys set to undefined (Yjs cannot store undefined). */
 function merge<T extends object>(base: T, patch: Partial<T>): T {
   const out = { ...base, ...patch } as Record<string, unknown>
@@ -71,15 +132,20 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const props = doc.getMap<Prop>('props')
   const notes = doc.getMap<Note>('notes')
   const customSkills = doc.getMap<SkillDef>('customSkills')
+  const initiative = doc.getMap<unknown>('initiative')
 
   doc.transact(() => {
     switch (intent.type) {
       case 'token.add':
         tokens.set(intent.token.id, intent.token)
         break
-      case 'token.remove':
+      case 'token.remove': {
         tokens.delete(intent.token)
+        // A deleted token leaves the turn order too.
+        const init = readInitiative(initiative)
+        if (init.order.some((e) => e.token === intent.token)) writeInitiative(initiative, withoutToken(init, intent.token))
         break
+      }
       case 'token.move': {
         const t = tokens.get(intent.token)
         if (!t) return
@@ -220,6 +286,30 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         if (!f.revealAll) fog.set(intent.scene, { ...f, revealAll: true })
         break
       }
+      case 'initiative.start':
+        writeInitiative(initiative, { active: true, round: 1, turn: 0, order: sortInitiative(intent.order) })
+        break
+      case 'initiative.set': {
+        const init = readInitiative(initiative)
+        if (!init.active) return
+        writeInitiative(initiative, withOrder(init, intent.order))
+        break
+      }
+      case 'initiative.next': {
+        const init = readInitiative(initiative)
+        if (!init.active) return
+        writeInitiative(initiative, nextTurn(init))
+        break
+      }
+      case 'initiative.remove': {
+        const init = readInitiative(initiative)
+        if (!init.active) return
+        writeInitiative(initiative, withoutToken(init, intent.token))
+        break
+      }
+      case 'initiative.end':
+        writeInitiative(initiative, EMPTY_INITIATIVE)
+        break
     }
   }, from)
 }

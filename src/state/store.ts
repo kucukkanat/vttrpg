@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 import type * as Y from 'yjs'
-import type { Character, ChatMessage, FogState, GameEvent, GameMeta, Note, Prop, Scene, Token } from '@/core/doc'
+import type { Character, ChatMessage, FogState, GameEvent, GameMeta, InitiativeState, Note, Prop, Scene, Token } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
@@ -41,6 +41,8 @@ export interface GameState {
   props: Record<PropId, Prop>
   notes: Record<NoteId, Note>
   customSkills: Record<SkillId, SkillDef>
+  /** Turn order; null until the GM has started initiative once (then `active` says whether it is running). */
+  initiative: InitiativeState | null
   presence: Record<string, Presence>
   notices: LocalNotice[]
   pushNotice(text: string, at?: number): LocalNotice
@@ -49,7 +51,7 @@ export interface GameState {
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative'>>): void
 }
 
 let noticeSeq = 0
@@ -65,6 +67,7 @@ export const useGame = create<GameState>((set) => ({
   props: {} as Record<PropId, Prop>,
   notes: {} as Record<NoteId, Note>,
   customSkills: {} as Record<SkillId, SkillDef>,
+  initiative: null,
   presence: {},
   notices: [],
   pushNotice: (text, at = Date.now()) => {
@@ -112,6 +115,13 @@ export function useEffectiveToken(pubkey: PlayerPubkey | string | null | undefin
   return useGame((s) => effectiveToken(s, pubkey))
 }
 
+/** The `initiative` map as state, or null while the GM has never started one (the map is empty). */
+export function readInitiative(doc: Y.Doc): InitiativeState | null {
+  const raw = doc.getMap('initiative').toJSON() as Partial<InitiativeState>
+  if (!Array.isArray(raw.order)) return null
+  return { active: raw.active === true, round: raw.round ?? 0, turn: raw.turn ?? 0, order: raw.order }
+}
+
 /** Mirror a Y.Doc into the store. Returns an unsubscribe. */
 export function bindDoc(doc: Y.Doc): () => void {
   const sync = () => {
@@ -126,6 +136,7 @@ export function bindDoc(doc: Y.Doc): () => void {
       props: doc.getMap('props').toJSON() as Record<PropId, Prop>,
       notes: doc.getMap('notes').toJSON() as Record<NoteId, Note>,
       customSkills: doc.getMap('customSkills').toJSON() as Record<SkillId, SkillDef>,
+      initiative: readInitiative(doc),
     })
   }
   sync()
