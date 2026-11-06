@@ -27,6 +27,7 @@ import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
 import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
 import { GameNotices } from './GameNotices'
+import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
 
 interface TabletLayout { tab: string; open: boolean; pinned: boolean }
@@ -192,6 +193,7 @@ export function GameShell({ controller }: { controller: GameController }) {
       ) : null}
 
       {bp === 'phone' && dice ? <div className="dice-layer">{dice}</div> : null}
+      <ShortcutsOverlay />
     </div>
   )
 }

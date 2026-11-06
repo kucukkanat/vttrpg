@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diceFromSeed, parseFormula } from '@/dice/fair'
+import { diceFromSeed, parseFormula, rollFromSeed } from '@/dice/fair'
 import { DiceStream, ExprError, composeScope, evaluate, evaluateSync, objectScope, parse, setPath, tokenize, usesDice } from './expr'
 
 const seed = 'ab'.repeat(32)
@@ -119,6 +119,14 @@ describe('dice', () => {
     expect(a).toBe(b)
     const others = await Promise.all(['cd'.repeat(32), 'ef'.repeat(32), '12'.repeat(32)].map((s) => evaluate('10d20', objectScope({}), new DiceStream(s))))
     expect(others.some((o) => o !== (a as number))).toBe(true)
+  })
+  it('reads d66 as two d6, tens then ones, like fair.ts', async () => {
+    const stream = new DiceStream(seed)
+    const total = await evaluate('d66', objectScope({}), stream)
+    expect(stream.dice).toHaveLength(2)
+    expect(stream.dice.every((d) => d.sides === 6)).toBe(true)
+    expect(total).toBe(stream.dice[0].value * 10 + stream.dice[1].value)
+    expect(total).toBe((await rollFromSeed('d66', seed)).total)
   })
   it('applies keep-highest', async () => {
     const stream = new DiceStream(seed)

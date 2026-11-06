@@ -1,0 +1,45 @@
+/* Keyboard shortcuts overlay (shell/ShortcutsOverlay.tsx). A centred card on tablet and desktop;
+   a bottom sheet on phones so the close button sits under the thumb. Above the bottom sheet, the
+   drawer and the invite popover. */
+.shortcuts-backdrop {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--sp-4) + var(--sat)) calc(var(--sp-4) + var(--sar)) calc(var(--sp-4) + var(--sab)) calc(var(--sp-4) + var(--sal));
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  animation: shortcuts-in .15s ease;
+}
+.shortcuts {
+  width: min(100%, 560px); max-height: 100%; overflow: auto; -webkit-overflow-scrolling: touch;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .6);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  display: grid; gap: var(--sp-3);
+}
+.shortcuts-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: var(--control); }
+.shortcuts-head h2 { margin: 0; font-size: var(--fs-xl); font-weight: 600; }
+.shortcuts-close { min-width: 44px; min-height: 44px; }
+
+.shortcuts-groups { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.shortcuts-group h3 { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.shortcuts-group dl { margin: 0; display: grid; gap: var(--sp-1); }
+.shortcut { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: var(--sp-2); align-items: baseline; min-height: 28px; }
+.shortcut dt { margin: 0; white-space: nowrap; }
+.shortcut dd { margin: 0; color: var(--fg); font-size: var(--fs-md); overflow-wrap: anywhere; }
+.shortcuts kbd {
+  display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-sm); line-height: 20px;
+  padding: 0 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--panel); color: var(--fg);
+}
+.shortcuts-note { margin: 0; }
+
+@keyframes shortcuts-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .shortcuts-backdrop { animation: none; } }
+
+@media (max-width: 699.98px) {
+  .shortcuts-backdrop { align-items: flex-end; padding: var(--sat) 0 0; }
+  .shortcuts {
+    width: 100%; max-height: 85%; border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0;
+    padding: var(--sp-3) calc(var(--sp-4) + var(--sar)) calc(var(--sp-4) + var(--sab)) calc(var(--sp-4) + var(--sal));
+  }
+  .shortcuts-groups { grid-template-columns: 1fr; }
+}
