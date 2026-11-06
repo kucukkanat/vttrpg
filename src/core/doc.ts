@@ -17,6 +17,8 @@ export interface GameMeta {
   packSource?: string // URL of the pack folder, if not built in
   activeScene: SceneId | null
   createdAt: number
+  /** Last-seen display names keyed by pubkey; the GM records them from presence so chat can name people who have gone offline. */
+  names?: Record<string, string>
 }
 
 export interface Scene {
