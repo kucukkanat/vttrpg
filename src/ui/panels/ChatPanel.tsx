@@ -5,6 +5,7 @@ import type { ChatMessage } from '@/core/doc'
 import { newSeed } from '@/dice'
 import type { PlayerPubkey } from '@/core/ids'
 import { findWhisperTarget, type Person } from './chatNames'
+import { DiceValues } from '../components'
 
 const HELP = [
   '/r <formula> — roll dice, e.g. /r 2d6+1',
@@ -87,7 +88,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           <div key={m.id} className={`msg ${m.kind}`}>
             <span className="who">{name(m.author)}{m.to && <> → {m.to.map(name).join(', ')}</>}</span>{' '}
             {m.kind === 'roll' && m.roll ? (
-              <span><em>{m.text}</em> → <strong>{m.roll.total}</strong> <span className="muted small">[{m.roll.dice.map((d) => d.value).join(', ')}]</span>
+              <span><em>{m.text}</em> → <strong>{m.roll.total}</strong> <DiceValues className="muted small" formula={m.roll.formula} dice={m.roll.dice} />
                 {m.roll.outcome && 'success' in m.roll.outcome && <span className={m.roll.outcome.success ? 'ok' : 'bad'}> {m.roll.outcome.success ? 'success' : 'fail'}{m.roll.outcome.critical ? '!' : ''}</span>}
               </span>
             ) : m.text}

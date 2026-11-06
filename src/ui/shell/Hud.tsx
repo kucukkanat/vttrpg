@@ -9,6 +9,7 @@ import { useTableUi } from '@/table/tableState'
 import type { ChatMessage, Token } from '@/core/doc'
 import type { PlayerPubkey } from '@/core/ids'
 import { Toasts } from './Toasts'
+import { DiceValues } from '../components'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -129,7 +130,7 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
           <span className="muted small">{who(shown.author)}</span>
           <span className="toast-formula">{shown.text}</span>
           <span className="toast-total">{r.total}</span>
-          <span className="muted small">[{r.dice.map((d) => d.value).join(', ')}]</span>
+          <DiceValues className="muted small" formula={r.formula} dice={r.dice} />
           {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
         </button>
       )}

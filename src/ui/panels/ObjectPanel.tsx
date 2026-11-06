@@ -115,7 +115,7 @@ export function ObjectPanel({ controller }: { controller: GameController }) {
       <h3>
         Edit
         {isGm && (
-          <button type="button" className={editMode ? 'primary' : ''} style={{ minHeight: 32, touchAction: 'manipulation' }} onClick={() => uiSet({ editMode: !editMode })}>
+          <button type="button" className={editMode ? 'primary' : ''} style={{ touchAction: 'manipulation' }} onClick={() => uiSet({ editMode: !editMode })}>
             {editMode ? 'Edit mode: on' : 'Edit mode: off'}
           </button>
         )}

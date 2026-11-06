@@ -85,16 +85,20 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
           </button>
         ))}
         {board.map((ref) => (
-          <button key={ref.sha256} style={pad} onClick={() => play(ref)} title={ref.name}>
-            <span style={{ fontSize: 22 }}>🔊</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{ref.name?.replace(/\.[^.]+$/, '') ?? 'sound'}</span>
-            <span
-              role="button"
+          <div key={ref.sha256} style={{ position: 'relative', display: 'grid' }}>
+            <button style={pad} onClick={() => play(ref)} title={ref.name}>
+              <span style={{ fontSize: 22 }}>🔊</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{ref.name?.replace(/\.[^.]+$/, '') ?? 'sound'}</span>
+            </button>
+            {/* A real button beside the pad (never inside it), so it is reachable by keyboard. */}
+            <button
+              type="button"
+              className="icon"
               aria-label={`Remove ${ref.name ?? 'sound'}`}
-              onClick={(e) => { e.stopPropagation(); remove(ref) }}
-              style={{ position: 'absolute', top: 2, right: 6, fontSize: 12, color: 'var(--muted)', padding: 4 }}
-            >✕</span>
-          </button>
+              onClick={() => remove(ref)}
+              style={{ position: 'absolute', top: 0, right: 0, minHeight: 0, minWidth: 0, width: 32, height: 32, fontSize: 12, color: 'var(--muted)', padding: 0 }}
+            >✕</button>
+          </div>
         ))}
         <label className="tiny-file" style={{ ...pad, margin: 0, color: 'var(--muted)' }}>
           <span style={{ fontSize: 22 }}>＋</span>
@@ -113,7 +117,7 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
       </label>
       <label style={{ marginBottom: 0 }}>
         <span className="small muted">Ambience{scene ? ` · ${scene.name}` : ''}</span>
-        <select value={scene?.ambientPreset ?? 'none'} disabled={!scene} onChange={(e) => setPreset(e.target.value as AmbientPreset)} style={{ height: 36 }}>
+        <select value={scene?.ambientPreset ?? 'none'} disabled={!scene} onChange={(e) => setPreset(e.target.value as AmbientPreset)}>
           {AMBIENT_PRESETS.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         {scene?.ambientAudio && (
