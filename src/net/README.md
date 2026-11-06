@@ -14,6 +14,7 @@ authority: players send intents, the GM applies them to the Yjs doc and publishe
 | `identity.ts` | NIP-07 extension if present, else a local key in `localStorage` (`vttrpg.nostr.secret`) |
 | `pool.ts` | `PoolLike` seam over `SimplePool` + relay status tracker |
 | `connection.ts` | `GameConnection`: manifest, deltas, intents, presence, snapshots |
+| `snapshots.ts` | `startSnapshotLoop`: GM-side periodic snapshot upload + manifest pointer, event pruning |
 | `testing.ts` | In-memory relay/pool for tests and the dev harness |
 | `devHarness.ts` | GM + player in one tab, logs the doc syncing |
 
@@ -51,11 +52,30 @@ of most relays and NIP-44's 65 535-byte plaintext cap. Players never publish del
 4. GM only: subscribe to `21078` intents. Everyone: subscribe to `21079` presence.
 5. GM: `publishSnapshotPointer(url, sha256)` republishes the manifest after uploading `snapshot()`.
 
+## Snapshot loop (GM)
+
+`startSnapshotLoop(connection, { upload, prune })` runs on the GM client. Every 2 minutes, if
+the doc changed since the last snapshot, or at once when 200 local updates piled up, it encodes
+`snapshot()`, hands the bytes to the injected `upload(bytes) -> { url, sha256 }` (the UI wires
+this to Blossom through `src/assets`), then calls `publishSnapshotPointer`. On every tick it
+also passes `{ type: 'event.prune', before: now - 2 min }` to `prune` (the controller's
+dispatch). Failures log and retry next tick; nothing throws. Returns a stop function.
+`createSnapshotLoop` returns the same with `flush()` and counters for tests.
+
+## Returning GM
+
+`joinGame({ ..., isGm: true })` with the GM's own identity replays snapshot + deltas like a
+player, and only then attaches the local-update publisher and the intent subscription, so
+nothing replayed is re-sent. `isGm` on the connection is only true when the manifest's `gm`
+matches the identity; any other identity asking for `isGm: true` gets a player connection.
+The UI (`src/ui/bootstrap.ts`, mode `rejoin`) additionally checks `meta.gm` in the restored doc.
+
 ## Status
 
 `connecting` until one relay is open, `connected` while any is, `offline` when all drop or
 all initial attempts fail. `SimplePool` reconnects with backoff and re-sends open
-subscriptions with `since = lastEmitted + 1`.
+subscriptions with `since = lastEmitted + 1`. `connection.relayCount` is the number of relays
+with an open socket right now and `connection.relays` the list it was opened with.
 
 ## Invite link
 

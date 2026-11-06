@@ -337,6 +337,12 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
     get status() {
       return tracker.status
     },
+    relays,
+    get relayCount() {
+      let open = 0
+      for (const v of pool.listConnectionStatus().values()) if (v) open++
+      return open
+    },
     sendIntent(intent) {
       if (closed) return
       if (isGm) {
