@@ -12,7 +12,8 @@ export function parseRoute(hash: string): Route {
   if (h.startsWith('/join/')) return { name: 'join', invite: window.location.href }
   if (h.startsWith('/new')) return { name: 'new' }
   if (h.startsWith('/game')) return { name: 'game' }
-  if (h.startsWith('/dev/')) return { name: 'dev', story: h.slice('/dev/'.length) }
+  // Dev stories exist only in dev builds; in production the hash falls through to home.
+  if (import.meta.env.DEV && h.startsWith('/dev/')) return { name: 'dev', story: h.slice('/dev/'.length) }
   return { name: 'home' }
 }
 

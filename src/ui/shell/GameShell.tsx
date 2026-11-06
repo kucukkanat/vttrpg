@@ -27,6 +27,7 @@ import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
 import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
 import { GameNotices } from './GameNotices'
+import { GmCallout } from '../onboarding/GmCallout'
 
 interface TabletLayout { tab: string; open: boolean; pinned: boolean }
 
@@ -152,6 +153,7 @@ export function GameShell({ controller }: { controller: GameController }) {
           <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
         </div>
         <GameNotices controller={controller} onOpenPanel={openPanel} />
+        {isGm && <GmCallout />}
         {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />

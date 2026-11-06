@@ -4,6 +4,7 @@ import { Shell } from '../components'
 import { useSession } from '../session'
 import { games } from '../games'
 import { Reconnecting, YourGames, useRejoin } from './Games'
+import { useCoarsePointer, verb } from '../useMediaQuery'
 import type { GameId } from '@/core/ids'
 
 const touch = { minHeight: 48, padding: '10px 18px', fontSize: 15 } as const
@@ -11,6 +12,7 @@ const touch = { minHeight: 48, padding: '10px 18px', fontSize: 15 } as const
 export function Home() {
   const { controller } = useSession()
   const { rejoin, busyId, error, notice } = useRejoin()
+  const coarse = useCoarsePointer()
   const [reconnecting, setReconnecting] = useState<GameId | null>(null)
   const cancelled = useRef(false)
 
@@ -55,7 +57,12 @@ export function Home() {
           if (link) window.location.href = link
         }}>Join with a link</button>
       </div>
-      <p className="muted small">Dev stories: <a href="#/dev/table">table</a> · <a href="#/dev/dice">dice</a> · <a href="#/dev/net">net</a></p>
+      <p className="muted small">
+        {verb(coarse)} <strong>New game</strong> to host a table. Players join from the link you share, in any browser; nothing to install.
+      </p>
+      {import.meta.env.DEV && (
+        <p className="muted small">Dev stories: <a href="#/dev/table">table</a> · <a href="#/dev/dice">dice</a> · <a href="#/dev/net">net</a></p>
+      )}
     </Shell>
   )
 }
