@@ -10,9 +10,10 @@ function packsPlugin(): Plugin {
   const root = fileURLToPath(new URL('.', import.meta.url))
   const src = path.join(root, 'packs')
   let outDir = 'dist'
+  let enabled = false
   return {
     name: 'vttrpg-packs',
-    configResolved(c) { outDir = c.build.outDir },
+    configResolved(c) { outDir = c.build.outDir; enabled = c.command === 'build' && c.mode !== 'test' },
     configureServer(server) {
       server.middlewares.use('/packs', (req, res, next) => {
         const file = path.join(src, decodeURIComponent(req.url ?? '/'))
@@ -21,7 +22,7 @@ function packsPlugin(): Plugin {
         import('node:fs').then((fs) => fs.createReadStream(file).pipe(res))
       })
     },
-    closeBundle() { if (existsSync(src)) cpSync(src, path.join(root, outDir, 'packs'), { recursive: true }) },
+    closeBundle() { if (enabled && existsSync(src)) cpSync(src, path.join(root, outDir, 'packs'), { recursive: true }) },
   }
 }
 

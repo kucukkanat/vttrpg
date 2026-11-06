@@ -1,0 +1,17 @@
+{
+  "id": "magic-missile",
+  "name": "Magic Missile",
+  "description": "A dart of pale light leaps from the caster's paw and strikes one creature in sight for d6+2 damage. Armor does nothing against it. Casting costs one point of Willpower.",
+  "icon": "spark",
+  "cost": [{ "resource": "wil", "amount": "1" }],
+  "target": { "kind": "single", "range": 8 },
+  "effects": [
+    { "kind": "roll", "formula": "d6 + 2", "label": "power" },
+    { "kind": "damage", "formula": "rolls.power.total", "resource": "hp" },
+    { "kind": "message", "text": "The missile from {source.name} finds {target.name}; armor is no help." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "beam", "from": "source", "to": "target", "color": "#8ab4ff", "duration": 300 },
+    { "at": 300, "preset": "hit", "from": "target", "color": "#c7dbff", "duration": 250 }
+  ]
+}
