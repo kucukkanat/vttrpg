@@ -13,23 +13,30 @@ import type { Token } from '@/core/doc'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { useClaimPrompt } from './ClaimPrompt'
 import { buildInviteUrl, selectAll, useCopy } from '../invite'
+import { ListRow } from '../components'
+import { colorName } from '../colorName'
+import { setSkipDice, useSkipDicePreference } from '@/dice/skipDice'
 import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
 export const AWAY_AFTER_MS = 35_000
 
 const css = `
-.players-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sp-2); min-height: 52px; padding: var(--sp-1) var(--sp-2); border-radius: var(--r-sm); cursor: default; }
-.players-row.away { opacity: .55; }
-.players-who { min-width: 0; display: grid; gap: 1px; }
+.players-row { display: block; }
+.players-row .list-row-main { min-height: 52px; padding: var(--sp-1) var(--sp-2); width: 100%; }
+.players-row.away .list-row-main { opacity: .55; }
+.players-who { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .players-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .players-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .players-badge { flex: none; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent); }
 .players-token { color: var(--muted); font-size: var(--fs-sm); display: flex; align-items: center; gap: 6px; min-width: 0; }
 .players-token .dot { width: 8px; height: 8px; }
+.players-action { flex: none; color: var(--accent); font-size: var(--fs-sm); }
 .players-assign { margin: var(--sp-1) 0 var(--sp-2); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); display: grid; gap: var(--sp-1); }
 .players-assign button { justify-content: flex-start; min-height: 44px; }
 .players-pick { width: 100%; min-height: 48px; font-size: var(--fs-lg); margin-top: var(--sp-2); }
+.players-prefs { margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
+.players-prefs .check { margin: 0; }
 `
 
 interface Row {
@@ -86,6 +93,8 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
     setAssigning(null)
   }
 
+  const skipDice = useSkipDicePreference()
+
   return (
     <div className="panel">
       <style>{css}</style>
@@ -93,54 +102,56 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
       <ul className="list">
         {rows.map((r) => {
           const open = assigning === r.pubkey
+          const assignable = isGm && !r.isGm
+          const assignBox = open ? (
+            <div className="players-assign" role="group" aria-label={`Assign a token to ${r.name}`}>
+              {!scene && <span className="muted small">No active scene.</span>}
+              {scene && unowned.length === 0 && <span className="muted small">Every token in this scene has an owner.</span>}
+              {unowned.map((t) => (
+                <button key={t.id} type="button" onClick={() => assign(r.pubkey, t.id as TokenId)}>
+                  <span className="dot" style={{ background: t.color }} /> Give {t.name}
+                </button>
+              ))}
+              {r.owned.map((t) => (
+                <button key={`back-${t.id}`} type="button" onClick={() => assign(me, t.id as TokenId)}>
+                  Take back {t.name}
+                </button>
+              ))}
+            </div>
+          ) : null
           return (
-            <li key={r.pubkey} style={{ display: 'block', padding: 0, minHeight: 0, cursor: 'default' }}>
-              <div className={`players-row${r.away ? ' away' : ''}`}>
-                <span className="dot" style={{ background: r.color }} />
-                <div className="players-who">
-                  <div className="players-name">
-                    <strong>{r.name}</strong>
-                    {r.isMe && <span className="muted small">you</span>}
-                    {r.isGm && <span className="players-badge">GM</span>}
-                    {r.away && <span className="muted small">away</span>}
-                  </div>
-                  <div className="players-token">
-                    {r.owned.length ? (
-                      r.owned.map((t) => (
-                        <span key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <span className="dot" style={{ background: t.color }} />{t.name}
-                        </span>
-                      ))
-                    ) : r.isGm ? (
-                      <span>running the game</span>
-                    ) : (
-                      <span>spectating</span>
-                    )}
-                  </div>
+            <ListRow
+              key={r.pubkey}
+              className={`players-row${r.away ? ' away' : ''}`}
+              onSelect={assignable ? () => setAssigning(open ? null : r.pubkey) : undefined}
+              expanded={assignable ? open : undefined}
+              label={assignable ? `${open ? 'Cancel assigning a token to' : 'Assign a token to'} ${r.name}` : undefined}
+              trailing={assignBox}
+            >
+              <span className="dot" style={{ background: r.color }} role="img" aria-label={colorName(r.color)} />
+              <div className="players-who">
+                <div className="players-name">
+                  <strong>{r.name}</strong>
+                  {r.isMe && <span className="muted small">you</span>}
+                  {r.isGm && <span className="players-badge">GM</span>}
+                  {r.away && <span className="muted small">away</span>}
                 </div>
-                {isGm && !r.isGm ? (
-                  <button type="button" aria-expanded={open} onClick={() => setAssigning(open ? null : r.pubkey)}>
-                    {open ? 'Cancel' : 'Assign…'}
-                  </button>
-                ) : null}
+                <div className="players-token">
+                  {r.owned.length ? (
+                    r.owned.map((t) => (
+                      <span key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span className="dot" style={{ background: t.color }} />{t.name}
+                      </span>
+                    ))
+                  ) : r.isGm ? (
+                    <span>running the game</span>
+                  ) : (
+                    <span>spectating</span>
+                  )}
+                </div>
               </div>
-              {open && (
-                <div className="players-assign" role="group" aria-label={`Assign a token to ${r.name}`}>
-                  {!scene && <span className="muted small">No active scene.</span>}
-                  {scene && unowned.length === 0 && <span className="muted small">Every token in this scene has an owner.</span>}
-                  {unowned.map((t) => (
-                    <button key={t.id} type="button" onClick={() => assign(r.pubkey, t.id as TokenId)}>
-                      <span className="dot" style={{ background: t.color }} /> Give {t.name}
-                    </button>
-                  ))}
-                  {r.owned.map((t) => (
-                    <button key={`back-${t.id}`} type="button" onClick={() => assign(me, t.id as TokenId)}>
-                      Take back {t.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </li>
+              {assignable && <span className="players-action" aria-hidden>{open ? 'Cancel' : 'Assign…'}</span>}
+            </ListRow>
           )
         })}
       </ul>
@@ -153,6 +164,12 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
       {!isGm && scene && (
         <button type="button" className="players-pick" onClick={show}>Pick a character</button>
       )}
+      <div className="players-prefs">
+        <label className="check">
+          <input type="checkbox" checked={skipDice} onChange={(e) => setSkipDice(e.target.checked)} />
+          <span>Skip 3D dice <span className="muted small">· results still show in chat</span></span>
+        </label>
+      </div>
     </div>
   )
 }

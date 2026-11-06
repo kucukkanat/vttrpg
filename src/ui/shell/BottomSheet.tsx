@@ -2,12 +2,13 @@
  * Phone bottom sheet. Lives in the `table` grid area (as `.sheet-area`, pointer-events none) so it
  * overlaps the table without being inside the canvas container. Half = 55% of the area, full = the
  * whole area minus the keyboard. The header row is the drag surface: vertical drags resize, a
- * horizontal swipe switches tabs, dragging below 60% of half closes.
+ * horizontal swipe switches tabs, dragging below 60% of half closes. Esc closes too; focus moves to
+ * the title on open and back to the opener on close.
  *
  * Hosts a registry panel (`def`) or, when `def` is omitted, arbitrary `children` under the same
  * header (the More list).
  */
-import { useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { PanelHost } from './PanelHost'
@@ -44,9 +45,40 @@ export function BottomSheet({ def, title, children, controller, size, keyboard, 
 }) {
   const area = useRef<HTMLDivElement>(null)
   const sheet = useRef<HTMLDivElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
   const drag = useRef<{ x: number; y: number; h: number } | null>(null)
   const [dragging, setDragging] = useState(false)
   const label = title ?? def?.title ?? ''
+
+  // Focus: the title takes focus on open so a keyboard user lands in the sheet instead of tabbing
+  // through the remaining tabs first; on close focus returns to whatever opened it (the tab).
+  useEffect(() => {
+    const el = sheet.current
+    const opener = document.activeElement
+    const outside = opener instanceof HTMLElement && !el?.contains(opener) ? opener : null
+    heading.current?.focus({ preventScroll: true })
+    return () => {
+      // Only restore when focus leaves with the sheet; a tap on another tab keeps the focus it took.
+      const now = document.activeElement
+      const stranded = !now || now === document.body || !now.isConnected || !!el?.contains(now)
+      if (stranded && outside?.isConnected) outside.focus({ preventScroll: true })
+    }
+  }, [])
+
+  // Esc closes the sheet; while typing, the first Esc only leaves the field and the next one closes.
+  const latestClose = useRef(onClose)
+  latestClose.current = onClose
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const field = e.target instanceof Element ? e.target.closest<HTMLElement>('input, textarea, select, [contenteditable="true"]') : null
+      if (field) { field.blur(); return }
+      e.preventDefault()
+      latestClose.current()
+    }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [])
 
   const fullHeight = () => (area.current?.clientHeight ?? 0) - keyboard
 
@@ -85,7 +117,7 @@ export function BottomSheet({ def, title, children, controller, size, keyboard, 
       <button type="button" className="icon sheet-size" aria-label={size === 'full' ? 'Shrink panel' : 'Expand panel'} onClick={() => onSize(size === 'full' ? 'half' : 'full')}>
         {size === 'full' ? '⌄' : '⌃'}
       </button>
-      <h2 className="host-title">{label}</h2>
+      <h2 className="host-title" ref={heading} tabIndex={-1}>{label}</h2>
       <button type="button" className="icon sheet-close" aria-label="Close panel" onClick={onClose}>✕</button>
     </div>
   )

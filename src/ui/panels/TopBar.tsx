@@ -40,7 +40,7 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
       <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
       <span className={`status ${status}`} role="status" aria-label={statusLabel} title={statusLabel}>
         <span className="dot" />
-        {!compact && <span className="small">{statusLabel}</span>}
+        <span className="small word">{statusLabel}</span>
       </span>
       <span className={`role ${isGm ? 'gm' : ''}`}>{isGm ? 'GM' : 'Player'}</span>
       <span className="spacer" />
