@@ -4,8 +4,8 @@
  */
 import { create } from 'zustand'
 import type * as Y from 'yjs'
-import type { Character, ChatMessage, FogState, GameEvent, GameMeta, Scene, Token } from '@/core/doc'
-import type { CharacterId, SceneId, TokenId } from '@/core/ids'
+import type { Character, ChatMessage, FogState, GameEvent, GameMeta, Prop, Scene, Token } from '@/core/doc'
+import type { CharacterId, PropId, SceneId, TokenId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 
 export interface GameState {
@@ -16,11 +16,12 @@ export interface GameState {
   chat: ChatMessage[]
   fog: Record<SceneId, FogState>
   events: GameEvent[]
+  props: Record<PropId, Prop>
   presence: Record<string, Presence>
   selectedToken: TokenId | null
   setSelectedToken(id: TokenId | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props'>>): void
 }
 
 export const useGame = create<GameState>((set) => ({
@@ -31,6 +32,7 @@ export const useGame = create<GameState>((set) => ({
   chat: [],
   fog: {} as Record<SceneId, FogState>,
   events: [],
+  props: {} as Record<PropId, Prop>,
   presence: {},
   selectedToken: null,
   setSelectedToken: (id) => set({ selectedToken: id }),
@@ -49,6 +51,7 @@ export function bindDoc(doc: Y.Doc): () => void {
       chat: doc.getArray('chat').toJSON() as ChatMessage[],
       fog: doc.getMap('fog').toJSON() as Record<SceneId, FogState>,
       events: doc.getArray('events').toJSON() as GameEvent[],
+      props: doc.getMap('props').toJSON() as Record<PropId, Prop>,
     })
   }
   sync()

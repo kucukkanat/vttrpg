@@ -105,6 +105,7 @@ describe('validate', () => {
   const doc = (): GameDocShape => ({
     meta: { name: 'g', gm, pack: pack.manifest.id, activeScene: scene, createdAt: 0 },
     events: [],
+    props: {},
     scenes: {},
     tokens: {
       ['t-alice' as TokenId]: token('t-alice', alice, 'c-alice'),

@@ -5,7 +5,7 @@
  */
 import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
-import type { CharacterId, PackId, PlayerPubkey, SceneId, TokenId } from './ids'
+import type { CharacterId, PackId, PlayerPubkey, PropId, SceneId, TokenId } from './ids'
 import type { VfxCue } from './pack'
 
 export type CameraMode = 'orbit' | 'token'
@@ -33,6 +33,38 @@ export interface Scene {
   darkness: number // 0..1, 0 = fully lit outdoors
   /** Weather preset rendered by the table's WeatherLayer. */
   weather?: 'none' | 'rain' | 'snow' | 'fog' | 'embers'
+  /** Transform applied to the whole scene model so an imported GLB can be fitted to the grid in-game. */
+  transform?: SceneTransform
+  /** Per-node overrides inside the scene model, keyed by the node's name in the GLB. */
+  overrides?: Record<string, NodeOverride>
+}
+
+export interface SceneTransform {
+  scale: number
+  rotationY: number
+  offset: Vec3
+}
+
+export interface NodeOverride {
+  position?: Vec3
+  rotationY?: number
+  scale?: number
+  hidden?: boolean
+}
+
+/** A standalone model placed in a scene (furniture, trees, props). Not a token: no owner, vision or sheet. */
+export interface Prop {
+  id: PropId
+  scene: SceneId
+  name: string
+  model: AssetRef
+  position: Vec3
+  rotation: Vec3 // euler radians
+  scale: number
+  /** Locked props ignore drags on the table (GM can still edit in the panel). */
+  locked?: boolean
+  /** Blocks movement and line of sight when true (adds its footprint to the wall set). */
+  solid?: boolean
 }
 
 export interface Token {
@@ -50,6 +82,8 @@ export interface Token {
   cell?: Cell
   rotationY: number
   scale: number
+  /** Height above the floor in meters (flying, standing on furniture). */
+  elevation?: number
   /** Vision radius in cells; 0 = none. */
   vision: number
   /** Light emitted by this token (torch) in cells; 0 = none. */
@@ -110,6 +144,7 @@ export interface GameDocShape {
   chat: ChatMessage[]
   fog: Record<SceneId, FogState>
   events: GameEvent[]
+  props: Record<PropId, Prop>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props'] as const

@@ -504,6 +504,7 @@ function docWith(tokens: Record<string, [PlayerPubkey | undefined, Character]>):
   const doc: GameDocShape = {
     meta: { name: 'g', gm, pack: 'dnd5e' as never, activeScene: scene, createdAt: 0 },
     events: [],
+    props: {},
     scenes: {},
     tokens: {},
     characters: {},

@@ -3,7 +3,7 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, Prop, RollResult, Scene, Token } from '@/core/doc'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
 
@@ -23,6 +23,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const fog = doc.getMap<FogState>('fog')
   const meta = doc.getMap<unknown>('meta')
   const events = doc.getArray<GameEvent>('events')
+  const props = doc.getMap<Prop>('props')
 
   doc.transact(() => {
     switch (intent.type) {
@@ -99,6 +100,18 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       }
       case 'audio.play':
         events.push([{ id: env.id, at, kind: 'audio', asset: intent.asset, volume: intent.volume, by: from }])
+        break
+      case 'prop.add':
+        props.set(intent.prop.id, intent.prop)
+        break
+      case 'prop.update': {
+        const p = props.get(intent.prop)
+        if (!p) return
+        props.set(intent.prop, { ...p, ...intent.patch, id: p.id })
+        break
+      }
+      case 'prop.remove':
+        props.delete(intent.prop)
         break
       case 'event.prune': {
         const keep = events.toArray().filter((e) => e.at >= intent.before).length

@@ -43,7 +43,7 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props }
   }
 
   async function resolveContext(env: IntentEnvelope): Promise<ApplyContext> {

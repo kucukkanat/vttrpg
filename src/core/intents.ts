@@ -4,8 +4,8 @@
  * optimistically and roll back if the GM's delta disagrees.
  */
 import type { Vec3 } from './geometry'
-import type { CharacterId, PlayerPubkey, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene } from './doc'
+import type { CharacterId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
+import type { Token, Character, Scene, Prop } from './doc'
 import type { AssetRef } from './assets'
 
 export type Intent =
@@ -29,6 +29,10 @@ export type Intent =
   | { type: 'audio.play'; asset: AssetRef; volume?: number }
   /** GM housekeeping: drop events older than `before`. */
   | { type: 'event.prune'; before: number }
+  /** Standalone props (GM only). */
+  | { type: 'prop.add'; prop: Prop }
+  | { type: 'prop.update'; prop: PropId; patch: Partial<Prop> }
+  | { type: 'prop.remove'; prop: PropId }
 
 export interface IntentEnvelope {
   id: string

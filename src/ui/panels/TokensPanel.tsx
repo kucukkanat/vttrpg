@@ -17,6 +17,25 @@ export function TokensPanel({ controller }: { controller: GameController }) {
   const isGm = controller.connection.isGm
   const visible = Object.values(tokens).filter((t) => t.scene === meta?.activeScene && (isGm || !t.hidden))
 
+  const remove = (id: TokenId) => {
+    void controller.dispatch({ type: 'token.remove', token: id })
+    if (selected === id) select(null)
+  }
+  // Delete / Backspace removes the selected token when focus is not in a text field.
+  useEffect(() => {
+    if (!isGm) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const el = document.activeElement
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable)) return
+      const id = useGame.getState().selectedToken
+      if (id) { e.preventDefault(); remove(id) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGm])
+
   const add = () => {
     if (!meta?.activeScene) return
     const id = newId<'TokenId'>()
@@ -40,6 +59,7 @@ export function TokensPanel({ controller }: { controller: GameController }) {
             <span style={{ flex: 1 }}>{t.name}</span>
             {t.owner === controller.pubkey && <span className="muted small">you</span>}
             {t.hidden && <span className="muted small">hidden</span>}
+            {isGm && <button className="icon" aria-label={`Remove ${t.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); remove(t.id as TokenId) }}>🗑</button>}
           </li>
         ))}
       </ul>
@@ -98,6 +118,7 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
         </label>
       )}
       {isGm && <button className="danger wide" onClick={() => void controller.dispatch({ type: 'token.remove', token: token.id })}>Remove token</button>}
+      <p className="muted small">Tip: Delete key removes the selected token.</p>
     </div>
   )
 }

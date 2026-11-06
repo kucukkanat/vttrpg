@@ -4,6 +4,9 @@
 }
 html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, sans-serif; }
 * { box-sizing: border-box; }
+/* Pinch and double-tap zoom the table, never the page. */
+html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+canvas { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 a { color: var(--accent); }
 button { background: #26262d; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 button:hover { border-color: var(--accent); }
@@ -61,3 +64,5 @@ button.danger { border-color: #7a2e2e; color: #ff9a93; }
 .msg.system { color: var(--muted); font-style: italic; }
 .ok { color: #8fd18f; } .bad { color: #f28b82; }
 input[type=range] { padding: 0; }
+button.icon { padding: 2px 6px; font-size: 14px; line-height: 1; background: transparent; border-color: transparent; }
+button.icon:hover { border-color: var(--border); }
