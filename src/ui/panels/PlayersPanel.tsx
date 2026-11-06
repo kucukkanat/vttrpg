@@ -37,6 +37,8 @@ const css = `
 .players-pick { width: 100%; min-height: 48px; font-size: var(--fs-lg); margin-top: var(--sp-2); }
 .players-prefs { margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 .players-prefs .check { margin: 0; }
+.players-toggle { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-2); cursor: pointer; font-size: var(--fs-md); }
+.players-toggle input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--accent); }
 `
 
 interface Row {
@@ -53,6 +55,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
   const presence = useGame((s) => s.presence)
   const tokens = useGame((s) => s.tokens)
   const scene = useGame((s) => s.meta?.activeScene ?? null)
+  const showHp = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const gm = controller.connection.gm
   const me = controller.pubkey
   const isGm = controller.connection.isGm
@@ -94,6 +97,11 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
   }
 
   const skipDice = useSkipDicePreference()
+  // GM-only meta flag, written straight to the doc like `meta.names` (the GM is the doc's authority).
+  const setShowHp = (on: boolean) => {
+    if (!isGm) return
+    controller.connection.doc.getMap<unknown>('meta').set('showHpToPlayers', on)
+  }
 
   return (
     <div className="panel">
@@ -160,6 +168,12 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <p className="muted">No players yet</p>
           {isGm ? <CopyInvite controller={controller} /> : <p className="muted small">Others appear here as they join.</p>}
         </div>
+      )}
+      {isGm && (
+        <label className="players-toggle">
+          <input type="checkbox" checked={showHp} onChange={(e) => setShowHp(e.target.checked)} />
+          <span>Show HP and conditions to players</span>
+        </label>
       )}
       {!isGm && scene && (
         <button type="button" className="players-pick" onClick={show}>Pick a character</button>

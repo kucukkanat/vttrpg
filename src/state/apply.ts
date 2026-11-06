@@ -3,7 +3,8 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, Note, Prop, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
@@ -13,6 +14,42 @@ export interface ApplyContext {
   roll?: RollResult
   /** Character patches + messages produced by the rules engine for 'skill.use'. */
   skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[] }
+}
+
+/** A sheet value the engine tracks as a resource: a bare number or `{ current }`. */
+function resourceValue(v: unknown): number | undefined {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined
+  if (v && typeof v === 'object') {
+    const c = (v as { current?: unknown }).current
+    return typeof c === 'number' && Number.isFinite(c) ? c : undefined
+  }
+  return undefined
+}
+
+/**
+ * Resource deltas per token from the engine's sheet patches, for floating numbers on the table.
+ * Only keys that were and remain resource-shaped count; `tokensOf` maps a character to the
+ * tokens that show it (the skill's source and targets first). Zero deltas are dropped.
+ */
+export function skillNumbers(
+  patches: { character: string; data: Record<string, unknown> }[],
+  before: (character: string) => Record<string, unknown> | undefined,
+  tokensOf: (character: string) => TokenId[],
+): ResourceDelta[] {
+  const out: ResourceDelta[] = []
+  for (const p of patches) {
+    const prev = before(p.character)
+    if (!prev) continue
+    const tokens = tokensOf(p.character)
+    if (!tokens.length) continue
+    for (const [key, next] of Object.entries(p.data)) {
+      const a = resourceValue(prev[key])
+      const b = resourceValue(next)
+      if (a === undefined || b === undefined || a === b) continue
+      for (const token of tokens) out.push({ token, delta: b - a, resource: key })
+    }
+  }
+  return out
 }
 
 /** Shallow merge that removes keys set to undefined (Yjs cannot store undefined). */
@@ -94,6 +131,21 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         ])
         break
       case 'skill.use': {
+        const src = tokens.get(intent.source)
+        // Tokens showing a sheet: the cast's own tokens first, then any other in the same scene.
+        const involved = [intent.source, ...intent.targets].map((id) => tokens.get(id)).filter((t): t is Token => !!t)
+        const tokensOf = (character: string): TokenId[] => {
+          const own = involved.filter((t) => t.character === character).map((t) => t.id)
+          if (own.length) return [...new Set(own)]
+          const rest: TokenId[] = []
+          tokens.forEach((t) => { if (t.character === character && (!src || t.scene === src.scene)) rest.push(t.id) })
+          return rest
+        }
+        const numbers = skillNumbers(
+          ctx.skill?.patches ?? [],
+          (id) => (characters.get(id)?.data as Record<string, unknown> | undefined),
+          tokensOf,
+        )
         for (const p of ctx.skill?.patches ?? []) {
           const c = characters.get(p.character)
           if (c) characters.set(p.character, { ...c, data: { ...(c.data as object), ...p.data } })
@@ -101,9 +153,10 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         for (const text of ctx.skill?.messages ?? []) {
           chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text }])
         }
-        const src = tokens.get(intent.source)
-        if (ctx.skill?.vfx?.length && src) {
-          events.push([{ id: env.id, at, kind: 'vfx', cues: ctx.skill.vfx, scene: src.scene, source: intent.source, targets: intent.targets, point: intent.point, label: intent.skill }])
+        if (src && (ctx.skill?.vfx?.length || numbers.length)) {
+          const ev: Extract<GameEvent, { kind: 'vfx' }> = { id: env.id, at, kind: 'vfx', cues: ctx.skill?.vfx ?? [], scene: src.scene, source: intent.source, targets: intent.targets, point: intent.point, label: intent.skill }
+          if (numbers.length) ev.numbers = numbers
+          events.push([ev])
         }
         break
       }

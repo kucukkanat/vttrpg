@@ -41,6 +41,15 @@ when a skill is cast at a tile or at a creature. Unresolvable cues are skipped, 
 `radius` and `strength` are optional extras read loosely off the cue (they are not in `VfxCue`
 yet); add them to `src/core/pack.ts` when the skill schema grows.
 
+## Floating numbers
+
+A `vfx` event may carry `numbers: ResourceDelta[]` (token, delta, resource), computed by the
+apply path from the engine's sheet patches. `planNumbers` (`numbers.ts`, pure) places one
+`FloatingNumber` above each token's head 120 ms after the event, staggered 180 ms apart on the
+same token; it pops, rises 0.9 cells and fades over 1.1 s. Red for a loss, green for a gain, with
+the resource key as a small tag (`-4 hp`, `-1 wil`). The sprite ignores size attenuation so it
+reads the same at any zoom. Dev story buttons: "damage number", "heal number".
+
 ## Weather
 
 `WeatherLayer({ kind, bounds, density? })` with `kind` in `none | rain | snow | embers | fog`.
