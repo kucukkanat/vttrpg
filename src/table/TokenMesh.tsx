@@ -13,6 +13,7 @@ import { useGame } from '@/state/store'
 import { canControl, useTable } from './context'
 import { snapToCell } from './grid'
 import { flickerNoise } from './SceneModel'
+import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { useTableUi } from './tableState'
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
@@ -84,8 +85,11 @@ export class ModelBoundary extends Component<{ fallback: ReactNode; children: Re
 /**
  * A GLB instance with shadows on. Scene-convention helpers (`COL_*`, `FOG_*`) inside the file
  * are hidden so a scene model can double as a prop. `onObject` reports the clone once it exists.
+ * With `fitCell` the model's footprint is fitted to the grid (see fitScale.ts) before `scale` applies.
  */
-export function GlbMini({ url, scale, onObject }: { url: string; scale: number; onObject?(o: Group | null): void }) {
+export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject }: {
+  url: string; scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
+}) {
   const gltf = useGLTF(url)
   const object = useMemo(() => {
     const o = gltf.scene.clone(true) as Group
@@ -99,11 +103,12 @@ export function GlbMini({ url, scale, onObject }: { url: string; scale: number; 
     })
     return o
   }, [gltf])
+  const fit = useMemo(() => (fitCell ? fitObjectToCell(object, fitCell, fitRange) : 1), [object, fitCell, fitRange])
   useEffect(() => {
     onObject?.(object)
     return () => onObject?.(null)
   }, [object, onObject])
-  return <primitive object={object} scale={scale} />
+  return <primitive object={object} scale={scale * fit} />
 }
 
 function Disc({ token, radius, dimmed }: { token: Token; radius: number; dimmed: boolean }) {
@@ -293,7 +298,7 @@ export function TokenMesh({ token }: { token: Token }) {
         {modelUrl ? (
           <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
             <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} />}>
-              <GlbMini url={modelUrl} scale={scale} />
+              <GlbMini url={modelUrl} scale={scale} fitCell={cell} />
             </Suspense>
           </ModelBoundary>
         ) : (

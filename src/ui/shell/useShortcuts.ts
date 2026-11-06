@@ -12,6 +12,26 @@ export interface ShortcutHandlers {
   focusChat(): void
   /** 1-based index into the visible panel list. */
   togglePanel(n: number): void
+  /** Show a panel wherever the current layout keeps it; answers `requestOpenPanel`. */
+  openPanel?(id: string): void
+}
+
+/** Window event panels use to ask the shell for another panel (Tokens row "Edit" opens the Edit panel). */
+export const OPEN_PANEL_EVENT = 'vtt:open-panel'
+
+export function requestOpenPanel(id: string) {
+  window.dispatchEvent(new CustomEvent(OPEN_PANEL_EVENT, { detail: { id } }))
+}
+
+/**
+ * Fallback when the shell did not hand over `openPanel`: expand the panel's desktop section if it
+ * is collapsed and scroll it into view. Does nothing when the panel is not mounted (phone sheet).
+ */
+function revealMountedPanel(id: string) {
+  const host = document.querySelector<HTMLElement>(`[data-panel="${id}"]`)
+  if (!host) return
+  host.querySelector<HTMLButtonElement>('.section-head[aria-expanded="false"]')?.click()
+  host.scrollIntoView?.({ block: 'nearest' })
 }
 
 export function isTypingTarget(el: Element | null): boolean {
@@ -36,6 +56,18 @@ export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Panels open each other through a window event so they need no shell props; every layout listens.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id
+      if (!id) return
+      if (handlers.openPanel) handlers.openPanel(id)
+      else revealMountedPanel(id)
+    }
+    window.addEventListener(OPEN_PANEL_EVENT, onOpen)
+    return () => window.removeEventListener(OPEN_PANEL_EVENT, onOpen)
+  }, [handlers])
 
   useEffect(() => {
     if (!enabled) return

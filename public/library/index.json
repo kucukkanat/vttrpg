@@ -1,5 +1,35 @@
 [
   {
+    "sha256": "44de39f6cc834293d04e74dbb86657b4b62f3ca036ad3e44edd08b677740a58a",
+    "path": "minis/knight.glb",
+    "kind": "glb",
+    "category": "mini",
+    "mime": "model/gltf-binary",
+    "size": 50912,
+    "name": "knight.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "253b234a435f2dfc4d031e7153c4682d71fbb268b38310014d1f703d70b9982e",
+    "path": "minis/mouse-adventurer.glb",
+    "kind": "glb",
+    "category": "mini",
+    "mime": "model/gltf-binary",
+    "size": 39824,
+    "name": "mouse-adventurer.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5d948b916e25ab47e7933c674d34a1da8adbbac4ca370be37577fc7722b10c18",
+    "path": "minis/rat.glb",
+    "kind": "glb",
+    "category": "mini",
+    "mime": "model/gltf-binary",
+    "size": 46288,
+    "name": "rat.glb",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "46aecf1d459b638088726fe65dada6f2c3348ba5efd43bf59ad84d43ddcf2cc1",
     "path": "placeholder.json",
     "kind": "json",
@@ -9,9 +39,110 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "93f44b97bfe11faee87eed62ccf640f8bb831fe04328cfe7681d607413300d43",
+    "path": "props/barrel.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 17188,
+    "name": "barrel.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ec853a2b65a65a87d71e1f492534c31d63285b4f82d4364c675fb9e148d034f5",
+    "path": "props/bed.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 11700,
+    "name": "bed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4c81b136a6c73d9aca375c9b7ca012bc317d7434c39583138c028847753924ee",
+    "path": "props/bookshelf.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 48184,
+    "name": "bookshelf.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2f18b877071819fdef187b99f6b0473db1c31c0be0f16369299220082ef00893",
+    "path": "props/campfire.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 33148,
+    "name": "campfire.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6545b870ce257e679b30038201abcadb40b97f0fd53b130b8285bd16b33e48f9",
+    "path": "props/chair.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 14976,
+    "name": "chair.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e00698067bc63bada8a85b83f8340b3b1e54f8fbff5277afa62fc2cce1bfe9d0",
+    "path": "props/chest.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 11428,
+    "name": "chest.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "64e5f2d594f5c9668af7792e1520cae0aee4bead5d74f50dd28f418e8bcdd3c7",
+    "path": "props/crate.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 13432,
+    "name": "crate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5bd97718d8b4efb6d9e17e3500da6f1cd66c634f35cf5d0ce39709c0b3afd006",
+    "path": "props/rock.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 12392,
+    "name": "rock.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "70b2084600bf34c9ae01bd9defb01c2e7e96c83205bb7e1ca8ed444a15bb2d1b",
+    "path": "props/table.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 19592,
+    "name": "table.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6fdbfe0419f700309e3ad7a01d924f690f96fb9afc00fb921f7933a3ae144b7b",
+    "path": "props/torch-stand.glb",
+    "kind": "glb",
+    "category": "prop",
+    "mime": "model/gltf-binary",
+    "size": 11340,
+    "name": "torch-stand.glb",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "b3d54b20c5e9a4cf517b35817881c1f5a1970f5d579864b41236762fca6e55b3",
     "path": "scenes/dev-room.glb",
     "kind": "glb",
+    "category": "scene",
     "mime": "model/gltf-binary",
     "size": 23948,
     "name": "dev-room.glb",
@@ -21,6 +152,7 @@
     "sha256": "f6721597a17ebb588fa460a9644c720f3501efc77f398590d4bb3e74532c9edd",
     "path": "scenes/dungeon.glb",
     "kind": "glb",
+    "category": "scene",
     "mime": "model/gltf-binary",
     "size": 163244,
     "name": "dungeon.glb",
@@ -30,6 +162,7 @@
     "sha256": "4c203981622a8fef1d259b8a358d2679e6248fc6b4e6df00ab3e48cddf6875ce",
     "path": "scenes/forest.glb",
     "kind": "glb",
+    "category": "scene",
     "mime": "model/gltf-binary",
     "size": 132644,
     "name": "forest.glb",
@@ -39,6 +172,7 @@
     "sha256": "68ecd3bea2ec15c79490e99face18139ddb820bc493234abc8da3cb34a1bf18a",
     "path": "scenes/tavern.glb",
     "kind": "glb",
+    "category": "scene",
     "mime": "model/gltf-binary",
     "size": 210416,
     "name": "tavern.glb",

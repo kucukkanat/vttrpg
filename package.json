@@ -11,7 +11,8 @@
     "test": "vitest run",
     "lint": "eslint src",
     "library:index": "node scripts/build-library-index.mjs",
-    "scenes": "node scripts/make-scenes/index.mjs && node scripts/build-library-index.mjs"
+    "scenes": "node scripts/make-scenes/index.mjs && node scripts/build-library-index.mjs",
+    "props": "node scripts/make-props/index.mjs && node scripts/build-library-index.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",

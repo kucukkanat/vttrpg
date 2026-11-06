@@ -67,6 +67,12 @@ moving a spawn in a script means updating the template too.
 `ambient_preset` is a scene custom property naming one of the built-in procedural ambiences
 (`src/audio`); scenes that set it leave `ambient_audio` unset.
 
+The small models in `../props` (barrel, crate, table, chair, chest, torch stand, bed, bookshelf,
+campfire, rock) and `../minis` (mouse adventurer, rat, knight) come from `scripts/make-props/index.mjs`
+(`npm run props`), reuse the same helpers, and each fits one 1.5 m cell standing on y = 0. The
+index builder tags every model with a `category` (`scene`, `prop` or `mini`) from its folder; the
+token and prop pickers only list props and minis, and the Scenes panel owns `scenes/`.
+
 ## License
 
 Files in this folder are CC0 unless a `LICENSE` file next to them says otherwise.

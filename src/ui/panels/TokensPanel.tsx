@@ -1,13 +1,26 @@
-import { useEffect } from 'react'
+/**
+ * Tokens panel: the list (with a filter once it gets long), ownership, visibility and removal.
+ * Size, rotation, elevation and the model live in the Edit panel; the row's pencil and the
+ * "Edit size and model" button send the selection there.
+ */
+import { useEffect, useRef, useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newId } from '@/core/ids'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import type { Token } from '@/core/doc'
-import { ModelPicker } from './ObjectPanel'
-import { isTypingTarget } from '../shell/useShortcuts'
+import { isTypingTarget, requestOpenPanel } from '../shell/useShortcuts'
+import './tokens.css'
 
 const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
+/** Above this many rows the list gets a filter box and scrolls on its own. */
+export const FILTER_THRESHOLD = 15
+
+/** Case-insensitive substring match on the name; an empty needle keeps everything. */
+export function filterTokens<T extends { name: string }>(tokens: readonly T[], needle: string): T[] {
+  const q = needle.trim().toLowerCase()
+  return q ? tokens.filter((t) => t.name.toLowerCase().includes(q)) : [...tokens]
+}
 
 export function TokensPanel({ controller }: { controller: GameController }) {
   const tokens = useGame((s) => s.tokens)
@@ -16,6 +29,16 @@ export function TokensPanel({ controller }: { controller: GameController }) {
   const select = useGame((s) => s.setSelectedToken)
   const isGm = controller.connection.isGm
   const visible = Object.values(tokens).filter((t) => t.scene === meta?.activeScene && (isGm || !t.hidden))
+  const long = visible.length > FILTER_THRESHOLD
+  const [filter, setFilter] = useState('')
+  const rows = long ? filterTokens(visible, filter) : visible
+  const list = useRef<HTMLUListElement>(null)
+
+  // A tap on the table changes the selection; keep that row on screen in a long list.
+  useEffect(() => {
+    if (!selected) return
+    list.current?.querySelector<HTMLElement>('li.selected')?.scrollIntoView?.({ block: 'nearest' })
+  }, [selected])
 
   const remove = (id: TokenId) => {
     void controller.dispatch({ type: 'token.remove', token: id })
@@ -49,26 +72,46 @@ export function TokensPanel({ controller }: { controller: GameController }) {
     select(id)
   }
 
+  const edit = (id: TokenId) => {
+    select(id)
+    requestOpenPanel('object')
+  }
+
   return (
     <div className="panel">
       <h3>Tokens {isGm && <button onClick={add} disabled={!meta?.activeScene} aria-label="Add token">+</button>}</h3>
-      <ul className="list">
-        {visible.map((t) => (
-          <li key={t.id} className={t.id === selected ? 'selected' : ''} onClick={() => select(t.id === selected ? null : (t.id as TokenId))}>
-            <span className="dot" style={{ background: t.color }} />
-            <span style={{ flex: 1 }}>{t.name}</span>
-            {t.owner === controller.pubkey && <span className="muted small">you</span>}
-            {t.hidden && <span className="muted small">hidden</span>}
-            {isGm && <button className="icon" aria-label={`Remove ${t.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); remove(t.id as TokenId) }}>🗑</button>}
-          </li>
-        ))}
+      {long && (
+        <input
+          className="tokens-filter"
+          type="search"
+          value={filter}
+          placeholder={`Filter ${visible.length} tokens…`}
+          aria-label="Filter tokens by name"
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      )}
+      <ul className={`list tokens-list ${long ? 'long' : ''}`} ref={list}>
+        {rows.map((t) => {
+          const editable = isGm || t.owner === controller.pubkey
+          return (
+            <li key={t.id} className={t.id === selected ? 'selected' : ''} onClick={() => select(t.id === selected ? null : (t.id as TokenId))}>
+              <span className="dot" style={{ background: t.color }} />
+              <span className="name">{t.name}</span>
+              {t.owner === controller.pubkey && <span className="muted small">you</span>}
+              {t.hidden && <span className="muted small">hidden</span>}
+              {editable && <button className="icon" aria-label={`Edit ${t.name}`} title="Size, rotation and model" onClick={(e) => { e.stopPropagation(); edit(t.id as TokenId) }}>✎</button>}
+              {isGm && <button className="icon" aria-label={`Remove ${t.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); remove(t.id as TokenId) }}>🗑</button>}
+            </li>
+          )
+        })}
       </ul>
-      {selected && tokens[selected] && <TokenProps controller={controller} token={tokens[selected]} />}
+      {long && rows.length === 0 && <p className="muted small tokens-empty">No token matches “{filter.trim()}”.</p>}
+      {selected && tokens[selected] && <TokenProps controller={controller} token={tokens[selected]} onEdit={() => edit(selected)} />}
     </div>
   )
 }
 
-function TokenProps({ controller, token }: { controller: GameController; token: Token }) {
+function TokenProps({ controller, token, onEdit }: { controller: GameController; token: Token; onEdit(): void }) {
   const isGm = controller.connection.isGm
   const mine = token.owner === controller.pubkey
   const presence = useGame((s) => s.presence)
@@ -92,7 +135,6 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
       <div className="grid2">
         <label>Vision<input type="number" min={0} max={30} value={token.vision} onChange={(e) => patch({ vision: Number(e.target.value) })} /></label>
         <label>Light<input type="number" min={0} max={30} value={token.light} onChange={(e) => patch({ light: Number(e.target.value) })} /></label>
-        <label>Size<input type="number" min={0.25} max={4} step={0.25} value={token.scale} onChange={(e) => patch({ scale: Number(e.target.value) })} /></label>
         {isGm && <label className="check"><input type="checkbox" checked={token.hidden} onChange={(e) => patch({ hidden: e.target.checked })} /> Hidden</label>}
       </div>
       {isGm && (
@@ -104,14 +146,7 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
           </select>
         </label>
       )}
-      <ModelPicker
-        controller={controller}
-        title="Model"
-        actionLabel="Use"
-        current={token.model ? (token.model.name?.replace(/\.glb$/i, '') ?? 'custom model') : 'disc with initials'}
-        onPick={(model) => patch({ model })}
-        onClear={token.model ? () => patch({ model: undefined }) : undefined}
-      />
+      <button className="wide" onClick={onEdit}>Edit size, rotation and model ›</button>
       {isGm && <button className="danger wide" onClick={() => void controller.dispatch({ type: 'token.remove', token: token.id })}>Remove token</button>}
       <p className="muted small">Tip: Delete removes the selected token; Cmd/Ctrl+Z brings it back.</p>
     </div>
