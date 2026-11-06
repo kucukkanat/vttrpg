@@ -6,13 +6,27 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
-import { useConnectionStatus } from '../shell/useConnectionStatus'
+import { useConnectionStatus, type ConnectionStatus } from '../shell/useConnectionStatus'
 import { buildInviteUrl, relayStatusLine, selectAll, useCopy } from '../invite'
 import './invite.css'
 
+const css = `
+.topbar { position: relative; }
+.status.gm-away .dot { background: var(--accent); }
+.offline-banner {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 8;
+  display: flex; align-items: center; gap: var(--sp-2); min-height: 44px;
+  padding: 0 calc(var(--sp-3) + var(--sar)) 0 calc(var(--sp-3) + var(--sal));
+  background: var(--panel-2); border-bottom: 1px solid var(--border); color: var(--fg); font-size: var(--fs-sm);
+}
+.offline-banner .dot { background: var(--bad); width: 8px; height: 8px; }
+.offline-banner span { min-width: 0; flex: 1 1 auto; }
+.offline-banner button { min-height: 44px; min-width: 44px; flex: none; }
+`
+
 export function TopBar({ controller, compact = false, trailing }: { controller: GameController; compact?: boolean; trailing?: ReactNode }) {
   const meta = useGame((s) => s.meta)
-  const status = useConnectionStatus(controller)
+  const { status, gmAway } = useConnectionStatus(controller)
   const isGm = controller.connection.isGm
   const [menu, setMenu] = useState(false)
   const [invite, setInvite] = useState(false)
@@ -34,11 +48,15 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
   const openInvite = () => { setMenu(false); setInvite(true) }
   const closeInvite = () => { setInvite(false); inviteButtonRef.current?.focus() }
 
-  const statusLabel = status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Offline'
+  // A player with relays but no GM beacon for a while sees amber "GM away"; the GM never does.
+  const showAway = status === 'connected' && gmAway && !isGm
+  const statusLabel = status === 'connected' ? (showAway ? 'Connected · GM away' : 'Connected') : status === 'connecting' ? 'Connecting…' : 'Offline'
+  const retry = () => controller.connection.reconnect()
   return (
     <header className={`topbar ${compact ? 'compact' : ''}`}>
+      <style>{css}</style>
       <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
-      <span className={`status ${status}`} role="status" aria-label={statusLabel} title={statusLabel}>
+      <span className={`status ${status}${showAway ? ' gm-away' : ''}`} role="status" aria-label={statusLabel} title={statusLabel}>
         <span className="dot" />
         {!compact && <span className="small">{statusLabel}</span>}
       </span>
@@ -67,13 +85,20 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
           {invite && <InvitePopover controller={controller} status={status} onClose={closeInvite} containerRef={inviteRef} />}
         </div>
       )}
+      {status === 'offline' && (
+        <div className="offline-banner" role="status">
+          <span className="dot" aria-hidden="true" />
+          <span>Offline · changes stay on this device</span>
+          <button type="button" onClick={retry}>Retry</button>
+        </div>
+      )}
     </header>
   )
 }
 
 function InvitePopover({ controller, status, onClose, containerRef }: {
   controller: GameController
-  status: ReturnType<typeof useConnectionStatus>
+  status: ConnectionStatus
   onClose: () => void
   containerRef: RefObject<HTMLDivElement | null>
 }) {

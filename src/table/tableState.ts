@@ -17,6 +17,20 @@ export interface DragGhost {
   z: number
 }
 
+/**
+ * A move the player made while the GM was away: the intent sits in the connection's queue and
+ * the token stays at the dragged spot with a ghost look until the document catches up (the GM
+ * applied it) or the queue drops it. `from` is the committed position when the move was queued,
+ * so any later change to the document position ends the pending state.
+ */
+export interface PendingMove {
+  x: number
+  z: number
+  from: { x: number; z: number }
+  /** Local clock (ms) after which the ghost snaps back on its own. */
+  until: number
+}
+
 /** Derived highlights while a skill is being aimed; written by the targeting layer, read by tokens. */
 export interface TargetingUi {
   source: TokenId
@@ -49,6 +63,8 @@ export interface TableUiState {
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
   grab: TokenId | null
   drag: DragGhost | null
+  /** Moves queued behind an away GM, by token (see `PendingMove`). */
+  pending: Record<TokenId, PendingMove>
   firstPerson: boolean
   /** Local override of the scene's camera mode (C key); null follows the scene. */
   cameraOverride: CameraMode | null
@@ -88,6 +104,7 @@ export const useTableUi = create<TableUiState>((set) => ({
   hovered: null,
   grab: null,
   drag: null,
+  pending: {} as Record<TokenId, PendingMove>,
   firstPerson: false,
   cameraOverride: null,
   showGrid: true,
@@ -108,6 +125,21 @@ export const useTableUi = create<TableUiState>((set) => ({
 /** Ask the camera rig to frame `id` (orbit: glide the view onto it; token mode: it is followed already). */
 export function focusToken(id: TokenId): void {
   useTableUi.getState().focusToken(id)
+}
+
+/** Marks `token` as moved-but-waiting; the controller calls this after the connection queued the move. */
+export function setPendingMove(token: TokenId, move: PendingMove): void {
+  useTableUi.setState((s) => ({ pending: { ...s.pending, [token]: move } }))
+}
+
+/** Ends the pending state of `token` (document caught up, queue expired, or nothing to clear). */
+export function clearPendingMove(token: TokenId): void {
+  useTableUi.setState((s) => {
+    if (!(token in s.pending)) return s
+    const pending = { ...s.pending }
+    delete pending[token]
+    return { pending }
+  })
 }
 
 /**

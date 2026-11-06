@@ -26,6 +26,8 @@ export interface PoolLike {
   listConnectionStatus(): Map<string, boolean>
   /** Fires with the relay URL whenever a relay socket opens. Optional for fakes. */
   onOpen?(cb: (url: string) => void): () => void
+  /** Retry every relay that is down right now, skipping the rest of its backoff. Optional for fakes. */
+  reconnect?(): void
   destroy(): void
 }
 
@@ -177,6 +179,23 @@ export class RelayPool implements PoolLike {
     rec.attempts++
     this.log('net: relay down', rec.url, reason, `retry in ${Math.round(delay / 1000)}s`)
     rec.timer = setTimeout(() => this.connect(rec), Math.round(delay * jitter))
+  }
+
+  /**
+   * User-driven retry (the Offline banner): every relay waiting out a backoff connects now, with
+   * its attempt counter reset so the next failure starts the backoff from the base again.
+   * Relays that are connecting or open are left alone.
+   */
+  reconnect() {
+    if (this.destroyed) return
+    for (const rec of this.records.values()) {
+      if (rec.state !== 'down') continue
+      if (rec.timer) clearTimeout(rec.timer)
+      rec.timer = undefined
+      rec.attempts = 0
+      this.log('net: relay retry now', rec.url)
+      this.connect(rec)
+    }
   }
 
   // --- subscriptions ------------------------------------------------------------------
