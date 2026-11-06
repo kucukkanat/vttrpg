@@ -6,7 +6,7 @@
  *   startGame({ mode: 'join', invite, displayName })
  *   startGame({ mode: 'rejoin', gameId, displayName? })  // from the registry, with the saved role
  */
-import { createGame, joinGame, loadIdentity, parseInvite, startSnapshotLoop, DEFAULT_RELAYS, type GameConnection, type Identity } from '@/net'
+import { createGame, joinGame, loadIdentity, parseInvite, createSnapshotLoop, DEFAULT_RELAYS, type GameConnection, type Identity } from '@/net'
 import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, type AssetResolver } from '@/assets'
 import { createRulesEngine, loadPack, BUILTIN_PACKS } from '@/rules'
 import { createController, type GameController } from './controller'
@@ -77,10 +77,13 @@ function finish(opts: {
     const controller = createController({ connection: opts.connection, rules, assets: opts.assets, displayName: opts.displayName, pubkey: opts.identity.pubkey })
     let stopSnapshots = () => {}
     if (opts.connection.isGm) {
-      stopSnapshots = startSnapshotLoop(opts.connection, {
+      const loop = createSnapshotLoop(opts.connection, {
         upload: snapshotUploader(opts.assets, opts.identity),
         prune: (intent) => controller.dispatch(intent),
       })
+      stopSnapshots = loop.stop
+      // Dev console: `await __vttSnapshot()` forces a snapshot upload right now.
+      if (import.meta.env.DEV) (window as unknown as { __vttSnapshot?: () => Promise<boolean> }).__vttSnapshot = () => loop.flush(true)
     }
     const dispose = controller.dispose
     controller.dispose = () => {

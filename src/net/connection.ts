@@ -6,6 +6,7 @@
 import * as Y from 'yjs'
 import type { Event as NostrEvent, EventTemplate, Filter } from 'nostr-tools'
 import type { SubCloser } from 'nostr-tools/abstract-pool'
+import { normalizeURL } from 'nostr-tools/utils'
 import type { GameId, PlayerPubkey } from '@/core/ids'
 import type { IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
@@ -40,6 +41,8 @@ export const REMOTE_ORIGIN = 'net:remote'
 export const PRESENCE_MIN_INTERVAL_MS = 100
 /** GM-side coalescing window for Yjs updates before they go on the wire. */
 export const DELTA_COALESCE_MS = 25
+/** GM: how often to check for open relays that have not accepted the current manifest yet. */
+export const MANIFEST_SPREAD_MS = 30_000
 
 export interface OpenOptions extends GameConnectionOptions {
   pool: PoolLike
@@ -49,6 +52,8 @@ export interface OpenOptions extends GameConnectionOptions {
   fresh?: boolean
   /** How long to wait for the relays' EOSE on join before giving up (ms). */
   replayTimeoutMs?: number
+  /** GM: period of the "republish manifest to relays that just came up" check; 0 disables. */
+  manifestSpreadMs?: number
   fetchImpl?: typeof fetch
   inviteBase?: InviteBase
   now?: () => number
@@ -151,9 +156,46 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
     return ev
   }
 
+  // Relays (normalized URLs) that accepted the manifest as it is now. Public relays come and go,
+  // so a manifest published while only one was up gets re-sent to the others as they open.
+  const manifestAccepted = new Set<string>()
+  let manifestInFlight = false
+
   async function publishManifest() {
-    const ev = await publish(manifestTemplate(gameKey, gameId, manifest, nowSec(now)))
-    log('net: manifest published', ev.id)
+    manifestInFlight = true
+    manifestAccepted.clear()
+    try {
+      const ev = await signed(identity, manifestTemplate(gameKey, gameId, manifest, nowSec(now)))
+      seen.add(ev.id)
+      const sent = pool.publish(relays, ev)
+      const settled = Promise.allSettled(sent).then((results) => {
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') manifestAccepted.add(normalizeURL(relays[i]))
+        })
+        log('net: manifest accepted by', manifestAccepted.size, 'of', relays.length, 'relays')
+      })
+      await Promise.any(sent).catch((e: unknown) => {
+        const reasons = e instanceof AggregateError ? e.errors.map(String) : [String(e)]
+        log('net: no relay accepted the manifest', reasons)
+      })
+      void settled.finally(() => {
+        manifestInFlight = false
+      })
+      log('net: manifest published', ev.id)
+    } catch (e) {
+      manifestInFlight = false
+      throw e
+    }
+  }
+
+  /** GM: republish the manifest when a relay is open that has not got the current one. */
+  function spreadManifest() {
+    if (closed || manifestInFlight) return
+    const status = pool.listConnectionStatus()
+    const missing = relays.filter((r) => status.get(normalizeURL(r)) && !manifestAccepted.has(normalizeURL(r)))
+    if (!missing.length) return
+    log('net: republishing manifest for', missing)
+    publishManifest().catch((e) => log('net: manifest republish failed', e))
   }
 
   const batchFor = (ev: NostrEvent) => tagValue(ev.tags, 'batch') ?? ev.id
@@ -323,9 +365,11 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
     await subscribeDeltas(since)
   }
 
+  let spreadTimer: ReturnType<typeof setInterval> | undefined
   if (isGm) {
     doc.on('update', onLocalUpdate)
     subs.push(pool.subscribeMany(relays, { kinds: [KIND_INTENT], '#g': [gameId] }, { onevent: handleIntent }))
+    if ((opts.manifestSpreadMs ?? MANIFEST_SPREAD_MS) > 0) spreadTimer = setInterval(spreadManifest, opts.manifestSpreadMs ?? MANIFEST_SPREAD_MS)
   }
   subs.push(pool.subscribeMany(relays, { kinds: [KIND_PRESENCE], '#g': [gameId] }, { onevent: handlePresence }))
 
@@ -390,6 +434,7 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
       doc.off('update', onLocalUpdate)
       if (flushTimer) clearTimeout(flushTimer)
       if (presenceTimer) clearTimeout(presenceTimer)
+      if (spreadTimer) clearInterval(spreadTimer)
       for (const s of subs) s.close()
       intentListeners.clear()
       presenceListeners.clear()
@@ -399,5 +444,7 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
   }
 
   if (isGm && opts.fresh) await publishManifest()
+  // A returning GM published nothing this session: make sure every open relay carries the manifest.
+  else if (isGm) spreadManifest()
   return conn
 }
