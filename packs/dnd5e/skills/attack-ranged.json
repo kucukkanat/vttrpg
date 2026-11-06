@@ -1,0 +1,20 @@
+{
+  "id": "attack-ranged",
+  "name": "Ranged Attack",
+  "description": "Shoot or throw the readied ranged weapon: d20 + ability modifier + proficiency bonus against the target's Armor Class. A natural 20 always hits and doubles the weapon dice; a natural 1 always misses. Damage is the weapon's dice plus the same ability modifier (DEX, or STR for thrown weapons). Range is the weapon's normal range; long range and cover are adjudicated at the table.",
+  "icon": "bow",
+  "target": { "kind": "single", "range": 24 },
+  "effects": [
+    { "kind": "message", "text": "{source.name} fires {ranged.name} at {target.name}." },
+    { "kind": "roll", "formula": "d20 + ranged_mod + pb", "vs": "target.ac", "label": "attack" },
+    {
+      "kind": "damage",
+      "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll(ranged.damage) + (save.dice.0 == 20 ? roll(ranged.damage) : 0) + ranged_mod : 0",
+      "resource": "hp"
+    }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "projectile", "from": "source", "to": "target", "color": "#d9c9a3", "duration": 300 },
+    { "at": 300, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 200 }
+  ]
+}

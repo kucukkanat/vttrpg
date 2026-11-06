@@ -1,0 +1,19 @@
+{
+  "id": "magic-missile",
+  "name": "Magic Missile",
+  "description": "1st-level evocation, range 120 feet. Three glowing darts of force strike unerringly, each for 1d4 + 1 force damage. No attack roll and no save. This pack sends all three darts at one target; splitting darts between creatures and casting with higher-level slots are handled at the table. Costs one 1st-level spell slot.",
+  "icon": "sparkles",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "single", "range": 24 },
+  "effects": [
+    { "kind": "roll", "formula": "3d4 + 3", "label": "darts" },
+    { "kind": "damage", "formula": "rolls.darts.total", "resource": "hp" },
+    { "kind": "message", "text": "Three darts of force from {source.name} strike {target.name}." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "beam", "from": "source", "to": "target", "color": "#8ab4ff", "duration": 250 },
+    { "at": 150, "preset": "beam", "from": "source", "to": "target", "color": "#a8c6ff", "duration": 250 },
+    { "at": 300, "preset": "beam", "from": "source", "to": "target", "color": "#c7dbff", "duration": 250 },
+    { "at": 550, "preset": "hit", "from": "target", "color": "#c7dbff", "duration": 250 }
+  ]
+}

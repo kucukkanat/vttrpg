@@ -1,0 +1,40 @@
+[
+  { "id": "str", "name": "Strength", "abbr": "STR", "min": 1, "max": 30 },
+  { "id": "dex", "name": "Dexterity", "abbr": "DEX", "min": 1, "max": 30 },
+  { "id": "con", "name": "Constitution", "abbr": "CON", "min": 1, "max": 30 },
+  { "id": "int", "name": "Intelligence", "abbr": "INT", "min": 1, "max": 30 },
+  { "id": "wis", "name": "Wisdom", "abbr": "WIS", "min": 1, "max": 30 },
+  { "id": "cha", "name": "Charisma", "abbr": "CHA", "min": 1, "max": 30 },
+  { "id": "level", "name": "Level", "min": 1, "max": 20 },
+
+  { "id": "str_mod", "name": "Strength modifier", "derived": "floor((str - 10) / 2)" },
+  { "id": "dex_mod", "name": "Dexterity modifier", "derived": "floor((dex - 10) / 2)" },
+  { "id": "con_mod", "name": "Constitution modifier", "derived": "floor((con - 10) / 2)" },
+  { "id": "int_mod", "name": "Intelligence modifier", "derived": "floor((int - 10) / 2)" },
+  { "id": "wis_mod", "name": "Wisdom modifier", "derived": "floor((wis - 10) / 2)" },
+  { "id": "cha_mod", "name": "Charisma modifier", "derived": "floor((cha - 10) / 2)" },
+  { "id": "pb", "name": "Proficiency bonus", "derived": "2 + floor((level - 1) / 4)" },
+
+  { "id": "speed_base", "name": "Base speed (ft)", "min": 0 },
+  { "id": "speed", "name": "Speed (ft)", "derived": "max(0, speed_base)" },
+
+  { "id": "armor_base", "name": "Armor base AC", "min": 10 },
+  { "id": "armor_dex_cap", "name": "Armor DEX cap", "min": 0 },
+  { "id": "shield", "name": "Shield bonus", "min": 0 },
+  { "id": "ac_bonus", "name": "Other AC bonus" },
+  { "id": "ac", "name": "Armor Class", "abbr": "AC", "derived": "armor_base + (armor_dex_cap == 0 ? 0 : min(dex_mod, armor_dex_cap)) + shield + ac_bonus" },
+  { "id": "initiative", "name": "Initiative", "derived": "dex_mod" },
+  { "id": "passive_perception", "name": "Passive Perception", "derived": "10 + wis_mod + prof.perception * pb" },
+
+  {
+    "id": "spell_mod",
+    "name": "Spellcasting ability modifier",
+    "derived": "spell_ability == 'int' ? int_mod : spell_ability == 'wis' ? wis_mod : spell_ability == 'cha' ? cha_mod : 0"
+  },
+  { "id": "spell_attack", "name": "Spell attack bonus", "derived": "pb + spell_mod" },
+  { "id": "spell_dc", "name": "Spell save DC", "derived": "8 + pb + spell_mod" },
+  { "id": "cantrip_dice", "name": "Cantrip damage dice", "derived": "level >= 17 ? 4 : level >= 11 ? 3 : level >= 5 ? 2 : 1" },
+
+  { "id": "melee_mod", "name": "Melee attack ability modifier", "derived": "melee.ability == 'dex' ? dex_mod : str_mod" },
+  { "id": "ranged_mod", "name": "Ranged attack ability modifier", "derived": "ranged.ability == 'str' ? str_mod : dex_mod" }
+]

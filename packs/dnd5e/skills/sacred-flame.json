@@ -1,0 +1,16 @@
+{
+  "id": "sacred-flame",
+  "name": "Sacred Flame",
+  "description": "Evocation cantrip, range 60 feet. Radiance descends on one creature, which makes a Dexterity saving throw against the caster's spell save DC. On a failure it takes 1d8 radiant damage (2d8 at 5th level, 3d8 at 11th, 4d8 at 17th) and gains no benefit from cover. Costs no spell slot.",
+  "icon": "sun",
+  "target": { "kind": "single", "range": 12 },
+  "effects": [
+    { "kind": "roll", "formula": "d20 + target.dex_mod + target.save_prof.dex * target.pb", "vs": "spell_dc", "label": "DEX save" },
+    { "kind": "damage", "formula": "save.success ? 0 : roll(cantrip_dice + 'd8')", "resource": "hp" },
+    { "kind": "message", "text": "Radiance falls on {target.name}." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "beam", "from": "point", "to": "target", "color": "#fff1b8", "duration": 400 },
+    { "at": 300, "preset": "hit", "from": "target", "color": "#ffe680", "duration": 300 }
+  ]
+}

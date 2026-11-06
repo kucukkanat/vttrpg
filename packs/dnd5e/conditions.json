@@ -1,0 +1,105 @@
+[
+  {
+    "id": "blinded",
+    "name": "Blinded",
+    "description": "Cannot see; automatically fails any check that needs sight. Attack rolls against the creature have advantage and its own attack rolls have disadvantage. Advantage and disadvantage are applied by the players; no numeric effect.",
+    "icon": "eye-off"
+  },
+  {
+    "id": "charmed",
+    "name": "Charmed",
+    "description": "Cannot attack the charmer or target them with harmful abilities or magic. The charmer has advantage on social checks against the creature.",
+    "icon": "heart"
+  },
+  {
+    "id": "deafened",
+    "name": "Deafened",
+    "description": "Cannot hear; automatically fails any check that needs hearing.",
+    "icon": "ear-off"
+  },
+  {
+    "id": "exhaustion",
+    "name": "Exhaustion",
+    "description": "Six cumulative levels: 1 disadvantage on ability checks, 2 speed halved, 3 disadvantage on attacks and saves, 4 hit point maximum halved, 5 speed 0, 6 death. Track the level in notes; the effects are applied by the players.",
+    "icon": "zzz"
+  },
+  {
+    "id": "frightened",
+    "name": "Frightened",
+    "description": "Disadvantage on ability checks and attack rolls while the source of fear is in sight; cannot willingly move closer to it.",
+    "icon": "ghost"
+  },
+  {
+    "id": "grappled",
+    "name": "Grappled",
+    "description": "Speed becomes 0 and no bonus to speed applies. Ends if the grappler is incapacitated or the creature is moved out of reach.",
+    "icon": "hand",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "incapacitated",
+    "name": "Incapacitated",
+    "description": "Cannot take actions or reactions.",
+    "icon": "ban"
+  },
+  {
+    "id": "invisible",
+    "name": "Invisible",
+    "description": "Cannot be seen without magic or a special sense; counts as heavily obscured for hiding. Attack rolls against the creature have disadvantage and its own attack rolls have advantage.",
+    "icon": "eye-off"
+  },
+  {
+    "id": "paralyzed",
+    "name": "Paralyzed",
+    "description": "Incapacitated, cannot move or speak, automatically fails STR and DEX saves. Attacks against the creature have advantage and hits from within 5 feet are critical hits. Speed 0.",
+    "icon": "snowflake",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "petrified",
+    "name": "Petrified",
+    "description": "Turned to stone: incapacitated, unaware, weight times ten, resistance to all damage, immune to poison and disease, automatically fails STR and DEX saves. Speed 0.",
+    "icon": "mountain",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "poisoned",
+    "name": "Poisoned",
+    "description": "Disadvantage on attack rolls and ability checks.",
+    "icon": "skull"
+  },
+  {
+    "id": "prone",
+    "name": "Prone",
+    "description": "Can only crawl until standing up, which costs half the movement. Disadvantage on attack rolls; attacks against the creature have advantage from within 5 feet and disadvantage from further away.",
+    "icon": "arrow-down"
+  },
+  {
+    "id": "restrained",
+    "name": "Restrained",
+    "description": "Speed 0. Attack rolls against the creature have advantage, its own have disadvantage, and it has disadvantage on DEX saves.",
+    "icon": "link",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "stunned",
+    "name": "Stunned",
+    "description": "Incapacitated, cannot move, speaks only falteringly, automatically fails STR and DEX saves. Attacks against the creature have advantage. Speed 0.",
+    "icon": "stars",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "unconscious",
+    "name": "Unconscious",
+    "description": "Incapacitated, unaware, drops what it holds and falls prone, automatically fails STR and DEX saves. Attacks against the creature have advantage and hits from within 5 feet are critical hits. Speed 0.",
+    "icon": "moon",
+    "modifiers": { "speed_base": -1000 }
+  },
+  {
+    "id": "shield-of-faith",
+    "name": "Shield of Faith",
+    "description": "A shimmering field of protection grants +2 to Armor Class for up to 10 minutes while the caster concentrates.",
+    "icon": "shield",
+    "modifiers": { "ac": 2 }
+  }
+]

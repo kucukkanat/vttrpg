@@ -17,7 +17,7 @@ import type {
 } from '@/core/pack'
 import type { TargetShape } from '@/core/geometry'
 import type { LoadedPack } from './index'
-import { parse } from './expr'
+import { parse, usesDice } from './expr'
 
 export class PackError extends Error {
   constructor(file: string, message: string) {
@@ -137,7 +137,8 @@ export function guardAttributes(v: unknown, file: string): AttributeDef[] {
   return guardArray(v, file).map((x, i) => {
     guardIdName(x, file, i)
     if (!opt(x.abbr, isStr) || !opt(x.min, isNum) || !opt(x.max, isNum)) throw new PackError(file, `${x.id}: bad abbr/min/max`)
-    if (x.derived !== undefined) expr(x.derived, file, `${x.id}.derived`)
+    if (x.derived !== undefined && usesDice(parse(expr(x.derived, file, `${x.id}.derived`))))
+      throw new PackError(file, `${x.id}.derived must not roll dice`)
     return x as unknown as AttributeDef
   })
 }

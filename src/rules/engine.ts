@@ -208,10 +208,10 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
   function initialData(): Data {
     const data: Data = {}
-    for (const a of pack.attributes) data[a.id] = { current: 0, max: 0 }
+    for (const a of pack.attributes) if (a.derived === undefined) data[a.id] = { current: 0, max: 0 }
     for (const r of pack.resources) data[r.id] = { current: 0, max: 0 }
     data.conditions = []
-    data[grid.bind] = emptyGrid(grid)
+    if (grid.declared) data[grid.bind] = emptyGrid(grid)
     data.notes = ''
     return data
   }
