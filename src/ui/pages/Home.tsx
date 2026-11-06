@@ -37,11 +37,6 @@ export function Home() {
       <p className="muted">A 3D tabletop for any ruleset. No accounts, no servers.</p>
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
-      {controller && (
-        <div className="row">
-          <button className="primary" style={touch} onClick={() => navigate('/game')}>Back to table</button>
-        </div>
-      )}
       {reconnecting && busyId ? (
         <Reconnecting
           game={games.get(reconnecting)}

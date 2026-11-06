@@ -6,6 +6,7 @@ import type { IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import type { GameConnection } from './index'
 import { CHUNK_BYTES, KIND_DELTA, KIND_INTENT, KIND_MANIFEST, KIND_PRESENCE, randomGameKey, sha256Hex, tagValue, type Manifest } from './codec'
+import { normalizeURL } from 'nostr-tools/utils'
 import { DELTA_COALESCE_MS, REMOTE_ORIGIN, fetchManifest, openConnection, readManifest } from './connection'
 import { localIdentity } from './identity'
 import { StatusTracker } from './pool'
@@ -77,6 +78,35 @@ const world = async (o?: FakeRelayOptions) => {
 }
 
 describe('manifest', () => {
+  it('is republished by the GM to relays that come up after the first publish', async () => {
+    class FlakyPool extends FakePool {
+      down = new Set<string>()
+      override publish(relays: string[], event: Parameters<FakePool['publish']>[1]): Promise<string>[] {
+        this.relay.published.push(event)
+        this.relay.inject(event)
+        return relays.map((r) => (this.down.has(r) ? Promise.reject(new Error('down')) : Promise.resolve('ok')))
+      }
+    }
+    const relay = new FakeRelay()
+    const pool = new FlakyPool(relay)
+    pool.down.add(RELAYS[1])
+    pool.connected.set(normalizeURL(RELAYS[0]), true)
+    const identity = localIdentity(generateSecretKey())
+    const gameId = crypto.randomUUID() as GameId
+    const gameKey = randomGameKey()
+    const manifest: Manifest = { name: 'Spread', gm: identity.pubkey, relays: RELAYS }
+    const gm = await openConnection({ relays: RELAYS, identity, gameId, gameKey, isGm: true, pool, tracker: tracker(), manifest, fresh: true, manifestSpreadMs: 40 })
+    worlds.push({ relay, gameId, gameKey, gm, open: [gm] })
+    const manifests = () => relay.published.filter((e) => e.kind === KIND_MANIFEST).length
+    await sleep(100)
+    expect(manifests()).toBe(1) // relay two is down and not open: nothing to do
+    pool.down.delete(RELAYS[1])
+    pool.connected.set(normalizeURL(RELAYS[1]), true)
+    await until(() => manifests() === 2)
+    await sleep(120)
+    expect(manifests()).toBe(2) // both accepted now: no further republishing
+  })
+
   it('is published encrypted on create and decrypts only with the game key', async () => {
     const w = await world()
     const ev = w.relay.stored.find((e) => e.kind === KIND_MANIFEST)!
