@@ -79,6 +79,36 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     target: new Vector3(), yaw: 0, pitch: 0.42, dist: 3 * cellSize, orbitPose: null, settled: false, lastMode: null, lastFollow: null,
   })
 
+  // Tell the HUD what the rig is doing (the pill highlights the effective mode, not the request).
+  useEffect(() => {
+    useTableUi.getState().set({ cameraActive: { mode: effectiveMode, canFollow: follow !== null } })
+  }, [effectiveMode, follow])
+  useEffect(() => () => useTableUi.getState().set({ cameraActive: null }), [])
+
+  // "Find me": frame the token in orbit mode, keeping the current viewing direction. In token mode
+  // the request is already satisfied by the selection switching the follow target.
+  const focusRequest = useTableUi((s) => s.focusRequest)
+  useEffect(() => {
+    if (!focusRequest) return
+    useTableUi.getState().set({ focusRequest: undefined })
+    const game = useGame.getState()
+    const token = game.tokens[focusRequest.id]
+    if (!token || token.scene !== game.meta?.activeScene || effectiveMode !== 'orbit') return
+    const r = rig.current
+    const from = controls.current?.target ?? r.target
+    const target = new Vector3(token.position.x, floorY + (token.elevation ?? 0), token.position.z)
+    const dir = camera.position.clone().sub(from)
+    if (dir.lengthSq() < 1e-6) dir.set(0, 1, 1)
+    dir.normalize()
+    // Look down at ~30° or steeper so walls between the camera and the token do not hide it.
+    if (dir.y < 0.5) { dir.y = 0.5; dir.normalize() }
+    const dist = 4 * cellSize * Math.max(1, token.scale)
+    r.orbitPose = { pos: target.clone().addScaledVector(dir, dist), target }
+    r.settled = false
+    setOrbitReady(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest])
+
   // Mode / follow-target changes start a transition.
   useEffect(() => {
     const r = rig.current
@@ -95,28 +125,6 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     r.lastMode = effectiveMode
     r.lastFollow = follow?.id ?? null
   }, [effectiveMode, follow, camera, cellSize])
-
-  // A focus request (ui/notices.ts: "You are Pip") glides the orbit view onto the token, keeping the
-  // current viewing direction but no further than a few cells away. In token mode the rig already
-  // follows the selected token. The request is consumed either way so a remount does not replay it.
-  const focus = useTableUi((s) => s.focusToken)
-  useEffect(() => {
-    if (!focus) return
-    useTableUi.getState().set({ focusToken: null })
-    const token = useGame.getState().tokens[focus.id]
-    if (!token || effectiveMode !== 'orbit') return
-    const r = rig.current
-    const target = new Vector3(token.position.x, floorY, token.position.z)
-    const from = controls.current?.target ?? r.target
-    const offset = camera.position.clone().sub(from)
-    const maxDist = 5 * cellSize * Math.max(1, token.scale)
-    if (offset.length() > maxDist || offset.length() < 0.5 * cellSize) offset.setLength(maxDist)
-    if (offset.y < 1.5 * cellSize) offset.y = 1.5 * cellSize
-    r.orbitPose = { pos: target.clone().add(offset), target }
-    r.settled = false
-    setOrbitReady(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus])
 
   // Initial overview on mount.
   useEffect(() => {

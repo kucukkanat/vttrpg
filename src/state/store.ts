@@ -6,7 +6,7 @@ import { create } from 'zustand'
 import type * as Y from 'yjs'
 import type { Character, ChatMessage, FogState, GameEvent, GameMeta, Note, Prop, Scene, Token } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
-import type { CharacterId, NoteId, PropId, SceneId, SkillId, TokenId } from '@/core/ids'
+import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 
 /** What the local user has selected on the table. Tokens stay mirrored in `selectedToken`. */
@@ -79,6 +79,33 @@ export const useGame = create<GameState>((set) => ({
   setPresence: (p) => set((s) => ({ presence: { ...s.presence, [p.pubkey]: p } })),
   _replaceFromDoc: (partial) => set(partial),
 }))
+
+/**
+ * The first token the user owns: visible tokens in the active scene first, then hidden ones there,
+ * then tokens in other scenes. Undefined for the GM and for players who own nothing yet.
+ */
+export function firstOwnedToken(s: Pick<GameState, 'tokens' | 'meta'>, pubkey: PlayerPubkey | string | null | undefined): Token | undefined {
+  if (!pubkey) return undefined
+  const owned = Object.values(s.tokens).filter((t) => t.owner === pubkey)
+  if (owned.length === 0) return undefined
+  const active = s.meta?.activeScene
+  const rank = (t: Token) => (t.scene === active ? (t.hidden ? 1 : 0) : 2)
+  return owned.reduce((best, t) => (rank(t) < rank(best) ? t : best))
+}
+
+/**
+ * The token a sheet-style panel should show: the selected one, else the first owned one so a
+ * player's Character and Skills still show their own character when nothing is selected.
+ */
+export function effectiveToken(s: Pick<GameState, 'tokens' | 'meta' | 'selectedToken'>, pubkey: PlayerPubkey | string | null | undefined): Token | undefined {
+  const selected = s.selectedToken ? s.tokens[s.selectedToken] : undefined
+  return selected ?? firstOwnedToken(s, pubkey)
+}
+
+/** Reactive `effectiveToken` for panels. */
+export function useEffectiveToken(pubkey: PlayerPubkey | string | null | undefined): Token | undefined {
+  return useGame((s) => effectiveToken(s, pubkey))
+}
 
 /** Mirror a Y.Doc into the store. Returns an unsubscribe. */
 export function bindDoc(doc: Y.Doc): () => void {

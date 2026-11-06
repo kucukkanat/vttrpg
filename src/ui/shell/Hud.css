@@ -1,0 +1,60 @@
+/* HUD controls over the table (shell/Hud.tsx): the token chip with "Find me" and the camera pill.
+   The .hud container (global.css) is position:absolute over the table, so offsets are table-relative.
+   Both stay at the top: the toast stack (toasts.css) and the targeting bar (TargetingBar.css) own the
+   bottom edge. */
+
+/* The chip is a pill holding one or two buttons; the buttons drop the global button chrome. */
+.chip > button {
+  background: transparent; border: 0; border-radius: 999px; padding: 0; min-height: var(--control);
+  color: var(--fg); font: inherit; font-size: var(--fs-md); cursor: pointer; touch-action: manipulation;
+}
+.chip > button:active { filter: none; }
+.chip > .chip-main { flex: 1 1 auto; display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.chip > .chip-find {
+  flex: none; min-width: var(--control); margin-left: var(--sp-1); padding: 0 var(--sp-1);
+  border-left: 1px solid var(--border); border-radius: 0 999px 999px 0;
+  color: var(--accent); font-size: var(--fs-xl); line-height: 1;
+}
+.chip:has(.chip-find) { padding-right: var(--sp-1); }
+.chip--find .chip-hint { font-weight: 600; }
+
+/* Camera pill: Orbit · Follow · Eyes plus the grid toggle, top-right of the table. */
+.cam-pill {
+  position: absolute; top: var(--sp-2); right: calc(var(--sp-2) + var(--sar));
+  display: flex; align-items: stretch; gap: var(--sp-1);
+}
+.cam-group {
+  display: flex; gap: 2px; padding: 2px;
+  background: rgba(23, 23, 27, .85); border: 1px solid var(--border); border-radius: 999px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.cam-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: var(--control); min-width: var(--control); padding: 0 var(--sp-2);
+  background: transparent; border: 0; border-radius: 999px; color: var(--fg);
+  font: inherit; font-size: var(--fs-sm); line-height: 1; cursor: pointer; touch-action: manipulation;
+}
+.cam-btn:active { filter: none; }
+.cam-btn.on { background: rgba(224, 164, 88, .18); color: var(--accent); }
+.cam-btn:disabled { opacity: .4; cursor: default; }
+.cam-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cam-grid { font-size: var(--fs-lg); }
+.cam-btn kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-xs); line-height: 16px;
+  padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted);
+}
+.cam-btn.on kbd { color: var(--accent); border-color: rgba(224, 164, 88, .5); }
+
+/* Touch: plain 44px buttons, no key hints. */
+@media (pointer: coarse) {
+  .cam-btn kbd { display: none; }
+}
+
+/* Phone and tablet: a vertical rail under the chip row on the right edge, clear of the chip, the
+   toasts at the bottom and the phone half sheet (which covers the lower 55% of the table). */
+.game--phone .cam-pill, .game--tablet .cam-pill {
+  top: calc(var(--sp-2) + var(--control) + var(--sp-2));
+  flex-direction: column;
+}
+.game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
+.game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }

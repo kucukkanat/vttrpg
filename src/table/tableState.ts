@@ -69,9 +69,19 @@ export interface TableUiState {
   nodeBase: ({ name: string } & NodeBase) | null
   /** Footprints of solid props, merged into the line-of-sight walls. */
   propWalls: Record<PropId, WallSegment[]>
-  /** One-shot request to frame the camera on a token; `seq` makes repeats for the same id distinct. */
-  focusToken: { id: TokenId; seq: number } | null
-  set(partial: Partial<Omit<TableUiState, 'set'>>): void
+  /**
+   * One-shot request to frame the camera on a token ("Find me", claim). `n` makes repeated requests
+   * for the same token distinct; the camera rig clears it once handled.
+   */
+  focusRequest?: { id: TokenId; n: number }
+  focusToken(id: TokenId): void
+  /**
+   * What the camera rig is actually doing, for the HUD: `mode` is the effective mode (token mode
+   * falls back to orbit without a token to follow), `canFollow` whether a follow target exists.
+   * Null while no table is mounted.
+   */
+  cameraActive: { mode: CameraMode; canFollow: boolean } | null
+  set(partial: Partial<Omit<TableUiState, 'set' | 'focusToken'>>): void
 }
 
 export const useTableUi = create<TableUiState>((set) => ({
@@ -90,14 +100,14 @@ export const useTableUi = create<TableUiState>((set) => ({
   editPreview: null,
   nodeBase: null,
   propWalls: {} as Record<PropId, WallSegment[]>,
-  focusToken: null,
+  focusToken: (id) => set((s) => ({ focusRequest: { id, n: (s.focusRequest?.n ?? 0) + 1 } })),
+  cameraActive: null,
   set: (partial) => set(partial),
 }))
 
 /** Ask the camera rig to frame `id` (orbit: glide the view onto it; token mode: it is followed already). */
 export function focusToken(id: TokenId): void {
-  const prev = useTableUi.getState().focusToken
-  useTableUi.getState().set({ focusToken: { id, seq: (prev?.seq ?? 0) + 1 } })
+  useTableUi.getState().focusToken(id)
 }
 
 /**

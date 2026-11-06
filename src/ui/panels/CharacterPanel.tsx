@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GameController } from '../controller'
-import { useGame } from '@/state/store'
+import { useEffectiveToken, useGame } from '@/state/store'
 import { SheetView } from '@/rules'
 import { newSeed } from '@/dice'
 import type { Character } from '@/core/doc'
@@ -13,8 +13,8 @@ function setPath(obj: Record<string, unknown>, path: string, value: unknown): Re
 }
 
 export function CharacterPanel({ controller }: { controller: GameController }) {
-  const selected = useGame((s) => s.selectedToken)
-  const token = useGame((s) => (selected ? s.tokens[selected] : undefined))
+  // The selected token, else the player's own: the sheet stays available when nothing is selected.
+  const token = useEffectiveToken(controller.pubkey)
   const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
   const [busy, setBusy] = useState(false)
   const rules = controller.rules
