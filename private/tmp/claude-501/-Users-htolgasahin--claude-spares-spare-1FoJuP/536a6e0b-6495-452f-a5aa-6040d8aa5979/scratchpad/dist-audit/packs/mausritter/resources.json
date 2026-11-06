@@ -1,0 +1,4 @@
+[
+  { "id": "hp", "name": "Hit Protection", "max": "hp.max", "resetOn": "rest" },
+  { "id": "pips", "name": "Pips", "max": "250", "resetOn": "never" }
+]

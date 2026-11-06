@@ -1,0 +1,656 @@
+{
+  "sections": [
+    {
+      "title": "Identity",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "name",
+          "label": "Name"
+        },
+        {
+          "kind": "text",
+          "bind": "race",
+          "label": "Race"
+        },
+        {
+          "kind": "text",
+          "bind": "class",
+          "label": "Class"
+        },
+        {
+          "kind": "number",
+          "bind": "level",
+          "label": "Level"
+        },
+        {
+          "kind": "text",
+          "bind": "background",
+          "label": "Background"
+        },
+        {
+          "kind": "text",
+          "bind": "alignment",
+          "label": "Alignment"
+        },
+        {
+          "kind": "number",
+          "bind": "xp",
+          "label": "Experience points"
+        },
+        {
+          "kind": "text",
+          "bind": "languages",
+          "label": "Languages"
+        },
+        {
+          "kind": "computed",
+          "label": "Proficiency bonus",
+          "expr": "pb"
+        }
+      ]
+    },
+    {
+      "title": "Abilities",
+      "columns": 4,
+      "fields": [
+        {
+          "kind": "number",
+          "bind": "str",
+          "label": "STR"
+        },
+        {
+          "kind": "roll",
+          "label": "STR check",
+          "formula": "d20 + str_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.str",
+          "label": "STR save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "STR save",
+          "formula": "d20 + str_mod + save_prof.str * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "dex",
+          "label": "DEX"
+        },
+        {
+          "kind": "roll",
+          "label": "DEX check",
+          "formula": "d20 + dex_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.dex",
+          "label": "DEX save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "DEX save",
+          "formula": "d20 + dex_mod + save_prof.dex * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "con",
+          "label": "CON"
+        },
+        {
+          "kind": "roll",
+          "label": "CON check",
+          "formula": "d20 + con_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.con",
+          "label": "CON save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "CON save",
+          "formula": "d20 + con_mod + save_prof.con * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "int",
+          "label": "INT"
+        },
+        {
+          "kind": "roll",
+          "label": "INT check",
+          "formula": "d20 + int_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.int",
+          "label": "INT save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "INT save",
+          "formula": "d20 + int_mod + save_prof.int * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "wis",
+          "label": "WIS"
+        },
+        {
+          "kind": "roll",
+          "label": "WIS check",
+          "formula": "d20 + wis_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.wis",
+          "label": "WIS save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "WIS save",
+          "formula": "d20 + wis_mod + save_prof.wis * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "cha",
+          "label": "CHA"
+        },
+        {
+          "kind": "roll",
+          "label": "CHA check",
+          "formula": "d20 + cha_mod"
+        },
+        {
+          "kind": "number",
+          "bind": "save_prof.cha",
+          "label": "CHA save prof. (0/1)"
+        },
+        {
+          "kind": "roll",
+          "label": "CHA save",
+          "formula": "d20 + cha_mod + save_prof.cha * pb"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "columns": 4,
+      "fields": [
+        {
+          "kind": "number",
+          "bind": "prof.acrobatics",
+          "label": "Acrobatics prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Acrobatics",
+          "formula": "d20 + dex_mod + prof.acrobatics * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.animal_handling",
+          "label": "Animal Handling prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Animal Handling",
+          "formula": "d20 + wis_mod + prof.animal_handling * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.arcana",
+          "label": "Arcana prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Arcana",
+          "formula": "d20 + int_mod + prof.arcana * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.athletics",
+          "label": "Athletics prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Athletics",
+          "formula": "d20 + str_mod + prof.athletics * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.deception",
+          "label": "Deception prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Deception",
+          "formula": "d20 + cha_mod + prof.deception * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.history",
+          "label": "History prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "History",
+          "formula": "d20 + int_mod + prof.history * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.insight",
+          "label": "Insight prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Insight",
+          "formula": "d20 + wis_mod + prof.insight * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.intimidation",
+          "label": "Intimidation prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Intimidation",
+          "formula": "d20 + cha_mod + prof.intimidation * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.investigation",
+          "label": "Investigation prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Investigation",
+          "formula": "d20 + int_mod + prof.investigation * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.medicine",
+          "label": "Medicine prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Medicine",
+          "formula": "d20 + wis_mod + prof.medicine * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.nature",
+          "label": "Nature prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Nature",
+          "formula": "d20 + int_mod + prof.nature * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.perception",
+          "label": "Perception prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Perception",
+          "formula": "d20 + wis_mod + prof.perception * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.performance",
+          "label": "Performance prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Performance",
+          "formula": "d20 + cha_mod + prof.performance * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.persuasion",
+          "label": "Persuasion prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Persuasion",
+          "formula": "d20 + cha_mod + prof.persuasion * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.religion",
+          "label": "Religion prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Religion",
+          "formula": "d20 + int_mod + prof.religion * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.sleight_of_hand",
+          "label": "Sleight of Hand prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Sleight of Hand",
+          "formula": "d20 + dex_mod + prof.sleight_of_hand * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.stealth",
+          "label": "Stealth prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Stealth",
+          "formula": "d20 + dex_mod + prof.stealth * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "prof.survival",
+          "label": "Survival prof. (0/1/2)"
+        },
+        {
+          "kind": "roll",
+          "label": "Survival",
+          "formula": "d20 + wis_mod + prof.survival * pb"
+        }
+      ]
+    },
+    {
+      "title": "Combat",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "resource",
+          "bind": "hp",
+          "label": "Hit points"
+        },
+        {
+          "kind": "resource",
+          "bind": "hit_dice",
+          "label": "Hit dice"
+        },
+        {
+          "kind": "text",
+          "bind": "hit_die",
+          "label": "Hit die"
+        },
+        {
+          "kind": "number",
+          "bind": "hit_die_sides",
+          "label": "Hit die sides"
+        },
+        {
+          "kind": "roll",
+          "label": "Initiative",
+          "formula": "d20 + initiative"
+        },
+        {
+          "kind": "computed",
+          "label": "Armor Class",
+          "expr": "ac"
+        },
+        {
+          "kind": "number",
+          "bind": "armor_base",
+          "label": "Armor base AC (10 = none)"
+        },
+        {
+          "kind": "number",
+          "bind": "armor_dex_cap",
+          "label": "Armor DEX cap (10 = none)"
+        },
+        {
+          "kind": "number",
+          "bind": "shield",
+          "label": "Shield bonus"
+        },
+        {
+          "kind": "number",
+          "bind": "ac_bonus",
+          "label": "Other AC bonus"
+        },
+        {
+          "kind": "number",
+          "bind": "speed_base",
+          "label": "Base speed (ft)"
+        },
+        {
+          "kind": "computed",
+          "label": "Speed",
+          "expr": "speed"
+        },
+        {
+          "kind": "computed",
+          "label": "Passive Perception",
+          "expr": "passive_perception"
+        },
+        {
+          "kind": "roll",
+          "label": "Death save",
+          "formula": "d20 >= 10"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "melee.name",
+          "label": "Melee weapon"
+        },
+        {
+          "kind": "text",
+          "bind": "melee.damage",
+          "label": "Melee damage dice"
+        },
+        {
+          "kind": "text",
+          "bind": "melee.ability",
+          "label": "Melee ability (str/dex)"
+        },
+        {
+          "kind": "roll",
+          "label": "Melee attack",
+          "formula": "d20 + melee_mod + pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Melee damage",
+          "formula": "roll(melee.damage) + melee_mod"
+        },
+        {
+          "kind": "roll",
+          "label": "Melee critical damage",
+          "formula": "roll(melee.damage) + roll(melee.damage) + melee_mod"
+        },
+        {
+          "kind": "text",
+          "bind": "ranged.name",
+          "label": "Ranged weapon"
+        },
+        {
+          "kind": "text",
+          "bind": "ranged.damage",
+          "label": "Ranged damage dice"
+        },
+        {
+          "kind": "text",
+          "bind": "ranged.ability",
+          "label": "Ranged ability (dex/str)"
+        },
+        {
+          "kind": "roll",
+          "label": "Ranged attack",
+          "formula": "d20 + ranged_mod + pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Ranged damage",
+          "formula": "roll(ranged.damage) + ranged_mod"
+        },
+        {
+          "kind": "roll",
+          "label": "Ranged critical damage",
+          "formula": "roll(ranged.damage) + roll(ranged.damage) + ranged_mod"
+        },
+        {
+          "kind": "list",
+          "bind": "attacks",
+          "label": "Other attacks",
+          "item": [
+            {
+              "kind": "text",
+              "bind": "name",
+              "label": "Name"
+            },
+            {
+              "kind": "text",
+              "bind": "bonus",
+              "label": "To hit"
+            },
+            {
+              "kind": "text",
+              "bind": "damage",
+              "label": "Damage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Spellcasting",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "spell_ability",
+          "label": "Spellcasting ability (int/wis/cha/none)"
+        },
+        {
+          "kind": "text",
+          "bind": "caster",
+          "label": "Caster type (full/half/pact/none)"
+        },
+        {
+          "kind": "roll",
+          "label": "Spell attack",
+          "formula": "d20 + spell_attack"
+        },
+        {
+          "kind": "computed",
+          "label": "Spell save DC",
+          "expr": "spell_dc"
+        },
+        {
+          "kind": "resource",
+          "bind": "slots_1",
+          "label": "1st-level slots"
+        },
+        {
+          "kind": "resource",
+          "bind": "slots_2",
+          "label": "2nd-level slots"
+        },
+        {
+          "kind": "resource",
+          "bind": "slots_3",
+          "label": "3rd-level slots"
+        },
+        {
+          "kind": "list",
+          "bind": "spells",
+          "label": "Spells known or prepared",
+          "item": [
+            {
+              "kind": "text",
+              "bind": "name",
+              "label": "Spell"
+            },
+            {
+              "kind": "number",
+              "bind": "level",
+              "label": "Level"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "equipment",
+          "label": "Equipment",
+          "item": [
+            {
+              "kind": "text",
+              "bind": "name",
+              "label": "Item"
+            },
+            {
+              "kind": "number",
+              "bind": "qty",
+              "label": "Qty"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Features and traits",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "features",
+          "label": "Features",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Feature"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Conditions",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "conditions",
+          "label": "Active conditions",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Condition"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Notes",
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "notes",
+          "label": "Notes",
+          "multiline": true
+        }
+      ]
+    }
+  ]
+}

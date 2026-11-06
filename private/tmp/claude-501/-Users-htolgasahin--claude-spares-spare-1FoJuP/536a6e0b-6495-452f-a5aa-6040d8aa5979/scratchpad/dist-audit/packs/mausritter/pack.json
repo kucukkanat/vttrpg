@@ -1,0 +1,17 @@
+{
+  "id": "mausritter",
+  "name": "Mausritter",
+  "version": "0.1.0",
+  "description": "Brave mice with three stats, a d20 roll-under save and ten inventory slots. One-roll character generation.",
+  "license": "Independent production compatible with the Mausritter third-party license. Mechanics only; all text is original and no art is included.",
+  "grid": { "type": "square", "cellSize": 1.5 },
+  "resolution": { "kind": "roll-under", "die": "d20" },
+  "files": {
+    "attributes": "attributes.json",
+    "resources": "resources.json",
+    "conditions": "conditions.json",
+    "sheet": "sheet.json",
+    "chargen": "chargen.json",
+    "skills": ["skills/attack.json", "skills/fireball.json", "skills/heal.json", "skills/magic-missile.json"]
+  }
+}

@@ -1,0 +1,576 @@
+{
+  "steps": [
+    {
+      "id": "abilities",
+      "title": "Roll abilities (4d6, drop the lowest)",
+      "assign": {
+        "str": "4d6kh3",
+        "dex": "4d6kh3",
+        "con": "4d6kh3",
+        "int": "4d6kh3",
+        "wis": "4d6kh3",
+        "cha": "4d6kh3"
+      }
+    },
+    {
+      "id": "defaults",
+      "title": "Level 1 defaults",
+      "set": {
+        "level": 1,
+        "xp": 0,
+        "speed_base": 30,
+        "armor_base": 10,
+        "armor_dex_cap": 10,
+        "shield": 0,
+        "ac_bonus": 0,
+        "hit_die": "d8",
+        "hit_die_sides": 8,
+        "caster": "none",
+        "spell_ability": "none",
+        "languages": "Common",
+        "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 0, "wis": 0, "cha": 0 },
+        "prof": {
+          "acrobatics": 0,
+          "animal_handling": 0,
+          "arcana": 0,
+          "athletics": 0,
+          "deception": 0,
+          "history": 0,
+          "insight": 0,
+          "intimidation": 0,
+          "investigation": 0,
+          "medicine": 0,
+          "nature": 0,
+          "perception": 0,
+          "performance": 0,
+          "persuasion": 0,
+          "religion": 0,
+          "sleight_of_hand": 0,
+          "stealth": 0,
+          "survival": 0
+        },
+        "melee": { "name": "Unarmed strike", "damage": "1", "ability": "str" },
+        "ranged": { "name": "None", "damage": "0", "ability": "dex" },
+        "attacks": [],
+        "spells": [],
+        "equipment": [],
+        "features": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "race",
+      "title": "Race",
+      "table": "race"
+    },
+    {
+      "id": "race-bonuses",
+      "title": "Apply racial ability score increases",
+      "assign": {
+        "str": "str + race_bonus.str",
+        "dex": "dex + race_bonus.dex",
+        "con": "con + race_bonus.con",
+        "int": "int + race_bonus.int",
+        "wis": "wis + race_bonus.wis",
+        "cha": "cha + race_bonus.cha"
+      }
+    },
+    {
+      "id": "class",
+      "title": "Class, saving throws, skills and starting equipment",
+      "table": "class"
+    },
+    {
+      "id": "background",
+      "title": "Background (Acolyte)",
+      "set": {
+        "background": "Acolyte",
+        "prof.insight": 1,
+        "prof.religion": 1,
+        "equipment": [
+          { "name": "Holy symbol", "qty": 1 },
+          { "name": "Prayer book", "qty": 1 },
+          { "name": "Stick of incense", "qty": 5 },
+          { "name": "Vestments", "qty": 1 },
+          { "name": "Common clothes", "qty": 1 },
+          { "name": "Gold pieces", "qty": 15 }
+        ],
+        "features": ["Shelter of the Faithful: free healing and care at temples of your faith"]
+      }
+    },
+    {
+      "id": "alignment",
+      "title": "Alignment",
+      "choose": {
+        "bind": "alignment",
+        "options": [
+          "Lawful good",
+          "Neutral good",
+          "Chaotic good",
+          "Lawful neutral",
+          "Neutral",
+          "Chaotic neutral",
+          "Lawful evil",
+          "Neutral evil",
+          "Chaotic evil"
+        ]
+      }
+    },
+    {
+      "id": "vitals",
+      "title": "Hit points, hit dice and spell slots",
+      "assign": {
+        "hp.max": "hit_die_sides + con_mod",
+        "hp.current": "hp.max",
+        "hit_dice.max": "level",
+        "hit_dice.current": "hit_dice.max",
+        "slots_1.max": "caster == 'full' ? (level >= 3 ? 4 : level + 1) : caster == 'half' ? (level >= 5 ? 4 : level >= 3 ? 3 : level == 2 ? 2 : 0) : caster == 'pact' ? (level == 1 ? 1 : level == 2 ? 2 : 0) : 0",
+        "slots_1.current": "slots_1.max",
+        "slots_2.max": "caster == 'full' ? (level >= 4 ? 3 : level == 3 ? 2 : 0) : caster == 'half' ? (level >= 7 ? 3 : level >= 5 ? 2 : 0) : caster == 'pact' ? (level == 3 or level == 4 ? 2 : 0) : 0",
+        "slots_2.current": "slots_2.max",
+        "slots_3.max": "caster == 'full' ? (level >= 6 ? 3 : level == 5 ? 2 : 0) : caster == 'half' ? (level >= 11 ? 3 : level >= 9 ? 2 : 0) : caster == 'pact' ? (level == 5 or level == 6 ? 2 : 0) : 0",
+        "slots_3.current": "slots_3.max"
+      }
+    }
+  ],
+  "tables": {
+    "race": {
+      "die": "d9",
+      "rows": {
+        "1": {
+          "race": "Hill Dwarf",
+          "race_bonus": { "str": 0, "dex": 0, "con": 2, "int": 0, "wis": 1, "cha": 0 },
+          "speed_base": 25,
+          "languages": "Common, Dwarvish",
+          "features": [
+            "Darkvision 60 ft.",
+            "Dwarven Resilience: advantage on saves against poison, resistance to poison damage",
+            "Dwarven Combat Training: battleaxe, handaxe, light hammer, warhammer",
+            "Stonecunning: double proficiency on History checks about stonework",
+            "Dwarven Toughness: +1 hit point per level"
+          ]
+        },
+        "2": {
+          "race": "High Elf",
+          "race_bonus": { "str": 0, "dex": 2, "con": 0, "int": 1, "wis": 0, "cha": 0 },
+          "speed_base": 30,
+          "languages": "Common, Elvish, one extra",
+          "prof.perception": 1,
+          "features": [
+            "Darkvision 60 ft.",
+            "Keen Senses: proficiency in Perception",
+            "Fey Ancestry: advantage on saves against being charmed, immune to magical sleep",
+            "Trance: 4 hours of meditation count as a long rest",
+            "Elf Weapon Training: longsword, shortsword, shortbow, longbow",
+            "Cantrip: one wizard cantrip using Intelligence"
+          ]
+        },
+        "3": {
+          "race": "Lightfoot Halfling",
+          "race_bonus": { "str": 0, "dex": 2, "con": 0, "int": 0, "wis": 0, "cha": 1 },
+          "speed_base": 25,
+          "languages": "Common, Halfling",
+          "features": [
+            "Lucky: reroll a natural 1 on attack rolls, ability checks and saving throws",
+            "Brave: advantage on saves against being frightened",
+            "Halfling Nimbleness: move through the space of larger creatures",
+            "Naturally Stealthy: hide behind creatures at least one size larger"
+          ]
+        },
+        "4": {
+          "race": "Human",
+          "race_bonus": { "str": 1, "dex": 1, "con": 1, "int": 1, "wis": 1, "cha": 1 },
+          "speed_base": 30,
+          "languages": "Common, one extra",
+          "features": ["+1 to every ability score"]
+        },
+        "5": {
+          "race": "Dragonborn",
+          "race_bonus": { "str": 2, "dex": 0, "con": 0, "int": 0, "wis": 0, "cha": 1 },
+          "speed_base": 30,
+          "languages": "Common, Draconic",
+          "features": [
+            "Draconic Ancestry: choose a dragon type for breath weapon and resistance",
+            "Breath Weapon: 2d6 damage in a line or cone, DEX or CON save for half, once per rest",
+            "Damage Resistance to the ancestry's damage type"
+          ]
+        },
+        "6": {
+          "race": "Rock Gnome",
+          "race_bonus": { "str": 0, "dex": 0, "con": 1, "int": 2, "wis": 0, "cha": 0 },
+          "speed_base": 25,
+          "languages": "Common, Gnomish",
+          "features": [
+            "Darkvision 60 ft.",
+            "Gnome Cunning: advantage on INT, WIS and CHA saves against magic",
+            "Artificer's Lore: double proficiency on History checks about magical, alchemical or technological items",
+            "Tinker: build tiny clockwork devices"
+          ]
+        },
+        "7": {
+          "race": "Half-Elf",
+          "race_bonus": { "str": 0, "dex": 1, "con": 1, "int": 0, "wis": 0, "cha": 2 },
+          "speed_base": 30,
+          "languages": "Common, Elvish, one extra",
+          "features": [
+            "Darkvision 60 ft.",
+            "Fey Ancestry: advantage on saves against being charmed, immune to magical sleep",
+            "Skill Versatility: proficiency in two skills of your choice (not pre-applied)",
+            "Ability Score Increase: +1 applied to DEX and CON by default; move them if you prefer"
+          ]
+        },
+        "8": {
+          "race": "Half-Orc",
+          "race_bonus": { "str": 2, "dex": 0, "con": 1, "int": 0, "wis": 0, "cha": 0 },
+          "speed_base": 30,
+          "languages": "Common, Orc",
+          "prof.intimidation": 1,
+          "features": [
+            "Darkvision 60 ft.",
+            "Menacing: proficiency in Intimidation",
+            "Relentless Endurance: drop to 1 hit point instead of 0 once per long rest",
+            "Savage Attacks: one extra weapon die on a critical hit with a melee weapon"
+          ]
+        },
+        "9": {
+          "race": "Tiefling",
+          "race_bonus": { "str": 0, "dex": 0, "con": 0, "int": 1, "wis": 0, "cha": 2 },
+          "speed_base": 30,
+          "languages": "Common, Infernal",
+          "features": [
+            "Darkvision 60 ft.",
+            "Hellish Resistance: resistance to fire damage",
+            "Infernal Legacy: thaumaturgy cantrip; hellish rebuke at 3rd level, darkness at 5th"
+          ]
+        }
+      }
+    },
+    "class": {
+      "die": "d12",
+      "rows": {
+        "1": {
+          "class": "Barbarian",
+          "hit_die": "d12",
+          "hit_die_sides": 12,
+          "save_prof": { "str": 1, "dex": 0, "con": 1, "int": 0, "wis": 0, "cha": 0 },
+          "prof.athletics": 1,
+          "prof.survival": 1,
+          "melee": { "name": "Greataxe", "damage": "1d12", "ability": "str" },
+          "ranged": { "name": "Javelin", "damage": "1d6", "ability": "str" },
+          "equipment": [
+            { "name": "Greataxe", "qty": 1 },
+            { "name": "Handaxe", "qty": 2 },
+            { "name": "Javelin", "qty": 4 },
+            { "name": "Explorer's pack", "qty": 1 }
+          ],
+          "features": [
+            "Rage: bonus damage and resistance to bludgeoning, piercing and slashing, twice per long rest",
+            "Unarmored Defense: add your CON modifier to AC while not wearing armor (set Other AC bonus)"
+          ]
+        },
+        "2": {
+          "class": "Bard",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 0, "dex": 1, "con": 0, "int": 0, "wis": 0, "cha": 1 },
+          "prof.acrobatics": 1,
+          "prof.performance": 1,
+          "prof.persuasion": 1,
+          "caster": "full",
+          "spell_ability": "cha",
+          "armor_base": 11,
+          "melee": { "name": "Rapier", "damage": "1d8", "ability": "dex" },
+          "ranged": { "name": "Dagger (thrown)", "damage": "1d4", "ability": "dex" },
+          "equipment": [
+            { "name": "Rapier", "qty": 1 },
+            { "name": "Dagger", "qty": 1 },
+            { "name": "Leather armor", "qty": 1 },
+            { "name": "Lute", "qty": 1 },
+            { "name": "Diplomat's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Vicious Mockery", "level": 0 },
+            { "name": "Healing Word", "level": 1 },
+            { "name": "Cure Wounds", "level": 1 }
+          ],
+          "features": [
+            "Bardic Inspiration (d6): a bonus action to give an ally a die to add to one roll, CHA modifier uses per long rest",
+            "Spellcasting: two cantrips and four 1st-level spells known"
+          ]
+        },
+        "3": {
+          "class": "Cleric",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 0, "wis": 1, "cha": 1 },
+          "prof.medicine": 1,
+          "prof.religion": 1,
+          "caster": "full",
+          "spell_ability": "wis",
+          "armor_base": 14,
+          "armor_dex_cap": 2,
+          "shield": 2,
+          "melee": { "name": "Mace", "damage": "1d6", "ability": "str" },
+          "ranged": { "name": "Light crossbow", "damage": "1d8", "ability": "dex" },
+          "equipment": [
+            { "name": "Mace", "qty": 1 },
+            { "name": "Scale mail", "qty": 1 },
+            { "name": "Shield", "qty": 1 },
+            { "name": "Light crossbow", "qty": 1 },
+            { "name": "Crossbow bolt", "qty": 20 },
+            { "name": "Holy symbol", "qty": 1 },
+            { "name": "Priest's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Sacred Flame", "level": 0 },
+            { "name": "Cure Wounds", "level": 1 },
+            { "name": "Healing Word", "level": 1 },
+            { "name": "Shield of Faith", "level": 1 }
+          ],
+          "features": [
+            "Divine Domain (Life): bonus Cure Wounds and Bless prepared, Disciple of Life heals extra 2 + spell level",
+            "Spellcasting: three cantrips, prepare WIS modifier + level spells"
+          ]
+        },
+        "4": {
+          "class": "Druid",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 1, "wis": 1, "cha": 0 },
+          "prof.nature": 1,
+          "prof.perception": 1,
+          "caster": "full",
+          "spell_ability": "wis",
+          "armor_base": 11,
+          "shield": 2,
+          "melee": { "name": "Scimitar", "damage": "1d6", "ability": "dex" },
+          "ranged": { "name": "None", "damage": "0", "ability": "dex" },
+          "equipment": [
+            { "name": "Wooden shield", "qty": 1 },
+            { "name": "Scimitar", "qty": 1 },
+            { "name": "Leather armor", "qty": 1 },
+            { "name": "Druidic focus", "qty": 1 },
+            { "name": "Explorer's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Produce Flame", "level": 0 },
+            { "name": "Cure Wounds", "level": 1 },
+            { "name": "Healing Word", "level": 1 }
+          ],
+          "features": ["Druidic: the secret language of druids", "Spellcasting: two cantrips, prepare WIS modifier + level spells"]
+        },
+        "5": {
+          "class": "Fighter",
+          "hit_die": "d10",
+          "hit_die_sides": 10,
+          "save_prof": { "str": 1, "dex": 0, "con": 1, "int": 0, "wis": 0, "cha": 0 },
+          "prof.athletics": 1,
+          "prof.perception": 1,
+          "armor_base": 16,
+          "armor_dex_cap": 0,
+          "shield": 2,
+          "melee": { "name": "Longsword", "damage": "1d8", "ability": "str" },
+          "ranged": { "name": "Light crossbow", "damage": "1d8", "ability": "dex" },
+          "equipment": [
+            { "name": "Chain mail", "qty": 1 },
+            { "name": "Longsword", "qty": 1 },
+            { "name": "Shield", "qty": 1 },
+            { "name": "Light crossbow", "qty": 1 },
+            { "name": "Crossbow bolt", "qty": 20 },
+            { "name": "Dungeoneer's pack", "qty": 1 }
+          ],
+          "features": [
+            "Fighting Style (Defense): +1 AC while wearing armor (set Other AC bonus to 1)",
+            "Second Wind: bonus action to regain 1d10 + level hit points once per rest"
+          ]
+        },
+        "6": {
+          "class": "Monk",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 1, "dex": 1, "con": 0, "int": 0, "wis": 0, "cha": 0 },
+          "prof.acrobatics": 1,
+          "prof.stealth": 1,
+          "melee": { "name": "Shortsword", "damage": "1d6", "ability": "dex" },
+          "ranged": { "name": "Dart", "damage": "1d4", "ability": "dex" },
+          "equipment": [
+            { "name": "Shortsword", "qty": 1 },
+            { "name": "Dart", "qty": 10 },
+            { "name": "Dungeoneer's pack", "qty": 1 }
+          ],
+          "features": [
+            "Unarmored Defense: add your WIS modifier to AC while unarmored and without a shield (set Other AC bonus)",
+            "Martial Arts: DEX for unarmed strikes and monk weapons, 1d4 unarmed damage, bonus unarmed strike"
+          ]
+        },
+        "7": {
+          "class": "Paladin",
+          "hit_die": "d10",
+          "hit_die_sides": 10,
+          "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 0, "wis": 1, "cha": 1 },
+          "prof.athletics": 1,
+          "prof.persuasion": 1,
+          "caster": "half",
+          "spell_ability": "cha",
+          "armor_base": 16,
+          "armor_dex_cap": 0,
+          "shield": 2,
+          "melee": { "name": "Longsword", "damage": "1d8", "ability": "str" },
+          "ranged": { "name": "Javelin", "damage": "1d6", "ability": "str" },
+          "equipment": [
+            { "name": "Longsword", "qty": 1 },
+            { "name": "Shield", "qty": 1 },
+            { "name": "Javelin", "qty": 5 },
+            { "name": "Chain mail", "qty": 1 },
+            { "name": "Holy symbol", "qty": 1 },
+            { "name": "Priest's pack", "qty": 1 }
+          ],
+          "features": [
+            "Divine Sense: detect celestials, fiends and undead, 1 + CHA modifier uses per long rest",
+            "Lay on Hands: a pool of 5 x level hit points to heal by touch",
+            "Spellcasting from 2nd level (Charisma)"
+          ]
+        },
+        "8": {
+          "class": "Ranger",
+          "hit_die": "d10",
+          "hit_die_sides": 10,
+          "save_prof": { "str": 1, "dex": 1, "con": 0, "int": 0, "wis": 0, "cha": 0 },
+          "prof.nature": 1,
+          "prof.perception": 1,
+          "prof.survival": 1,
+          "caster": "half",
+          "spell_ability": "wis",
+          "armor_base": 14,
+          "armor_dex_cap": 2,
+          "melee": { "name": "Shortsword", "damage": "1d6", "ability": "dex" },
+          "ranged": { "name": "Longbow", "damage": "1d8", "ability": "dex" },
+          "equipment": [
+            { "name": "Scale mail", "qty": 1 },
+            { "name": "Shortsword", "qty": 2 },
+            { "name": "Longbow", "qty": 1 },
+            { "name": "Arrow", "qty": 20 },
+            { "name": "Dungeoneer's pack", "qty": 1 }
+          ],
+          "features": [
+            "Favored Enemy: advantage on Survival to track and INT checks to recall one type of creature",
+            "Natural Explorer: expertise and travel benefits in one favored terrain",
+            "Spellcasting from 2nd level (Wisdom)"
+          ]
+        },
+        "9": {
+          "class": "Rogue",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 0, "dex": 1, "con": 0, "int": 1, "wis": 0, "cha": 0 },
+          "prof.acrobatics": 1,
+          "prof.deception": 1,
+          "prof.sleight_of_hand": 2,
+          "prof.stealth": 2,
+          "armor_base": 11,
+          "melee": { "name": "Rapier", "damage": "1d8", "ability": "dex" },
+          "ranged": { "name": "Shortbow", "damage": "1d6", "ability": "dex" },
+          "equipment": [
+            { "name": "Rapier", "qty": 1 },
+            { "name": "Shortbow", "qty": 1 },
+            { "name": "Arrow", "qty": 20 },
+            { "name": "Dagger", "qty": 2 },
+            { "name": "Leather armor", "qty": 1 },
+            { "name": "Thieves' tools", "qty": 1 },
+            { "name": "Burglar's pack", "qty": 1 }
+          ],
+          "features": [
+            "Expertise: double proficiency in Sleight of Hand and Stealth (pre-applied) and thieves' tools",
+            "Sneak Attack: extra 1d6 damage once per turn with advantage or an adjacent ally",
+            "Thieves' Cant"
+          ]
+        },
+        "10": {
+          "class": "Sorcerer",
+          "hit_die": "d6",
+          "hit_die_sides": 6,
+          "save_prof": { "str": 0, "dex": 0, "con": 1, "int": 0, "wis": 0, "cha": 1 },
+          "prof.arcana": 1,
+          "prof.persuasion": 1,
+          "caster": "full",
+          "spell_ability": "cha",
+          "melee": { "name": "Dagger", "damage": "1d4", "ability": "dex" },
+          "ranged": { "name": "Light crossbow", "damage": "1d8", "ability": "dex" },
+          "equipment": [
+            { "name": "Light crossbow", "qty": 1 },
+            { "name": "Crossbow bolt", "qty": 20 },
+            { "name": "Dagger", "qty": 2 },
+            { "name": "Arcane focus", "qty": 1 },
+            { "name": "Dungeoneer's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Fire Bolt", "level": 0 },
+            { "name": "Magic Missile", "level": 1 },
+            { "name": "Burning Hands", "level": 1 }
+          ],
+          "features": [
+            "Sorcerous Origin (Draconic Bloodline): draconic resilience, 1 extra hit point per level and AC 13 + DEX unarmored (set Armor base AC to 13)",
+            "Spellcasting: four cantrips and two 1st-level spells known"
+          ]
+        },
+        "11": {
+          "class": "Warlock",
+          "hit_die": "d8",
+          "hit_die_sides": 8,
+          "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 0, "wis": 1, "cha": 1 },
+          "prof.arcana": 1,
+          "prof.deception": 1,
+          "caster": "pact",
+          "spell_ability": "cha",
+          "armor_base": 11,
+          "melee": { "name": "Mace", "damage": "1d6", "ability": "str" },
+          "ranged": { "name": "Light crossbow", "damage": "1d8", "ability": "dex" },
+          "equipment": [
+            { "name": "Light crossbow", "qty": 1 },
+            { "name": "Crossbow bolt", "qty": 20 },
+            { "name": "Mace", "qty": 1 },
+            { "name": "Dagger", "qty": 2 },
+            { "name": "Leather armor", "qty": 1 },
+            { "name": "Arcane focus", "qty": 1 },
+            { "name": "Scholar's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Eldritch Blast", "level": 0 },
+            { "name": "Burning Hands", "level": 1 }
+          ],
+          "features": [
+            "Otherworldly Patron (The Fiend): Dark One's Blessing grants temporary hit points when you reduce a foe to 0",
+            "Pact Magic: slots recover on a short rest"
+          ]
+        },
+        "12": {
+          "class": "Wizard",
+          "hit_die": "d6",
+          "hit_die_sides": 6,
+          "save_prof": { "str": 0, "dex": 0, "con": 0, "int": 1, "wis": 1, "cha": 0 },
+          "prof.arcana": 1,
+          "prof.history": 1,
+          "caster": "full",
+          "spell_ability": "int",
+          "melee": { "name": "Quarterstaff", "damage": "1d6", "ability": "str" },
+          "ranged": { "name": "None", "damage": "0", "ability": "dex" },
+          "equipment": [
+            { "name": "Quarterstaff", "qty": 1 },
+            { "name": "Component pouch", "qty": 1 },
+            { "name": "Spellbook", "qty": 1 },
+            { "name": "Scholar's pack", "qty": 1 }
+          ],
+          "spells": [
+            { "name": "Fire Bolt", "level": 0 },
+            { "name": "Magic Missile", "level": 1 },
+            { "name": "Burning Hands", "level": 1 }
+          ],
+          "features": [
+            "Arcane Recovery: recover spell slots totalling half your level (rounded up) once per day on a short rest",
+            "Spellcasting: three cantrips and six 1st-level spells in the spellbook"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "burning-hands",
+  "name": "Burning Hands",
+  "description": "1st-level evocation, 15-foot cone. A thin sheet of flame shoots from the caster's fingertips. Every creature in the cone makes a Dexterity saving throw against the caster's spell save DC, taking 3d6 fire damage on a failure or half as much on a success. Costs one 1st-level spell slot.",
+  "icon": "flame",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "cone", "range": 3, "angle": 53 },
+  "effects": [
+    { "kind": "roll", "formula": "3d6", "label": "fire" },
+    { "kind": "roll", "formula": "d20 + target.dex_mod + target.save_prof.dex * target.pb", "vs": "spell_dc", "label": "DEX save" },
+    { "kind": "damage", "formula": "save.success ? floor(rolls.fire.total / 2) : rolls.fire.total", "resource": "hp" },
+    { "kind": "message", "text": "Flames fan out from {source.name}'s fingertips." }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "ring", "from": "source", "color": "#ff7a1a", "duration": 500 },
+    { "at": 100, "preset": "beam", "from": "source", "to": "point", "color": "#ff4500", "duration": 500 },
+    { "at": 300, "preset": "hit", "from": "target", "color": "#ffb347", "duration": 300 }
+  ]
+}

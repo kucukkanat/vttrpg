@@ -1,0 +1,27 @@
+{
+  "id": "dnd5e",
+  "name": "D&D 5e (SRD)",
+  "version": "0.1.0",
+  "description": "Fifth edition fantasy from the System Reference Document 5.1: six abilities, proficiency bonus, d20 attacks against Armor Class, saving throws against a DC, spell slots and 4d6-drop-lowest character creation.",
+  "license": "Mechanics and content from the SRD 5.1 by Wizards of the Coast LLC under CC-BY-4.0; see LICENSE.md for the attribution notice. No Player's Handbook-only content.",
+  "grid": { "type": "square", "cellSize": 1.5 },
+  "resolution": { "kind": "d20-vs-dc" },
+  "files": {
+    "attributes": "attributes.json",
+    "resources": "resources.json",
+    "conditions": "conditions.json",
+    "sheet": "sheet.json",
+    "chargen": "chargen.json",
+    "skills": [
+      "skills/attack-melee.json",
+      "skills/attack-ranged.json",
+      "skills/fire-bolt.json",
+      "skills/magic-missile.json",
+      "skills/burning-hands.json",
+      "skills/sacred-flame.json",
+      "skills/cure-wounds.json",
+      "skills/healing-word.json",
+      "skills/shield-of-faith.json"
+    ]
+  }
+}

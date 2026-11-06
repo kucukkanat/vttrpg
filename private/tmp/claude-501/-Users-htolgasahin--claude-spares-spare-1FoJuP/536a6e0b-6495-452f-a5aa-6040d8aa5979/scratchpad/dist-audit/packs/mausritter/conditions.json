@@ -1,0 +1,37 @@
+[
+  {
+    "id": "exhausted",
+    "name": "Exhausted",
+    "description": "Worn down by exertion or a missed rest. Body and reflexes suffer until a full night's sleep. Takes up an inventory slot.",
+    "icon": "zzz",
+    "modifiers": { "str": -2, "dex": -2 }
+  },
+  {
+    "id": "frightened",
+    "name": "Frightened",
+    "description": "Shaken by something dreadful. Nerve fails until the mouse feels safe again. Takes up an inventory slot.",
+    "icon": "eye",
+    "modifiers": { "wil": -3 }
+  },
+  {
+    "id": "hungry",
+    "name": "Hungry",
+    "description": "A missed meal. Everything is a little harder until the mouse eats. Takes up an inventory slot.",
+    "icon": "bowl",
+    "modifiers": { "str": -1, "dex": -1, "wil": -1 }
+  },
+  {
+    "id": "injured",
+    "name": "Injured",
+    "description": "A lingering wound that slows the body. Cleared by a week of care. Takes up an inventory slot.",
+    "icon": "bandage",
+    "modifiers": { "str": -3 }
+  },
+  {
+    "id": "drained",
+    "name": "Drained",
+    "description": "Hollowed out by magic or dread. The will is dulled until a long rest. Takes up an inventory slot.",
+    "icon": "moon",
+    "modifiers": { "wil": -2 }
+  }
+]
