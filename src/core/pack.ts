@@ -1,0 +1,116 @@
+/**
+ * System pack format. A pack is a folder of JSON files; `pack.json` is the entry.
+ * The rules engine (`src/rules`) loads and interprets these. The table engine
+ * only ever sees the results (tokens, chat, VFX cues).
+ */
+import type { GridType, TargetShape } from './geometry'
+import type { PackId, SkillId } from './ids'
+
+export interface PackManifest {
+  id: PackId
+  name: string
+  version: string
+  description?: string
+  license?: string
+  grid: { type: GridType; cellSize: number }
+  /** Files relative to the pack folder. */
+  files: {
+    attributes: string
+    resources: string
+    conditions: string
+    sheet: string
+    chargen?: string
+    skills?: string[]
+  }
+}
+
+export interface AttributeDef {
+  id: string
+  name: string
+  abbr?: string
+  min?: number
+  max?: number
+  /** Expression in the pack DSL, e.g. "floor((str - 10) / 2)". */
+  derived?: string
+}
+
+export interface ResourceDef {
+  id: string
+  name: string
+  /** Expression for the maximum, e.g. "con + level". */
+  max: string
+  resetOn?: 'rest' | 'longRest' | 'session' | 'never'
+}
+
+export interface ConditionDef {
+  id: string
+  name: string
+  description: string
+  icon?: string
+  /** Attribute modifiers while active, e.g. { str: -2 }. */
+  modifiers?: Record<string, number>
+}
+
+export type SheetField =
+  | { kind: 'number'; bind: string; label: string; readonly?: boolean }
+  | { kind: 'text'; bind: string; label: string; multiline?: boolean }
+  | { kind: 'resource'; bind: string; label: string }
+  | { kind: 'inventory-grid'; bind: string; label: string; cols: number; rows: number }
+  | { kind: 'list'; bind: string; label: string; item: SheetField[] }
+  | { kind: 'roll'; label: string; formula: string }
+
+export interface SheetSection {
+  title: string
+  columns?: number
+  fields: SheetField[]
+}
+
+export interface SheetSchema {
+  sections: SheetSection[]
+}
+
+/** One row of a skill's effect. Interpreted by the rules engine. */
+export type Effect =
+  | { kind: 'roll'; formula: string; vs?: string; label?: string }
+  | { kind: 'damage'; formula: string; resource: string }
+  | { kind: 'heal'; formula: string; resource: string }
+  | { kind: 'condition'; add?: string[]; remove?: string[] }
+  | { kind: 'move'; cells: number }
+  | { kind: 'message'; text: string }
+
+/** VFX cue sent to the table engine. Presets live in `src/table/vfx`. */
+export interface VfxCue {
+  at: number // ms offset in the timeline
+  preset: 'hit' | 'projectile' | 'ring' | 'rain' | 'aura' | 'beam' | 'shake' | 'sound'
+  from?: 'source' | 'target' | 'point'
+  to?: 'source' | 'target' | 'point'
+  color?: string
+  duration?: number
+  asset?: string // for 'sound'
+}
+
+export interface SkillDef {
+  id: SkillId
+  name: string
+  description: string
+  icon?: string
+  cost?: { resource: string; amount: string }[]
+  target: TargetShape
+  effects: Effect[]
+  vfx: VfxCue[]
+}
+
+export interface ChargenStep {
+  id: string
+  title: string
+  /** Expressions assigning sheet fields, e.g. { str: "max(3d6 drop lowest, ...)" }. */
+  assign?: Record<string, string>
+  /** Table id to roll on; result merged into the sheet. */
+  table?: string
+  choose?: { bind: string; options: string[] }
+}
+
+export interface ChargenSchema {
+  steps: ChargenStep[]
+  tables: Record<string, { die: string; rows: Record<string, Record<string, unknown>> }>
+}

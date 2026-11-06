@@ -1,0 +1,16 @@
+{
+  "id": "mausritter",
+  "name": "Mausritter",
+  "version": "0.0.1",
+  "description": "Rules pack skeleton. Filled in by the rules session.",
+  "license": "Compatible with the Mausritter third-party license; no copyrighted text.",
+  "grid": { "type": "square", "cellSize": 1.5 },
+  "files": {
+    "attributes": "attributes.json",
+    "resources": "resources.json",
+    "conditions": "conditions.json",
+    "sheet": "sheet.json",
+    "chargen": "chargen.json",
+    "skills": ["skills/fireball.json", "skills/heal.json", "skills/magic-missile.json"]
+  }
+}
