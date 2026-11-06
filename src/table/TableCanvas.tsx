@@ -28,7 +28,7 @@ import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
 import { GridOverlay } from './GridOverlay'
-import { ImageFloor } from './ImageFloor'
+import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { Props } from './PropMesh'
 import { disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
@@ -177,6 +177,10 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
     return new Box3(new Vector3(f.minX, 0, f.minZ), new Vector3(f.maxX, 2 * grid.cellSize, f.maxZ))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageKey])
+  // Map image loading state for the overlay; `imageRetry` makes the floor resolve and load again.
+  const [imageStatus, setImageStatus] = useState<ImageFloorStatus | null>(null)
+  const [imageRetry, setImageRetry] = useState(0)
+  const retryImage = useCallback(() => setImageRetry((n) => n + 1), [])
   const bounds3 = useMemo(() => {
     const b = (loaded?.bounds ?? (imageBox ? null : new Box3(new Vector3(-8, 0, -8), new Vector3(8, 3, 8))))?.clone() ?? null
     const modelBox = b && transform ? b.applyMatrix4(sceneTransformMatrix(transform)) : b
@@ -230,7 +234,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
           {url && <SceneLoaderBridge url={url} onLoaded={handleLoaded} onError={setError} />}
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
-          {image && <ImageFloor image={image} grid={grid} floorY={floorY} />}
+          {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
           <Props sceneId={sceneId} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
@@ -245,6 +249,8 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
       </Canvas>
       {model && !loaded && !error && <Overlay>Loading scene…</Overlay>}
       {error && <Overlay tone="error">{error}</Overlay>}
+      {image && imageStatus?.kind === 'loading' && <Overlay>Loading map…</Overlay>}
+      {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
     </div>
   )
@@ -431,6 +437,25 @@ function CameraRigFromStore({ mode, sceneId, viewer, bounds, floorY, cellSize, w
     return owned ?? inScene[0] ?? null
   }, [tokens, sceneId, selectedId, viewer])
   return <CameraRig mode={mode} follow={follow} bounds={bounds} floorY={floorY} cellSize={cellSize} walls={walls} />
+}
+
+/** The map image could not be loaded: says which file and offers to resolve and load it again. */
+function MapImageError({ status, onRetry }: { status: Extract<ImageFloorStatus, { kind: 'error' }>; onRetry(): void }) {
+  return (
+    <div role="alert" style={{
+      position: 'absolute', left: 12, bottom: 12, maxWidth: 'min(420px, calc(100% - 24px))', padding: '8px 10px', borderRadius: 6, fontSize: 13,
+      background: 'rgba(120,30,30,0.9)', color: '#f3ead8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+    }}>
+      <span style={{ flex: '1 1 160px', minWidth: 0 }}>
+        <strong>Map image failed to load</strong>
+        <span style={{ display: 'block', opacity: 0.85, overflowWrap: 'anywhere' }}>{status.name}</span>
+      </span>
+      <button type="button" onClick={onRetry} style={{
+        minHeight: 36, padding: '0 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
+        color: '#f3ead8', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+      }}>Retry</button>
+    </div>
+  )
 }
 
 function Overlay({ children, tone }: { children: React.ReactNode; tone?: 'error' }) {

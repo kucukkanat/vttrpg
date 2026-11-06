@@ -42,6 +42,24 @@ export function imageFrame(grid: GridSpec, image: SceneImage): ImageFrame {
   return { cx, cz, width, height, minX: cx - width / 2, minZ: cz - height / 2, maxX: cx + width / 2, maxZ: cz + height / 2, cellSize }
 }
 
+/**
+ * Size of the floor plane in meters. The frame (cells times cell size) is the source of truth: map
+ * exports define their image as exactly `widthCells x heightCells`, and plain images get rows from
+ * the aspect ratio at import time. Only a missing or degenerate side (a doc written by hand or by
+ * an older build) is filled in from the image's pixel aspect, so a map never collapses to a sliver.
+ */
+export function imagePlaneSize(frame: ImageFrame, pixelWidth = 0, pixelHeight = 0): { width: number; height: number } {
+  const min = frame.cellSize * 0.01
+  const hasW = Number.isFinite(frame.width) && frame.width > min
+  const hasH = Number.isFinite(frame.height) && frame.height > min
+  const aspect = pixelWidth > 0 && pixelHeight > 0 ? pixelWidth / pixelHeight : 0
+  if (hasW && hasH) return { width: frame.width, height: frame.height }
+  if (hasW) return { width: frame.width, height: aspect > 0 ? frame.width / aspect : frame.width }
+  if (hasH) return { width: aspect > 0 ? frame.height * aspect : frame.height, height: frame.height }
+  const w = Math.max(1, frame.cellSize)
+  return { width: w, height: aspect > 0 ? w / aspect : w }
+}
+
 export function imageBounds(grid: GridSpec, image: SceneImage): Bounds2 {
   const f = imageFrame(grid, image)
   return { minX: f.minX, minZ: f.minZ, maxX: f.maxX, maxZ: f.maxZ }
