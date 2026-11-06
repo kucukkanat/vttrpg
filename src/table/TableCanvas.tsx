@@ -220,7 +220,7 @@ function TableInner({ sceneId, scene, onIntent, onPresence, resolveAsset, viewer
           <CameraShake cellSize={grid.cellSize} />
         </TableContext.Provider>
       </Canvas>
-      {!loaded && !error && <Overlay>Loading scene…</Overlay>}
+      {model && !loaded && !error && <Overlay>Loading scene…</Overlay>}
       {error && <Overlay tone="error">{error}</Overlay>}
       {targeting && <TargetingBar targeting={targeting} />}
     </div>
