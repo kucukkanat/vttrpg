@@ -19,6 +19,8 @@ export interface GameMeta {
   createdAt: number
   /** Last-seen display names keyed by pubkey; the GM records them from presence so chat can name people who have gone offline. */
   names?: Record<string, string>
+  /** GM toggle: players see HP bars and condition glyphs on tokens. The GM always sees them. */
+  showHpToPlayers?: boolean
 }
 
 export interface Scene {
@@ -139,8 +141,20 @@ export interface FogState {
  * rendered by every client once (ignore events older than your join time), pruned by the GM.
  */
 export type GameEvent =
-  | { id: string; at: number; kind: 'vfx'; cues: VfxCue[]; scene: SceneId; source?: TokenId; targets: TokenId[]; point?: Vec3; label?: string }
+  | {
+      id: string; at: number; kind: 'vfx'; cues: VfxCue[]; scene: SceneId; source?: TokenId; targets: TokenId[]; point?: Vec3; label?: string
+      /** Resource changes the skill caused, for floating damage and heal numbers over the tokens. */
+      numbers?: ResourceDelta[]
+    }
   | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
+
+/** One resource change on a token's sheet: negative for damage or a cost, positive for healing. */
+export interface ResourceDelta {
+  token: TokenId
+  delta: number
+  /** Sheet key of the resource (e.g. `hp`). */
+  resource: string
+}
 
 /** GM journal entry or handout. Markdown body; optional image. */
 export interface Note {

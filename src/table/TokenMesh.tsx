@@ -1,19 +1,27 @@
 /**
  * One token: a GLB mini when `token.model` is set, else a coloured disc with initials.
  * Handles hover, selection (click / right-click / long-press) and drag-to-move with snapping.
+ * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
+ * chips around the disc, and a ring in the local player's colour on the tokens they own.
  */
-import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor, useGLTF } from '@react-three/drei'
 import {
-  CanvasTexture, Color, Group, Mesh, MeshStandardMaterial, Plane, PointLight, SRGBColorSpace, Vector3,
+  CanvasTexture, Color, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, PlaneGeometry,
+  PointLight, RingGeometry, SpriteMaterial, SRGBColorSpace, Vector3,
 } from 'three'
 import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
+import { useSession } from '@/ui/session'
 import { canControl, useTable } from './context'
 import { snapToCell } from './grid'
 import { flickerNoise } from './SceneModel'
 import { useTableUi } from './tableState'
+import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
+
+/** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
+export const LOCAL_PRESENCE_COLOR = '#7cc4ff'
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
 
@@ -124,6 +132,130 @@ function Disc({ token, radius, dimmed }: { token: Token; radius: number; dimmed:
   )
 }
 
+/* ---------- Combat state on the footprint: shared geometry and materials, created once ---------- */
+
+interface HudShared {
+  plane: PlaneGeometry
+  ring: RingGeometry
+  back: MeshBasicMaterial
+  divider: MeshBasicMaterial
+  bands: Record<HpBand, MeshBasicMaterial>
+}
+let hudShared: HudShared | null = null
+function hud(): HudShared {
+  if (hudShared) return hudShared
+  const flat = (color: string, opacity = 1) => new MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false, toneMapped: false })
+  hudShared = {
+    plane: new PlaneGeometry(1, 1),
+    ring: new RingGeometry(1, 1.1, 48),
+    back: flat('#100e0c', 0.82),
+    divider: flat('#100e0c'),
+    bands: { high: flat(HP_BAND_COLORS.high), mid: flat(HP_BAND_COLORS.mid), low: flat(HP_BAND_COLORS.low) },
+  }
+  return hudShared
+}
+const ownerMaterials = new Map<string, MeshBasicMaterial>()
+function ownerMaterial(color: string): MeshBasicMaterial {
+  let m = ownerMaterials.get(color)
+  if (!m) {
+    m = new MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false })
+    ownerMaterials.set(color, m)
+  }
+  return m
+}
+/** One sprite material per chip look (label + colour); the pack's condition list bounds the cache. */
+const chipMaterials = new Map<string, SpriteMaterial>()
+function chipMaterial(chip: ConditionChip): SpriteMaterial {
+  const key = `${chip.label}|${chip.color}`
+  let m = chipMaterials.get(key)
+  if (m) return m
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = chip.color
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.7)'
+  ctx.lineWidth = 4
+  ctx.stroke()
+  const c = new Color(chip.color)
+  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+  ctx.fillStyle = lum > 0.45 ? '#1a1612' : '#f6efe3'
+  ctx.font = `bold ${chip.label.length > 1 ? 30 : 36}px system-ui, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(chip.label, size / 2, size / 2 + 2)
+  const map = new CanvasTexture(canvas)
+  map.colorSpace = SRGBColorSpace
+  m = new SpriteMaterial({ map, transparent: true, depthWrite: false, toneMapped: false })
+  chipMaterials.set(key, m)
+  return m
+}
+const noRaycast = () => undefined
+const tmpObject = new Object3D()
+
+/**
+ * Flat bar on the floor in front of the disc. Backing plane plus a fill scaled to the ratio,
+ * coloured by band; up to `MAX_PIPS` points get divider pips (one instanced mesh).
+ */
+function HpBar({ current, max, radius }: { current: number; max: number; radius: number }) {
+  const s = hud()
+  const w = radius * 1.8
+  const h = radius * 0.22
+  const ratio = Math.min(1, Math.max(0, current / max))
+  const band = hpBand(current, max)
+  const pips = max <= MAX_PIPS ? Math.max(0, Math.round(max) - 1) : 0
+  const dividers = useRef<InstancedMesh>(null)
+  useLayoutEffect(() => {
+    const m = dividers.current
+    if (!m || pips <= 0) return
+    for (let i = 0; i < pips; i++) {
+      tmpObject.position.set(-w / 2 + (w * (i + 1)) / (pips + 1), 0, 0.001)
+      tmpObject.scale.set(Math.max(0.012 * radius, w * 0.025), h, 1)
+      tmpObject.updateMatrix()
+      m.setMatrixAt(i, tmpObject.matrix)
+    }
+    m.count = pips
+    m.instanceMatrix.needsUpdate = true
+  }, [pips, w, h, radius])
+  return (
+    <group rotation-x={-Math.PI / 2} position={[0, 0, radius * 1.12 + h]} raycast={noRaycast}>
+      <mesh geometry={s.plane} material={s.back} scale={[w + h, h * 1.8, 1]} renderOrder={4} raycast={noRaycast} />
+      {ratio > 0 && (
+        <mesh geometry={s.plane} material={s.bands[band]} position={[-(w - w * ratio) / 2, 0, 0.0005]} scale={[w * ratio, h, 1]} renderOrder={5} raycast={noRaycast} />
+      )}
+      {pips > 0 && <instancedMesh key={pips} ref={dividers} args={[s.plane, s.divider, pips]} renderOrder={6} frustumCulled={false} raycast={noRaycast} />}
+    </group>
+  )
+}
+
+/** Camera-facing lettered chips around the rim of the disc, one sprite each with a shared material per look. */
+function ConditionGlyphs({ chips, radius }: { chips: ConditionChip[]; radius: number }) {
+  const size = radius * 0.55
+  const ringR = radius * 1.2
+  const y = radius * 0.22 + size * 0.5
+  return (
+    <>
+      {chips.map((c, i) => {
+        const a = chipAngle(i)
+        return (
+          <sprite key={c.id} material={chipMaterial(c)} position={[Math.cos(a) * ringR, y, -Math.sin(a) * ringR]} scale={[size, size, 1]} renderOrder={7} raycast={noRaycast} />
+        )
+      })}
+    </>
+  )
+}
+
+/** Permanent ring in the viewer's presence colour around the tokens they own. */
+function OwnerRing({ radius, color }: { radius: number; color: string }) {
+  return (
+    <mesh geometry={hud().ring} material={ownerMaterial(color)} rotation-x={-Math.PI / 2} position-y={0.004} scale={[radius, radius, 1]} renderOrder={3} raycast={noRaycast} />
+  )
+}
+
 export function useAssetUrl(ref: Token['model']): string | null {
   const { resolveAsset } = useTable()
   const [url, setUrl] = useState<string | null>(null)
@@ -151,9 +283,15 @@ export function TokenMesh({ token }: { token: Token }) {
   const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'token' && s.editPreview.target.id === token.id ? s.editPreview : null))
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const modelUrl = useAssetUrl(token.model)
+  const character = useGame((s) => (token.character ? s.characters[token.character] : undefined))
+  const showHpToPlayers = useGame((s) => s.meta?.showHpToPlayers ?? false)
+  const presenceColor = useGame((s) => (viewer ? s.presence[viewer.pubkey]?.color : undefined))
+  // The pack (resources, conditions) comes from the session's rules engine; the Canvas bridges the context.
+  const rules = useSession().controller?.rules ?? null
 
   const group = useRef<Group>(null)
   const body = useRef<Group>(null)
+  const hudGroup = useRef<Group>(null)
   const light = useRef<PointLight>(null)
   const controllable = canControl(viewer, token)
   useCursor(hovered && controllable, 'grab')
@@ -166,6 +304,17 @@ export function TokenMesh({ token }: { token: Token }) {
   const radius = 0.38 * cell * scale
   const phase = useMemo(() => hashPhase(token.id), [token.id])
   const gmView = !viewer || viewer.isGm
+  const mine = !!viewer && token.owner === viewer.pubkey
+  const showState = gmView || showHpToPlayers
+  const primary = rules?.pack.resources[0]
+  const hp = useMemo(() => {
+    if (!showState || !character || !rules || !primary) return null
+    return readResource(character.data, primary, (expr) => rules.evaluateNow(expr, character))
+  }, [showState, character, rules, primary])
+  const chips = useMemo(
+    () => (showState ? conditionChips(token, character, rules?.pack.conditions ?? []) : []),
+    [showState, token, character, rules],
+  )
 
   // Smoothly follow the committed position (or the drag ghost / edit preview), with an idle bob.
   const current = useRef(new Vector3(token.position.x, floorY, token.position.z))
@@ -185,6 +334,7 @@ export function TokenMesh({ token }: { token: Token }) {
       body.current.position.y = bob + lift + elevation
       body.current.rotation.y = rotationY
     }
+    if (hudGroup.current) hudGroup.current.position.y = lift + elevation + 0.012
     if (light.current && token.light > 0) {
       light.current.intensity = 5 * cell * cell * (1 + 0.3 * flickerNoise(t, phase))
     }
@@ -321,6 +471,12 @@ export function TokenMesh({ token }: { token: Token }) {
             intensity={5 * cell * cell}
           />
         )}
+      </group>
+      {/* Combat state and the owner marker follow the lift but not the facing, so the bar always sits in front. */}
+      <group ref={hudGroup} position-y={elevation + 0.012} raycast={noRaycast}>
+        {mine && <OwnerRing radius={radius} color={presenceColor ?? LOCAL_PRESENCE_COLOR} />}
+        {hp && <HpBar current={hp.current} max={hp.max} radius={radius} />}
+        {chips.length > 0 && <ConditionGlyphs chips={chips} radius={radius} />}
       </group>
       {elevation > 0.01 && <ElevationMarker elevation={elevation} radius={radius} cell={cell} />}
     </group>

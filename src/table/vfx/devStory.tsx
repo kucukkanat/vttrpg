@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stats } from '@react-three/drei'
-import type { GameEvent, Token } from '@/core/doc'
+import type { GameEvent, ResourceDelta, Token } from '@/core/doc'
 import type { PlayerPubkey, SceneId, TokenId } from '@/core/ids'
 import type { VfxCue } from '@/core/pack'
 import { useGame } from '@/state/store'
@@ -37,7 +37,7 @@ function seedStore() {
   })
 }
 
-type Preset = { label: string; cues: VfxCue[]; targets?: TokenId[]; point?: boolean }
+type Preset = { label: string; cues: VfxCue[]; targets?: TokenId[]; point?: boolean; numbers?: (source: TokenId, target: TokenId) => ResourceDelta[] }
 
 const SINGLE: Preset[] = [
   { label: 'hit', cues: [{ at: 0, preset: 'hit', from: 'target', color: '#ffffff', duration: 250 }] },
@@ -78,6 +78,16 @@ const COMBOS: Preset[] = [
     label: 'hit both tokens', targets: [A, B],
     cues: [{ at: 0, preset: 'hit', from: 'target', color: '#ff6b6b', duration: 300 }],
   },
+  {
+    label: 'damage number',
+    cues: [{ at: 0, preset: 'hit', from: 'target', color: '#ffffff', duration: 250 }],
+    numbers: (source, target) => [{ token: target, delta: -4, resource: 'hp' }, { token: source, delta: -1, resource: 'wil' }],
+  },
+  {
+    label: 'heal number',
+    cues: [{ at: 0, preset: 'aura', from: 'target', color: '#7be0a0', duration: 900 }],
+    numbers: (_source, target) => [{ token: target, delta: 3, resource: 'hp' }, { token: target, delta: 2, resource: 'hp' }],
+  },
 ]
 
 const WEATHER: WeatherKind[] = ['none', 'rain', 'snow', 'embers', 'fog']
@@ -97,6 +107,7 @@ export function DevStory() {
     const ev: VfxEvent = {
       id: crypto.randomUUID(), at: Date.now(), kind: 'vfx', cues: p.cues, scene: SCENE,
       source, targets: p.targets ?? [target], point: p.point ? POINT : undefined, label: p.label,
+      numbers: p.numbers?.(source, target),
     }
     setEvents((list) => [...list.slice(-39), ev])
     setCount((n) => n + 1)

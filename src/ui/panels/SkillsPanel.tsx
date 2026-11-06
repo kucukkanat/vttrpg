@@ -12,8 +12,32 @@ import type { SkillDef } from '@/core/pack'
 import type { TokenId } from '@/core/ids'
 import type { TargetingProps } from '@/table'
 import { isPlayerCharacter, useTargeting } from '../targeting'
+import { pushToast } from '../toasts'
 
 const TOAST_MS = 8000
+/** Longest outcome toast; beyond this only the first line is shown. */
+export const OUTCOME_TOAST_MAX = 140
+
+/** The engine's own effect lines (`takes N damage`, `recovers N`, `is now`, `is no longer`), the part of a result that matters most. */
+const EFFECT_LINE = /\b(takes \d+ damage|would recover|recovers \d+|is now|is no longer)\b/
+
+/**
+ * One line for the outcome toast: the first result line, with the first effect line (or the last
+ * line) appended when the cast produced several and both fit: "Pip attacks Rat. Rat takes 3 damage".
+ */
+export function outcomeToastText(lines: readonly string[]): string {
+  const first = lines[0]?.trim() ?? ''
+  const rest = lines.slice(1).map((l) => l.trim()).filter(Boolean)
+  const second = rest.find((l) => EFFECT_LINE.test(l)) ?? rest[rest.length - 1] ?? ''
+  if (!second) return first
+  const both = `${first} ${second}`
+  return both.length <= OUTCOME_TOAST_MAX ? both : first
+}
+
+/** The Chat panel is mounted somewhere on screen (desktop column, open drawer or sheet). */
+function chatVisible(): boolean {
+  return typeof document !== 'undefined' && document.querySelector('.chat') !== null
+}
 
 /** Current value of a resource in sheet data: a number, `{ current }`, or a dotted path. */
 export function readResource(data: Record<string, unknown>, id: string): number | undefined {
@@ -178,6 +202,25 @@ export function useSkillTargeting(controller: GameController | null): TargetingP
   const pending = useTargeting((s) => s.pending)
   const sourceExists = useGame((s) => (pending ? !!s.tokens[pending.source] : true))
   useEffect(() => { if (pending && !sourceExists) useTargeting.getState().clear() }, [pending, sourceExists])
+
+  // Outcome toast: on a phone or tablet the sheet closes to aim, so the Skills panel's own outcome
+  // box is gone by the time the result lands. When the Chat panel is not on screen either, the
+  // first result lines of a cast made here go out as a toast. This hook outlives the panel.
+  useEffect(() => {
+    let toasted: number | null = null
+    let lastChat = useGame.getState().chat
+    return useGame.subscribe((s) => {
+      if (s.chat === lastChat) return
+      lastChat = s.chat
+      const firedAt = useTargeting.getState().firedAt
+      if (!firedAt || firedAt === toasted) return
+      const lines = s.chat.filter((m) => m.kind === 'system' && m.at >= firedAt).map((m) => m.text)
+      if (!lines.length) return
+      toasted = firedAt
+      if (chatVisible()) return
+      pushToast({ text: outcomeToastText(lines), key: 'skill-outcome', ttl: 6000 })
+    })
+  }, [])
   return useMemo<TargetingProps | undefined>(() => {
     if (!pending || !controller) return undefined
     return {

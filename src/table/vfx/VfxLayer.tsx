@@ -2,7 +2,8 @@
  * Plays `GameEvent`s of kind 'vfx' once each. New events are planned into scheduled effects
  * (pure, see schedule.ts); a per-frame check spawns the ones whose time has come; each effect
  * component removes itself when finished. `shake` goes out through `vfxBus`, `sound` is left to
- * the audio module.
+ * the audio module. An event's `numbers` (resource deltas) become floating damage and heal numbers
+ * over the tokens, planned by `numbers.ts` and drawn by `FloatingNumber`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -12,9 +13,11 @@ import { vfxBus } from './bus'
 import { AuraEffect } from './presets/AuraEffect'
 import { BeamEffect } from './presets/BeamEffect'
 import { clamp01, useLifetime } from './presets/common'
+import { FloatingNumber } from './presets/FloatingNumber'
 import { HitEffect } from './presets/HitEffect'
 import { ProjectileEffect } from './presets/ProjectileEffect'
 import { RingEffect } from './presets/RingEffect'
+import { planNumbers, type FloatingNumberSpec } from './numbers'
 import { planEvent, prunePlayed, splitDue, takeNewEvents, type ScheduledEffect } from './schedule'
 import { Rain } from './weather/Rain'
 
@@ -32,6 +35,8 @@ export function VfxLayer({ events, since, cellSize, maxActive = 48 }: VfxLayerPr
   const played = useRef(new Set<string>())
   const pending = useRef<ScheduledEffect[]>([])
   const [active, setActive] = useState<ScheduledEffect[]>([])
+  const pendingNumbers = useRef<FloatingNumberSpec[]>([])
+  const [numbers, setNumbers] = useState<FloatingNumberSpec[]>([])
 
   useEffect(() => {
     const fresh = takeNewEvents(events, since, played.current)
@@ -39,28 +44,44 @@ export function VfxLayer({ events, since, cellSize, maxActive = 48 }: VfxLayerPr
     if (!fresh.length) return
     const tokens = useGame.getState().tokens
     const now = performance.now()
-    for (const ev of fresh) pending.current.push(...planEvent(ev, tokens, cellSize, now))
+    for (const ev of fresh) {
+      pending.current.push(...planEvent(ev, tokens, cellSize, now))
+      pendingNumbers.current.push(...planNumbers(ev, tokens, cellSize, now))
+    }
     pending.current.sort((a, b) => a.fireAt - b.fireAt)
+    pendingNumbers.current.sort((a, b) => a.fireAt - b.fireAt)
   }, [events, since, cellSize])
 
   useFrame(() => {
-    if (!pending.current.length) return
-    const { due, pending: rest } = splitDue(pending.current, performance.now())
-    if (!due.length) return
-    pending.current = rest
-    const visual: ScheduledEffect[] = []
-    for (const e of due) {
-      if (e.preset === 'shake') vfxBus.emit('shake', e.strength, e.duration)
-      else if (e.preset !== 'sound') visual.push(e)
+    const now = performance.now()
+    if (pending.current.length) {
+      const { due, pending: rest } = splitDue(pending.current, now)
+      if (due.length) {
+        pending.current = rest
+        const visual: ScheduledEffect[] = []
+        for (const e of due) {
+          if (e.preset === 'shake') vfxBus.emit('shake', e.strength, e.duration)
+          else if (e.preset !== 'sound') visual.push(e)
+        }
+        if (visual.length) setActive((a) => [...a, ...visual].slice(-maxActive))
+      }
     }
-    if (visual.length) setActive((a) => [...a, ...visual].slice(-maxActive))
+    if (pendingNumbers.current.length) {
+      const { due, pending: rest } = splitDue(pendingNumbers.current, now)
+      if (due.length) {
+        pendingNumbers.current = rest
+        setNumbers((n) => [...n, ...due].slice(-maxActive))
+      }
+    }
   })
 
   const finish = useCallback((key: string) => setActive((a) => (a.some((e) => e.key === key) ? a.filter((e) => e.key !== key) : a)), [])
+  const finishNumber = useCallback((key: string) => setNumbers((n) => (n.some((e) => e.key === key) ? n.filter((e) => e.key !== key) : n)), [])
 
   return (
     <>
       {active.map((e) => <Effect key={e.key} effect={e} onDone={() => finish(e.key)} />)}
+      {numbers.map((n) => <FloatingNumber key={n.key} spec={n} onDone={() => finishNumber(n.key)} />)}
     </>
   )
 }
