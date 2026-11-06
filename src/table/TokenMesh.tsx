@@ -1,6 +1,7 @@
 /**
  * One token: a GLB mini when `token.model` is set, else a coloured disc with initials.
- * Handles hover, selection (click / right-click / long-press) and drag-to-move with snapping.
+ * Handles hover, selection (click; Shift/Cmd-click or touch Select mode adds to the set), the context
+ * menu (right-click / long-press) and drag-to-move with snapping; dragging a selected token moves the whole selection.
  * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
  * chips around the disc, and a ring in the local player's colour on the tokens they own.
  */
@@ -18,7 +19,7 @@ import { canControl, useTable } from './context'
 import { snapToCell } from './grid'
 import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
-import { clearPendingMove, useTableUi } from './tableState'
+import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
 
 /** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
@@ -40,7 +41,13 @@ export const capture = (e: ThreeEvent<PointerEvent>) => {
   }
 }
 export const DRAG_THRESHOLD_PX = 6
-export const LONG_PRESS_MS = 450
+/** Touch: a still press this long opens the token's context menu (props: selects). */
+export const LONG_PRESS_MS = 500
+
+/** Shift / Cmd / Ctrl held, or touch Select mode on: the tap adds to the selection instead of replacing it. */
+export function isAdditiveSelect(e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, multiSelect: boolean): boolean {
+  return multiSelect || e.shiftKey || e.metaKey || e.ctrlKey
+}
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -278,10 +285,14 @@ export function useAssetUrl(ref: Token['model']): string | null {
 
 export function TokenMesh({ token }: { token: Token }) {
   const { grid, floorY, viewer, onIntent, onPresence } = useTable()
-  const selected = useGame((s) => s.selectedToken === token.id)
+  const selected = useGame((s) => s.selectedTokens.includes(token.id))
   const setSelected = useGame((s) => s.setSelectedToken)
+  const toggleSelected = useGame((s) => s.toggleSelected)
   const hovered = useTableUi((s) => s.hovered === token.id)
   const dragGhost = useTableUi((s) => (s.drag && s.drag.token === token.id ? s.drag : null))
+  // Another selected token is being dragged: this one previews the same move (see groupMoveTargets).
+  const groupDrag = useTableUi((s) => (s.drag && s.drag.token !== token.id ? s.drag : null))
+  const inDragGroup = useGame((s) => groupDrag !== null && s.selectedTokens.includes(token.id) && s.selectedTokens.includes(groupDrag.token))
   // Dropped while the GM was away: stays where it was dropped, ghosted, until the doc catches up.
   const pending = useTableUi((s) => s.pending[token.id] ?? null)
   const targeting = useTableUi((s) => s.targeting !== null)
@@ -305,6 +316,12 @@ export function TokenMesh({ token }: { token: Token }) {
   const controllable = canControl(viewer, token)
   useCursor(hovered && controllable, 'grab')
   useCursor(dragGhost !== null, 'grabbing')
+  const groupGhost = useMemo(() => {
+    if (!groupDrag || !inDragGroup || !controllable) return null
+    return snapToCell(grid, token.position.x + (groupDrag.x - groupDrag.from.x), token.position.z + (groupDrag.z - groupDrag.from.z))
+  }, [groupDrag, inDragGroup, controllable, grid, token.position.x, token.position.z])
+  /** Position preview while this token, or its selection group, is being dragged. */
+  const ghostPos = dragGhost ?? groupGhost
 
   const cell = grid.cellSize
   const scale = preview?.scale ?? token.scale
@@ -330,14 +347,14 @@ export function TokenMesh({ token }: { token: Token }) {
   useFrame(({ clock }, dt) => {
     const g = group.current
     if (!g) return
-    const tx = dragGhost ? dragGhost.x : pending ? pending.x : preview ? preview.position.x : token.position.x
-    const tz = dragGhost ? dragGhost.z : pending ? pending.z : preview ? preview.position.z : token.position.z
-    const k = 1 - Math.exp(-dt * (dragGhost || preview ? 18 : 10))
+    const tx = ghostPos ? ghostPos.x : pending ? pending.x : preview ? preview.position.x : token.position.x
+    const tz = ghostPos ? ghostPos.z : pending ? pending.z : preview ? preview.position.z : token.position.z
+    const k = 1 - Math.exp(-dt * (ghostPos || preview ? 18 : 10))
     current.current.x += (tx - current.current.x) * k
     current.current.z += (tz - current.current.z) * k
     const t = clock.elapsedTime
     const bob = Math.sin(t * 1.6 + phase) * 0.012 * cell
-    const lift = dragGhost ? 0.25 * cell : 0
+    const lift = ghostPos ? 0.25 * cell : 0
     g.position.set(current.current.x, floorY, current.current.z)
     if (body.current) {
       body.current.position.y = bob + lift + elevation
@@ -356,7 +373,18 @@ export function TokenMesh({ token }: { token: Token }) {
   } | null>(null)
   const hit = useMemo(() => new Vector3(), [])
 
-  const select = () => setSelected(token.id)
+  /** Plain tap: this token alone. Shift / Cmd / Ctrl or touch Select mode: toggle it in the set. */
+  const select = (e?: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    if (e && isAdditiveSelect(e, useTableUi.getState().multiSelect)) toggleSelected(token.id)
+    else setSelected(token.id)
+  }
+  /** Right-click / long-press: the token becomes the primary selection (the set is kept when it is a member) and the menu opens there. */
+  const openMenu = (x: number, y: number) => {
+    const s = useGame.getState()
+    if (s.selectedTokens.includes(token.id)) s.selectMany(s.selectedTokens, token.id)
+    else s.setSelectedToken(token.id)
+    uiSet({ contextMenu: { token: token.id, x, y } })
+  }
 
   const endDrag = (commit: boolean) => {
     const d = drag.current
@@ -371,6 +399,16 @@ export function TokenMesh({ token }: { token: Token }) {
     if (commit && ghost && ghost.token === token.id) {
       if (Math.abs(ghost.x - token.position.x) > 1e-4 || Math.abs(ghost.z - token.position.z) > 1e-4) {
         onIntent({ type: 'token.move', token: token.id, position: { x: ghost.x, y: floorY, z: ghost.z } })
+        // The rest of the selection moves by the same delta: one intent per token the viewer may move.
+        const s = useGame.getState()
+        for (const m of groupMoveTargets(ghost, s.tokens, s.selectedTokens)) {
+          const t = s.tokens[m.token]
+          if (!t || !canControl(viewer, t)) continue
+          const p = snapToCell(grid, m.x, m.z)
+          if (Math.abs(p.x - t.position.x) > 1e-4 || Math.abs(p.z - t.position.z) > 1e-4) {
+            onIntent({ type: 'token.move', token: m.token, position: { x: p.x, y: floorY, z: p.z } })
+          }
+        }
       }
     }
   }
@@ -379,15 +417,18 @@ export function TokenMesh({ token }: { token: Token }) {
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (targeting) return
     e.stopPropagation()
-    if (e.button === 2) { select(); return }
+    if (e.button === 2) return // the contextmenu event that follows selects and opens the menu
     if (e.button !== 0) return
-    if (!controllable) { select(); return }
+    if (!controllable) { select(e.nativeEvent); return }
     capture(e).setPointerCapture(e.pointerId)
     uiSet({ grab: token.id })
     drag.current = {
       pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false,
       longPress: e.pointerType === 'touch'
-        ? setTimeout(() => { if (drag.current && !drag.current.moved) { select(); endDrag(false) } }, LONG_PRESS_MS)
+        ? setTimeout(() => {
+          const held = drag.current
+          if (held && !held.moved) { endDrag(false); openMenu(held.startX, held.startY) }
+        }, LONG_PRESS_MS)
         : null,
       plane: new Plane(new Vector3(0, 1, 0), -floorY),
       lastPresence: 0,
@@ -411,7 +452,7 @@ export function TokenMesh({ token }: { token: Token }) {
     const key = `${snapped.cell.q},${snapped.cell.r}`
     if (key !== d.lastCell) {
       d.lastCell = key
-      uiSet({ drag: { token: token.id, x: snapped.x, z: snapped.z } })
+      uiSet({ drag: { token: token.id, x: snapped.x, z: snapped.z, from: { x: token.position.x, z: token.position.z } } })
     }
     const now = performance.now()
     if (now - d.lastPresence >= PRESENCE_INTERVAL_MS) {
@@ -427,7 +468,7 @@ export function TokenMesh({ token }: { token: Token }) {
     capture(e).releasePointerCapture(e.pointerId)
     const wasClick = !d.moved
     endDrag(true)
-    if (wasClick) select()
+    if (wasClick) select(e.nativeEvent)
   }
 
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -449,7 +490,14 @@ export function TokenMesh({ token }: { token: Token }) {
       onPointerUp={onPointerUp}
       onPointerCancel={() => endDrag(false)}
       onLostPointerCapture={() => endDrag(false)}
-      onContextMenu={(e) => { if (targeting) return; e.stopPropagation(); e.nativeEvent.preventDefault(); select() }}
+      onContextMenu={(e) => {
+        if (targeting) return
+        e.stopPropagation()
+        e.nativeEvent.preventDefault()
+        // Players get the menu on their own tokens only; another token just gets selected.
+        if (controllable) openMenu(e.nativeEvent.clientX, e.nativeEvent.clientY)
+        else select()
+      }}
       onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); uiSet({ hovered: token.id }) }}
       onPointerOut={() => { if (useTableUi.getState().hovered === token.id) uiSet({ hovered: null }) }}
     >

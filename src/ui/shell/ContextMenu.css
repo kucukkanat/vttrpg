@@ -1,0 +1,29 @@
+/* Token context menu (shell/ContextMenu.tsx). Absolutely positioned inside the .hud container, which is
+   position:absolute over the table, so `left` / `top` are table-relative; the component clamps them inside
+   the HUD's padding (which carries the safe-area insets). Rows are 44px tall for touch. */
+.hud > .ctx-menu, .ctx-menu {
+  position: absolute; z-index: 6;
+  min-width: 200px; max-width: min(300px, calc(100% - 2 * var(--sp-2)));
+  padding: var(--sp-1);
+  border-radius: var(--r-md); background: rgba(23, 23, 27, .95); border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  animation: ctx-in .12s ease;
+}
+.ctx-head {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; padding: 0 var(--sp-3);
+  color: var(--muted); font-size: var(--fs-sm);
+}
+.ctx-name { font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-row {
+  display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: 100%; min-height: 44px; padding: 0 var(--sp-3);
+  background: transparent; border: 0; border-radius: var(--r-sm); color: var(--fg);
+  font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.ctx-row:hover, .ctx-row:focus-visible { background: rgba(224, 164, 88, .14); outline: none; }
+.ctx-row:active { filter: none; background: rgba(224, 164, 88, .24); }
+.ctx-row--danger { color: var(--danger); }
+.ctx-row .ctx-sub, .ctx-head .ctx-sub { margin-left: auto; padding-left: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
+.ctx-sep { height: 1px; margin: var(--sp-1) 0; background: var(--border); }
+@keyframes ctx-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .ctx-menu { animation: none; } }

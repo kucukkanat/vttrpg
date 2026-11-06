@@ -8,6 +8,7 @@ import { firstOwnedToken, useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import type { ChatMessage, Token } from '@/core/doc'
 import type { PlayerPubkey } from '@/core/ids'
+import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
 import { InitiativeChip } from '../panels/InitiativePanel'
@@ -79,6 +80,7 @@ export function CameraPill() {
   const active = useTableUi((s) => s.cameraActive)
   const firstPerson = useTableUi((s) => s.firstPerson)
   const showGrid = useTableUi((s) => s.showGrid)
+  const multiSelect = useTableUi((s) => s.multiSelect)
   const set = useTableUi((s) => s.set)
   if (!active) return null
   const view = cameraView(active, firstPerson)
@@ -107,6 +109,13 @@ export function CameraPill() {
           <kbd aria-hidden>G</kbd>
         </button>
       </div>
+      {/* Touch only (Hud.css): taps add tokens to the selection while on; desktop uses Shift/Cmd-click. */}
+      <div className="cam-group cam-group--select">
+        <button type="button" className={`cam-btn cam-select${multiSelect ? ' on' : ''}`} aria-pressed={multiSelect}
+          title="Select several tokens by tapping them" onClick={() => set({ multiSelect: !multiSelect })}>
+          <span className="cam-label">Select</span>
+        </button>
+      </div>
     </div>
   )
 }
@@ -122,12 +131,13 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
   const r = shown?.roll
   const success = r?.outcome && 'success' in r.outcome ? !!r.outcome.success : null
   const critical = !!r?.outcome?.critical
-  // The general toast stack (ui/toasts.ts) and the initiative chip ride along here so the shell
-  // mounts them in the HUD; the chip takes the next chip row under the camera pill.
+  // The general toast stack (ui/toasts.ts), the initiative chip and the token context menu ride
+  // along here so the shell mounts them in the HUD; the chip takes the next chip row under the camera pill.
   return (
     <>
       <Toasts />
       <InitiativeChip />
+      <ContextMenu />
       {shown && r && (
         <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
           <span className="muted small">{who(shown.author)}</span>
