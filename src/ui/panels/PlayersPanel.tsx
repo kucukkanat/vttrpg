@@ -3,7 +3,7 @@
  * the active scene (or "spectating"). The GM gets an "Assign…" control per player that lists the
  * unowned tokens of the scene; players get "Pick a character", which opens the claim prompt.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { games } from '../games'
@@ -12,6 +12,8 @@ import type { Presence } from '@/core/presence'
 import type { Token } from '@/core/doc'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { useClaimPrompt } from './ClaimPrompt'
+import { buildInviteUrl, selectAll, useCopy } from '../invite'
+import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
 export const AWAY_AFTER_MS = 35_000
@@ -142,10 +144,37 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           )
         })}
       </ul>
-      {rows.length === 1 && <p className="muted small" style={{ marginTop: 8 }}>Nobody else is here yet{isGm ? '. Share the invite link from the top bar.' : '.'}</p>}
+      {rows.length === 1 && (
+        <div className="players-empty">
+          <p className="muted">No players yet</p>
+          {isGm ? <CopyInvite controller={controller} /> : <p className="muted small">Others appear here as they join.</p>}
+        </div>
+      )}
       {!isGm && scene && (
         <button type="button" className="players-pick" onClick={show}>Pick a character</button>
       )}
     </div>
+  )
+}
+
+/** GM: one tap copies the invite link; when the clipboard is blocked the link is shown selected instead. */
+function CopyInvite({ controller }: { controller: GameController }) {
+  const link = buildInviteUrl(controller.connection)
+  const { state, copy } = useCopy(link)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (state === 'failed') selectAll(inputRef.current) }, [state])
+  return (
+    <>
+      <button type="button" className="primary" onClick={() => void copy()} aria-live="polite">
+        {state === 'copied' ? 'Copied' : 'Copy invite link'}
+      </button>
+      {state === 'failed' && (
+        <>
+          <input ref={inputRef} readOnly value={link} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
+          <p className="muted small">Copy is blocked here. The link is selected: press Ctrl/⌘+C or long-press it.</p>
+        </>
+      )}
+      <p className="muted small">Players open it in any browser, no account needed.</p>
+    </>
   )
 }

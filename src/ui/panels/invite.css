@@ -1,0 +1,38 @@
+/* Invite popover (top bar) and the Players panel empty state. Anchored under the Invite
+   button on tablet and desktop; a full-width panel under the top bar on phones. */
+.invite-anchor { position: relative; flex: none; align-self: stretch; }
+.invite-pop {
+  position: absolute; right: 0; top: calc(100% + 4px); width: 380px; max-width: calc(100vw - 2 * var(--sp-3)); z-index: 40;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: var(--sp-3); display: grid; gap: var(--sp-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+  text-align: left;
+}
+.invite-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: var(--control); }
+.invite-head strong { font-size: var(--fs-lg); }
+.invite-row { display: flex; gap: var(--sp-2); min-width: 0; }
+.invite-row input { flex: 1 1 auto; min-width: 0; min-height: 44px; font-size: var(--fs-md); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; }
+.invite-row button { flex: none; min-height: 44px; min-width: 88px; }
+.invite-pop p { margin: 0; }
+.invite-hint { color: var(--muted); font-size: var(--fs-sm); }
+.invite-relays { color: var(--muted); font-size: var(--fs-sm); display: flex; align-items: center; gap: 6px; }
+.invite-relays .dot { width: 8px; height: 8px; }
+.invite-failed { color: var(--accent); font-size: var(--fs-sm); }
+.invite-close { min-height: 44px; min-width: 44px; }
+
+@media (max-width: 699.98px) {
+  .invite-anchor { position: static; }
+  .invite-pop {
+    position: fixed; left: 0; right: 0; top: var(--topbar-h); width: auto; max-width: none;
+    border-radius: 0 0 var(--r-lg) var(--r-lg); border-top: 0;
+    padding: var(--sp-3) calc(var(--sp-4) + var(--sar)) var(--sp-4) calc(var(--sp-4) + var(--sal));
+  }
+  .invite-row { flex-wrap: wrap; }
+  .invite-row input { flex: 1 1 100%; }
+  .invite-row button { flex: 1 1 auto; }
+}
+
+/* Players panel: nobody here yet */
+.players-empty { display: grid; gap: var(--sp-2); margin-top: var(--sp-2); justify-items: start; }
+.players-empty p { margin: 0; }
+.players-empty button { min-height: 44px; }
+.players-empty input { min-height: 44px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-sm); }
