@@ -81,6 +81,7 @@ export function CameraPill() {
   const firstPerson = useTableUi((s) => s.firstPerson)
   const showGrid = useTableUi((s) => s.showGrid)
   const multiSelect = useTableUi((s) => s.multiSelect)
+  const tool = useTableUi((s) => s.tool)
   const set = useTableUi((s) => s.set)
   if (!active) return null
   const view = cameraView(active, firstPerson)
@@ -114,6 +115,17 @@ export function CameraPill() {
         <button type="button" className={`cam-btn cam-select${multiSelect ? ' on' : ''}`} aria-pressed={multiSelect}
           title="Select several tokens by tapping them" onClick={() => set({ multiSelect: !multiSelect })}>
           <span className="cam-label">Select</span>
+        </button>
+      </div>
+      <div className="cam-group" role="group" aria-label="Table tools">
+        <button type="button" className={`cam-btn cam-tool${tool === 'ruler' ? ' on' : ''}`} aria-pressed={tool === 'ruler'} aria-label="Ruler: measure distance"
+          title={`${tool === 'ruler' ? 'Put away' : 'Measure with'} the ruler (M)`} onClick={() => set({ tool: tool === 'ruler' ? null : 'ruler' })}>
+          <span className="cam-label" aria-hidden>📏</span>
+          <kbd aria-hidden>M</kbd>
+        </button>
+        <button type="button" className={`cam-btn cam-tool${tool === 'ping' ? ' on' : ''}`} aria-pressed={tool === 'ping'} aria-label="Ping: mark a spot for everyone"
+          title={tool === 'ping' ? 'Tap the table to ping, Esc to cancel' : 'Ping a spot on the table (or double-tap the floor)'} onClick={() => set({ tool: tool === 'ping' ? null : 'ping' })}>
+          <span className="cam-label" aria-hidden>📍</span>
         </button>
       </div>
     </div>

@@ -4,9 +4,13 @@
  * Module-level singleton: one table per page.
  */
 
+import type { PingEvent } from '../ping'
+
 export interface VfxBusEvents {
   /** Camera shake request. `strength` is 0..1, `durationMs` the decay time. */
   shake: (strength: number, durationMs: number) => void
+  /** A table ping to play (the controller emits received ones; PingLayer draws them). */
+  ping: (ping: PingEvent) => void
 }
 
 export interface VfxBus {
@@ -18,23 +22,25 @@ export interface VfxBus {
 }
 
 export function createVfxBus(): VfxBus {
-  const handlers: { [K in keyof VfxBusEvents]?: Set<VfxBusEvents[K]> } = {}
+  type AnyHandler = (...args: never[]) => void
+  const handlers = new Map<keyof VfxBusEvents, Set<AnyHandler>>()
   const bus: VfxBus = {
     on(type, handler) {
-      const set = (handlers[type] ??= new Set()) as Set<typeof handler>
-      set.add(handler)
+      let set = handlers.get(type)
+      if (!set) { set = new Set(); handlers.set(type, set) }
+      set.add(handler as AnyHandler)
       return () => bus.off(type, handler)
     },
     off(type, handler) {
-      (handlers[type] as Set<typeof handler> | undefined)?.delete(handler)
+      handlers.get(type)?.delete(handler as AnyHandler)
     },
     emit(type, ...args) {
-      const set = handlers[type] as Set<(...a: typeof args) => void> | undefined
+      const set = handlers.get(type)
       if (!set) return
-      for (const h of Array.from(set)) h(...args)
+      for (const h of Array.from(set)) (h as unknown as (...a: typeof args) => void)(...args)
     },
     count(type) {
-      return handlers[type]?.size ?? 0
+      return handlers.get(type)?.size ?? 0
     },
   }
   return bus

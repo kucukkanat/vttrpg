@@ -2,9 +2,11 @@
  * Desktop keyboard shortcuts for the shell. Ignored while typing in a field or when a modifier is
  * held, so browser shortcuts and the table's own keys (G grid, F first person, C camera, Delete, Esc) keep working.
  * `?` opens the shortcuts overlay (ShortcutsOverlay.tsx), which lists `SHORTCUTS`.
+ * M toggles the ruler tool while a table is mounted.
  */
 import { useEffect } from 'react'
 import { undoLast } from '@/state/undo'
+import { useTableUi } from '@/table/tableState'
 import { pushToast } from '../toasts'
 
 export interface ShortcutHandlers {
@@ -122,6 +124,12 @@ export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
         case ']': e.preventDefault(); handlers.toggleRight(); break
         case '/': e.preventDefault(); handlers.focusChat(); break
         case '?': e.preventDefault(); toggleShortcutsOverlay(); break
+        case 'm': case 'M': {
+          // Ruler tool on the table (the HUD button does the same on touch).
+          const ui = useTableUi.getState()
+          if (ui.cameraActive) ui.set({ tool: ui.tool === 'ruler' ? null : 'ruler' })
+          break
+        }
         default:
           if (/^[1-9]$/.test(e.key)) { e.preventDefault(); handlers.togglePanel(Number(e.key)) }
       }

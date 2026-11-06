@@ -10,6 +10,8 @@
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
  * two fingers pan, pinch zooms, long-press opens the token menu.
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
+ * Tools (`tableState.tool`, HUD buttons): the ruler measures distances (RulerLayer, M); ping marks a
+ * spot for every client (PingLayer; also a double-tap or a long touch on empty floor).
  * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
  * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
  */
@@ -32,7 +34,9 @@ import { cellKey, worldToCell, type Bounds2 } from './grid'
 import { GridOverlay } from './GridOverlay'
 import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
+import { PingLayer, pingMissed } from './PingLayer'
 import { Props } from './PropMesh'
+import { RulerLayer } from './RulerLayer'
 import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
 import { ScenePreviewBar, SceneTransition } from './SceneTransition'
@@ -306,7 +310,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         camera={CAMERA_OPTS}
         gl={GL_OPTS}
         style={CANVAS_STYLE}
-        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null) }}
+        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null); if (!targeting) pingMissed(e) }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <color attach="background" args={['#0b0b10']} />
@@ -320,6 +324,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
+          {!targeting && <RulerLayer bounds={bounds2} />}
+          <PingLayer bounds={bounds2} />
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <EditGizmo />
