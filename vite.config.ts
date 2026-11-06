@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { cpSync, existsSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import path from 'node:path'
 
 /** Serves ./packs at /packs in dev and copies it into dist/packs on build. */
@@ -27,8 +28,13 @@ function packsPlugin(): Plugin {
   }
 }
 
+function buildId(): string {
+  try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return 'dev' }
+}
+
 // GitHub Pages serves from /vttrpg/. Local dev uses /.
 export default defineConfig(({ command }) => ({
+  define: { __BUILD_ID__: JSON.stringify(buildId()), __BUILD_TIME__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
   base: command === 'build' ? '/vttrpg/' : '/',
   plugins: [
     react(),

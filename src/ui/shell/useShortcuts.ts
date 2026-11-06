@@ -1,6 +1,6 @@
 /**
  * Desktop keyboard shortcuts for the shell. Ignored while typing in a field or when a modifier is
- * held, so browser shortcuts and the table's own keys (G, Delete, Esc) keep working.
+ * held, so browser shortcuts and the table's own keys (G grid, F first person, C camera, Delete, Esc) keep working.
  */
 import { useEffect } from 'react'
 
@@ -30,7 +30,7 @@ export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
       switch (e.key) {
         case '[': e.preventDefault(); handlers.toggleLeft(); break
         case ']': e.preventDefault(); handlers.toggleRight(); break
-        case 'c': case 'C': e.preventDefault(); handlers.focusChat(); break
+        case '/': e.preventDefault(); handlers.focusChat(); break
         default:
           if (/^[1-9]$/.test(e.key)) { e.preventDefault(); handlers.togglePanel(Number(e.key)) }
       }

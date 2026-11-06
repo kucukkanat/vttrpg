@@ -161,31 +161,37 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | Key | Action |
 |---|---|
 | `[` / `]` | toggle left / right column |
-| `c` | focus the chat input (opens Chat if collapsed) |
+| `/` | focus the chat input (opens Chat if collapsed) |
 | `1`–`9` | toggle the n-th panel section (registry order) |
-| `Esc` | blur the focused field; cancel skill targeting (table) |
-| `G` | grid overlay (table, existing) |
+| `Esc` | blur the focused field; cancel skill targeting / deselect (table) |
+| `G` / `F` / `C` | grid overlay / first person / camera mode (table, existing) |
 | `Delete` | remove the selected token (GM, existing) |
 
-Phone and tablet get no shortcut layer; hardware keyboards still reach the table's own keys.
+The shell never binds a key the table uses. Phone and tablet get no shortcut layer; hardware
+keyboards still reach the table's own keys.
 
 ## Checklist
 
-- [ ] `docs/UX.md` written
-- [ ] global CSS tokens (spacing, type, colour, radii), coarse-pointer 44 px rule, 16 px inputs, momentum scroll
-- [ ] `GameShell` picks the layout from `useBreakpoint`, single tree, canvas does not remount
-- [ ] Phone: top bar, table, tab bar from `PANELS`, GM filter, safe-area padding
-- [ ] Phone: bottom sheet half/full/closed, drag, swipe down to close, swipe between tabs
-- [ ] Phone: table interactive behind the half sheet
-- [ ] Phone: unread chat badge
-- [ ] Phone: dice overlay above the sheet
-- [ ] Phone: chat input above the iOS keyboard (`visualViewport`), home indicator respected
-- [ ] Tablet: right drawer 360 px with tabs, pin / hide, persisted
-- [ ] Desktop: resizable columns, drag handle, double-click collapse, persisted
-- [ ] Desktop: collapsible sections, persisted
-- [ ] Top bar: name, status dot, role, invite (GM), leave, phone overflow menu
-- [ ] Selected-token chip and roll toast
-- [ ] Keyboard shortcuts on desktop
-- [ ] Panel layout tweaks (touch rows, scroll areas), no behaviour change
-- [ ] `npm run typecheck`, `npx vitest run`, `npm run build` green
-- [ ] Verified in the browser at 375 × 812, 768 × 1024 and desktop with screenshots
+- [x] `docs/UX.md` written
+- [x] global CSS tokens (spacing, type, colour, radii), coarse-pointer 44 px rule, 16 px inputs, momentum scroll
+- [x] `GameShell` picks the layout from `useBreakpoint`, single tree, canvas does not remount
+- [x] Phone: top bar, table, tab bar from `PANELS`, GM filter, safe-area padding
+- [x] Phone: bottom sheet half/full/closed, drag, swipe down to close, swipe between tabs
+- [x] Phone: table interactive behind the half sheet
+- [x] Phone: unread chat badge
+- [x] Phone: dice overlay above the sheet
+- [x] Phone: chat input above the iOS keyboard (`visualViewport`), home indicator respected
+      (logic unit-tested; the desktop browser cannot emulate an on-screen keyboard, so this
+      still needs a pass on a real iPhone/iPad)
+- [x] Tablet: right drawer 360 px with tabs, pin / hide, persisted
+- [x] Desktop: resizable columns, drag handle, double-click collapse, persisted
+- [x] Desktop: collapsible sections, persisted
+- [x] Top bar: name, status dot, role, invite (GM), leave, phone overflow menu
+- [x] Selected-token chip and roll toast
+- [x] Keyboard shortcuts on desktop
+- [x] Panel layout tweaks (touch rows, scroll areas), no behaviour change (CSS only; no panel TSX edited)
+- [x] `npm run typecheck`, `npx vitest run`, `npm run build` green
+- [x] Verified in the browser at 375 × 812, 768 × 1024 and 1400 × 900 with screenshots
+
+Known follow-ups outside this shell's files: `BuildTag` (fixed bottom-right) overlaps the Chat
+tab label on phones; it should sit above the tab bar or move into the overflow menu.

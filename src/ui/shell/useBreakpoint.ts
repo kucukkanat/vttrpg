@@ -4,7 +4,7 @@
  *   tablet  700–1099  right drawer with tabs
  *   desktop >= 1100   three columns
  */
-import { useEffect, useState } from 'react'
+import { useMediaQuery } from '../useMediaQuery'
 
 export type Breakpoint = 'phone' | 'tablet' | 'desktop'
 
@@ -17,23 +17,8 @@ export function breakpointFor(width: number): Breakpoint {
   return 'desktop'
 }
 
-const read = (): Breakpoint => (typeof window === 'undefined' ? 'desktop' : breakpointFor(window.innerWidth))
-
 export function useBreakpoint(): Breakpoint {
-  const [bp, setBp] = useState<Breakpoint>(read)
-  useEffect(() => {
-    const phone = window.matchMedia(`(max-width: ${PHONE_MAX}px)`)
-    const tablet = window.matchMedia(`(max-width: ${TABLET_MAX}px)`)
-    const on = () => setBp(read())
-    phone.addEventListener('change', on)
-    tablet.addEventListener('change', on)
-    window.addEventListener('resize', on)
-    on()
-    return () => {
-      phone.removeEventListener('change', on)
-      tablet.removeEventListener('change', on)
-      window.removeEventListener('resize', on)
-    }
-  }, [])
-  return bp
+  const phone = useMediaQuery(`(max-width: ${PHONE_MAX}px)`)
+  const tablet = useMediaQuery(`(max-width: ${TABLET_MAX}px)`)
+  return phone ? 'phone' : tablet ? 'tablet' : 'desktop'
 }

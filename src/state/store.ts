@@ -8,6 +8,14 @@ import type { Character, ChatMessage, FogState, GameEvent, GameMeta, Prop, Scene
 import type { CharacterId, PropId, SceneId, TokenId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 
+/** What the local user has selected on the table. Tokens stay mirrored in `selectedToken`. */
+export type Selection =
+  | { kind: 'token'; id: TokenId }
+  | { kind: 'prop'; id: PropId }
+  /** A named node inside the active scene's GLB (edited via `scene.overrides`). */
+  | { kind: 'node'; id: string }
+  | { kind: 'scene'; id: SceneId }
+
 export interface GameState {
   meta: GameMeta | null
   scenes: Record<SceneId, Scene>
@@ -20,6 +28,8 @@ export interface GameState {
   presence: Record<string, Presence>
   selectedToken: TokenId | null
   setSelectedToken(id: TokenId | null): void
+  selection: Selection | null
+  setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
   _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props'>>): void
 }
@@ -35,7 +45,9 @@ export const useGame = create<GameState>((set) => ({
   props: {} as Record<PropId, Prop>,
   presence: {},
   selectedToken: null,
-  setSelectedToken: (id) => set({ selectedToken: id }),
+  setSelectedToken: (id) => set({ selectedToken: id, selection: id ? { kind: 'token', id } : null }),
+  selection: null,
+  setSelection: (sel) => set({ selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null }),
   setPresence: (p) => set((s) => ({ presence: { ...s.presence, [p.pubkey]: p } })),
   _replaceFromDoc: (partial) => set(partial),
 }))
