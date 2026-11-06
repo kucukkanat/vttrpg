@@ -193,6 +193,14 @@ function TokenEditor({ controller, token, editable, onDeselect }: { controller: 
       <Stepper label="Size" value={token.scale} step={0.25} min={TOKEN_SIZE_LIMITS.min} max={TOKEN_SIZE_LIMITS.max} unit="× cell" onChange={(v) => patch({ scale: v })} />
       <Stepper label="Rotation" value={displayDeg(token.rotationY)} step={15} unit="degrees" decimals={1} wrap onChange={(v) => patch({ rotationY: degToRad(v) })} />
       <Stepper label="Elevation" value={elevation} step={0.25} min={0} max={50} unit="m above floor" onChange={(v) => patch({ elevation: v })} />
+      <ModelPicker
+        controller={controller}
+        title="Token model"
+        actionLabel="Use"
+        current={token.model ? (token.model.name?.replace(/\.glb$/i, '') ?? 'custom model') : 'disc with initials'}
+        onPick={(model) => patch({ model })}
+        onClear={token.model ? () => patch({ model: undefined }) : undefined}
+      />
     </div>
   )
 }
@@ -311,20 +319,72 @@ function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }:
 }
 
 /** Library GLBs (scene models listed separately) or an uploaded .glb, placed where the camera looks. */
-function AddProp({ controller, sceneId, scene }: { controller: GameController; sceneId: SceneId; scene: Scene | undefined }) {
+/** Library dropdown + upload. Calls `onPick` with the chosen model; never adds anything itself. */
+export function ModelPicker({ controller, title, actionLabel, hint, current, onPick, onClear }: {
+  controller: GameController
+  title: string
+  actionLabel: string
+  hint?: string
+  current?: string
+  onPick(model: ReturnType<typeof libraryRef>, name: string): void
+  onClear?(): void
+}) {
   const [library, setLibrary] = useState<LibraryEntry[]>([])
   const [choice, setChoice] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
-  const setSelection = useGame((s) => s.setSelection)
-  const uiSet = useTableUi((s) => s.set)
   useEffect(() => { void loadLibraryIndex().then((l) => setLibrary(l.filter((e) => e.kind === 'glb'))) }, [])
   const models = library.filter((e) => !e.path.startsWith('scenes/'))
   const scenes = library.filter((e) => e.path.startsWith('scenes/'))
+  const pickFromLibrary = () => {
+    const entry = library.find((e) => e.sha256 === choice)
+    if (entry) onPick(libraryRef(entry), entry.name.replace(/\.glb$/i, ''))
+  }
+  const upload = async (file: File | undefined) => {
+    if (!file) return
+    setBusy(file.name)
+    try {
+      const ref = await controller.assets.importFile(file)
+      onPick(ref, file.name.replace(/\.glb$/i, ''))
+    } catch (e) {
+      console.warn('model upload failed', e)
+    } finally {
+      setBusy(null)
+    }
+  }
+  return (
+    <div className="props">
+      <div style={sectionTitle}>{title}</div>
+      {current !== undefined && (
+        <div className="row" style={{ alignItems: 'center', marginTop: 0 }}>
+          <span className="muted small" style={{ flex: 1 }}>Current: {current}</span>
+          {onClear && <button type="button" style={{ minHeight: 40 }} onClick={onClear}>Use disc</button>}
+        </div>
+      )}
+      {library.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6 }}>
+          <select value={choice} style={{ minHeight: 40 }} onChange={(e) => setChoice(e.target.value)} aria-label={`${title} library`}>
+            <option value="">Pick a model…</option>
+            {models.length > 0 && <optgroup label="Models">{models.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
+            {scenes.length > 0 && <optgroup label="Scene models">{scenes.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
+          </select>
+          <button type="button" style={{ minHeight: 40, touchAction: 'manipulation' }} disabled={!choice} onClick={pickFromLibrary}>{actionLabel}</button>
+        </div>
+      )}
+      <label className="tiny-file" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {busy ? `Importing ${busy}…` : 'Upload a .glb'}
+        <input type="file" accept=".glb,model/gltf-binary" hidden disabled={!!busy} onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = '' }} />
+      </label>
+      {hint && <p className="muted small">{hint}</p>}
+    </div>
+  )
+}
 
+function AddProp({ controller, sceneId, scene }: { controller: GameController; sceneId: SceneId; scene: Scene | undefined }) {
+  const setSelection = useGame((s) => s.setSelection)
+  const uiSet = useTableUi((s) => s.set)
   const add = (model: ReturnType<typeof libraryRef>, name: string) => {
     const id = newId<'PropId'>() as PropId
     const at = placementPoint()
-    // land on a cell centre
     const g = scene?.grid
     const position = g && g.type !== 'none'
       ? { x: Math.round((at.x - g.origin.x) / g.cellSize) * g.cellSize + g.origin.x, y: at.y, z: Math.round((at.z - g.origin.z) / g.cellSize) * g.cellSize + g.origin.z }
@@ -333,41 +393,13 @@ function AddProp({ controller, sceneId, scene }: { controller: GameController; s
     setSelection({ kind: 'prop', id })
     uiSet({ editMode: true, gizmoMode: 'translate' })
   }
-  const addFromLibrary = () => {
-    const entry = library.find((e) => e.sha256 === choice)
-    if (entry) add(libraryRef(entry), entry.name.replace(/\.glb$/i, ''))
-  }
-  const upload = async (file: File | undefined) => {
-    if (!file) return
-    setBusy(file.name)
-    try {
-      const ref = await controller.assets.importFile(file)
-      add(ref, file.name.replace(/\.glb$/i, ''))
-    } catch (e) {
-      console.warn('prop upload failed', e)
-    } finally {
-      setBusy(null)
-    }
-  }
-
   return (
-    <div className="props">
-      <div style={sectionTitle}>Add prop</div>
-      {library.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6 }}>
-          <select value={choice} style={{ minHeight: 40 }} onChange={(e) => setChoice(e.target.value)} aria-label="Prop model">
-            <option value="">Pick a model…</option>
-            {models.length > 0 && <optgroup label="Props">{models.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
-            {scenes.length > 0 && <optgroup label="Scene models">{scenes.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}</optgroup>}
-          </select>
-          <button type="button" style={{ minHeight: 40, touchAction: 'manipulation' }} disabled={!choice} onClick={addFromLibrary}>Add</button>
-        </div>
-      )}
-      <label className="tiny-file" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {busy ? `Importing ${busy}…` : 'Upload a .glb'}
-        <input type="file" accept=".glb,model/gltf-binary" hidden disabled={!!busy} onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = '' }} />
-      </label>
-      <p className="muted small">New props land where the camera looks, at scale 1. Turn on edit mode to move, turn and resize them with the handles.</p>
-    </div>
+    <ModelPicker
+      controller={controller}
+      title="Add a separate prop"
+      actionLabel="Add"
+      hint="Props are scenery, not tokens. They land where the camera looks, at scale 1; turn on edit mode to move, turn and resize them."
+      onPick={add}
+    />
   )
 }

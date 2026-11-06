@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newId } from '@/core/ids'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import type { Token } from '@/core/doc'
-import type { LibraryEntry } from '@/assets'
-import { libraryRef, loadLibraryIndex } from '../library'
+import { ModelPicker } from './ObjectPanel'
 
 const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
 
@@ -72,8 +71,6 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
   const isGm = controller.connection.isGm
   const mine = token.owner === controller.pubkey
   const presence = useGame((s) => s.presence)
-  const [library, setLibrary] = useState<LibraryEntry[]>([])
-  useEffect(() => { void loadLibraryIndex().then((l) => setLibrary(l.filter((e) => e.kind === 'glb' && !e.path.startsWith('scenes/')))) }, [])
   const patch = (p: Partial<Token>) => void controller.dispatch({ type: 'token.update', token: token.id, patch: p })
 
   if (!isGm && !mine) {
@@ -106,17 +103,14 @@ function TokenProps({ controller, token }: { controller: GameController; token: 
           </select>
         </label>
       )}
-      {library.length > 0 && (
-        <label>Model
-          <select value={token.model?.sha256 ?? ''} onChange={(e) => {
-            const entry = library.find((l) => l.sha256 === e.target.value)
-            patch({ model: entry ? libraryRef(entry) : undefined })
-          }}>
-            <option value="">Disc</option>
-            {library.map((l) => <option key={l.sha256} value={l.sha256}>{l.name.replace(/\.glb$/i, '')}</option>)}
-          </select>
-        </label>
-      )}
+      <ModelPicker
+        controller={controller}
+        title="Model"
+        actionLabel="Use"
+        current={token.model ? (token.model.name?.replace(/\.glb$/i, '') ?? 'custom model') : 'disc with initials'}
+        onPick={(model) => patch({ model })}
+        onClear={token.model ? () => patch({ model: undefined }) : undefined}
+      />
       {isGm && <button className="danger wide" onClick={() => void controller.dispatch({ type: 'token.remove', token: token.id })}>Remove token</button>}
       <p className="muted small">Tip: Delete key removes the selected token.</p>
     </div>

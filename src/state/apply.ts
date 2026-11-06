@@ -14,6 +14,13 @@ export interface ApplyContext {
   skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[] }
 }
 
+/** Shallow merge that removes keys set to undefined (Yjs cannot store undefined). */
+function merge<T extends object>(base: T, patch: Partial<T>): T {
+  const out = { ...base, ...patch } as Record<string, unknown>
+  for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k]
+  return out as T
+}
+
 export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext = {}): void {
   const { intent, from, at } = env
   const tokens = doc.getMap<Token>('tokens')
@@ -42,7 +49,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'token.update': {
         const t = tokens.get(intent.token)
         if (!t) return
-        tokens.set(intent.token, { ...t, ...intent.patch, id: t.id })
+        tokens.set(intent.token, merge(t, { ...intent.patch, id: t.id }))
         break
       }
       case 'scene.add':
@@ -54,7 +61,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'scene.update': {
         const s = scenes.get(intent.scene)
         if (!s) return
-        scenes.set(intent.scene, { ...s, ...intent.patch, id: s.id })
+        scenes.set(intent.scene, merge(s, { ...intent.patch, id: s.id }))
         break
       }
       case 'character.upsert':
@@ -107,7 +114,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'prop.update': {
         const p = props.get(intent.prop)
         if (!p) return
-        props.set(intent.prop, { ...p, ...intent.patch, id: p.id })
+        props.set(intent.prop, merge(p, { ...intent.patch, id: p.id }))
         break
       }
       case 'prop.remove':
