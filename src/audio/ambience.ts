@@ -86,19 +86,19 @@ const wind: Builder = (ctx) => graph(ctx, (out, _s, started) => {
 
 const fire: Builder = (ctx) => graph(ctx, (out, sched, started) => {
   const rumble = noiseSource(ctx)
-  const lp = filter(ctx, 'lowpass', 140, 0.8)
-  const g = gain(ctx, 0.45)
+  const lp = filter(ctx, 'lowpass', 160, 0.9)
+  const g = gain(ctx, 1.4)
   rumble.connect(lp).connect(g).connect(out)
   rumble.start()
-  started.push(rumble, lfo(ctx, 0.3, 0.15, g.gain), lfo(ctx, 1.7, 0.08, g.gain))
+  started.push(rumble, lfo(ctx, 0.3, 0.4, g.gain), lfo(ctx, 1.7, 0.2, g.gain))
   const hiss = noiseSource(ctx)
   const hp = filter(ctx, 'bandpass', 3500, 1.5)
-  const hg = gain(ctx, 0.03)
+  const hg = gain(ctx, 0.05)
   hiss.connect(hp).connect(hg).connect(out)
   hiss.start()
   started.push(hiss, lfo(ctx, 0.9, 0.02, hg.gain))
   sched.every(40, 260, (when) => {
-    noiseBurst(ctx, out, when, { freq: rand(1800, 6000), q: rand(1.5, 4), peak: rand(0.08, 0.35), attack: 0.001, decay: rand(0.008, 0.03) })
+    noiseBurst(ctx, out, when, { freq: rand(1800, 6000), q: rand(1.5, 4), peak: rand(0.15, 0.5), attack: 0.001, decay: rand(0.008, 0.03) })
     if (Math.random() < 0.15) noiseBurst(ctx, out, when + 0.01, { type: 'lowpass', freq: 400, peak: 0.25, decay: 0.08 })
   })
 })
@@ -124,7 +124,7 @@ const rain: Builder = (ctx) => graph(ctx, (out, sched, started) => {
 })
 
 const cave: Builder = (ctx) => graph(ctx, (out, sched, started) => {
-  const drone = gain(ctx, 0.22)
+  const drone = gain(ctx, 0.1)
   for (const [f, d] of [[42, 0], [63, -7], [84, 5]] as const) {
     const o = ctx.createOscillator()
     o.type = 'sine'
@@ -137,7 +137,7 @@ const cave: Builder = (ctx) => graph(ctx, (out, sched, started) => {
   }
   const lp = filter(ctx, 'lowpass', 220, 0.5)
   drone.connect(lp).connect(out)
-  started.push(lfo(ctx, 0.05, 0.1, drone.gain), lfo(ctx, 0.021, 60, lp.frequency))
+  started.push(lfo(ctx, 0.05, 0.04, drone.gain), lfo(ctx, 0.021, 60, lp.frequency))
   const air = noiseSource(ctx)
   const abp = filter(ctx, 'bandpass', 180, 1)
   const ag = gain(ctx, 0.08)
@@ -162,7 +162,7 @@ const cave: Builder = (ctx) => graph(ctx, (out, sched, started) => {
 const tavern: Builder = (ctx) => graph(ctx, (out, sched, started) => {
   // murmur: two voice-band noise layers with independent random amplitude walks
   const voices: GainNode[] = []
-  for (const [f, q, lvl] of [[420, 1.2, 0.18], [900, 1.5, 0.1], [1700, 2, 0.05]] as const) {
+  for (const [f, q, lvl] of [[420, 1.2, 0.7], [900, 1.5, 0.4], [1700, 2, 0.18]] as const) {
     const src = noiseSource(ctx)
     const bp = filter(ctx, 'bandpass', f, q)
     const g = gain(ctx, lvl)
@@ -176,12 +176,12 @@ const tavern: Builder = (ctx) => graph(ctx, (out, sched, started) => {
   })
   // keep the walk bounded
   sched.every(1500, 2500, (when) => {
-    const levels = [0.18, 0.1, 0.05]
+    const levels = [0.7, 0.4, 0.18]
     voices.forEach((g, i) => g.gain.setTargetAtTime(levels[i] * rand(0.7, 1.3), when, 0.6))
   })
   const room = noiseSource(ctx)
   const lp = filter(ctx, 'lowpass', 250, 0.7)
-  const rg = gain(ctx, 0.12)
+  const rg = gain(ctx, 0.35)
   room.connect(lp).connect(rg).connect(out)
   room.start()
   started.push(room, lfo(ctx, 0.2, 0.04, rg.gain))
@@ -194,7 +194,7 @@ const tavern: Builder = (ctx) => graph(ctx, (out, sched, started) => {
 })
 
 const forest: Builder = (ctx) => graph(ctx, (out, sched, started) => {
-  windLayer(ctx, out, started, { cutoff: 700, level: 0.18 })
+  windLayer(ctx, out, started, { cutoff: 700, level: 0.28 })
   // leaves
   const src = noiseSource(ctx)
   const bp = filter(ctx, 'bandpass', 3000, 1)

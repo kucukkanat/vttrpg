@@ -3,7 +3,7 @@
  * the master volume, driven directly through the engine; plus the GM soundboard panel wired to a
  * local fake controller whose intents apply straight to the store, so `useGameAudio` is exercised.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { AssetRef } from '@/core/assets'
 import type { GameEvent, Scene } from '@/core/doc'
 import type { Intent } from '@/core/intents'
@@ -66,17 +66,21 @@ function fakeController(): GameController {
 
 export function DevStory() {
   const [ready, setReady] = useState(false)
-  const engineRef = useRef<AudioEngine | null>(null)
   const controller = useMemo(fakeController, [])
-  engineRef.current ??= createAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) })
-  const engine = engineRef.current
+  // Created in an effect so StrictMode's mount/unmount/mount cycle never leaves a disposed engine behind.
+  const [engine, setEngine] = useState<AudioEngine | null>(null)
+  useEffect(() => {
+    const e = createAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) })
+    setEngine(e)
+    return () => e.dispose()
+  }, [controller])
   const { unlocked, unlock } = useAudioUnlock(engine)
-  const [volume, setVolume] = useState(engine.getMasterVolume())
+  const [volume, setVolume] = useState(0.8)
+  useEffect(() => { if (engine) setVolume(engine.getMasterVolume()) }, [engine])
   const [log, setLog] = useState<string[]>([])
   const preset = useGame((s) => s.scenes[SCENE]?.ambientPreset ?? 'none')
   const events = useGame((s) => s.events.length)
   useEffect(() => { seedStore(); setReady(true) }, [])
-  useEffect(() => () => engine.dispose(), [engine])
   useGameAudio(ready ? engine : null)
 
   const note = (s: string) => setLog((l) => [s, ...l].slice(0, 8))
@@ -85,12 +89,12 @@ export function DevStory() {
     note(`ambience → ${p}`)
   }
   const shot = (name: (typeof BUILTIN_SOUNDS)[number]) => {
-    void engine.playOneShot(builtinRef(name))
+    void engine?.playOneShot(builtinRef(name))
     note(`one-shot ${name}`)
   }
-  const impact = (s: number) => { engine.diceImpact(s); note(`dice impact ${s}`) }
+  const impact = (s: number) => { engine?.diceImpact(s); note(`dice impact ${s}`) }
 
-  if (!ready) return null
+  if (!ready || !engine) return null
   const big: React.CSSProperties = { minHeight: 56, minWidth: 96, fontSize: 15, touchAction: 'manipulation' }
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--fg)', padding: '16px max(16px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-bottom))', display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)', maxWidth: 900, margin: '0 auto' }}>
