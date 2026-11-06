@@ -26,6 +26,7 @@ reports what it found and what is missing (`report.found / missing / warnings`).
 | Object | Type | Meaning |
 |---|---|---|
 | `COL_<anything>` | mesh | Collider. Hidden after load. Its near-vertical faces become 2D wall segments used for line-of-sight and fog. Keep these simple boxes; never rely on visual geometry for walls. A `COL_floor` slab is fine (its horizontal faces are ignored). |
+| `WALL_<anything>` | mesh | Visible wall (case-insensitive prefix). The table fades these out when the camera looks down from above so a room does not read as a picture frame in orbit view. Keep them at most 0.3 m thick and give each one a matching `COL_` box; the `WALL_` mesh itself never blocks sight. |
 | `LIGHT_<anything>` | light | Dynamic point/spot light. Custom properties on the light *object*: `flicker` (0..1, amplitude of the flame flicker), `color_temp` (Kelvin; overrides the light colour). The first four lights cast shadows. |
 | `SPAWN_player`, `SPAWN_<name>` | empty | Token spawn points, by name. `SPAWN_player` is where new player tokens appear. |
 | `GRID` | empty | World origin of grid cell (0,0). Custom properties: `cell_size` (metres), `type` (`square` or `hex`). Hex grids are pointy-top, axial coordinates, `cell_size` is the centre-to-centre spacing. |
@@ -39,7 +40,7 @@ both.
 ## Checklist before export
 
 1. Floor at height 0, +Y up, metres.
-2. Every wall that should block sight has a `COL_` box behind it.
+2. Every wall that should block sight has a `COL_` box behind it; name the visible wall `WALL_*`, no thicker than 0.3 m.
 3. One `GRID` empty at the centre of the cell you want to be (0,0), with `cell_size` and `type`.
 4. `SPAWN_player` placed on the floor.
 5. Lights named `LIGHT_*`; torches get `flicker` and `color_temp`.

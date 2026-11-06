@@ -6,7 +6,7 @@ import { readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import type { PointLight } from 'three'
+import { Box3, Mesh, type PointLight } from 'three'
 import { interpretScene } from '@/table/sceneLoader'
 
 const SCENES = resolve(__dirname, '../../public/library/scenes')
@@ -41,6 +41,21 @@ describe.each(files)('%s', (file) => {
     // Only the ambient track may be reported missing (the generated scenes name a preset instead).
     expect(scene.report.missing.filter((m) => !m.startsWith('ambient_audio'))).toEqual([])
     expect(scene.report.warnings.filter((w) => !w.startsWith('no FOG_'))).toEqual([])
+  })
+
+  it('names visible walls WALL_* and keeps them at most 0.3 m thick', async () => {
+    const gltf = await parseGlb(file)
+    const walls: Mesh[] = []
+    gltf.scene.traverse((o) => { if (o instanceof Mesh && /^wall_/i.test(o.name)) walls.push(o) })
+    if (file === 'forest.glb') { expect(walls).toHaveLength(0); return }
+    expect(walls.length).toBeGreaterThan(0)
+    for (const w of walls) {
+      const box = new Box3().setFromObject(w)
+      const thickness = Math.min(box.max.x - box.min.x, box.max.z - box.min.z)
+      expect(thickness, w.name).toBeLessThanOrEqual(0.3 + 1e-6)
+    }
+    // No visible mesh keeps the old lowercase wall_ names without the prefix.
+    gltf.scene.traverse((o) => { if (o.name.startsWith('wall_')) throw new Error(`unprefixed wall ${o.name}`) })
   })
 })
 

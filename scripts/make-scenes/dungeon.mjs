@@ -69,8 +69,8 @@ scene.add(floorCollider(COLS * CELL, ROWS * CELL))
 const walls = group('walls')
 const cols = group('colliders')
 function addWall(name, w, d, x, z) {
-  walls.add(block(name, [w, H, d], [x, z], rock))
-  cols.add(block(`COL_${name}`, [w, H, d], [x, z], rock))
+  walls.add(block(`WALL_${name}`, [w, H, d], [x, z], rock))
+  cols.add(block(`COL_wall_${name}`, [w, H, d], [x, z], rock))
 }
 let n = 0
 // Horizontal edges (between row j-1 and row j), merged along x.
@@ -83,7 +83,7 @@ for (let j = 0; j <= ROWS; j++) {
     while (k + 1 < COLS && isFloor(k + 1, j - 1) !== isFloor(k + 1, j)) k++
     const x0 = cx(i) - CELL / 2 - T / 2
     const x1 = cx(k) + CELL / 2 + T / 2
-    addWall(`wall_${n++}`, x1 - x0, T, (x0 + x1) / 2, cz(j) - CELL / 2)
+    addWall(`${n++}`, x1 - x0, T, (x0 + x1) / 2, cz(j) - CELL / 2)
     i = k + 1
   }
 }
@@ -97,7 +97,7 @@ for (let i = 0; i <= COLS; i++) {
     while (k + 1 < ROWS && isFloor(i - 1, k + 1) !== isFloor(i, k + 1)) k++
     const z0 = cz(j) - CELL / 2 - T / 2
     const z1 = cz(k) + CELL / 2 + T / 2
-    addWall(`wall_${n++}`, T, z1 - z0, cx(i) - CELL / 2, (z0 + z1) / 2)
+    addWall(`${n++}`, T, z1 - z0, cx(i) - CELL / 2, (z0 + z1) / 2)
     j = k + 1
   }
 }

@@ -3,6 +3,7 @@
  * convention documented in public/library/scenes/README.md:
  *
  *   COL_*   meshes  -> colliders / line-of-sight walls (hidden after load)
+ *   WALL_*  meshes  -> visible walls, faded when viewed from above (<= 0.3 m thick)
  *   LIGHT_* nodes   -> a holder node with `flicker` / `color_temp` userData and a PointLight child
  *   SPAWN_* empties -> token spawn points
  *   GRID    empty   -> grid origin; userData `cell_size`, `type`
@@ -125,10 +126,13 @@ export function floor(name, w, d, material, [x = 0, z = 0] = [], y = 0) {
 
 // ------------------------------------------------------------------ convention objects
 
-/** Visible wall plus a matching COL_ collider. Returns [visible, collider]. */
+/**
+ * Visible wall (`WALL_<name>`, faded by the table when the camera looks down from above; keep it
+ * at most 0.3 m thick) plus a matching `COL_wall_<name>` collider. Returns [visible, collider].
+ */
 export function wall(name, [w, h, d], [x, z], material, rotY = 0) {
-  const v = block(name, [w, h, d], [x, z], material, rotY)
-  const c = block(`COL_${name}`, [w, h, d], [x, z], material, rotY)
+  const v = block(`WALL_${name}`, [w, h, d], [x, z], material, rotY)
+  const c = block(`COL_wall_${name}`, [w, h, d], [x, z], material, rotY)
   return [v, c]
 }
 

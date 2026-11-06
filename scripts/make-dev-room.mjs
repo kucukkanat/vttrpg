@@ -5,8 +5,7 @@
  *
  *   node scripts/make-dev-room.mjs      (or `npm run scenes` for every generated scene)
  */
-import { Mesh } from 'three'
-import { CELL, block, fog, floor, floorCollider, grid, group, light, mat, newScene, spawn, writeGlb } from './make-scenes/lib.mjs'
+import { CELL, block, fog, floor, floorCollider, grid, group, light, mat, newScene, spawn, wall, writeGlb } from './make-scenes/lib.mjs'
 
 const ROOM_W = 12 // x, meters
 const ROOM_D = 9 // z
@@ -22,26 +21,19 @@ const scene = newScene('dev-room', { ambient_audio: 'library/audio/dungeon-drips
 // Visible floor and walls (render geometry)
 scene.add(floor('floor', ROOM_W, ROOM_D, floorMat))
 
-const walls = group('walls',
-  block('wall_north', [ROOM_W + WALL_T, WALL_H, WALL_T], [0, -ROOM_D / 2 - WALL_T / 2], stone),
-  block('wall_south', [ROOM_W + WALL_T, WALL_H, WALL_T], [0, ROOM_D / 2 + WALL_T / 2], stone),
-  block('wall_west', [WALL_T, WALL_H, ROOM_D], [-ROOM_W / 2 - WALL_T / 2, 0], stone),
-  block('wall_east', [WALL_T, WALL_H, ROOM_D], [ROOM_W / 2 + WALL_T / 2, 0], stone),
-)
-scene.add(walls)
-
-// An interior partition so line-of-sight has something to hide behind.
-const pillar = block('pillar', [0.6, WALL_H, 3.0], [1.5, -0.75], trimMat)
-scene.add(pillar)
-
-// Colliders: duplicates of the wall boxes, named COL_*; hidden after load, used for LoS.
+// Walls (WALL_* visible + COL_wall_* colliders) and an interior partition so line-of-sight has
+// something to hide behind.
+const walls = group('walls')
 const colliders = group('colliders')
-for (const src of [...walls.children, pillar]) {
-  const c = new Mesh(src.geometry.clone(), stone)
-  c.name = `COL_${src.name}`
-  c.position.copy(src.position)
-  colliders.add(c)
-}
+for (const [v, c] of [
+  wall('north', [ROOM_W + WALL_T, WALL_H, WALL_T], [0, -ROOM_D / 2 - WALL_T / 2], stone),
+  wall('south', [ROOM_W + WALL_T, WALL_H, WALL_T], [0, ROOM_D / 2 + WALL_T / 2], stone),
+  wall('west', [WALL_T, WALL_H, ROOM_D], [-ROOM_W / 2 - WALL_T / 2, 0], stone),
+  wall('east', [WALL_T, WALL_H, ROOM_D], [ROOM_W / 2 + WALL_T / 2, 0], stone),
+]) { walls.add(v); colliders.add(c) }
+scene.add(walls)
+scene.add(block('pillar', [0.6, WALL_H, 3.0], [1.5, -0.75], trimMat))
+colliders.add(block('COL_pillar', [0.6, WALL_H, 3.0], [1.5, -0.75], stone))
 colliders.add(floorCollider(ROOM_W, ROOM_D))
 scene.add(colliders)
 
