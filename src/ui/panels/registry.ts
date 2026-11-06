@@ -12,6 +12,8 @@ import { SkillsPanel } from './SkillsPanel'
 import { ChatPanel } from './ChatPanel'
 import { ObjectPanel } from './ObjectPanel'
 import { SoundboardPanel } from './SoundboardPanel'
+import { JournalPanel } from './JournalPanel'
+import { PrepPanel } from './PrepPanel'
 
 export interface PanelDef {
   id: string
@@ -38,4 +40,6 @@ export const PANELS: PanelDef[] = [
   { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right' },
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: '✦', component: SkillsPanel, scope: 'all', side: 'right' },
   { id: 'chat', title: 'Chat', short: 'Chat', glyph: '💬', component: ChatPanel, scope: 'all', side: 'right', fill: true },
+  { id: 'journal', title: 'Journal', short: 'Journal', glyph: '📖', component: JournalPanel, scope: 'all', side: 'right' },
+  { id: 'prep', title: 'Prep', short: 'Prep', glyph: '🧰', component: PrepPanel, scope: 'gm', side: 'left' },
 ]
