@@ -13,8 +13,12 @@ reports what it found and what is missing (`report.found / missing / warnings`).
   space, so unapplied scale on a parent is fine but unapplied *negative* scale is not.
 - Include: *Custom Properties* (needed for `flicker`, `color_temp`, `cell_size`, `type`),
   *Punctual Lights*, *Cameras* off.
-- Compression: Draco on. The decoder is loaded from gstatic at runtime. KTX2/Basis textures are
-  optional; the app only enables the KTX2 loader when a renderer is available.
+- Compression: Draco on. KTX2/Basis textures (`KHR_texture_basisu`, e.g. via gltf-transform
+  `etc1s`/`uastc`) are supported too and are the way to stay inside the iPad texture budget.
+  The Draco decoder and the Basis transcoder ship with the app (three bundles them; Vite emits
+  them as lazily fetched assets), so no CDN is involved. `loadSceneModel` accepts
+  `dracoDecoderPath` / `ktx2TranscoderPath` to use a CDN copy instead (`DRACO_DECODER_PATH`
+  points at Google's gstatic mirror).
 - Budget: keep a scene under ~50 MB on disk and ~300 MB of GPU memory (iPad).
 
 ## Naming convention
