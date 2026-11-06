@@ -16,6 +16,8 @@ export interface SheetViewProps {
   onChange(path: string, value: unknown): void
   onRoll(formula: string, label: string): void
   readOnly?: boolean
+  /** Evaluates a dice-free expression against this character (derived attributes). */
+  compute?(expr: string): unknown
 }
 
 function read(character: Character, bind: string): unknown {
@@ -23,11 +25,11 @@ function read(character: Character, bind: string): unknown {
   return getPath(character.data, bind.split('.'))
 }
 
-export function SheetView({ schema, character, onChange, onRoll, readOnly = false }: SheetViewProps) {
+export function SheetView({ schema, character, onChange, onRoll, readOnly = false, compute }: SheetViewProps) {
   return (
     <div className="sheet">
       {schema.sections.map((section, i) => (
-        <Section key={`${section.title}-${i}`} section={section} character={character} onChange={onChange} onRoll={onRoll} readOnly={readOnly} />
+        <Section key={`${section.title}-${i}`} section={section} character={character} onChange={onChange} onRoll={onRoll} readOnly={readOnly} compute={compute} />
       ))}
     </div>
   )
@@ -38,6 +40,7 @@ interface FieldProps {
   onChange(path: string, value: unknown): void
   onRoll(formula: string, label: string): void
   readOnly: boolean
+  compute?(expr: string): unknown
 }
 
 function Section({ section, ...rest }: { section: SheetSection } & FieldProps) {
@@ -54,10 +57,11 @@ function Section({ section, ...rest }: { section: SheetSection } & FieldProps) {
   )
 }
 
-function Field({ field, character, onChange, onRoll, readOnly }: { field: SheetField } & FieldProps) {
+function Field({ field, character, onChange, onRoll, readOnly, compute }: { field: SheetField } & FieldProps) {
   switch (field.kind) {
     case 'number': {
-      const v = read(character, field.bind)
+      let v = read(character, field.bind)
+      if (v === undefined && compute && field.readonly) v = safeCompute(compute, field.bind)
       const n = typeof v === 'number' ? v : ''
       return (
         <label className="field">
@@ -186,15 +190,29 @@ function Field({ field, character, onChange, onRoll, readOnly }: { field: SheetF
           {field.label}
         </button>
       )
+    case 'computed': {
+      const v = compute ? safeCompute(compute, field.expr) : undefined
+      const shown = typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(1)) : typeof v === 'string' || typeof v === 'boolean' ? String(v) : '—'
+      return (
+        <label className="field">
+          <span>{field.label}</span>
+          <div className="readonly computed">{shown}</div>
+        </label>
+      )
+    }
   }
+}
+
+function safeCompute(compute: (expr: string) => unknown, expr: string): unknown {
+  try { return compute(expr) } catch { return undefined }
 }
 
 /** A list whose single item field binds to "." holds plain values (e.g. condition ids) instead of objects. */
 function isScalarList(item: SheetField[]): boolean {
-  return item.length === 1 && item[0].kind !== 'roll' && item[0].bind === '.'
+  return item.length === 1 && item[0].kind !== 'roll' && item[0].kind !== 'computed' && item[0].bind === '.'
 }
 
 function prefixBind(field: SheetField, prefix: string): SheetField {
-  if (field.kind === 'roll') return field
+  if (field.kind === 'roll' || field.kind === 'computed') return field
   return { ...field, bind: field.bind === '.' ? prefix : `${prefix}.${field.bind}` } as SheetField
 }

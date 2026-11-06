@@ -197,6 +197,9 @@ function guardField(x: unknown, file: string, where: string): SheetField {
     case 'roll':
       expr(x.formula, file, `${where}.formula`)
       break
+    case 'computed':
+      expr(x.expr, file, `${where}.expr`)
+      break
     default:
       throw new PackError(file, `${where}: unknown field kind "${x.kind}"`)
   }

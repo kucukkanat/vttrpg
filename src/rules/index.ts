@@ -21,6 +21,8 @@ export interface RulesEngine {
   roll(formula: string, seed: string, context?: Record<string, unknown>): Promise<RollResult>
   /** Evaluate a DSL expression against a character's data (+ context). */
   evaluate(expr: string, character: Character, context?: Record<string, unknown>): Promise<number | string | boolean>
+  /** Synchronous evaluation for dice-free expressions (sheet display). Throws if the expression uses dice. */
+  evaluateNow(expr: string, character: Character, context?: Record<string, unknown>): number | string | boolean
   /** Validate an intent against the rules. Returns null if ok, else a reason. */
   validate(intent: Intent, actor: { isGm: boolean; pubkey: string }, doc: unknown): string | null
   /** Run chargen fully randomized (Mausritter one-roll) with the given seed. */

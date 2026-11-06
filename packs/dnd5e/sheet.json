@@ -45,9 +45,9 @@
           "label": "Languages"
         },
         {
-          "kind": "roll",
+          "kind": "computed",
           "label": "Proficiency bonus",
-          "formula": "pb"
+          "expr": "pb"
         }
       ]
     },
@@ -393,9 +393,9 @@
           "formula": "d20 + initiative"
         },
         {
-          "kind": "roll",
+          "kind": "computed",
           "label": "Armor Class",
-          "formula": "ac"
+          "expr": "ac"
         },
         {
           "kind": "number",
@@ -423,14 +423,14 @@
           "label": "Base speed (ft)"
         },
         {
-          "kind": "roll",
+          "kind": "computed",
           "label": "Speed",
-          "formula": "speed"
+          "expr": "speed"
         },
         {
-          "kind": "roll",
+          "kind": "computed",
           "label": "Passive Perception",
-          "formula": "passive_perception"
+          "expr": "passive_perception"
         },
         {
           "kind": "roll",
@@ -547,9 +547,9 @@
           "formula": "d20 + spell_attack"
         },
         {
-          "kind": "roll",
+          "kind": "computed",
           "label": "Spell save DC",
-          "formula": "spell_dc"
+          "expr": "spell_dc"
         },
         {
           "kind": "resource",

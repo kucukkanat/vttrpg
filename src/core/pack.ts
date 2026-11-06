@@ -76,6 +76,8 @@ export type SheetField =
     }
   | { kind: 'list'; bind: string; label: string; item: SheetField[] }
   | { kind: 'roll'; label: string; formula: string }
+  /** Read-only value computed from a dice-free expression (derived attributes, modifiers). */
+  | { kind: 'computed'; label: string; expr: string }
 
 export interface SheetSection {
   title: string

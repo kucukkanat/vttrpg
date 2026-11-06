@@ -436,5 +436,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     return out + text.slice(i)
   }
 
-  return { pack, roll, evaluate: evaluateFor, validate, generateCharacter, resolveSkill }
+  function evaluateNow(expr: string, character: Character, context: Data = {}): Value {
+    return evaluateSync(expr, contextScope(context, character))
+  }
+  return { pack, roll, evaluate: evaluateFor, evaluateNow, validate, generateCharacter, resolveSkill }
 }

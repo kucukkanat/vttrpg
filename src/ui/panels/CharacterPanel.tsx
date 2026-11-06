@@ -52,6 +52,7 @@ export function CharacterPanel({ controller }: { controller: GameController }) {
         schema={rules.pack.sheet}
         character={character}
         readOnly={!canEdit}
+        compute={(expr) => rules.evaluateNow(expr, character)}
         onChange={(path, value) => {
           const next: Character = path === 'name' ? { ...character, name: String(value) } : { ...character, data: setPath(character.data, path, value) }
           void controller.dispatch({ type: 'character.upsert', character: next })
