@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { Quaternion, Vector3 } from 'three'
-import { dieDef, toPhysicalDice, upReading } from './geometry'
+import { dieDef, toPhysicalDice, upFlatness, upReading } from './geometry'
 import { rapierReady, samplePose, seededRandom, simulateRollSync, type ThrowParams } from './simulate'
 
 const tray = { width: 8, depth: 5 }
@@ -36,6 +36,7 @@ describe('simulateRoll', () => {
         samplePose(rec, track, rec.duration, pos, rot)
         const def = dieDef(track.die.type)
         expect(def.readings[upReading(def, rot)].value).toBe(track.die.value)
+        expect(upFlatness(def, rot)).toBeGreaterThan(0.999)
         expect(Math.abs(pos.x)).toBeLessThan(tray.width / 2)
         expect(Math.abs(pos.z)).toBeLessThan(tray.depth / 2)
         expect(pos.y).toBeGreaterThan(0)

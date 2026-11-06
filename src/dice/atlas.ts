@@ -98,7 +98,7 @@ export function drawAtlas(type: DieType, colors: DieColors): HTMLCanvasElement {
         ctx.save()
         ctx.translate(x, y)
         ctx.rotate(Math.atan2(corner.x, corner.y))
-        ctx.font = `bold ${Math.round(inr * 0.75)}px system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`
+        ctx.font = `bold ${Math.round(inr * 0.9)}px system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`
         ctx.fillText(label, 0, 0)
         ctx.restore()
       })
@@ -107,7 +107,7 @@ export function drawAtlas(type: DieType, colors: DieColors): HTMLCanvasElement {
 
     const reading = def.readings[face.tile]
     const label = faceLabel(type, reading.value)
-    const size = inr * (label.length > 1 ? 0.95 : 1.25) * (poly.length === 3 ? 0.9 : 1)
+    const size = inr * (label.length > 1 ? 1.2 : 1.6) * (poly.length === 3 ? 0.95 : 1)
     ctx.font = `bold ${Math.round(size)}px system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`
     ctx.fillText(label, cx, cy + size * 0.04)
     if (label === '6' || label === '9') {

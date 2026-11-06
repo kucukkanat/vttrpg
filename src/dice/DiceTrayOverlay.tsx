@@ -59,10 +59,10 @@ function Scene({ tilt, fill, dieSize = 0.5, shadows = true, ...tray }: Omit<Dice
   const r = Math.max(w, d)
   return (
     <>
-      <hemisphereLight args={['#fff5e6', '#5a4a3a', 0.9]} />
+      <hemisphereLight args={['#fff5e6', '#6a5a4a', 1.4]} />
       <directionalLight
         position={[r * 0.3, r * 0.9, r * 0.4]}
-        intensity={2.2}
+        intensity={2.6}
         castShadow={shadows}
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0005}

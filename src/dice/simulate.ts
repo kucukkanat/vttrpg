@@ -61,6 +61,9 @@ export const SIM_DT = 1 / 60
 const MAX_STEPS = 60 * 12
 const REST_STEPS = 24
 const TAIL_STEPS = 12
+/** Cosine threshold (about 8 degrees) under which a resting die counts as cocked and gets re-thrown. */
+const FLAT_COS = 0.99
+const MAX_NUDGES = 8
 /** A real d20 is about 12 mm circumradius; gravity scales so big HUD dice fall like real ones. */
 const REAL_DIE_RADIUS = 0.012
 /** Dice read better a bit slower than life; gravity is scaled down by this factor. */
@@ -139,7 +142,7 @@ export function simulateRollSync(params: ThrowParams): RollRecording {
   const dir = new Vector3(side === 0 ? 1 : side === 1 ? -1 : 0, 0, side === 2 ? 1 : side === 3 ? -1 : 0)
   const across = new Vector3(-dir.z, 0, dir.x)
   const start = dir.clone().multiplyScalar(-(dir.x ? hw : hd) * 0.8)
-  const speed = Math.sqrt(g * dieSize) * range(2.6, 3.4)
+  const speed = Math.sqrt(g * dieSize) * range(2.0, 2.8)
   const acrossHalf = dir.x ? hd : hw
   const laneGap = Math.min(dieSize * 2.6, (acrossHalf * 1.6) / Math.max(1, dice.length - 1))
 
@@ -181,6 +184,7 @@ export function simulateRollSync(params: ThrowParams): RollRecording {
   const restLin = 0.2 * dieSize, restAng = 0.5
   let restRun = 0
   let steps = 0
+  let nudges = 0
 
   const record = (step: number) => {
     for (let i = 0; i < n; i++) {
@@ -207,7 +211,23 @@ export function simulateRollSync(params: ThrowParams): RollRecording {
       return Math.hypot(v.x, v.y, v.z) < restLin && Math.hypot(w.x, w.y, w.z) < restAng
     })
     restRun = resting ? restRun + 1 : 0
-    if (restRun >= REST_STEPS) { steps++; break }
+    if (restRun >= REST_STEPS) {
+      // Cocked dice (leaning on a wall or another die) get a nudge and keep going, like at a real
+      // table. Still seeded, so still deterministic.
+      const cocked = bodies.filter((b, i) => {
+        const r = b.rotation()
+        return upFlatness(dieDef(dice[i].type), new Quaternion(r.x, r.y, r.z, r.w)) < FLAT_COS
+      })
+      if (cocked.length === 0 || nudges >= MAX_NUDGES) { steps++; break }
+      nudges++
+      restRun = 0
+      const hop = Math.sqrt(2 * g * dieSize * 3)
+      for (const b of cocked) {
+        b.setLinvel({ x: range(-0.4, 0.4) * hop, y: hop, z: range(-0.4, 0.4) * hop }, true)
+        const spin = Math.sqrt(g / dieSize) * range(0.8, 1.6)
+        b.setAngvel({ x: range(-1, 1) * spin, y: range(-1, 1) * spin, z: range(-1, 1) * spin }, true)
+      }
+    }
   }
   record(Math.min(steps, MAX_STEPS - 1))
   const baseSteps = Math.min(steps + 1, MAX_STEPS)
