@@ -22,6 +22,19 @@ export type Start =
 /** A controller plus an optional message worth showing (e.g. a GM demoted to player on rejoin). */
 export type StartedGame = GameController & { notice?: string }
 
+/** Dev only: `localStorage.setItem('vttrpg.relays', JSON.stringify(['ws://localhost:7777']))` points new games at other relays. */
+function relayList(): string[] {
+  if (!import.meta.env.DEV) return DEFAULT_RELAYS
+  try {
+    const raw = localStorage.getItem('vttrpg.relays')
+    const list: unknown = raw ? JSON.parse(raw) : null
+    if (Array.isArray(list) && list.length && list.every((r) => typeof r === 'string')) return list as string[]
+  } catch {
+    // ignore
+  }
+  return DEFAULT_RELAYS
+}
+
 const packUrl = (id: string) =>
   BUILTIN_PACKS.find((p) => p.id === id)?.url ?? `packs/${id}/`
 
@@ -99,7 +112,7 @@ export async function startGame(start: Start): Promise<StartedGame> {
   const assets = createAssetResolver({ libraryBase: import.meta.env.BASE_URL + 'library/' })
 
   if (start.mode === 'create') {
-    const connection = await createGame({ relays: DEFAULT_RELAYS, identity, name: start.name })
+    const connection = await createGame({ relays: relayList(), identity, name: start.name })
     const meta: GameMeta = {
       name: start.name,
       gm: identity.pubkey,
@@ -116,7 +129,7 @@ export async function startGame(start: Start): Promise<StartedGame> {
   if (start.mode === 'join') {
     const info = parseInvite(start.invite)
     if (!info) throw new Error('That is not a valid invite link.')
-    const connection = await joinGame({ relays: info.relays.length ? info.relays : DEFAULT_RELAYS, identity, gameId: info.gameId, gameKey: info.gameKey, isGm: false })
+    const connection = await joinGame({ relays: info.relays.length ? info.relays : relayList(), identity, gameId: info.gameId, gameKey: info.gameKey, isGm: false })
     const m = metaOf(connection)
     const packId = (m.get('pack') as string | undefined) ?? 'mausritter'
     remember(connection, { name: (m.get('name') as string | undefined) ?? '', pack: packId, displayName: start.displayName })
@@ -132,7 +145,7 @@ export async function startGame(start: Start): Promise<StartedGame> {
     throw new Error('The saved invite for this game is unreadable; it was removed. Open a fresh invite link.')
   }
   const displayName = start.displayName ?? saved.displayName ?? (saved.isGm ? 'GM' : 'Player')
-  const relays = info.relays.length ? info.relays : saved.relays.length ? saved.relays : DEFAULT_RELAYS
+  const relays = info.relays.length ? info.relays : saved.relays.length ? saved.relays : relayList()
   // joinGame replays snapshot + deltas before resolving, for GMs too; the doc is complete when we read meta.
   const connection = await joinGame({ relays, identity, gameId: info.gameId, gameKey: info.gameKey, isGm: saved.isGm })
   const m = metaOf(connection)
