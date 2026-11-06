@@ -1,10 +1,14 @@
 /**
- * Local, never-synced UI state of the table (hover, drag ghost, camera toggles). Separate from
- * the game store so it never leaks into the shared document.
+ * Local, never-synced UI state of the table (hover, drag ghost, camera toggles, edit mode).
+ * Separate from the game store so it never leaks into the shared document.
  */
 import { create } from 'zustand'
 import type { CameraMode } from '@/core/doc'
-import type { TokenId } from '@/core/ids'
+import type { Vec3 } from '@/core/geometry'
+import type { PropId, TokenId } from '@/core/ids'
+import type { Selection } from '@/state/store'
+import type { GizmoMode, NodeBase } from './editing'
+import type { WallSegment } from './walls'
 
 export interface DragGhost {
   token: TokenId
@@ -26,6 +30,20 @@ export interface TargetingUi {
   candidate: { targets: TokenId[]; point: { x: number; y: number; z: number } } | null
 }
 
+/**
+ * Transform of the selected object while a gizmo handle or prop drag is in progress. Renderers
+ * show it instead of the committed document values; the intent is sent on release.
+ * `position` has the same meaning as the stored one (token/prop position, node local position,
+ * scene offset); `elevation` only applies to tokens.
+ */
+export interface EditPreview {
+  target: Selection
+  position: Vec3
+  rotationY: number
+  scale: number
+  elevation?: number
+}
+
 export interface TableUiState {
   hovered: TokenId | null
   /** Token under a pressed pointer, before it has moved far enough to count as a drag. */
@@ -39,6 +57,18 @@ export interface TableUiState {
   visible: ReadonlySet<string> | null
   /** Non-null while the host is aiming a skill on the table. */
   targeting: TargetingUi | null
+  /** GM edit mode: gizmo on the selection, scene nodes selectable. */
+  editMode: boolean
+  /** Snap gizmo translation / rotation / scale to steps (Alt held = free). */
+  snap: boolean
+  gizmoMode: GizmoMode
+  /** A gizmo handle or a prop is being dragged: camera controls stay off. */
+  editDrag: boolean
+  editPreview: EditPreview | null
+  /** Base (un-overridden) local transform of the selected scene node, for the panel. */
+  nodeBase: ({ name: string } & NodeBase) | null
+  /** Footprints of solid props, merged into the line-of-sight walls. */
+  propWalls: Record<PropId, WallSegment[]>
   set(partial: Partial<Omit<TableUiState, 'set'>>): void
 }
 
@@ -51,5 +81,28 @@ export const useTableUi = create<TableUiState>((set) => ({
   showGrid: true,
   visible: null,
   targeting: null,
+  editMode: false,
+  snap: true,
+  gizmoMode: 'translate',
+  editDrag: false,
+  editPreview: null,
+  nodeBase: null,
+  propWalls: {} as Record<PropId, WallSegment[]>,
   set: (partial) => set(partial),
 }))
+
+/**
+ * Non-reactive values the canvas publishes for hosts (where the camera looks, where the scene
+ * is), so a panel can place a new prop somewhere sensible without subscribing to the render loop.
+ */
+export const tableRuntime: { cameraTarget: Vec3 | null; sceneCenter: Vec3 | null; floorY: number } = {
+  cameraTarget: null,
+  sceneCenter: null,
+  floorY: 0,
+}
+
+/** Where a newly added object should appear: the camera target, else the scene centre. */
+export function placementPoint(): Vec3 {
+  const p = tableRuntime.cameraTarget ?? tableRuntime.sceneCenter ?? { x: 0, y: tableRuntime.floorY, z: 0 }
+  return { x: p.x, y: tableRuntime.floorY, z: p.z }
+}
