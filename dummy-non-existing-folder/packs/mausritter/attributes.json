@@ -1,5 +1,0 @@
-[
-  { "id": "str", "name": "Strength", "abbr": "STR", "min": 0, "max": 18 },
-  { "id": "dex", "name": "Dexterity", "abbr": "DEX", "min": 0, "max": 18 },
-  { "id": "wil", "name": "Willpower", "abbr": "WIL", "min": 0, "max": 18 }
-]
