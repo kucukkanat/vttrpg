@@ -7,12 +7,12 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useConnectionStatus, type ConnectionStatus } from '../shell/useConnectionStatus'
-import { buildInviteUrl, relayStatusLine, selectAll, useCopy } from '../invite'
+import { buildInviteUrl, RELAY_HEALTH_HINT, relayHealth, relayStatusLine, selectAll, useCopy } from '../invite'
 import './invite.css'
 
 const css = `
 .topbar { position: relative; }
-.status.gm-away .dot { background: var(--accent); }
+.status.gm-away .dot, .status.degraded .dot { background: var(--accent); }
 .offline-banner {
   position: absolute; left: 0; right: 0; top: 100%; z-index: 8;
   display: flex; align-items: center; gap: var(--sp-2); min-height: 44px;
@@ -26,7 +26,7 @@ const css = `
 
 export function TopBar({ controller, compact = false, trailing }: { controller: GameController; compact?: boolean; trailing?: ReactNode }) {
   const meta = useGame((s) => s.meta)
-  const { status, gmAway } = useConnectionStatus(controller)
+  const { status, gmAway, relaysOpen, relaysTotal } = useConnectionStatus(controller)
   const isGm = controller.connection.isGm
   const [menu, setMenu] = useState(false)
   const [invite, setInvite] = useState(false)
@@ -50,13 +50,18 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
 
   // A player with relays but no GM beacon for a while sees amber "GM away"; the GM never does.
   const showAway = status === 'connected' && gmAway && !isGm
-  const statusLabel = status === 'connected' ? (showAway ? 'Connected · GM away' : 'Connected') : status === 'connecting' ? 'Connecting…' : 'Offline'
+  // Fewer than half of the relays open: amber, with the count, so a GM knows why players lag.
+  const health = relayHealth(relaysOpen, relaysTotal)
+  const degraded = status === 'connected' && !showAway && health.level === 'degraded'
+  const statusLabel = status === 'connected'
+    ? (showAway ? 'Connected · GM away' : degraded ? `Connected · ${health.open}/${health.total} relays` : 'Connected')
+    : status === 'connecting' ? 'Connecting…' : 'Offline'
   const retry = () => controller.connection.reconnect()
   return (
     <header className={`topbar ${compact ? 'compact' : ''}`}>
       <style>{css}</style>
       <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
-      <span className={`status ${status}${showAway ? ' gm-away' : ''}`} role="status" aria-label={statusLabel} title={statusLabel}>
+      <span className={`status ${status}${showAway ? ' gm-away' : ''}${degraded ? ' degraded' : ''}`} role="status" aria-label={statusLabel} title={statusLabel}>
         <span className="dot" />
         <span className="small word">{statusLabel}</span>
       </span>
@@ -82,7 +87,7 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
       )}
       {isGm && (
         <div className="invite-anchor" ref={inviteRef}>
-          {invite && <InvitePopover controller={controller} status={status} onClose={closeInvite} containerRef={inviteRef} />}
+          {invite && <InvitePopover controller={controller} status={status} open={relaysOpen} onClose={closeInvite} containerRef={inviteRef} />}
         </div>
       )}
       {status === 'offline' && (
@@ -96,9 +101,11 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
   )
 }
 
-function InvitePopover({ controller, status, onClose, containerRef }: {
+function InvitePopover({ controller, status, open, onClose, containerRef }: {
   controller: GameController
   status: ConnectionStatus
+  /** Relays open right now, kept live by the top bar. */
+  open: number
   onClose: () => void
   containerRef: RefObject<HTMLDivElement | null>
 }) {
@@ -124,7 +131,7 @@ function InvitePopover({ controller, status, onClose, containerRef }: {
   }
 
   const total = controller.connection.relays.length
-  const open = status === 'offline' ? 0 : controller.connection.relayCount
+  const health = relayHealth(status === 'offline' ? 0 : open, total)
   return (
     <div className="invite-pop" role="dialog" aria-label="Invite players">
       <div className="invite-head">
@@ -141,8 +148,9 @@ function InvitePopover({ controller, status, onClose, containerRef }: {
       <p className="invite-hint">Players open this in any browser, no account needed.</p>
       <p className={`invite-relays status ${status}`}>
         <span className="dot" />
-        {status === 'connecting' ? 'Connecting to the relays…' : relayStatusLine(open, total)}
+        {status === 'connecting' ? 'Connecting to the relays…' : relayStatusLine(health.open, health.total)}
       </p>
+      {status !== 'connecting' && health.level !== 'good' && <p className="invite-hint">{RELAY_HEALTH_HINT}</p>}
     </div>
   )
 }

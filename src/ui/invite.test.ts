@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildInviteUrl, copyText, describeRelays, relayHost, relayStatusLine } from './invite'
+import { buildInviteUrl, copyText, describeRelays, relayHealth, relayHost, relayStatusLine } from './invite'
 
 describe('buildInviteUrl', () => {
   it('returns the connection invite link', () => {
@@ -43,5 +43,27 @@ describe('relay copy', () => {
     expect(relayStatusLine(3, 5)).toBe('Shared on 3 of 5 relays')
     expect(relayStatusLine(5, 5)).toBe('Shared on 5 relays')
     expect(relayStatusLine(1, 1)).toBe('Shared on 1 relay')
+  })
+})
+
+describe('relayHealth', () => {
+  it('is good with every relay open or at least half of them', () => {
+    expect(relayHealth(5, 5)).toEqual({ open: 5, total: 5, level: 'good' })
+    expect(relayHealth(2, 4)).toEqual({ open: 2, total: 4, level: 'good' })
+    expect(relayHealth(3, 5).level).toBe('good')
+    expect(relayHealth(1, 1).level).toBe('good')
+  })
+  it('is degraded when fewer than half are open', () => {
+    expect(relayHealth(2, 5)).toEqual({ open: 2, total: 5, level: 'degraded' })
+    expect(relayHealth(1, 4).level).toBe('degraded')
+    expect(relayHealth(1, 3).level).toBe('degraded')
+  })
+  it('is none with nothing open or no relays at all', () => {
+    expect(relayHealth(0, 5)).toEqual({ open: 0, total: 5, level: 'none' })
+    expect(relayHealth(0, 0)).toEqual({ open: 0, total: 0, level: 'none' })
+  })
+  it('clamps counts that disagree with the relay list', () => {
+    expect(relayHealth(7, 5)).toEqual({ open: 5, total: 5, level: 'good' })
+    expect(relayHealth(-1, 5)).toEqual({ open: 0, total: 5, level: 'none' })
   })
 })

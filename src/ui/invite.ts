@@ -128,6 +128,26 @@ export function relayStatusLine(open: number, total: number): string {
   return `Shared on ${open} of ${total} relays`
 }
 
+export type RelayHealthLevel = 'good' | 'degraded' | 'none'
+
+export interface RelayHealth {
+  open: number
+  total: number
+  /** `none`: nothing open; `degraded`: fewer than half of the relays are open; `good` otherwise. */
+  level: RelayHealthLevel
+}
+
+/** Shown under the relay line in the invite popover whenever the health is not `good`. */
+export const RELAY_HEALTH_HINT = 'Players may take longer to find the game; keep this tab open.'
+
+/** Clamps `open` into [0, total] and grades the connection for the status label and the invite popover. */
+export function relayHealth(open: number, total: number): RelayHealth {
+  const t = Math.max(0, total)
+  const o = Math.max(0, Math.min(open, t))
+  const level: RelayHealthLevel = t === 0 || o === 0 ? 'none' : o * 2 < t ? 'degraded' : 'good'
+  return { open: o, total: t, level }
+}
+
 export interface GamePreview {
   name: string
   gm: string
