@@ -1,7 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import type { GridSpec } from '@/core/geometry'
 import { cellToWorld, worldToCell } from './grid'
-import { imageBounds, imageFrame, imageGridToWorld, imageSceneGrid, imageSceneLayout, imageWallsToWorld, layoutForCells, pixelsPerCell } from './imageScene'
+import { imageBounds, imageFrame, imageGridToWorld, imagePlaneSize, imageSceneGrid, imageSceneLayout, imageWallsToWorld, layoutForCells, pixelsPerCell } from './imageScene'
+
+describe('imagePlaneSize', () => {
+  const grid: GridSpec = imageSceneGrid(1.5)
+  const frameFor = (widthCells: number, heightCells: number) =>
+    imageFrame(grid, { asset: { sha256: 'x', kind: 'image', mime: 'image/png', size: 0, sources: [] }, widthCells, heightCells } as unknown as Parameters<typeof imageFrame>[1])
+
+  it('is the frame when both sides are known, whatever the pixels say', () => {
+    expect(imagePlaneSize(frameFor(16, 12), 1024, 768)).toEqual({ width: 24, height: 18 })
+    // a map export declares its own cell counts; the image is stretched to them, never re-derived
+    expect(imagePlaneSize(frameFor(16, 10), 1024, 768)).toEqual({ width: 24, height: 15 })
+    expect(imagePlaneSize(frameFor(16, 12))).toEqual({ width: 24, height: 18 })
+  })
+  it('fills a missing height from the image aspect', () => {
+    expect(imagePlaneSize(frameFor(16, 0), 1024, 768)).toEqual({ width: 24, height: 18 })
+    expect(imagePlaneSize(frameFor(16, Number.NaN), 1024, 768)).toEqual({ width: 24, height: 18 })
+    // without pixels there is nothing better than a square
+    expect(imagePlaneSize(frameFor(16, 0))).toEqual({ width: 24, height: 24 })
+  })
+  it('fills a missing width from the image aspect', () => {
+    expect(imagePlaneSize(frameFor(0, 12), 1024, 768)).toEqual({ width: 24, height: 18 })
+  })
+  it('never collapses to nothing', () => {
+    const s = imagePlaneSize(frameFor(0, 0), 200, 100)
+    expect(s.width).toBeGreaterThan(0)
+    expect(s.height).toBeCloseTo(s.width / 2)
+  })
+})
 
 describe('imageSceneLayout', () => {
   it('derives rows from the aspect ratio and keeps columns', () => {
