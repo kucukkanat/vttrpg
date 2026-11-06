@@ -33,6 +33,18 @@ export function createController(opts: {
 }): GameController {
   const { connection, rules, assets } = opts
   const unbind = bindDoc(connection.doc)
+
+  // Custom skills live in the doc; the engine merges them over the pack's skills by id.
+  let customSig: string | undefined
+  const syncCustomSkills = (custom: GameDocShape['customSkills']) => {
+    if (!rules) return
+    const sig = JSON.stringify(custom)
+    if (sig === customSig) return
+    customSig = sig
+    rules.setCustomSkills(Object.values(custom))
+  }
+  syncCustomSkills(useGame.getState().customSkills)
+  const offCustomSkills = useGame.subscribe((s) => syncCustomSkills(s.customSkills))
   const me: Presence = {
     pubkey: opts.pubkey,
     name: opts.displayName,
@@ -111,6 +123,7 @@ export function createController(opts: {
     dispose() {
       offIntent()
       offPresence()
+      offCustomSkills()
       unbind()
       connection.close()
     },

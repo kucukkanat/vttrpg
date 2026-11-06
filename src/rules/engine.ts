@@ -63,7 +63,19 @@ export function outcomeFor(
 
 export function createRulesEngine(pack: LoadedPack): RulesEngine {
   const grid = inventoryField(pack)
-  const skillById = new Map<string, SkillDef>(pack.skills.map((s) => [s.id as string, s]))
+  const skillById = new Map<string, SkillDef>()
+  let customSkills: SkillDef[] = []
+  function rebuildSkills(): void {
+    skillById.clear()
+    for (const s of pack.skills) skillById.set(s.id as string, s)
+    for (const s of customSkills) skillById.set(s.id as string, s)
+  }
+  rebuildSkills()
+  function setCustomSkills(skills: SkillDef[]): void {
+    customSkills = skills.slice()
+    rebuildSkills()
+  }
+  const allSkills = (): SkillDef[] => [...skillById.values()]
   const resolution = pack.manifest.resolution
 
   const labelOf = (id: string): string =>
@@ -281,9 +293,9 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
   // ---------------------------------------------------------------- skills
 
-  async function resolveSkill(skillId: string, source: Character, targets: Character[], seed: string) {
-    const skill = skillById.get(skillId)
-    if (!skill) throw new Error(`unknown skill "${skillId}"`)
+  async function resolveSkill(skillRef: string | SkillDef, source: Character, targets: Character[], seed: string) {
+    const skill = typeof skillRef === 'string' ? skillById.get(skillRef) : skillRef
+    if (!skill) throw new Error(`unknown skill "${String(skillRef)}"`)
     const stream = new DiceStream(seed)
     const messages: string[] = []
     const originals = new Map<string, Character>()
@@ -448,5 +460,5 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
   function evaluateNow(expr: string, character: Character, context: Data = {}): Value {
     return evaluateSync(expr, contextScope(context, character))
   }
-  return { pack, roll, evaluate: evaluateFor, evaluateNow, blankCharacter, validate, generateCharacter, resolveSkill }
+  return { pack, roll, evaluate: evaluateFor, evaluateNow, blankCharacter, validate, generateCharacter, resolveSkill, setCustomSkills, allSkills }
 }

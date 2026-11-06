@@ -29,14 +29,29 @@ export interface RulesEngine {
   blankCharacter(id: string, name: string): Character
   /** Run chargen fully randomized (Mausritter one-roll) with the given seed. */
   generateCharacter(seed: string, name: string): Promise<Character>
-  /** Resolve a skill use into document patches + vfx cues. */
-  resolveSkill(skillId: string, source: Character, targets: Character[], seed: string): Promise<{
+  /**
+   * Resolve a skill use into document patches + vfx cues. Pass a skill id to use a pack or custom
+   * skill, or a `SkillDef` to dry-run an unsaved definition (the skill editor's Test button).
+   */
+  resolveSkill(skill: string | SkillDef, source: Character, targets: Character[], seed: string): Promise<{
     patches: { character: string; data: Record<string, unknown> }[]
     messages: string[]
     vfx: VfxCue[]
   }>
+  /**
+   * Skills created or overridden in this game (`GameDocShape.customSkills`). They are merged over
+   * `pack.skills` by id for lookup, validation and resolution; `pack.skills` keeps the originals.
+   * Calling it again replaces the previous custom set, so removing one restores the pack's version.
+   */
+  setCustomSkills(skills: SkillDef[]): void
+  /** Pack skills with custom overrides applied in place, followed by new custom skills. */
+  allSkills(): SkillDef[]
 }
 
 export { loadPack, createRulesEngine, BUILTIN_PACKS } from './impl'
+/** Validate a skill definition the way the pack loader does (throws `PackError`). */
+export { guardSkill, PackError } from './load'
+/** Parse a DSL expression; throws `ExprError` with a message on syntax errors. */
+export { parse as parseExpression, ExprError } from './expr'
 export { SheetView } from './SheetView'
 export type { SheetViewProps } from './SheetView'
