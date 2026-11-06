@@ -11,6 +11,7 @@ import { CharacterPanel } from './CharacterPanel'
 import { SkillsPanel } from './SkillsPanel'
 import { ChatPanel } from './ChatPanel'
 import { ObjectPanel } from './ObjectPanel'
+import { SoundboardPanel } from './SoundboardPanel'
 
 export interface PanelDef {
   id: string
@@ -30,6 +31,7 @@ export const PANELS: PanelDef[] = [
   { id: 'scenes', title: 'Scenes', short: 'Scenes', glyph: '🗺', component: ScenesPanel, scope: 'all', side: 'left' },
   { id: 'tokens', title: 'Tokens', short: 'Tokens', glyph: '♟', component: TokensPanel, scope: 'all', side: 'left' },
   { id: 'object', title: 'Edit', short: 'Edit', glyph: '✎', component: ObjectPanel, scope: 'all', side: 'left' },
+  { id: 'sound', title: 'Sound', short: 'Sound', glyph: '🔊', component: SoundboardPanel, scope: 'gm', side: 'left' },
   { id: 'players', title: 'Players', short: 'Players', glyph: '👥', component: PlayersPanel, scope: 'all', side: 'left' },
   { id: 'character', title: 'Character', short: 'Sheet', glyph: '📜', component: CharacterPanel, scope: 'all', side: 'right' },
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: '✦', component: SkillsPanel, scope: 'all', side: 'right' },

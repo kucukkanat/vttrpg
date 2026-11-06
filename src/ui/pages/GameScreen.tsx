@@ -9,6 +9,7 @@ import { TopBar } from '../panels/TopBar'
 import { PANELS } from '../panels/registry'
 import { useSkillTargeting } from '../panels/SkillsPanel'
 import { useMediaQuery } from '../useMediaQuery'
+import { sharedAudioEngine } from '@/audio'
 
 export function GameScreen() {
   const { controller } = useSession()
@@ -52,6 +53,7 @@ export function GameScreen() {
           showRim={false}
           floor="shadow"
           onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
+          onImpact={(strength) => sharedAudioEngine({ resolve: resolveAsset }).diceImpact(strength)}
         />
       )}
     </section>
