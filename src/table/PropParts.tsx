@@ -27,6 +27,7 @@ import { usePropPointer } from './propPointer'
 import { flickerNoise } from './SceneModel'
 import { useTableUi } from './tableState'
 import { registerPropObject } from './build/editRuntime'
+import { useBuildUi } from './build/buildState'
 import { useDoorClicks } from './doorClick'
 import type { GraphicsTier } from './graphics'
 
@@ -121,8 +122,12 @@ const MemoInvisiblePart = memo(function InvisiblePart({ prop }: { prop: Prop }) 
   const scale = preview?.scale ?? propScale(prop)
   const parts = localParts(prop, undefined, cell)
   const playerDoor = !gm && !!prop.door && !!scene.playersOpenDoors && !prop.door.locked
+  // Walls and bare lights show while the GM edits, with Show walls, or while placing walls; doors always (they are clicked).
+  const editing = useTableUi((s) => s.buildMode)
+  const showWalls = useBuildUi((s) => s.showWalls || s.tool === 'segment' || !!s.proposal)
   useCursor(hover && (gm || playerDoor), prop.door ? 'pointer' : 'grab')
   if (!gm && !playerDoor) return null
+  const shown = !!prop.door || editing || showWalls || selected || hover
 
   const y = 0.06
   const color = selected ? SELECT : hover ? HOVER : prop.door ? (prop.door.locked ? BUILD.locked : prop.door.open ? BUILD.doorOpen : BUILD.door) : BUILD.wall
@@ -146,7 +151,7 @@ const MemoInvisiblePart = memo(function InvisiblePart({ prop }: { prop: Prop }) 
   return (
     <group ref={group} userData={{ propId: prop.id }} position={[position.x, position.y, position.z]} rotation={[0, rotation.y, 0]} {...handlers}>
       <group scale={[scale.x, 1, scale.z]}>
-        {gm && lines.map((l, i) => (
+        {gm && shown && lines.map((l, i) => (
           <Line key={i} points={l.pts} color={color} lineWidth={l.width} dashed={l.dashed} dashSize={0.2} gapSize={0.12}
             depthTest={false} transparent opacity={0.95} renderOrder={20} raycast={noRaycast} />
         ))}
@@ -163,7 +168,7 @@ const MemoInvisiblePart = memo(function InvisiblePart({ prop }: { prop: Prop }) 
       </group>
       {gm && prop.light && !parts && (
         <group position-y={bulbY}>
-          <mesh raycast={noRaycast}>
+          <mesh raycast={noRaycast} visible={shown}>
             <sphereGeometry args={[0.12 * cell, 12, 8]} />
             <meshBasicMaterial color={selected ? SELECT : prop.light.color} />
           </mesh>

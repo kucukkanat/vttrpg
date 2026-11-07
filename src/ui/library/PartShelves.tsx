@@ -13,7 +13,12 @@ import { useEffect, useMemo, useState } from 'react'
 import type { GameController } from '../controller'
 import type { CatalogueEntry } from '@/core/catalogue'
 import { BUILTIN_KITS, type KitManifest } from '@/core/kits'
-import { isNoModel } from '@/core/propParts'
+import type { Prop } from '@/core/doc'
+import { hasModel, isNoModel } from '@/core/propParts'
+import { MAX_PROPS_PER_INTENT } from '@/core/props'
+import { useGame } from '@/state/store'
+import { tableRuntime } from '@/table/tableState'
+import { pushToast } from '../toasts'
 import { armSegmentTool, pickUpModel, useBuildUi } from '@/table/build/buildState'
 import { lightSourceHeld } from '@/table/build/lightSources'
 import { loadBuiltinKits, useKitManifests } from '@/table/kits/manifests'
@@ -134,7 +139,84 @@ export function LightsShelf({ filter, query, phone }: ShelfProps) {
   )
 }
 
-export function WallsShelf({ filter, query, phone }: ShelfProps) {
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
+
+/**
+ * The scene's walls at the top of the shelf: show them all, who may open doors, wall detection
+ * on a map image (reviewed on the table before anything changes) and removing them in bulk.
+ */
+function SceneWalls({ controller }: { controller: GameController }) {
+  const sceneId = useGame((s) => s.meta?.activeScene ?? null)
+  const scene = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene] : undefined))
+  const props = useGame((s) => s.props)
+  const showWalls = useBuildUi((s) => s.showWalls)
+  const proposal = useBuildUi((s) => (s.proposal && s.proposal.scene === sceneId ? s.proposal : null))
+  const set = useBuildUi((s) => s.set)
+  const [sensitivity, setSensitivity] = useState(0.5)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const mine = useMemo(() => Object.values(props).filter((p) => p.scene === sceneId && !hasModel(p) && (p.wall || p.door)), [props, sceneId])
+  const detected = useMemo(() => mine.filter((p) => p.tags?.includes('detected')), [mine])
+  if (!scene || !sceneId) return null
+  const remove = (ids: Prop['id'][]) => { for (let i = 0; i < ids.length; i += MAX_PROPS_PER_INTENT) void controller.dispatch({ type: 'props.remove', ids: ids.slice(i, i + MAX_PROPS_PER_INTENT) }) }
+  const detect = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const { detectSceneWalls } = await import('@/import')
+      const url = await controller.assets.resolve(scene.image!.asset)
+      const blob = await (await fetch(url)).blob()
+      const result = await detectSceneWalls(scene, blob, sensitivity)
+      set({ proposal: { scene: sceneId, walls: result.walls } })
+    } catch (e) {
+      setError(`Could not read the map: ${errText(e)}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const accept = async () => {
+    if (!proposal) return
+    const { segmentWallProps } = await import('@/import')
+    const placed = segmentWallProps(scene, proposal.walls, { y: tableRuntime.floorY ?? 0, tags: ['detected'] })
+    for (let i = 0; i < placed.length; i += MAX_PROPS_PER_INTENT) void controller.dispatch({ type: 'props.place', props: placed.slice(i, i + MAX_PROPS_PER_INTENT) })
+    set({ proposal: null })
+    pushToast({ text: `Added ${placed.length} invisible ${placed.length === 1 ? 'wall' : 'walls'}`, ttl: 2500 })
+  }
+  return (
+    <section className="lib-section lib-scene-walls" aria-label="Walls in this scene">
+      <h4 className="lib-section-title">This scene <span className="muted">· {mine.length} invisible</span></h4>
+      <label className="check small">
+        <input type="checkbox" checked={showWalls} onChange={(e) => set({ showWalls: e.target.checked })} /> Show walls
+      </label>
+      <label className="check small" title="Players click unlocked doors to open or close them; locked doors stay shut">
+        <input type="checkbox" checked={!!scene.playersOpenDoors} onChange={(e) => void controller.dispatch({ type: 'scene.update', scene: sceneId, patch: { playersOpenDoors: e.target.checked } })} /> Players may open doors
+      </label>
+      {scene.image && (
+        <div className="lib-opts" role="group" aria-label="Detect walls">
+          <label className="lib-opt lib-range" title="Detection sensitivity">
+            <span className="muted small">Detect {Math.round(sensitivity * 100)}%</span>
+            <input type="range" min={0} max={1} step={0.05} value={sensitivity} onChange={(e) => setSensitivity(Number(e.target.value))} aria-label="Detection sensitivity" />
+          </label>
+          <button type="button" className="tiny" disabled={busy} onClick={() => void detect()} title="Find walls in the map image's dark lines; you review them on the table before anything changes">
+            {busy ? 'Looking…' : proposal ? 'Detect again' : 'Detect walls'}
+          </button>
+          {proposal && <button type="button" className="tiny primary" disabled={!proposal.walls.length} onClick={() => void accept()}>Accept {proposal.walls.length}</button>}
+          {proposal && <button type="button" className="tiny" onClick={() => set({ proposal: null })}>Discard</button>}
+        </div>
+      )}
+      {proposal && !proposal.walls.length && <p className="muted small">No walls found; try a higher sensitivity.</p>}
+      {error && <p className="small error">{error}</p>}
+      {!proposal && (detected.length > 0 || mine.length > 0) && (
+        <div className="lib-opts">
+          {detected.length > 0 && <button type="button" className="tiny danger" onClick={() => remove(detected.map((p) => p.id))} title="Undo brings them back">Remove {detected.length} detected</button>}
+          {mine.length > detected.length && <button type="button" className="tiny danger" onClick={() => remove(mine.map((p) => p.id))} title="Every invisible wall and door in this scene (Undo brings them back)">Remove all invisible</button>}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function WallsShelf({ controller, filter, query, phone }: ShelfProps) {
   const prefs = usePrefs(filter, query)
   const { entries, mine, loading } = useEntries()
   const manifestsById = useKitManifests((s) => s.manifests)
@@ -152,6 +234,7 @@ export function WallsShelf({ filter, query, phone }: ShelfProps) {
   return (
     <div className="lib-shelf lib-parts">
       <div className="lib-scroll">
+        {filter === 'all' && !query && <SceneWalls controller={controller} />}
         {total === 0 && <p className="muted small lib-empty">{emptyText(filter, query, loading)}</p>}
         <Section title="For map images" count={shelf.invisible.length}>
           {shelf.invisible.map((s) => (
