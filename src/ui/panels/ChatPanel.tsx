@@ -6,7 +6,8 @@ import { newSeed } from '@/dice'
 import type { PlayerPubkey } from '@/core/ids'
 import { findWhisperTarget, type Person } from './chatNames'
 import { formatDay, formatTime, groupMessages, isChatMessage } from './chatGroups'
-import { DiceValues } from '../components'
+import { DiceRow } from '../dice/DiceFace'
+import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
 import './ChatPanel.css'
 
@@ -105,11 +106,26 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   const mineOrPublic = chat.filter((m) => !m.to || m.author === me || m.to.includes(me as PlayerPubkey) || controller.connection.isGm)
   const blocks = groupMessages(interleave(mineOrPublic, notices))
 
-  const body = (m: ChatMessage) => m.kind === 'roll' && m.roll ? (
-    <span><em>{m.text}</em> → <strong>{m.roll.total}</strong> <DiceValues className="muted small" formula={m.roll.formula} dice={m.roll.dice} />
-      {m.roll.outcome && 'success' in m.roll.outcome && <span className={m.roll.outcome.success ? 'ok' : 'bad'}> {m.roll.outcome.success ? 'success' : 'fail'}{m.roll.outcome.critical ? '!' : ''}</span>}
-    </span>
-  ) : m.text
+  const body = (m: ChatMessage) => {
+    if (m.kind !== 'roll' || !m.roll) return m.text
+    const r = m.roll
+    const label = rollLabel(m.text, r.formula)
+    const outcome = rollOutcome(r.outcome)
+    // The visual card is hidden from screen readers; the role="img" label speaks the full result.
+    return (
+      <span className="roll-card" role="img" aria-label={rollSummary(r, m.text)}>
+        <span className="roll-head" aria-hidden="true">
+          {label && <span className="roll-label">{label}</span>}
+          <span className="roll-formula">{r.formula}</span>
+        </span>
+        <span className="roll-line" aria-hidden="true">
+          <DiceRow dice={dieViews(r.formula, r.dice)} />
+          <span className="roll-total">{r.total}</span>
+          {outcome && <span className={`roll-tag ${outcome.success ? 'ok' : 'bad'}${outcome.critical ? ' crit' : ''}`}>{outcomeText(outcome)}</span>}
+        </span>
+      </span>
+    )
+  }
   const time = (at: number) => <time className="time muted" dateTime={new Date(at).toISOString()}>{formatTime(at)}</time>
 
   return (

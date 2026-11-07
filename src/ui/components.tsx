@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { colorName } from './colorName'
-import { keptMask } from '@/dice/kept'
+import { dieLabel, dieViews } from './dice/diceFaces'
+import { DiceRow } from './dice/DiceFace'
 
 export function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -54,21 +55,16 @@ export function Swatch({ color, on = false, onPick }: { color: string; on?: bool
 }
 
 /**
- * The individual dice of a roll, "[5, 2, 1]", with dice that `kh`/`kl` dropped struck through and
- * named for screen readers. `formula` is the roll's text (e.g. "4d6kh3").
+ * The individual dice of a roll drawn as small faces (d6 pips, polygon badges for other dice), with
+ * dice that `kh`/`kl` dropped faded and struck, natural max/min highlighted, and the values spoken
+ * as one label. `formula` is the roll's text (e.g. "4d6kh3"); `sides` is optional per die.
  */
-export function DiceValues({ formula, dice, className }: { formula: string; dice: { value: number }[]; className?: string }) {
-  const kept = keptMask(formula, dice)
+export function DiceValues({ formula, dice, className }: { formula: string; dice: { value: number; sides?: number }[]; className?: string }) {
+  const views = dieViews(formula, dice)
+  if (!views.length) return null
   return (
-    <span className={className}>
-      [
-      {dice.map((d, i) => (
-        <span key={i}>
-          {i > 0 && ', '}
-          {kept[i] ? d.value : <s className="die dropped" aria-label={`${d.value}, dropped`}>{d.value}</s>}
-        </span>
-      ))}
-      ]
+    <span className={['dice-values', className ?? ''].filter(Boolean).join(' ')} role="img" aria-label={`Dice: ${views.map(dieLabel).join('; ')}`}>
+      <DiceRow dice={views} />
     </span>
   )
 }

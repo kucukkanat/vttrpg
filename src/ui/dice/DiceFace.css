@@ -1,0 +1,21 @@
+/* Drawn dice faces (dice/DiceFace.tsx), shared by the chat log and the roll toast. */
+.dice-row { display: inline-flex; flex-wrap: wrap; align-items: flex-start; gap: 3px; min-width: 0; max-width: 100%; vertical-align: middle; }
+.die-face { display: inline-flex; flex-direction: column; align-items: center; flex: none; line-height: 1; color: var(--fg); }
+.die-face svg { display: block; overflow: visible; }
+.die-face .die-body { fill: var(--panel-2); stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; }
+.die-face .die-pip { fill: var(--fg); }
+.die-face .die-num { fill: currentColor; font-weight: 700; font-variant-numeric: tabular-nums; font-family: inherit; }
+.die-face .die-sides { font-size: 8px; color: var(--muted); margin-top: 1px; letter-spacing: .02em; }
+.die-face .die-strike { stroke: var(--fg); stroke-width: 2; stroke-linecap: round; }
+/* Natural max / natural 1: coloured outline and a soft fill. */
+.die-face.nat-max .die-body { stroke: var(--ok); stroke-width: 2.25; fill: rgba(143, 209, 143, .16); }
+.die-face.nat-max .die-pip { fill: var(--ok); }
+.die-face.nat-max { color: var(--ok); }
+.die-face.nat-min .die-body { stroke: var(--bad); stroke-width: 2.25; fill: rgba(242, 139, 130, .16); }
+.die-face.nat-min .die-pip { fill: var(--bad); }
+.die-face.nat-min { color: var(--bad); }
+/* Dropped by kh/kl: faded and struck (the strike line is drawn in the SVG). */
+.die-face.dropped { opacity: .45; text-decoration: none; }
+.die-face.dropped .die-body { stroke: var(--muted); fill: transparent; }
+.die-face.dropped .die-pip, .die-face.dropped { color: var(--muted); }
+.die-face.dropped .die-pip { fill: var(--muted); }
