@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PlayerPubkey, SceneId } from './ids'
-import {
-  activeBuilders, admitPresence, BUILD_IDLE_MS, BUILD_STALE_MS, BuildPresenceTracker, encodeBuildPresence, MAX_BUILD_SELECTION,
-  sanitizeBuildPresence, type BuilderState, type Presence,
-} from './presence'
+import { admitPresence, MAX_BUILD_SELECTION, sanitizeBuildPresence, type Presence } from './presence'
+import { activeBuilders, BUILD_IDLE_MS, BUILD_STALE_MS, BuildPresenceTracker, encodeBuildPresence, type BuilderState } from './builderPresence'
 
 const S = 'scene-1' as SceneId
 const state = (extra: Partial<BuilderState> = {}): BuilderState => ({ scene: S, cursor: { x: 1.23456, y: 0, z: -2.0049 }, held: null, selection: [], ...extra })

@@ -6,7 +6,8 @@
 import type { AssetRef } from '@/core/assets'
 import type { CatalogueEntry } from '@/core/catalogue'
 import type { Prop } from '@/core/doc'
-import { getAssetStatus, readUnshared, reshareCandidates, type AssetResolver } from '@/assets'
+import { getAssetStatus, type AssetResolver } from '@/assets'
+import { readUnshared, reshareCandidates } from '@/assets/unshared'
 import { useGame } from '@/state/store'
 
 /** Wait this long after the document arrives, so the table's own loads go first. */
