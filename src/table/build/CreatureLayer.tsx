@@ -64,16 +64,16 @@ export function CreatureLayer({ bounds }: { bounds: Bounds2 }) {
         <group key={i} position={[g.position.x, floorY + 0.02, g.position.z]}>
           <mesh position-y={0.06} raycast={noRaycast} renderOrder={21}>
             <cylinderGeometry args={[r, r, 0.12, 32]} />
-            <meshBasicMaterial color={g.color} transparent opacity={0.5} depthWrite={false} />
+            <meshBasicMaterial color={g.color} transparent opacity={0.55} depthWrite={false} depthTest={false} />
           </mesh>
           <mesh rotation-x={-Math.PI / 2} position-y={0.005} raycast={noRaycast} renderOrder={21}>
             <ringGeometry args={[r * 0.98, r * 1.12, 40]} />
-            <meshBasicMaterial color={BUILD.proposal} transparent opacity={0.9} depthWrite={false} />
+            <meshBasicMaterial color={BUILD.proposal} transparent opacity={0.9} depthWrite={false} depthTest={false} />
           </mesh>
         </group>
       ))}
       {held && hover && ghost[0] && (
-        <FloorLabel x={ghost[0].position.x} y={floorY + 0.3} z={ghost[0].position.z} color={BUILD.proposal}>
+        <FloorLabel x={ghost[0].position.x} y={floorY + 0.05} z={ghost[0].position.z + r * 1.9} color={BUILD.proposal}>
           {busy ? 'Placing…' : `${held.title}${held.tokens.length > 1 ? ` ×${held.tokens.length}` : ''} · ${visible ? 'visible' : 'hidden'}`}
         </FloorLabel>
       )}
