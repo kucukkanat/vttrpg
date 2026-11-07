@@ -3,6 +3,7 @@
  * hand-built store state, and a tiny control bar to switch camera mode, GM / player view and
  * edit mode. The Edit panel needs a controller, so the bar has buttons that fire the same intents.
  */
+import { migratedScale } from '@/core/props'
 import { useEffect, useState } from 'react'
 import type { Prop, Scene, Token } from '@/core/doc'
 import type { TargetShape } from '@/core/geometry'
@@ -138,6 +139,30 @@ function applyLocally(intent: Intent) {
       s._replaceFromDoc({ props: next })
       break
     }
+    case 'props.place': {
+      const next = { ...s.props }
+      for (const p of intent.props) next[p.id] = p
+      s._replaceFromDoc({ props: next })
+      break
+    }
+    case 'props.update': {
+      const next = { ...s.props }
+      for (const u of intent.updates) { const p = next[u.id]; if (p) next[u.id] = { ...p, ...u.patch, id: p.id } }
+      s._replaceFromDoc({ props: next })
+      break
+    }
+    case 'props.remove': {
+      const next = { ...s.props }
+      for (const id of intent.ids) delete next[id]
+      s._replaceFromDoc({ props: next })
+      break
+    }
+    case 'props.migrate': {
+      const next = { ...s.props }
+      for (const { id, fit } of intent.items) { const p = next[id]; if (p && typeof p.scale === 'number') next[id] = { ...p, scale: migratedScale(p.scale, fit), legacyFit: fit } }
+      s._replaceFromDoc({ props: next })
+      break
+    }
     default:
       break
   }
@@ -148,6 +173,7 @@ function describe(i: Intent): string {
     case 'token.move': return `${i.type} ${i.token} -> ${i.position.x.toFixed(2)},${i.position.z.toFixed(2)}`
     case 'token.update': return `${i.type} ${JSON.stringify(i.patch)}`
     case 'prop.update': return `${i.type} ${JSON.stringify(i.patch)}`
+    case 'props.update': return `${i.type} ${JSON.stringify(i.updates)}`
     case 'scene.update': return `${i.type} ${JSON.stringify(i.patch)}`
     case 'fog.reveal': return `${i.type} +${i.cells.length}`
     default: return i.type
@@ -182,7 +208,8 @@ export function DevStory() {
   const addProp = () => {
     const id = `prop-${Date.now().toString(36)}` as PropId
     const at = placementPoint()
-    onIntent({ type: 'prop.add', prop: { id, scene: SCENE, name: 'Crate house', model: DEV_ROOM_MODEL, position: at, rotation: { x: 0, y: 0, z: 0 }, scale: 0.1 } })
+    // A version 1 scale on purpose: the story exercises the legacy fit and its migration.
+    onIntent({ type: 'props.place', props: [{ id, scene: SCENE, name: 'Crate house', model: DEV_ROOM_MODEL, position: at, rotation: { x: 0, y: 0, z: 0 }, scale: 0.1 }] })
     setSelection({ kind: 'prop', id })
     uiSet({ editMode: true })
   }
@@ -221,11 +248,11 @@ export function DevStory() {
         <button onClick={addProp}>add prop ({propCount})</button>
         <button
           disabled={selection?.kind !== 'prop'}
-          onClick={() => { if (selection?.kind === 'prop') { onIntent({ type: 'prop.remove', prop: selection.id }); setSelection(null) } }}
+          onClick={() => { if (selection?.kind === 'prop') { onIntent({ type: 'props.remove', ids: [selection.id] }); setSelection(null) } }}
         >remove prop (Del)</button>
         <button
           disabled={selection?.kind !== 'prop'}
-          onClick={() => { if (selection?.kind === 'prop') onIntent({ type: 'prop.update', prop: selection.id, patch: { solid: !useGame.getState().props[selection.id]?.solid } }) }}
+          onClick={() => { if (selection?.kind === 'prop') onIntent({ type: 'props.update', updates: [{ id: selection.id, patch: { solid: !useGame.getState().props[selection.id]?.solid } }] }) }}
         >toggle solid</button>
         <span>|</span>
         <button onClick={() => { const t = useGame.getState().tokens['tok-mouse' as TokenId]; if (t) onIntent({ type: 'token.update', token: t.id, patch: { elevation: ((t.elevation ?? 0) + 0.5) % 3 } }) }}>

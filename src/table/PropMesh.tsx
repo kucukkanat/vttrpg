@@ -3,16 +3,19 @@
  * drags unlocked props on the floor, and `solid` props publish their footprint so fog and the
  * shoulder camera treat them as walls.
  */
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor } from '@react-three/drei'
 import { Box3, EdgesGeometry, Group, Mesh, Plane, PlaneGeometry, Vector3 } from 'three'
 import type { Prop } from '@/core/doc'
+import type { Vec3 } from '@/core/geometry'
+import { isLegacyScale, propScale, uniformScale } from '@/core/props'
 import type { SceneId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
 import { footprintWalls, snapTranslation } from './editing'
-import { fitObjectToCell, PROP_FIT } from './fitScale'
+import { legacyPropFit } from './fitScale'
+import { noteLegacyFit, queuePropMigration } from './propMigration'
 import { useTableUi } from './tableState'
 import { HOVER, SELECT } from '@/ui/theme/palette'
 import { doubleTapEdit, tapTwice } from './editTap'
@@ -24,7 +27,7 @@ const noRaycast = () => undefined
 export function Props({ sceneId }: { sceneId: SceneId }) {
   const props = useGame((s) => s.props)
   const list = useMemo(() => Object.values(props).filter((p) => p.scene === sceneId), [props, sceneId])
-  return <>{list.map((p) => <PropMesh key={p.id} prop={p} />)}</>
+  return <>{list.map((p) => <MemoPropMesh key={p.id} prop={p} />)}</>
 }
 
 /** Placeholder while the model loads or when it fails: a crate the size of one cell. */
@@ -75,19 +78,29 @@ export function PropMesh({ prop }: { prop: Prop }) {
 
   const position = preview?.position ?? prop.position
   const rotation = preview ? { x: prop.rotation.x, y: preview.rotationY, z: prop.rotation.z } : prop.rotation
-  const scale = preview?.scale ?? prop.scale
   const cell = grid.cellSize
 
-  // Selection outline from the model's own bounds (times the cell fit GlbMini applies); footprint
-  // for line-of-sight from the world bounds, republished whenever the model or transform changes.
+  // Models draw at their real size times the per-axis scale. A version 1 prop (number scale) is
+  // drawn with the one-cell fit it always had until a GM client migrates it (src/core/props.ts).
+  const legacy = isLegacyScale(prop.scale)
+  const legacyFit = useMemo(() => (object && legacy ? legacyPropFit(object, cell) : 1), [object, legacy, cell])
+  useEffect(() => {
+    if (!object || !legacy) return
+    noteLegacyFit(prop.id, legacyFit)
+    if (gm) queuePropMigration(prop.id, legacyFit, onIntent)
+  }, [object, legacy, legacyFit, prop.id, gm, onIntent])
+  const base = propScale(prop, legacyFit)
+  const scale: Vec3 = preview?.scaleVec ?? base
+
+  // Selection outline from the model's own bounds (inside the scaled group); footprint for
+  // line-of-sight from the world bounds, republished whenever the model or transform changes.
   const local = useMemo(() => (object ? localBounds(object) : null), [object])
-  const fit = useMemo(() => (object ? fitObjectToCell(object, cell, PROP_FIT) : 1), [object, cell])
   const outline = useMemo(() => {
     if (!local || local.isEmpty()) return null
-    const w = Math.max(0.1, (local.max.x - local.min.x) * fit) * 1.04
-    const d = Math.max(0.1, (local.max.z - local.min.z) * fit) * 1.04
-    return { geometry: new EdgesGeometry(new PlaneGeometry(w, d)), cx: (local.min.x + local.max.x) / 2 * fit, cz: (local.min.z + local.max.z) / 2 * fit }
-  }, [local, fit])
+    const w = Math.max(0.1 / Math.max(scale.x, 1e-6), local.max.x - local.min.x) * 1.04
+    const d = Math.max(0.1 / Math.max(scale.z, 1e-6), local.max.z - local.min.z) * 1.04
+    return { geometry: new EdgesGeometry(new PlaneGeometry(w, d)), cx: (local.min.x + local.max.x) / 2, cz: (local.min.z + local.max.z) / 2 }
+  }, [local, scale.x, scale.z])
   useEffect(() => () => outline?.geometry.dispose(), [outline])
 
   const removeWalls = useCallback(() => {
@@ -104,7 +117,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
     const box = new Box3().setFromObject(object, true)
     if (box.isEmpty()) { removeWalls(); return }
     uiSet({ propWalls: { ...useTableUi.getState().propWalls, [prop.id]: footprintWalls(box) } })
-  }, [object, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, scale, prop.solid, prop.id, uiSet, removeWalls])
+  }, [object, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, scale.x, scale.y, scale.z, prop.solid, prop.id, uiSet, removeWalls])
   useEffect(() => removeWalls, [removeWalls])
 
   // Floor drag (GM, unlocked). Mirrors the token drag but previews through `editPreview`.
@@ -124,7 +137,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
     if (commit && pv && pv.target.kind === 'prop' && pv.target.id === prop.id) {
       const p = pv.position
       if (Math.abs(p.x - prop.position.x) > 1e-4 || Math.abs(p.z - prop.position.z) > 1e-4) {
-        onIntent({ type: 'prop.update', prop: prop.id, patch: { position: { x: p.x, y: prop.position.y, z: p.z } } })
+        onIntent({ type: 'props.update', updates: [{ id: prop.id, patch: { position: { x: p.x, y: prop.position.y, z: p.z } } }] })
       }
     }
   }
@@ -166,7 +179,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
     if (snap && !e.nativeEvent.altKey) p = { ...snapTranslation(p, grid), y: prop.position.y }
     const cur = useTableUi.getState().editPreview
     if (cur && cur.target.kind === 'prop' && cur.target.id === prop.id && cur.position.x === p.x && cur.position.z === p.z) return
-    uiSet({ editPreview: { target: { kind: 'prop', id: prop.id }, position: p, rotationY: prop.rotation.y, scale: prop.scale } })
+    uiSet({ editPreview: { target: { kind: 'prop', id: prop.id }, position: p, rotationY: prop.rotation.y, scale: uniformScale(base), scaleVec: base } })
   }
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
     const d = drag.current
@@ -197,11 +210,11 @@ export function PropMesh({ prop }: { prop: Prop }) {
       onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); setHovered(true) }}
       onPointerOut={() => setHovered(false)}
     >
-      <group scale={scale}>
+      <group scale={[scale.x, scale.y, scale.z]}>
         {url ? (
           <ModelBoundary fallback={<Crate cell={cell} tone="error" />}>
             <Suspense fallback={<Crate cell={cell} tone="loading" />}>
-              <GlbMini url={url} scale={1} fitCell={cell} fitRange={PROP_FIT} onObject={setObject} />
+              <GlbMini url={url} scale={1} onObject={setObject} />
             </Suspense>
           </ModelBoundary>
         ) : missing ? (
@@ -210,7 +223,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
           <Crate cell={cell} tone="loading" />
         )}
         {(selected || hovered) && outline && (
-          <lineSegments geometry={outline.geometry} rotation-x={-Math.PI / 2} position={[outline.cx, 0.012 / scale, outline.cz]} renderOrder={3} raycast={noRaycast}>
+          <lineSegments geometry={outline.geometry} rotation-x={-Math.PI / 2} position={[outline.cx, 0.012 / Math.max(scale.y, 1e-6), outline.cz]} renderOrder={3} raycast={noRaycast}>
             <lineBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </lineSegments>
         )}
@@ -224,3 +237,6 @@ export function PropMesh({ prop }: { prop: Prop }) {
     </group>
   )
 }
+
+/** Props whose document object did not change skip re-rendering (the store keeps their identity). */
+const MemoPropMesh = memo(PropMesh)

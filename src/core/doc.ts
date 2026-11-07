@@ -69,20 +69,48 @@ export interface NodeOverride {
   hidden?: boolean
 }
 
-/** A standalone model placed in a scene (furniture, trees, props). Not a token: no owner, vision or sheet. */
+/**
+ * A standalone model placed in a scene (furniture, trees, props). Not a token: no owner, vision or sheet.
+ *
+ * Model v2: the model is drawn at its real size (metres, as authored or as normalised on import)
+ * times a per-axis `scale`, turned by a three-axis `rotation`. Version 1 props stored one number
+ * as `scale`, a multiplier on top of a per-load "fit to one cell"; see `LegacyPropScale` and
+ * `src/core/props.ts` for how those are read and migrated.
+ */
 export interface Prop {
   id: PropId
   scene: SceneId
   name: string
   model: AssetRef
   position: Vec3
-  rotation: Vec3 // euler radians
-  scale: number
+  /** Euler radians on all three axes, three.js default order ('XYZ'). */
+  rotation: Vec3
+  /** Per-axis scale on the model's real size. A bare number is a version 1 prop not yet migrated. */
+  scale: Vec3 | LegacyPropScale
+  /** The `CatalogueEntry.id` the prop was placed from (`src/core/catalogue.ts`), when known. */
+  catalogue?: string
+  tags?: string[]
+  /** Who placed it; filled in by apply from the intent's sender when missing. */
+  createdBy?: PlayerPubkey
+  /** Who wrote it last; stamped by apply. The undo stack uses it to spot someone else's change. */
+  editedBy?: PlayerPubkey
+  /**
+   * Set once by the scale migration: the one-cell fit factor a version 1 prop was drawn with,
+   * now folded into `scale`. Kept as a record (and for the undo conflict check), never applied.
+   */
+  legacyFit?: number
   /** Locked props ignore drags on the table (GM can still edit in the panel). */
   locked?: boolean
   /** Blocks movement and line of sight when true (adds its footprint to the wall set). */
   solid?: boolean
 }
+
+/**
+ * Version 1 prop scale: one uniform number applied on top of the model fitted to at most one cell
+ * (`PROP_FIT` in `src/table/fitScale.ts`), so its meaning depended on the model's bounds. Read
+ * with `propScale` and replaced by a `Vec3` through `props.migrate` once the bounds are known.
+ */
+export type LegacyPropScale = number
 
 export interface Token {
   id: TokenId

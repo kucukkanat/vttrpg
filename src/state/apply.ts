@@ -8,6 +8,7 @@ import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
+import { migratedScale } from '@/core/props'
 import { combatEntries, EMPTY_INITIATIVE, inCurrentSlot, nextTurn, sheetDeltas, slotRange, sortInitiative, withOrder, withoutToken } from './initiative'
 import { DEFAULT_NAMES, endConcentration, pruneEffects, setEffect, startConcentration, tickEffects, updateMessage, type EffectsDoc, type PackNames } from './effects'
 
@@ -129,6 +130,10 @@ function merge<T extends object>(base: T, patch: Partial<T>): T {
   const out = { ...base, ...patch } as Record<string, unknown>
   for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k]
   return out as T
+}
+
+function stripUndefined<T extends object>(o: T): T {
+  return merge(o, {})
 }
 
 export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext = {}): void {
@@ -359,13 +364,35 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'audio.stop':
         events.push([intent.asset ? { id: env.id, at, kind: 'audio-stop', asset: intent.asset, by: from } : { id: env.id, at, kind: 'audio-stop', by: from }])
         break
+      // Prop batches: every entry in this one transaction. Apply stamps `editedBy` (and a missing
+      // `createdBy`) from the sender, so undo can tell whose change is the latest.
+      case 'props.place':
+        for (const p of intent.props) props.set(p.id, { ...stripUndefined(p), createdBy: p.createdBy ?? from, editedBy: from })
+        for (const w of intent.walls ?? []) walls.set(w.id, w)
+        break
+      case 'props.update':
+        for (const u of intent.updates) {
+          const p = props.get(u.id)
+          if (p) props.set(u.id, merge(p, { ...u.patch, id: p.id, editedBy: from }))
+        }
+        break
+      case 'props.remove':
+        for (const id of intent.ids) props.delete(id)
+        break
+      case 'props.migrate':
+        // Only while the scale is still a version 1 number: a second GM client's copy is a no-op.
+        for (const { id, fit } of intent.items) {
+          const p = props.get(id)
+          if (p && typeof p.scale === 'number') props.set(id, { ...p, scale: migratedScale(p.scale, fit), legacyFit: fit })
+        }
+        break
       case 'prop.add':
-        props.set(intent.prop.id, intent.prop)
+        props.set(intent.prop.id, { ...stripUndefined(intent.prop), createdBy: intent.prop.createdBy ?? from, editedBy: from })
         break
       case 'prop.update': {
         const p = props.get(intent.prop)
         if (!p) return
-        props.set(intent.prop, merge(p, { ...intent.patch, id: p.id }))
+        props.set(intent.prop, merge(p, { ...intent.patch, id: p.id, editedBy: from }))
         break
       }
       case 'prop.remove':

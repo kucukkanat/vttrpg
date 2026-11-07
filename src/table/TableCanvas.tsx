@@ -229,7 +229,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         case 'e': case 'E': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn + 1 }); break
         case 'Delete': case 'Backspace': {
           const sel = useGame.getState().selection
-          if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'prop.remove', prop: sel.id }); setSelection(null) }
+          if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'props.remove', ids: [sel.id] }); setSelection(null) }
           break
         }
         case 'Escape': setSelection(null); break

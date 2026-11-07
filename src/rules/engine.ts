@@ -6,6 +6,7 @@
 import type { Character, GameDocShape, RollAdvantage, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
 import type { CharacterId } from '@/core/ids'
+import { validatePropsIntent } from '@/core/props'
 import type { ChargenStep, ConditionDuration, Effect, RollResolution, SkillDef } from '@/core/pack'
 import { parseFormula } from '@/dice/fair'
 import type { LoadedPack, RulesEngine, SkillCondition, SkillDamage } from './index'
@@ -180,6 +181,10 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const doc = docRaw as GameDocShape
     // Holds for the GM too: the table always has a live scene to show.
     if (intent.type === 'scene.remove' && doc.meta?.activeScene === intent.scene) return 'switch to another scene before removing the live one'
+    // Prop batches are checked for shape and references whoever sends them; only the GM and
+    // co-GMs may send them at all (the fall-through below refuses players).
+    const badProps = validatePropsIntent(intent, doc)
+    if (badProps) return badProps
     if (actor.isGm) return null
     switch (intent.type) {
       case 'roll':

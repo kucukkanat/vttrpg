@@ -248,3 +248,25 @@ describe('validate', () => {
     expect(engine.validate({ type: 'scene.remove', scene }, asAlice, d)).toMatch(/switch to another scene/)
   })
 })
+
+describe('validating prop batches', () => {
+  const scene = 's1'
+  const model = { sha256: 'ab'.repeat(32), kind: 'model', mime: 'model/gltf-binary', size: 1, sources: [] }
+  const crate = { id: 'p1', scene, name: 'Crate', model, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } }
+  const d = { scenes: { [scene]: { id: scene } }, props: { p1: crate } }
+  const gm = { isGm: true, pubkey: 'aa'.repeat(32) }
+  const player = { isGm: false, pubkey: 'bb'.repeat(32) }
+  it('lets the GM and co-GMs send well-formed batches and refuses players', () => {
+    const place = { type: 'props.place', props: [{ ...crate, id: 'p2' }] } as unknown as Intent
+    const move = { type: 'props.update', updates: [{ id: 'p1', patch: { position: { x: 1, y: 0, z: 1 } } }] } as unknown as Intent
+    expect(engine.validate(place, gm, d)).toBeNull()
+    expect(engine.validate(move, gm, d)).toBeNull()
+    expect(engine.validate(place, player, d)).toMatch(/only the GM/)
+    expect(engine.validate(move, player, d)).toMatch(/only the GM/)
+  })
+  it('checks the shape for the GM too', () => {
+    const bad = { type: 'props.update', updates: [{ id: 'p1', patch: { scale: { x: Number.NaN, y: 1, z: 1 } } }] } as unknown as Intent
+    expect(engine.validate(bad, gm, d)).toMatch(/finite/)
+    expect(engine.validate({ type: 'props.remove', ids: ['nope'] } as unknown as Intent, gm, d)).toMatch(/unknown prop/)
+  })
+})

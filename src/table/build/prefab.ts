@@ -8,6 +8,7 @@
 import type { Prefab, PrefabProp, PrefabWall, Prop, Wall } from '@/core/doc'
 import type { GridSpec, Vec3 } from '@/core/geometry'
 import { newId, type PrefabId, type PropId, type SceneId, type WallId } from '@/core/ids'
+import { Euler, Quaternion, Vector3 } from 'three'
 import type { Bounds2 } from '../grid'
 import { clean } from './wallEdit'
 
@@ -51,7 +52,8 @@ export function capturePrefab(opts: {
   const { rect } = opts
   const rel = (p: { x: number; z: number }) => ({ x: clean(p.x - rect.minX), z: clean(p.z - rect.minZ) })
   const props: PrefabProp[] = opts.props.filter((p) => inside(p.position, rect)).map((p) => {
-    const { id: _id, scene: _scene, ...rest } = p
+    // Authorship belongs to the placed copy, not the template: apply stamps it on each stamp.
+    const { id: _id, scene: _scene, createdBy: _by, editedBy: _ed, ...rest } = p
     const r = rel(p.position)
     return { ...rest, position: { x: r.x, y: clean(p.position.y - (opts.floorY ?? 0)), z: r.z } }
   })
@@ -128,7 +130,7 @@ export function stampPrefab(
     return { x: clean(opts.corner.x + t.x), z: clean(opts.corner.z + t.z) }
   }
   const angle = (turns * Math.PI) / 2
-  const props: Prop[] = prefab.props.map((p) => {
+  const props: Prop[] = prefab.props.map(({ createdBy: _by, editedBy: _ed, ...p }) => {
     const at = place(p.position)
     const position: Vec3 = { x: at.x, y: clean(opts.floorY + p.position.y * k), z: at.z }
     return {
@@ -136,8 +138,9 @@ export function stampPrefab(
       id: newId<'PropId'>() as PropId,
       scene: opts.scene,
       position,
-      rotation: { ...p.rotation, y: normalizeAngle(p.rotation.y + angle) },
-      scale: clean(p.scale * k),
+      rotation: turnRotation(p.rotation, angle),
+      // A version 1 number stays a number (migrated when it loads); per-axis scales grow per axis.
+      scale: typeof p.scale === 'number' ? clean(p.scale * k) : { x: clean(p.scale.x * k), y: clean(p.scale.y * k), z: clean(p.scale.z * k) },
     }
   })
   const walls: Wall[] = prefab.walls.map((pw) => {
@@ -146,6 +149,17 @@ export function stampPrefab(
     return wall
   })
   return { props, walls }
+}
+
+/**
+ * `rotation` (Euler XYZ) after a turn of `angle` about the world Y axis. An upright prop just adds
+ * the angle to its Y; a tilted one composes the turn so the tilt turns with the stamp.
+ */
+export function turnRotation(rotation: Vec3, angle: number): Vec3 {
+  if (Math.abs(rotation.x) < 1e-9 && Math.abs(rotation.z) < 1e-9) return { ...rotation, y: normalizeAngle(rotation.y + angle) }
+  const q = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle).multiply(new Quaternion().setFromEuler(new Euler(rotation.x, rotation.y, rotation.z, 'XYZ')))
+  const e = new Euler().setFromQuaternion(q, 'XYZ')
+  return { x: normalizeAngle(e.x), y: normalizeAngle(e.y), z: normalizeAngle(e.z) }
 }
 
 function normalizeAngle(r: number): number {

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Prop, Wall } from '@/core/doc'
 import type { GridSpec } from '@/core/geometry'
 import type { PropId, SceneId, WallId } from '@/core/ids'
-import { capturePrefab, prefabSummary, quarter, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
+import { Euler, Quaternion, Vector3 } from 'three'
+import { capturePrefab, prefabSummary, quarter, snapRectToCells, stampCorner, stampPrefab, stampSize, turnRotation } from './prefab'
 
 const grid: GridSpec = { type: 'square', cellSize: 1, origin: { x: 0, y: 0, z: 0 } }
 const s1 = 's1' as SceneId
@@ -64,5 +65,22 @@ describe('prefabs', () => {
     const out = stampPrefab(prefab, { scene: s1, corner: { x: 0, z: 0 }, turns: 0, cellSize: 1.5, floorY: 1 })
     expect(out.props[0]).toMatchObject({ position: { x: 1.5, y: 1, z: 1.5 }, scale: 1.5 })
     expect(stampSize(prefab, 0, 1.5)).toEqual({ x: 3, z: 3 })
+  })
+  it('scales per-axis props per axis, drops authorship and turns tilted props as a whole', () => {
+    const tilted: Prop = {
+      ...prop('a', 1, 1), scale: { x: 1, y: 2, z: 0.5 }, rotation: { x: Math.PI / 2, y: 0, z: 0 },
+      createdBy: 'aa' as Prop['createdBy'], editedBy: 'bb' as Prop['editedBy'],
+    }
+    const prefab = capturePrefab({ name: 'P', rect: { minX: 0, minZ: 0, maxX: 2, maxZ: 2 }, cellSize: 1, props: [tilted], walls: [] })
+    expect(prefab.props[0]).not.toHaveProperty('createdBy')
+    expect(prefab.props[0]).not.toHaveProperty('editedBy')
+    const out = stampPrefab(prefab, { scene: s1, corner: { x: 0, z: 0 }, turns: 1, cellSize: 2, floorY: 0 })
+    expect(out.props[0]!.scale).toEqual({ x: 2, y: 4, z: 1 })
+    // The stamped orientation equals a world quarter turn applied after the original rotation.
+    const r = out.props[0]!.rotation
+    const got = new Quaternion().setFromEuler(new Euler(r.x, r.y, r.z, 'XYZ'))
+    const want = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2).multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0, 'XYZ')))
+    expect(Math.abs(got.dot(want))).toBeCloseTo(1, 6)
+    expect(turnRotation({ x: 0, y: 0.5, z: 0 }, Math.PI / 2)).toEqual({ x: 0, y: Number((0.5 + Math.PI / 2).toFixed(6)), z: 0 })
   })
 })

@@ -178,29 +178,77 @@ export function readInitiative(doc: Y.Doc): InitiativeState | null {
   return s
 }
 
-/** Mirror a Y.Doc into the store. Returns an unsubscribe. */
+type DocPartial = Parameters<GameState['_replaceFromDoc']>[0]
+type DocKey = keyof Required<DocPartial>
+
+/** A Y.Map entry as plain JSON: the stored object itself, or a nested Yjs type (nothing writes those today) as JSON. */
+function plain(v: unknown): unknown {
+  return v && typeof v === 'object' && typeof (v as { toJSON?: unknown }).toJSON === 'function' ? (v as { toJSON(): unknown }).toJSON() : v
+}
+
+/**
+ * Mirror a Y.Doc into the store. Returns an unsubscribe.
+ *
+ * Incremental: every top-level type is observed (deeply) and only the store keys whose type
+ * changed in a transaction are re-read, so a chat line leaves `props`, `tokens` and the rest as
+ * they were. Props are patched entry by entry: the `props` record is copied only when a prop
+ * changed, and unchanged props keep their object identity, so memoised renderers skip them.
+ */
 export function bindDoc(doc: Y.Doc): () => void {
-  const sync = () => {
-    useGame.getState()._replaceFromDoc({
-      meta: (doc.getMap('meta').toJSON() as GameMeta | Record<string, never>) as GameMeta,
-      scenes: doc.getMap('scenes').toJSON() as Record<SceneId, Scene>,
-      tokens: doc.getMap('tokens').toJSON() as Record<TokenId, Token>,
-      characters: doc.getMap('characters').toJSON() as Record<CharacterId, Character>,
-      chat: doc.getArray('chat').toJSON() as ChatMessage[],
-      fog: doc.getMap('fog').toJSON() as Record<SceneId, FogState>,
-      events: doc.getArray('events').toJSON() as GameEvent[],
-      props: doc.getMap('props').toJSON() as Record<PropId, Prop>,
-      notes: doc.getMap('notes').toJSON() as Record<NoteId, Note>,
-      customSkills: doc.getMap('customSkills').toJSON() as Record<SkillId, SkillDef>,
-      initiative: readInitiative(doc),
-      creatures: doc.getMap('creatures').toJSON() as Record<string, CreatureTemplate>,
-      encounters: doc.getMap('encounters').toJSON() as Record<string, Encounter>,
-      walls: doc.getMap('walls').toJSON() as Record<WallId, Wall>,
-      prefabs: doc.getMap('prefabs').toJSON() as Record<PrefabId, Prefab>,
-      lights: doc.getMap('lights').toJSON() as Record<LightId, PlacedLight>,
-    })
+  const types: Record<DocKey, Y.Map<unknown> | Y.Array<unknown>> = {
+    meta: doc.getMap('meta'), scenes: doc.getMap('scenes'), tokens: doc.getMap('tokens'), characters: doc.getMap('characters'),
+    chat: doc.getArray('chat'), fog: doc.getMap('fog'), events: doc.getArray('events'), props: doc.getMap('props'),
+    notes: doc.getMap('notes'), customSkills: doc.getMap('customSkills'), initiative: doc.getMap('initiative'),
+    creatures: doc.getMap('creatures'), encounters: doc.getMap('encounters'), walls: doc.getMap('walls'),
+    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'),
   }
-  sync()
+  const keys = Object.keys(types) as DocKey[]
+  // An empty `meta` map mirrors as an empty object, as it always has.
+  const read = (key: DocKey): unknown => (key === 'initiative' ? readInitiative(doc) : types[key].toJSON())
+
+  const propsMap = types.props as Y.Map<unknown>
+  let props = propsMap.toJSON() as Record<PropId, Prop>
+  const dirty = new Set<DocKey>()
+
+  const onProps = (events: Y.YEvent<Y.AbstractType<unknown>>[]) => {
+    let next: Record<string, Prop> | null = null
+    const put = (key: string) => {
+      next ??= { ...props }
+      const v = propsMap.get(key)
+      if (v === undefined) delete next[key]
+      else next[key] = plain(v) as Prop
+    }
+    for (const ev of events) {
+      if (ev.target === propsMap) for (const key of ev.changes.keys.keys()) put(key)
+      else if (typeof ev.path[0] === 'string') put(ev.path[0])
+    }
+    if (next) { props = next as Record<PropId, Prop>; dirty.add('props') }
+  }
+  propsMap.observeDeep(onProps)
+  const offOthers = keys.filter((k) => k !== 'props').map((key) => {
+    const mark = () => { dirty.add(key) }
+    types[key].observeDeep(mark)
+    return () => types[key].unobserveDeep(mark)
+  })
+
+  const snapshot = (which: Iterable<DocKey>): DocPartial => {
+    const out: Record<string, unknown> = {}
+    for (const key of which) out[key] = key === 'props' ? props : read(key)
+    return out as DocPartial
+  }
+  // Observers run in the transaction's cleanup, before the doc's 'update' event, so by then
+  // `dirty` names every key the transaction touched.
+  const sync = () => {
+    if (!dirty.size) return
+    const partial = snapshot(dirty)
+    dirty.clear()
+    useGame.getState()._replaceFromDoc(partial)
+  }
+  useGame.getState()._replaceFromDoc(snapshot(keys))
   doc.on('update', sync)
-  return () => doc.off('update', sync)
+  return () => {
+    doc.off('update', sync)
+    propsMap.unobserveDeep(onProps)
+    for (const off of offOthers) off()
+  }
 }

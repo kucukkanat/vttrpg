@@ -471,8 +471,9 @@ function ToolCatcher({ tool, bounds, baseWalls }: { tool: BuildTool; bounds: Bou
         const size = stampSize(prefab, stamp.turns, cell)
         const corner = stampCorner(p, size, grid, snap())
         const out = stampPrefab(prefab, { scene: sceneId, corner, turns: stamp.turns, cellSize: cell, floorY })
-        for (const prop of out.props) onIntent({ type: 'prop.add', prop })
-        if (out.walls.length) onIntent({ type: 'wall.add', walls: out.walls })
+        // The whole stamp is one intent: one change, one message, one undo step.
+        if (out.props.length) onIntent({ type: 'props.place', props: out.props, ...(out.walls.length ? { walls: out.walls } : {}) })
+        else if (out.walls.length) onIntent({ type: 'wall.add', walls: out.walls })
         break
       }
     }
