@@ -5,7 +5,7 @@
  * M toggles the ruler tool while a table is mounted.
  */
 import { useEffect } from 'react'
-import { undoLast } from '@/state/undo'
+import { describeOutcome, redoLast, undoLast } from '@/state/undo'
 import { useTableUi } from '@/table/tableState'
 import { pushToast } from '../toasts'
 
@@ -49,7 +49,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Delete / Backspace', what: 'Remove the selected prop (GM)', group: 'Table' },
   { keys: 'Esc', what: 'Close a tip, card or menu; cancel aiming; deselect', group: 'Table' },
   { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores)', group: 'Table' },
-  { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Z', what: 'Undo your last build edit or removal (GM)', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Shift+Z, Ctrl+Y', what: 'Redo what you undid (GM)', group: 'Table' },
   { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
   { keys: 'Arrows', what: 'Move through the token menu or the search results', group: 'Table' },
   { keys: '[', what: 'Put the card away', group: 'Panels' },
@@ -94,18 +95,27 @@ export function isTypingTarget(el: Element | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable
 }
 
-/** Cmd/Ctrl+Z (no Shift/Alt) outside a field: undo the GM's last destructive action. */
+/** Cmd/Ctrl+Z (no Shift/Alt) outside a field: undo this GM's last edit. */
 export function isUndoKey(e: KeyboardEvent): boolean {
   return (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z'
 }
 
+/** Cmd/Ctrl+Shift+Z, or Ctrl+Y (no Shift), outside a field: redo. */
+export function isRedoKey(e: KeyboardEvent): boolean {
+  if (e.altKey) return false
+  const key = e.key.toLowerCase()
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'z') return true
+  return e.ctrlKey && !e.metaKey && !e.shiftKey && key === 'y'
+}
+
 export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
-  // Undo works on every layout with a keyboard; it is a no-op for players (nothing on the stack).
+  // Undo and redo work on every layout with a keyboard; no-ops for players (nothing on the stacks).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!isUndoKey(e) || isTypingTarget(document.activeElement)) return
+      const dir = isUndoKey(e) ? 'undo' : isRedoKey(e) ? 'redo' : null
+      if (!dir || isTypingTarget(document.activeElement)) return
       e.preventDefault()
-      void undoLast().then((entry) => entry && pushToast({ text: `Restored ${entry.subject}`, ttl: 2500 }))
+      void (dir === 'undo' ? undoLast() : redoLast()).then((o) => o && pushToast({ text: describeOutcome(o, dir), ttl: o.note ? 5000 : 2500 }))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

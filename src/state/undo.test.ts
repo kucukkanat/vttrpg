@@ -42,12 +42,13 @@ describe('captureUndo', () => {
   })
   it('inverts token.remove into token.add with the same data', () => {
     const e = captureUndo({ type: 'token.remove', token: token.id }, snapshot(), 123)
-    expect(e).toEqual({ label: 'Removed Rat Guard', subject: 'Rat Guard', inverse: [{ type: 'token.add', token }], at: 123 })
+    expect(e).toEqual({ label: 'Removed Rat Guard', subject: 'Rat Guard', inverse: [{ type: 'token.add', token }], forward: [{ type: 'token.remove', token: token.id }], destructive: true, at: 123 })
   })
-  it('inverts prop.remove into prop.add', () => {
+  it('keeps the full prop of a prop.remove so undo can place it back', () => {
     const e = captureUndo({ type: 'prop.remove', prop: prop.id }, snapshot())
     expect(e?.label).toBe('Removed Crate')
-    expect(e?.inverse).toEqual([{ type: 'prop.add', prop }])
+    expect(e?.destructive).toBe(true)
+    expect(e?.props).toEqual([{ id: prop.id, before: prop, after: null }])
   })
   it('inverts note.remove into note.upsert', () => {
     const e = captureUndo({ type: 'note.remove', note: note.id }, snapshot())
@@ -128,7 +129,7 @@ describe('undo stack', () => {
     expect(sent).toEqual([{ type: 'token.add', token }])
     const second = await undoLast()
     expect(second?.subject).toBe('Crate')
-    expect(sent[1]).toEqual({ type: 'prop.add', prop })
+    expect(sent[1]).toEqual({ type: 'props.place', props: [prop] })
     expect(await undoLast()).toBeNull()
     expect(sent).toHaveLength(2)
   })
@@ -156,7 +157,7 @@ describe('undo for encounters and creature templates', () => {
     const encounter = { id: 'e1', name: 'Ambush', rows: [], placed: [] }
     const creature = { id: 'c1', name: 'Swamp Goblin', data: {}, updatedAt: 1 }
     const s = snapshot({ encounters: { e1: encounter }, creatures: { c1: creature } })
-    expect(captureUndo({ type: 'encounter.remove', encounter: 'e1' }, s, 9)).toEqual({ label: 'Deleted Ambush', subject: 'Ambush', inverse: [{ type: 'encounter.upsert', encounter }], at: 9 })
+    expect(captureUndo({ type: 'encounter.remove', encounter: 'e1' }, s, 9)).toEqual({ label: 'Deleted Ambush', subject: 'Ambush', inverse: [{ type: 'encounter.upsert', encounter }], forward: [{ type: 'encounter.remove', encounter: 'e1' }], destructive: true, at: 9 })
     expect(captureUndo({ type: 'creature.remove', creature: 'c1' }, s)?.inverse).toEqual([{ type: 'creature.upsert', creature }])
     expect(captureUndo({ type: 'encounter.remove', encounter: 'gone' }, s)).toBeNull()
   })

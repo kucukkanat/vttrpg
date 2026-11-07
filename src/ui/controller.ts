@@ -17,7 +17,7 @@ import type { Character, GameDocShape, GameEvent, ResourceDelta, RollResult } fr
 import type { PlayerPubkey, SceneId } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
-import { bindUndoDispatcher, recordUndo, undoLast } from '@/state/undo'
+import { bindUndoDispatcher, captureUndo, commitUndo, describeOutcome, isReplaying, undoLast } from '@/state/undo'
 import { newSeed, rollFromSeed } from '@/dice'
 import { withAdvantage } from '@/rules'
 import type { TokenId } from '@/core/ids'
@@ -212,17 +212,20 @@ export function createController(opts: {
       }
       return
     }
-    // Destructive intents from this client get an inverse on the undo stack and an Undo toast
-    // before they are applied; `undoLast()` dispatches the inverse through this same function.
+    // Build edits and destructive intents from this client go on its own undo stack: captured from
+    // the store before they apply and settled against it after (so a refused intent records
+    // nothing). Destructive ones also get an Undo toast. `undoLast()`/`redoLast()` dispatch through
+    // this same function; what they send is not recorded again.
     bindUndoDispatcher(dispatch)
-    const undo = recordUndo(intent, useGame.getState())
-    if (undo) {
+    const pending = isReplaying() ? null : captureUndo(intent, useGame.getState())
+    await gmApply(env)
+    const undo = commitUndo(pending, useGame.getState())
+    if (undo?.destructive) {
       pushToast({
         text: undo.label,
-        action: { label: 'Undo', run: () => void undoLast().then((e) => e && pushToast({ text: `Restored ${e.subject}`, ttl: 2500 })) },
+        action: { label: 'Undo', run: () => void undoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'undo'), ttl: 2500 })) },
       })
     }
-    await gmApply(env)
   }
 
   return {

@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
-import { fitObjectToCell, fitScale, horizontalExtent, PROP_FIT, TOKEN_FIT } from './fitScale'
+import type { PropId } from '@/core/ids'
+import { migratedScale, propScale } from '@/core/props'
+import { fitObjectToCell, fitScale, horizontalExtent, legacyPropFit, PROP_FIT, TOKEN_FIT } from './fitScale'
+import { queuePropMigration, takePropMigrations } from './propMigration'
 
 const CELL = 1.5
 
@@ -60,5 +63,49 @@ describe('horizontalExtent', () => {
   it('is 0 for an object with no visible meshes', () => {
     expect(horizontalExtent(new Group())).toBe(0)
     expect(fitObjectToCell(new Group(), CELL, TOKEN_FIT)).toBe(1)
+  })
+})
+
+describe('version 1 prop migration', () => {
+  /** World width of `model` drawn the old way: fitted to PROP_FIT, then the prop's number scale. */
+  const oldWidth = (model: Group, n: number) => horizontalExtent(model) * fitObjectToCell(model, CELL, PROP_FIT) * n
+
+  it('keeps the exact on-screen size of old props, large, small and in range', () => {
+    for (const [w, n] of [[12, 1], [12, 2.5], [0.9, 1.3], [0.01, 0.5]] as const) {
+      const model = new Group()
+      model.add(boxMesh('body', w, 1, w / 2))
+      const fit = legacyPropFit(model, CELL)
+      const migrated = propScale({ scale: n }, fit)
+      expect(migrated).toEqual(migratedScale(n, fit))
+      // Real-size rendering times the migrated scale gives the old width on every axis.
+      expect(horizontalExtent(model) * migrated.x).toBeCloseTo(oldWidth(model, n), 9)
+      expect(migrated.y).toBe(migrated.x)
+      expect(migrated.z).toBe(migrated.x)
+    }
+  })
+
+  it('leaves new props at their real size', () => {
+    const model = new Group()
+    model.add(boxMesh('wagon', 4, 2, 2))
+    expect(propScale({ scale: { x: 1, y: 1, z: 1 } }, legacyPropFit(model, CELL))).toEqual({ x: 1, y: 1, z: 1 })
+  })
+})
+
+describe('migration queue', () => {
+  it('sends one props.migrate for every legacy prop that loaded within the window', () => {
+    vi.useFakeTimers()
+    try {
+      const sent: unknown[] = []
+      queuePropMigration('a' as PropId, 0.5, (i) => sent.push(i))
+      queuePropMigration('b' as PropId, 0.25, (i) => sent.push(i))
+      queuePropMigration('a' as PropId, 0.5, (i) => sent.push(i))
+      queuePropMigration('c' as PropId, Number.NaN, (i) => sent.push(i))
+      expect(sent).toHaveLength(0)
+      vi.advanceTimersByTime(1000)
+      expect(sent).toEqual([{ type: 'props.migrate', items: [{ id: 'a', fit: 0.5 }, { id: 'b', fit: 0.25 }] }])
+      expect(takePropMigrations()).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

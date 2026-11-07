@@ -10,7 +10,7 @@ import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import { toggleBuildTool, type BuildTool } from '@/table/build/buildState'
 import { newSeed } from '@/dice'
-import { undoLast } from '@/state/undo'
+import { describeOutcome, redoLast, undoLast } from '@/state/undo'
 import { useRollMode } from '../rollMode'
 import { pushToast } from '../toasts'
 import { setTextScale, setThemePref } from '../theme/theme'
@@ -62,7 +62,8 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
         add('Build', { id: `build:${tool}`, title, words, where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'build' }); toggleBuildTool(tool) } })
       }
       add('Build', { id: 'build:scene', title: 'Scene settings', words: 'darkness weather ambience fog grid', where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'scenes' }) } })
-      add('Build', { id: 'build:undo', title: 'Undo the last removal', words: 'restore', keys: 'Cmd/Ctrl+Z', run: () => void undoLast().then((e) => e && pushToast({ text: `Restored ${e.subject}`, ttl: 2500 })) })
+      add('Build', { id: 'build:undo', title: 'Undo your last edit', words: 'restore removal move', keys: 'Cmd/Ctrl+Z', run: () => void undoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'undo'), ttl: 2500 })) })
+      add('Build', { id: 'build:redo', title: 'Redo', words: 'again repeat', keys: 'Cmd/Ctrl+Shift+Z', run: () => void redoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'redo'), ttl: 2500 })) })
     }
 
     // Table tools.
