@@ -10,6 +10,7 @@ import { normalizeURL } from 'nostr-tools/utils'
 import type { GameId, PlayerPubkey, TokenId } from '@/core/ids'
 import type { Intent, IntentEnvelope } from '@/core/intents'
 import { GM_AWAY_AFTER_MS, isAway, type Presence } from '@/core/presence'
+import { decryptBlob } from '@/core/blobCrypto'
 import type { GameAuthority, GameConnection, GameConnectionOptions, Identity, InviteInfo, SendIntentResult } from './index'
 import {
   APP_TAG,
@@ -672,7 +673,8 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
       const bytes = new Uint8Array(await res.arrayBuffer())
       const digest = await sha256Hex(bytes)
       if (digest.toLowerCase() !== snap.sha256.toLowerCase()) throw new Error('sha256 mismatch')
-      applyRemoteUpdate(bytes)
+      // Snapshots from older builds have no key and are the raw update.
+      applyRemoteUpdate(typeof snap.key === 'string' ? await decryptBlob(bytes, snap.key) : bytes)
       log('net: snapshot applied', snap.url)
       lastDeltaAt = Math.max(lastDeltaAt, snap.at)
       return snap.at
@@ -926,9 +928,9 @@ export async function openConnection(opts: OpenOptions): Promise<GameConnection>
     snapshot() {
       return Y.encodeStateAsUpdate(doc)
     },
-    async publishSnapshotPointer(url, sha256) {
+    async publishSnapshotPointer(url, sha256, key) {
       if (!isGm || !isFounder) throw new Error('net: only the founding GM publishes snapshot pointers')
-      manifest = { ...manifest, snapshot: { url, sha256, at: lastDeltaAt || nowSec(now) } }
+      manifest = { ...manifest, snapshot: { url, sha256, ...(key ? { key } : {}), at: lastDeltaAt || nowSec(now) } }
       await publishManifest()
     },
     get hasLocalCopy() {

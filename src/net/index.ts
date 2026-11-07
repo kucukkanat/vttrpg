@@ -94,7 +94,7 @@ export interface GameConnection {
   /** Full Yjs state as one update, for uploading as a snapshot. */
   snapshot(): Uint8Array
   /** GM only: republish the manifest pointing at an uploaded snapshot so late joiners skip the delta replay. */
-  publishSnapshotPointer(url: string, sha256: string): Promise<void>
+  publishSnapshotPointer(url: string, sha256: string, key?: string): Promise<void>
   /** True when the doc was restored from this device's local copy (the relay replay then runs behind it). */
   hasLocalCopy: boolean
   close(): void

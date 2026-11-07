@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateSecretKey } from 'nostr-tools'
+import * as Y from 'yjs'
+import { decryptBlob } from '@/core/blobCrypto'
 import type { GameId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import type { GameConnection } from './index'
@@ -104,6 +106,14 @@ describe('snapshot loop', () => {
     const m = latestManifest(w)
     expect(m?.snapshot?.url).toMatch(/^https:\/\/blossom\.test\//)
     expect(m?.snapshot?.sha256).toBe(await sha256Hex(b.upload.mock.calls[0][0]))
+    // What leaves the device is ciphertext; the key is only in the (encrypted) manifest.
+    const sent = b.upload.mock.calls[0][0]
+    expect(new TextDecoder().decode(sent)).not.toContain('changed')
+    expect(m?.snapshot?.key).toBeTruthy()
+    const opened = await decryptBlob(sent, m!.snapshot!.key!)
+    const copy = new Y.Doc()
+    Y.applyUpdate(copy, opened)
+    expect(copy.getMap('meta').get('name')).toBe('changed')
     expect(log).toHaveBeenCalledWith('net: snapshot published', expect.any(Number), 'bytes ->', m?.snapshot?.url)
     // Quiet afterwards: no second upload without new changes.
     await vi.advanceTimersByTimeAsync(SNAPSHOT_INTERVAL_MS * 2)
@@ -233,6 +243,7 @@ describe('snapshot loop', () => {
     })
     w.open.push(player)
     expect(log).toHaveBeenCalledWith('net: snapshot applied', manifest.snapshot!.url)
+    expect(manifest.snapshot?.key).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(player.doc.getMap('meta').get('name')).toBe('Snap game')
     expect(player.doc.getMap('tokens').size).toBe(20)
     loop.stop()

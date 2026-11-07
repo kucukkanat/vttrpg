@@ -28,7 +28,14 @@ export const CHUNK_BYTES = 30 * 1024
 
 export interface SnapshotPointer {
   url: string
+  /** Hash of the bytes at `url`: the ciphertext when `key` is set, else the raw Yjs update. */
   sha256: string
+  /**
+   * AES-256-GCM key the snapshot is encrypted under (see `core/blobCrypto.ts`), fresh per snapshot.
+   * Safe here because the manifest itself is encrypted under the game key. Absent on snapshots
+   * from older builds, which were uploaded unencrypted and are still read.
+   */
+  key?: string
   /** Unix seconds; deltas at or after this are replayed on top. */
   at: number
 }
