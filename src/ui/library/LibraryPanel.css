@@ -72,11 +72,31 @@
 .lib-star.on { color: #b07400; opacity: 1; }
 .lib-star.on svg { fill: currentColor; }
 
+/* My models: the card menu, the upload status and the turned-over card. */
+.lib-more {
+  position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; min-height: 26px; min-width: 26px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; border: 0; background: rgba(245, 234, 208, .8); color: var(--muted); opacity: .75;
+}
+.lib-more:hover, .lib-more:focus-visible { opacity: 1; }
+.lib-status { position: absolute; right: 4px; top: 32px; max-width: calc(100% - 8px); pointer-events: auto; }
+.lib-status .asset-status { padding: 1px 5px; border-radius: 4px; background: rgba(42, 28, 16, .85); font-size: 10px !important; font-weight: 700; }
+.lib-status .asset-status--shared { color: #a5e0a5 !important; }
+.lib-status .asset-status--failed { color: #ffb3a7 !important; }
+.lib-status .asset-status--local, .lib-status .asset-status--uploading { color: #f5ead0 !important; }
+.lib-card--manage { background: var(--panel-2); border: 1px solid var(--accent); border-radius: var(--r-sm); overflow: hidden; }
+.lib-manage { display: flex; flex-direction: column; gap: 4px; padding: 6px; height: 100%; overflow: auto; }
+.lib-manage-title { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-manage input { width: 100%; min-height: 28px; font-size: var(--fs-sm); }
+.lib-manage form { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.lib-manage-row { display: flex; gap: 4px; flex-wrap: wrap; }
+@media (pointer: fine) { .lib-manage button { min-height: 24px; padding: 0 6px; } }
+.lib-manage .small { line-height: 1.25; }
+
 /* Phones: one row of shelves, scrolled sideways, so the cards get the room. */
 @media (max-width: 699.98px) { .lib-chips.lib-shelves { flex-wrap: nowrap; overflow-x: auto; } }
 @media (pointer: coarse) {
   .lib-chip { min-height: 36px; }
-  .lib-star { width: 32px; height: 32px; }
+  .lib-star, .lib-more { width: 32px; height: 32px; }
 }
 
 /* The hover preview, beside the tray. */

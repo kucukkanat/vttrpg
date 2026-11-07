@@ -106,6 +106,14 @@ export function GameShell({ controller }: { controller: GameController }) {
     useTableUi.getState().set({ buildMode: mode === 'build' })
     return () => useTableUi.getState().set({ buildMode: false })
   }, [mode])
+  // GM: uploads that never reached Blossom last time go out again (loaded lazily, after the doc).
+  useEffect(() => {
+    if (!isGm || display) return
+    let cancel: (() => void) | undefined
+    let live = true
+    void import('../library/reshare').then((m) => { if (live) cancel = m.reshareOnStart(controller.assets) })
+    return () => { live = false; cancel?.() }
+  }, [isGm, display, controller])
   // Players have no Prep or Build; a GM demoted mid-session drops back to Play.
   useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
 

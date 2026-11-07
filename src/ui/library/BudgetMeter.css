@@ -1,0 +1,27 @@
+/* The scene budget meter at the foot of the Build tray. */
+.budget { position: relative; flex: none; margin-top: var(--sp-1); }
+.budget-bar {
+  display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: 26px; padding: 2px var(--sp-1);
+  background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; font-size: var(--fs-xs); color: var(--muted);
+}
+.budget-label { font-weight: 700; }
+.budget-track { flex: 0 0 64px; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--fg) 14%, transparent); overflow: hidden; }
+.budget-fill { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+.budget-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.budget--warn .budget-fill { background: var(--danger); }
+.budget--warn .budget-label, .budget--warn .budget-text { color: var(--warn-fg); }
+
+.budget-pop {
+  position: absolute; left: 0; bottom: 100%; z-index: 30; width: min(320px, 90vw); padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  background: var(--panel) var(--paper-tex); color: var(--fg);
+}
+.budget-pop p { margin: 0 0 var(--sp-1); }
+.budget-table { border-collapse: collapse; margin-bottom: var(--sp-1); font-variant-numeric: tabular-nums; }
+.budget-table th { text-align: left; font-weight: 400; padding-right: var(--sp-2); }
+.budget-table td { padding-right: var(--sp-1); text-align: right; }
+.budget-table tr.over td:first-of-type, .budget-note { color: var(--warn-fg); }
+.budget-sub { margin-top: var(--sp-2) !important; }
+.budget-list { margin: 0 0 var(--sp-2); padding-left: 1.4em; }
+.budget-list li { display: flex; justify-content: space-between; gap: var(--sp-2); }
+.budget-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

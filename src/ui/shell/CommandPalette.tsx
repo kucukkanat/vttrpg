@@ -119,7 +119,7 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
     // Game.
     if (isGm) add('Game', { id: 'game:invite', title: 'Invite players', words: 'link share join', where: 'Top bar', run: requestInvite })
     if (actions.exportGame) add('Game', { id: 'game:export', title: 'Export the game file', words: 'save backup download', run: actions.exportGame })
-    add('Game', { id: 'game:credits', title: 'Scene credits', words: 'licence attribution authors models cc by', where: 'Card', run: () => actions.openPanel('credits') })
+    add('Game', { id: 'game:credits', title: 'Scene credits', words: 'licence attribution authors models cc by', where: isGm ? 'Reference' : 'Card', run: () => actions.openPanel('credits') })
     add('Game', { id: 'game:keys', title: 'Keyboard shortcuts', words: 'keys help', keys: '?', run: () => toggleShortcutsOverlay(true) })
     add('Game', { id: 'theme:dark', title: 'Theme: lamplight (dark)', words: 'appearance colour', run: () => setThemePref('dark') })
     add('Game', { id: 'theme:daylight', title: 'Theme: parchment (light)', words: 'appearance colour bright daylight', run: () => setThemePref('daylight') })

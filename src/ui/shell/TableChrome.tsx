@@ -4,7 +4,7 @@
  * and the combat control. Each reads `useTableLayout` and hosts registry panels through PanelHost,
  * so the panels themselves do not know where they are.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GameController } from '../controller'
 import type { ChatMessage } from '@/core/doc'
 import type { PanelDef } from '../panels/registry'
@@ -17,6 +17,8 @@ import { isTypingTarget } from './useShortcuts'
 import { useAttention, handleAttention } from '../attention'
 import { endCombat, startCombat } from '../panels/InitiativePanel'
 import { Icon, type IconName } from '../icons'
+
+const BudgetMeter = lazy(() => import('../library/BudgetMeter'))
 
 /** Esc (outside a field) runs `onClose` while `active`. Capture phase, so it wins over table keys. */
 function useEscape(active: boolean, onClose: () => void) {
@@ -180,6 +182,7 @@ export function GmScreen({ controller, panels, live, onLive }: { controller: Gam
             <LeafTabs ids={BUILD_TABS} active={buildDef.id} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />
           </PaperHead>
           <PanelHost key={buildDef.id} def={buildDef} controller={controller} className="t-tray-body" />
+          <Suspense fallback={null}><BudgetMeter /></Suspense>
         </div>
       )}
       <div className={`t-plaque t-plaque--${mode}`} role="group" aria-label="GM screen">
@@ -240,6 +243,7 @@ export function GmScreenSheet({ controller, panels }: { controller: GameControll
       {mode === 'prep' && <LeafTabs ids={current.panels} active={def?.id ?? ''} panels={panels} onPick={(id) => set({ leafTabs: { ...leafTabs, [current.id]: id } })} />}
       {mode === 'build' && <LeafTabs ids={BUILD_TABS} active={def?.id ?? ''} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />}
       {def && <PanelHost key={def.id} def={def} controller={controller} className="t-screen-body" />}
+      {mode === 'build' && <Suspense fallback={null}><BudgetMeter /></Suspense>}
     </div>
   )
 }

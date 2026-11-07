@@ -5,11 +5,12 @@
  * the bubble. A tip whose target is not on screen is not shown; it waits for the target.
  * Which tip is due lives in tips.ts (pure, tested).
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { GameController } from '../controller'
 import { firstOwnedToken, useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
+import { useBuildUi } from '@/table/build/buildState'
 import { useTargeting } from '../targeting'
 import { currentEntry } from '../panels/initiative'
 import { dueTip, markTipSeen, placeBubble, readSeenTips, TIP_ORDER, TIP_TEXT, type Box, type Placement, type Side, type TipId } from './tips'
@@ -23,7 +24,10 @@ const GAP = 12
 const TOKEN_GAP = 40
 const MARGIN = 8
 
-const SIDE: Record<TipId, Side> = { 'your-turn': 'above', 'token-bar': 'above', 'long-press': 'above', 'edit-gesture': 'above', dice: 'left' }
+const SIDE: Record<TipId, Side> = {
+  'your-turn': 'above', 'token-bar': 'above', 'long-press': 'above', 'edit-gesture': 'above', dice: 'left',
+  'build-pickup': 'above', 'build-turn': 'above', 'build-putdown': 'above', 'build-undo': 'above', 'build-paste': 'above',
+}
 
 function endTurnButton(): HTMLElement | null {
   const marked = document.querySelector<HTMLElement>('.token-bar .end-turn')
@@ -36,10 +40,18 @@ function targetOf(id: TipId): Element | null {
     case 'your-turn': return endTurnButton()
     case 'token-bar': return document.querySelector('.dock .token-bar')
     case 'long-press':
-    case 'edit-gesture': return document.querySelector('.table canvas')
+    case 'edit-gesture':
+    case 'build-turn':
+    case 'build-putdown':
+    case 'build-undo':
+    case 'build-paste': return document.querySelector('.table canvas')
+    case 'build-pickup': return document.querySelector('.t-tray .lib-grid, .t-screen-sheet .lib-grid')
     case 'dice': return document.querySelector('.cam-dice')
   }
 }
+
+/** Tips about the board as a whole: a point at its centre, not the full-screen canvas box. */
+const POINT_TIPS = new Set<TipId>(['long-press', 'edit-gesture', 'build-turn', 'build-putdown', 'build-undo', 'build-paste'])
 
 const toBox = (r: DOMRect): Box => ({ left: r.left, top: r.top, width: r.width, height: r.height })
 
@@ -55,7 +67,7 @@ function measure(id: TipId): Box | null {
   const hit = document.elementFromPoint(cx, cy)
   if (hit && hit !== el && !el.contains(hit) && !hit.closest('.onboarding-tip')) return null
   // A box around the token, so the bubble (GAP away from it) clears the token on any side.
-  if (id === 'long-press' || id === 'edit-gesture') return { left: cx, top: cy - (TOKEN_GAP - GAP), width: 0, height: 2 * (TOKEN_GAP - GAP) }
+  if (POINT_TIPS.has(id)) return { left: cx, top: cy - (TOKEN_GAP - GAP), width: 0, height: 2 * (TOKEN_GAP - GAP) }
   return toBox(r)
 }
 
@@ -187,6 +199,15 @@ export function OnboardingTips({ controller }: { controller: GameController }) {
   const menuOpen = useTableUi((s) => s.contextMenu !== null)
   const editMode = useTableUi((s) => s.editMode)
   const aiming = useTargeting((s) => s.pending !== null)
+  const building = useTableUi((s) => s.buildMode)
+  const holding = useBuildUi((s) => s.tool === 'place' && s.held !== null)
+  const propSelected = useGame((s) => s.propSelection.length > 0)
+  const propCount = useGame((s) => Object.keys(s.props).length)
+  const keyboard = useMemo(() => typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches, [])
+  // Placed something during this Build visit: more props than when Build opened.
+  const [buildStart, setBuildStart] = useState<number | null>(null)
+  useEffect(() => { setBuildStart(building ? propCount : null) }, [building]) // eslint-disable-line react-hooks/exhaustive-deps
+  const placed = buildStart !== null && propCount > buildStart
 
   const [seen, setSeen] = useState<ReadonlySet<TipId>>(readSeenTips)
   const retire = useCallback((id: TipId) => {
@@ -198,6 +219,23 @@ export function OnboardingTips({ controller }: { controller: GameController }) {
   useEffect(() => { if (menuOpen) retire('long-press') }, [menuOpen, retire])
   useEffect(() => { if (editMode) retire('edit-gesture') }, [editMode, retire])
   useEffect(() => { if (aiming) retire('token-bar') }, [aiming, retire])
+  // Build: picking up, turning, putting down, undoing and pasting retire their tips.
+  useEffect(() => { if (holding) retire('build-pickup') }, [holding, retire])
+  useEffect(() => useBuildUi.subscribe((s, prev) => {
+    const held = prev.tool === 'place' && prev.held
+    if (held && s.tool === 'place' && s.yaw !== prev.yaw) retire('build-turn')
+    if (held && s.tool !== 'place') retire('build-putdown')
+  }), [retire])
+  useEffect(() => {
+    if (!building) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.code === 'KeyZ') retire('build-undo')
+      if (e.code === 'KeyV') retire('build-paste')
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [building, retire])
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const t = e.target as Element | null
@@ -215,7 +253,7 @@ export function OnboardingTips({ controller }: { controller: GameController }) {
     isGm, ownsToken, tokenSelected, editableSelected, myTurn,
     busy: menuOpen || editMode || aiming || calloutOpen,
     targets: new Set(TIP_ORDER.filter((id) => anchors[id])),
-    seen,
+    seen, building, holding, placed, propSelected, keyboard,
   })
 
   const [shown, setShown] = useState<TipId | null>(null)

@@ -47,6 +47,33 @@ describe('dueTip', () => {
   })
 })
 
+describe('Build tips', () => {
+  const build = (p: Partial<TipFacts> = {}) => facts({ isGm: true, building: true, keyboard: true, seen: new Set(['dice']), ...p })
+
+  it('walks a first Build visit: pick up, turn, put down', () => {
+    expect(dueTip(build())).toBe('build-pickup')
+    expect(dueTip(build({ holding: true, seen: new Set(['build-pickup']) }))).toBe('build-turn')
+    expect(dueTip(build({ holding: true, seen: new Set(['build-pickup', 'build-turn']) }))).toBe('build-putdown')
+  })
+
+  it('offers undo after a stamp and paste with a selection', () => {
+    const seen = new Set<TipId>(['build-pickup', 'build-turn', 'build-putdown'])
+    expect(dueTip(build({ seen }))).toBeNull()
+    expect(dueTip(build({ seen, placed: true }))).toBe('build-undo')
+    expect(dueTip(build({ seen: new Set([...seen, 'build-undo']), propSelected: true }))).toBe('build-paste')
+    // Not while a model is in hand: the paste would replace it.
+    expect(dueTip(build({ seen: new Set([...seen, 'build-undo']), propSelected: true, holding: true }))).toBeNull()
+  })
+
+  it('stays out of Play, away from players, and skips key tips on touch', () => {
+    expect(dueTip(facts({ isGm: true, seen: new Set(['dice']) }))).toBeNull()
+    expect(dueTip(facts({ building: true, keyboard: true, seen: new Set(['dice']) }))).toBeNull()
+    expect(dueTip(build({ keyboard: false, holding: true, seen: new Set(['build-pickup']) }))).toBeNull()
+    // The dice tip waits until Build is folded away.
+    expect(dueTip(build({ seen: new Set(['build-pickup']) }))).toBeNull()
+  })
+})
+
 describe('placeBubble', () => {
   const base: PlaceInput = {
     anchor: { left: 100, top: 500, width: 200, height: 50 },
