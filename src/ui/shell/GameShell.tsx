@@ -17,6 +17,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useGame } from '@/state/store'
+import { useTableUi } from '@/table/tableState'
 import type { AssetRef } from '@/core/assets'
 import { sharedAudioEngine } from '@/audio'
 import type { GameController } from '../controller'
@@ -99,6 +100,11 @@ export function GameShell({ controller }: { controller: GameController }) {
     // Only on mount and when the device class changes; later toggles are the user's.
   }, [bp]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!phone) setScrollPref({ open: layout.scrollOpen }) }, [layout.scrollOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The table needs to know about Build: the prop gizmo, power keys and box select live there.
+  useEffect(() => {
+    useTableUi.getState().set({ buildMode: mode === 'build' })
+    return () => useTableUi.getState().set({ buildMode: false })
+  }, [mode])
   // Players have no Prep or Build; a GM demoted mid-session drops back to Play.
   useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
 

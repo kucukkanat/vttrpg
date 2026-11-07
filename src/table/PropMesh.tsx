@@ -1,6 +1,6 @@
 /**
  * Props: standalone GLB models placed in a scene (furniture, trees, crates). Tap selects, the GM
- * drags unlocked props on the floor, and `solid` props publish their footprint so fog and the
+ * drags unlocked props (the whole selection) on the floor, and `solid` props publish their footprint so fog and the
  * shoulder camera treat them as walls.
  */
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -19,6 +19,7 @@ import { HOVER, SELECT } from '@/ui/theme/palette'
 import { GlbMini, ModelBoundary, useAssetLoad } from './TokenMesh'
 import { MissingModel } from './MissingAsset'
 import { usePropPointer } from './propPointer'
+import { registerPropObject } from './build/editRuntime'
 
 const noRaycast = () => undefined
 
@@ -52,20 +53,22 @@ export function localBounds(object: Object3D): Box3 {
 
 export function PropMesh({ prop }: { prop: Prop }) {
   const { grid, viewer, onIntent } = useTable()
-  const selected = useGame((s) => s.selection?.kind === 'prop' && s.selection.id === prop.id)
-  const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'prop' && s.editPreview.target.id === prop.id ? s.editPreview : null))
+  const selected = useGame((s) => s.propSelection.includes(prop.id))
+  // Group transforms (drags, the gizmo, gestures) preview every selected prop: build/PropGizmo.tsx.
+  const preview = useTableUi((s) => s.propPreview?.[prop.id] ?? null)
   const uiSet = useTableUi((s) => s.set)
   const { url, missing } = useAssetLoad(prop.model)
   const [hovered, setHovered] = useState(false)
   const [object, setObject] = useState<Group | null>(null)
   const group = useRef<Group>(null)
+  useEffect(() => registerPropObject(prop.id, group.current), [prop.id])
 
   const gm = !viewer || viewer.isGm
   const draggable = gm && !prop.locked
   useCursor(hovered && draggable, 'grab')
 
   const position = preview?.position ?? prop.position
-  const rotation = preview ? { x: prop.rotation.x, y: preview.rotationY, z: prop.rotation.z } : prop.rotation
+  const rotation = preview?.rotation ?? prop.rotation
   const cell = grid.cellSize
 
   // Models draw at their real size times the per-axis scale. A version 1 prop (number scale) is
@@ -78,7 +81,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
     if (gm) queuePropMigration(prop.id, legacyFit, onIntent)
   }, [object, legacy, legacyFit, prop.id, gm, onIntent])
   const base = propScale(prop, legacyFit)
-  const scale: Vec3 = preview?.scaleVec ?? base
+  const scale: Vec3 = preview?.scale ?? base
 
   // Selection outline from the model's own bounds (inside the scaled group); footprint for
   // line-of-sight from the world bounds, republished whenever the model or transform changes.

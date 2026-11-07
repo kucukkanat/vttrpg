@@ -1,6 +1,6 @@
 /**
- * Transform gizmo for the selected object while edit mode is on (GM, or a player on their own
- * token): move arrows, scale spheres and a turn ring together, screen-sized (`fixed`), about
+ * Transform gizmo for the selected token, scene node or scene while edit mode is on (GM, or a
+ * player on their own token; props use build/PropGizmo.tsx): move arrows, scale spheres and a turn ring together, screen-sized (`fixed`), about
  * 110 px per axis with 8 px lines so a finger can hold them.
  *
  * The gizmo is "controlled": its matrix is derived from the document, the drag is previewed
@@ -21,8 +21,6 @@ import {
   TOKEN_SIZE_LIMITS,
 } from './editing'
 import { baseOf } from './SceneModel'
-import { propScale, scaleBy, uniformScale } from '@/core/props'
-import { knownLegacyFit } from './propMigration'
 import { useTableUi, type EditPreview } from './tableState'
 import { SELECT } from '@/ui/theme/palette'
 
@@ -57,7 +55,6 @@ export function EditGizmo() {
   const { sceneId, scene, grid, floorY, loaded, viewer } = useTable()
   const selection = useGame((s) => s.selection)
   const token = useGame((s) => (s.selection?.kind === 'token' ? s.tokens[s.selection.id] : undefined))
-  const prop = useGame((s) => (s.selection?.kind === 'prop' ? s.props[s.selection.id] : undefined))
   const editMode = useTableUi((s) => s.editMode)
   const gm = !viewer || viewer.isGm
   const override = selection?.kind === 'node' ? scene.overrides?.[selection.id] : undefined
@@ -79,26 +76,9 @@ export function EditGizmo() {
           commit: (p) => ({ type: 'token.update', token: token.id, patch: { position: p.position, rotationY: p.rotationY, scale: p.scale, elevation: p.elevation ?? 0 } }),
         }
       }
-      case 'prop': {
-        if (!prop || prop.scene !== sceneId) return null
-        // The handle is a uniform factor on the prop's current per-axis scale (1 = as it is), so
-        // a stretched prop keeps its proportions and a plain move never snaps the size. The
-        // factor's limits keep the largest axis inside SCALE_LIMITS (or where it already is).
-        const base = propScale(prop, knownLegacyFit(prop.id))
-        const handle = uniformScale(base) || 1
-        const vecFor = (factor: number) => scaleBy(base, factor)
-        const limits = { min: Math.min(SCALE_LIMITS.min, handle) / handle, max: Math.max(SCALE_LIMITS.max, handle) / handle }
-        return {
-          selection, scale: 1, parentWorld: identity, parentInv: identity, scaleLimits: limits, minY: floorY,
-          world: pose(prop.position, prop.rotation.y),
-          toPreview: (l, rotationY, scale) => ({ target: selection, position: l, rotationY, scale, scaleVec: vecFor(scale) }),
-          // One intent on release: one undo step for the whole drag.
-          commit: (p) => ({
-            type: 'props.update',
-            updates: [{ id: prop.id, patch: { position: p.position, rotation: { ...prop.rotation, y: p.rotationY }, scale: p.scaleVec ?? vecFor(p.scale) } }],
-          }),
-        }
-      }
+      // Props have their own gizmo with multi-select (build/PropGizmo.tsx).
+      case 'prop':
+        return null
       case 'node': {
         const o = loaded?.root.getObjectByName(selection.id)
         const base = o ? baseOf(o) : null
@@ -128,7 +108,7 @@ export function EditGizmo() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, token, prop, override, transform, sceneId, loaded, floorY, scene.overrides])
+  }, [selection, token, override, transform, sceneId, loaded, floorY, scene.overrides])
 
   // The GM edits anything; a player only their own tokens.
   const allowed = gm || (selection?.kind === 'token' && !!token && !!viewer && token.owner === viewer.pubkey)

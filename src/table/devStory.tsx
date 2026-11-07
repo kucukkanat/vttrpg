@@ -241,7 +241,7 @@ export function DevStory() {
         <strong>edit</strong>
         <button onClick={() => uiSet({ editMode: !editMode })} style={on(editMode)} disabled={!asGm}>edit mode: {editMode ? 'on' : 'off'}</button>
         {(['translate', 'rotate', 'scale'] as const).map((m) => (
-          <button key={m} onClick={() => uiSet({ gizmoMode: m })} style={on(gizmoMode === m)}>{m} ({m === 'translate' ? 'G' : m[0]!.toUpperCase()})</button>
+          <button key={m} onClick={() => uiSet({ gizmoMode: m })} style={on(gizmoMode === m)}>{m}</button>
         ))}
         <button onClick={() => uiSet({ snap: !snap })} style={on(snap)}>snap: {snap ? 'on' : 'off (Alt = free)'}</button>
         <span>|</span>
