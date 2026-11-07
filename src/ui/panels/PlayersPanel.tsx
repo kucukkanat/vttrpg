@@ -16,6 +16,7 @@ import { buildInviteUrl, selectAll, useCopy } from '../invite'
 import { ListRow } from '../components'
 import { colorName } from '../colorName'
 import { setSkipDice, useSkipDicePreference } from '@/dice/skipDice'
+import { FeelPrefs } from '../feedback/FeelPrefs'
 import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
@@ -183,6 +184,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <input type="checkbox" checked={skipDice} onChange={(e) => setSkipDice(e.target.checked)} />
           <span>Skip 3D dice <span className="muted small">· results still show in chat</span></span>
         </label>
+        <FeelPrefs />
       </div>
     </div>
   )

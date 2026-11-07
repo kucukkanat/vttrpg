@@ -44,7 +44,14 @@ button {
   cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1);
 }
-button:active { filter: brightness(1.15); }
+button:active, .is-pressed { filter: brightness(1.15); }
+/* Same-frame press glow (ui/feedback/press.ts marks the control on pointerdown): wider than a
+   fingertip so it shows around the finger covering the control. */
+.is-pressed {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 38%, transparent), 0 0 18px 4px color-mix(in srgb, var(--accent) 30%, transparent);
+  transform: scale(.97); transition: transform 60ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .is-pressed { transform: none; transition: none; } }
 @media (hover: hover) { button:hover { border-color: var(--accent); } }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
