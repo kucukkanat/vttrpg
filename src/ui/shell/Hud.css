@@ -56,7 +56,9 @@
    toasts at the bottom and the phone half sheet (which covers the lower 55% of the table). */
 .game--phone .cam-pill, .game--tablet .cam-pill {
   top: calc(var(--sp-2) + var(--control) + var(--sp-2));
-  flex-direction: column;
+  flex-direction: column; width: var(--rail-w);
 }
+/* Chips under the first row (the initiative chip) stop short of the rail. */
+.game--phone, .game--tablet { --rail-w: 60px; }
 .game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
 .game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }

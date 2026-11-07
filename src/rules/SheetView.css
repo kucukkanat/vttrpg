@@ -11,6 +11,7 @@
   display: grid;
   gap: 14px;
   padding: 12px;
+  container-type: inline-size;
 }
 .sheet h2 { margin: 0; font-size: 18px; }
 .sheet section { border: 1px solid var(--sheet-border); border-radius: 8px; padding: 10px 12px; }
@@ -57,3 +58,10 @@
 .sheet button.roll { font-weight: 600; }
 .sheet button.roll::before { content: "⚄ "; }
 .sheet .conditions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Narrow hosts (a 200px desktop column, a 320px phone): the pack's fixed column count would squeeze
+   stat boxes below their content and push the sheet sideways, so fields flow at a minimum width. */
+@container (max-width: 300px) {
+  .sheet .fields { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+  .sheet .grid { grid-template-columns: repeat(auto-fill, minmax(min(110px, 100%), 1fr)); }
+}

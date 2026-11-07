@@ -162,7 +162,7 @@ export function RowCard({ title, index, count, onMove, onDelete, children }: {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 'var(--sp-2)', background: 'var(--panel-2)', display: 'grid', gap: 'var(--sp-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ flex: 1, fontWeight: 600 }}>{title}</span>
+        <span style={{ flex: 1, minWidth: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{title}</span>
         <button type="button" className="icon" onClick={() => onMove(-1)} disabled={index === 0} aria-label="Move up">↑</button>
         <button type="button" className="icon" onClick={() => onMove(1)} disabled={index === count - 1} aria-label="Move down">↓</button>
         <button type="button" className="icon danger" onClick={onDelete} aria-label="Delete row">✕</button>
@@ -172,4 +172,4 @@ export function RowCard({ title, index, count, onMove, onDelete, children }: {
   )
 }
 
-export const twoCol: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--sp-2)', alignItems: 'start' }
+export const twoCol: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 'var(--sp-2)', alignItems: 'start' }

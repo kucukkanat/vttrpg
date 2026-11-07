@@ -124,7 +124,8 @@ export function ObjectPanel({ controller }: { controller: GameController }) {
         <div className="row" style={{ marginTop: 0, marginBottom: 8 }}>
           {(['translate', 'rotate', 'scale'] as GizmoMode[]).map((m) => (
             <button key={m} type="button" style={toggleBtn(gizmoMode === m)} onClick={() => uiSet({ gizmoMode: m })}>
-              {m === 'translate' ? 'Move (G)' : m === 'rotate' ? 'Rotate (R)' : 'Scale (S)'}
+              {m === 'translate' ? 'Move' : m === 'rotate' ? 'Rotate' : 'Scale'}
+              <kbd className="key-hint">{m === 'translate' ? 'G' : m === 'rotate' ? 'R' : 'S'}</kbd>
             </button>
           ))}
           <button type="button" style={toggleBtn(snap)} onClick={() => uiSet({ snap: !snap })}>{snap ? 'Snap: on' : 'Snap: off'}</button>

@@ -54,7 +54,7 @@ function move<T>(list: T[], i: number, dir: -1 | 1): T[] {
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section style={{ display: 'grid', gap: 'var(--sp-2)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'var(--sp-2)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'var(--sp-2)' }}>
         <h4 style={{ margin: 0, fontSize: 'var(--fs-sm)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--muted)' }}>{title}</h4>
         {action}
       </div>
@@ -186,7 +186,7 @@ function AddMenu<T extends string>({ label, options, onPick }: { label: string; 
       value=""
       onChange={(e) => { if (e.target.value) onPick(e.target.value as T) }}
       aria-label={label}
-      style={{ width: 'auto', minWidth: 120, background: '#26262d', fontSize: 'var(--fs-sm)' }}
+      style={{ width: 'auto', minWidth: 0, maxWidth: '100%', background: '#26262d', fontSize: 'var(--fs-sm)' }}
     >
       <option value="">{label}</option>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}

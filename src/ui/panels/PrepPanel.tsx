@@ -29,7 +29,7 @@ export function PrepPanel({ controller }: { controller: GameController }) {
 function Section({ title, open, children }: { title: string; open?: boolean; children: ReactNode }) {
   return (
     <details open={open} style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--sp-1)', marginTop: 'var(--sp-2)' }}>
-      <summary style={{ minHeight: 'var(--control)', display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 600, listStyle: 'none' }}>{title}</summary>
+      <summary className="disclosure" style={{ fontWeight: 600 }}>{title}</summary>
       {children}
     </details>
   )

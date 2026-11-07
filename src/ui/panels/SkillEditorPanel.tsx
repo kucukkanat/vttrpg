@@ -61,7 +61,7 @@ const glyph = (icon: string | undefined): string => (icon && !/^[a-z0-9-]+$/i.te
 const touch: CSSProperties = { minHeight: 'var(--control)' }
 
 const card: CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 10, rowGap: 2, alignItems: 'center', textAlign: 'left',
+  display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 10, rowGap: 2, alignItems: 'center', textAlign: 'left',
   minHeight: 56, padding: '8px 12px', borderRadius: 10, width: '100%', border: '1px solid var(--border)', background: '#26262d',
 }
 
@@ -208,7 +208,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
         <div style={{ display: 'grid', gap: 8 }}>
           {customList.map((s) => (
             <button key={s.id} type="button" style={card} onClick={() => edit(s)}>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>{glyph(s.icon)}{s.name}</span>
+              <span style={{ fontWeight: 600, fontSize: 15, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{glyph(s.icon)}{s.name}</span>
               <span className="small" style={{ color: 'var(--accent)' }}>{packSkillIds.has(s.id) ? 'overrides pack' : 'custom'}</span>
               <span className="muted small" style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeTarget(s.target)} · {s.effects.length} effect{s.effects.length === 1 ? '' : 's'} · {s.vfx.length} vfx
@@ -219,20 +219,20 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
         <p className="muted small" style={{ margin: '16px 0 8px' }}>Pack skills: {pack.manifest.name}</p>
         <div style={{ display: 'grid', gap: 8 }}>
           {pack.skills.map((s) => (
-            <div key={s.id} style={{ ...card, gridTemplateColumns: '1fr auto' }}>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>{s.name}</span>
-              <span className="row" style={{ marginTop: 0, flexWrap: 'nowrap' }}>
+            <div key={s.id} style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ flex: '1 1 6em', minWidth: 0, fontWeight: 600, fontSize: 15, overflowWrap: 'anywhere' }}>{s.name}</span>
+              <span className="row" style={{ marginTop: 0, flex: 'none' }}>
                 <button type="button" className="tiny" style={touch} onClick={() => override(s.id)} title={custom[s.id] ? 'Edit the override of this pack skill' : 'Edit a replacement with the same id; every sheet gets it instead of the pack version'}>{custom[s.id] ? 'Edit override' : 'Override'}</button>
                 <button type="button" className="tiny" style={touch} onClick={() => duplicate(s)} title="Copy under a new id, next to the pack skill">Duplicate</button>
               </span>
-              <span className="muted small" style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="muted small" style={{ flexBasis: '100%', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeTarget(s.target)} · {s.effects.length} effect{s.effects.length === 1 ? '' : 's'}{custom[s.id] ? ' · overridden above' : ''}
               </span>
             </div>
           ))}
         </div>
         <details style={{ marginTop: 16 }}>
-          <summary style={{ minHeight: 'var(--control)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>Import / export JSON</summary>
+          <summary className="disclosure">Import / export JSON</summary>
           <p className="muted small">Paste one skill or a list of skills to add them to this game.</p>
           <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={5} placeholder='{ "id": "...", "name": "...", ... }' spellCheck={false} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }} />
           {importError && <p className="small error">{importError}</p>}

@@ -37,4 +37,5 @@
 /* HUD chip over the table: a pill like the token chip, one tap opens the panel. */
 .init-chip .chip-main { gap: var(--sp-2); }
 .init-chip .init-chip-glyph { flex: none; color: var(--accent); }
-.game--phone .init-chip, .game--tablet .init-chip { max-width: calc(100% - var(--control) - var(--sp-3)); }
+/* Clear of the camera rail on the right edge (Hud.css sets --rail-w). */
+.game--phone .init-chip, .game--tablet .init-chip { max-width: calc(100% - var(--rail-w, 60px) - var(--sp-2)); }

@@ -61,7 +61,7 @@ input, select, textarea {
 textarea { padding: var(--sp-2); }
 input[type=range] { padding: 0; min-height: var(--control); accent-color: var(--accent); }
 input[type=checkbox] { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent); margin: 0; }
-label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(--fs-md); }
+label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(--fs-md); }
 @media (pointer: coarse) {
   /* 16px stops iOS from zooming the page when a field gains focus. */
   input, select, textarea { font-size: var(--fs-lg); }
@@ -74,6 +74,14 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
 .row { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-3); }
 .muted { color: var(--muted); } .small { font-size: var(--fs-sm); } .error { color: var(--danger); }
 .spacer { flex: 1; }
+/* A <details> summary drawn as a row with its own chevron (the native marker is lost under display:flex). */
+summary.disclosure { min-height: var(--control); display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; list-style: none; }
+summary.disclosure::-webkit-details-marker { display: none; }
+summary.disclosure::before { content: "▸"; flex: none; width: 12px; font-size: var(--fs-sm); color: var(--muted); }
+details[open] > summary.disclosure::before { content: "▾"; }
+/* Keyboard shortcut beside a button label; touch screens have no keyboard, so it is dropped there. */
+.key-hint { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--muted); padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; }
+@media (pointer: coarse) { .key-hint { display: none; } }
 .ok { color: var(--ok); } .bad { color: var(--bad); }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 
@@ -152,7 +160,8 @@ label { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(-
    --------------------------------------------------------------------------------------------- */
 .panel { padding: var(--sp-3); border-bottom: 1px solid var(--border); }
 .panel h3 { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); min-height: 28px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+/* One shrinkable column: a row never sizes the track to its content and pushes the panel sideways. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .list li { min-height: var(--control); padding: 0 var(--sp-2); border-radius: var(--r-sm); cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); }
 @media (hover: hover) { .list li:hover { background: #22222a; } }
 .list li:active { background: #22222a; }
@@ -198,7 +207,10 @@ button.list-row-main:active { background: #22222a; filter: none; }
 }
 /* Dropped dice of a `kh`/`kl` roll in the toast and the chat log. */
 .die.dropped { text-decoration: line-through; opacity: .55; }
-.sheet { max-height: 50vh; overflow: auto; }
+/* The character panel scrolls as a whole; the rules sheet inside it (also `.sheet`) must not become a
+   second, half-height scroller nested in it. */
+.panel.sheet { max-height: 50vh; overflow: auto; }
+.panel.sheet > .sheet { max-height: none; overflow: visible; padding: 0; }
 
 .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .chat .log { flex: 1; min-height: 0; font-size: var(--fs-md); display: flex; flex-direction: column; gap: var(--sp-1); overflow-anchor: auto; }
@@ -217,6 +229,9 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .hosted > .panel { flex: 1; min-height: 0; border-bottom: 0; padding-top: var(--sp-1); }
 .hosted > .panel > h3 { position: absolute; top: 0; right: var(--actions-right); height: var(--head-h); margin: 0; font-size: 0; letter-spacing: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-2); z-index: 2; }
 .hosted > .panel > h3 > * { font-size: var(--fs-sm); }
+/* `--actions-w` (set by PanelHost) is the width of those relocated buttons: the title stops short of them. */
+.host-title:focus { outline: none; }  /* focused on open for screen readers; not a control */
+.hosted .host-title { margin-right: calc(var(--actions-w, 0px) + var(--sp-2)); }
 .host-title { margin: 0; font-size: var(--fs-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------------------------------------------------------------------------------------------
@@ -280,10 +295,10 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .pin.on { color: var(--accent); }
 .pin:not(.on) { opacity: .6; }
 
-/* Build tag. Hosts show it as muted footer text; the fixed corner tag from main.tsx stays for the
-   home, new-game and join pages and is hidden while a game is on screen so it never overlaps. */
+/* Build tag. Hosts show it as muted footer text; the tag from main.tsx sits after the page content on the
+   home, new-game and join pages (never over it) and is hidden while a game is on screen so it never overlaps. */
 .build-id { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--muted); }
-.build-tag { position: fixed; left: 6px; bottom: calc(2px + var(--sab)); font-size: 10px; color: var(--muted); pointer-events: none; z-index: 5; font-family: ui-monospace, monospace; }
+.build-tag { display: block; padding: 0 calc(var(--sp-4) + var(--sar)) calc(var(--sp-3) + var(--sab)) calc(var(--sp-4) + var(--sal)); text-align: center; font-size: 10px; color: var(--muted); font-family: ui-monospace, monospace; }
 .game ~ .build-tag, #root:has(.game) > .build-tag { display: none; }
 .col-foot, .drawer-foot {
   flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1);
@@ -365,6 +380,8 @@ button.list-row-main:active { background: #22222a; filter: none; }
   background: rgba(0, 0, 0, .72); border: 1px solid var(--border); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   color: var(--fg); animation: toast-in .2s ease;
 }
+/* Long formulas ("4d6kh3+2d8+…") have no spaces: let them break instead of running past the card. */
+.toast > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .toast-formula { font-style: italic; }
 .toast-total { font-weight: 700; font-size: var(--fs-xl); color: var(--accent); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }

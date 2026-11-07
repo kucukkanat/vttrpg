@@ -250,7 +250,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
                 {['none', 'wind', 'fire', 'rain', 'cave', 'tavern', 'forest'].map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
             </label>
-            <label>Darkness <span className="muted">{Math.round(active.darkness * 100)}%</span>
+            <label style={{ gridColumn: '1 / -1' }}><span>Darkness <span className="muted">{Math.round(active.darkness * 100)}%</span></span>
               <input type="range" min={0} max={1} step={0.05} value={active.darkness} onChange={(e) => update({ darkness: Number(e.target.value) })} />
             </label>
           </div>
