@@ -8,7 +8,7 @@
  * Cone `angle` is the full opening angle in degrees.
  */
 import type { Cell, GridSpec, TargetShape, Vec2, Vec3 } from '@/core/geometry'
-import { cellsWithinRadius, cellToWorld } from './grid'
+import { cellsWithinRadius, cellToWorld, worldToCell } from './grid'
 
 /** Tolerance so a token standing exactly on the boundary counts as inside. */
 const EPS = 1e-6
@@ -225,6 +225,27 @@ export function shapeOutline(shape: ResolvedShape, segments = 48): Vec2[] {
       ]
     }
   }
+}
+
+// ------------------------------------------------------------------------------- touch aim
+
+/** While a finger drags an area template, the aim sits this far above the touch point so the finger never hides it. */
+export const FINGER_OFFSET_PX = 64
+
+/** Shapes aimed at a spot (rather than picked on a token): the ones that take the finger offset and the grid snap. */
+export function isAreaShape(shape: TargetShape): boolean {
+  return shape.kind === 'radius' || shape.kind === 'cone' || shape.kind === 'line'
+}
+
+/** Screen point the aim ray goes through for a finger at (x, y): straight up by the offset, kept inside `rect`. */
+export function fingerAimPoint(x: number, y: number, rect: { top: number }, offset = FINGER_OFFSET_PX): { x: number; y: number } {
+  return { x, y: Math.max(rect.top + 1, y - offset) }
+}
+
+/** Touch aim snaps to cell centres so a burst lands on a cell and a cone or line points along whole cells. Gridless scenes stay free. */
+export function snapAim(grid: GridSpec, p: Vec2): Vec2 {
+  if (grid.type === 'none') return { x: p.x, y: p.y }
+  return cellToWorld(grid, worldToCell(grid, p.x, p.y))
 }
 
 // ------------------------------------------------------------------------------- staging
