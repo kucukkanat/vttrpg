@@ -205,7 +205,7 @@ function previewHandlers(skill: SkillDef, source: TokenId) {
 }
 
 /** GM: start combat (everyone with a sheet in the scene), add this token to it, or take it out. */
-function InitiativeButton({ controller, token, active, inOrder }: { controller: GameController; token: Token; active: boolean; inOrder: boolean }) {
+export function InitiativeButton({ controller, token, active, inOrder }: { controller: GameController; token: Token; active: boolean; inOrder: boolean }) {
   const [busy, setBusy] = useState(false)
   const run = async () => {
     setBusy(true)

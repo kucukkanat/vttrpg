@@ -1,6 +1,6 @@
 /**
  * Panels the game screen can show. The shell decides placement (shell/tableLayout.ts `routePanel`:
- * the scroll, the one card, the GM screen's leaves or tray; sheets on phones). Add a panel here and
+ * the scroll, the one card, or the Build workspace for the GM; sheets on phones). Add a panel here and
  * it is reachable everywhere, including the command palette.
  */
 import { createElement, lazy, Suspense, type ComponentType } from 'react'
@@ -19,7 +19,7 @@ import { InitiativePanel } from './InitiativePanel'
 type PanelComponent = ComponentType<{ controller: GameController }>
 
 /**
- * A panel loaded the first time it is shown. GM-only tools (Prep, Skill editor) are kept out of
+ * A panel loaded the first time it is shown. GM-only tools (the Library, Skill editor) are kept out of
  * the game chunk this way; players never download them. The wrapper has the panel's shape, so
  * `PANELS` and the hosts need no special case; the fallback is a plain panel body under the
  * host's own header.
@@ -32,12 +32,9 @@ function lazyPanel(load: () => Promise<PanelComponent>): PanelComponent {
   }
 }
 
-const PrepPanel = lazyPanel(() => import('./PrepPanel').then((m) => m.PrepPanel))
 const SkillEditorPanel = lazyPanel(() => import('./SkillEditorPanel').then((m) => m.SkillEditorPanel))
-const BuildPanel = lazyPanel(() => import('./BuildPanel').then((m) => m.BuildPanel))
 const LibraryPanel = lazyPanel(() => import('../library/LibraryPanel').then((m) => m.LibraryPanel))
 const CreditsPanel = lazyPanel(() => import('../library/CreditsPanel').then((m) => m.CreditsPanel))
-const KitPanel = lazyPanel(() => import('./KitPanel').then((m) => m.KitPanel))
 // Play (GM drawer): the table-time quick tools, and the scene title's switcher.
 const RandomTablesPanel = lazyPanel(() => import('../prep/RandomTables').then((m) => m.RandomTablesPanel))
 const NpcCard = lazyPanel(() => import('../prep/NpcCard').then((m) => m.NpcCard))
@@ -67,10 +64,7 @@ export const PANELS: PanelDef[] = [
   { id: 'chat', title: 'Chat', short: 'Chat', glyph: 'chat', component: ChatPanel, scope: 'all' },
   { id: 'journal', title: 'Journal', short: 'Journal', glyph: 'book', component: JournalPanel, scope: 'all' },
   { id: 'library', title: 'Library', short: 'Models', glyph: 'cube', component: LibraryPanel, scope: 'gm' },
-  { id: 'build', title: 'Build', short: 'Build', glyph: 'wall', component: BuildPanel, scope: 'gm' },
   { id: 'credits', title: 'Credits', short: 'Credits', glyph: 'ribbon', component: CreditsPanel, scope: 'all' },
-  { id: 'kit', title: 'Kit', short: 'Kit', glyph: 'wall', component: KitPanel, scope: 'gm' },
-  { id: 'prep', title: 'Prep', short: 'Prep', glyph: 'toolbox', component: PrepPanel, scope: 'gm' },
   { id: 'skills-editor', title: 'Skill editor', short: 'Editor', glyph: 'wrench', component: SkillEditorPanel, scope: 'gm' },
   { id: 'tables', title: 'Random tables', short: 'Tables', glyph: 'dice', component: RandomTablesPanel, scope: 'gm' },
   { id: 'npc', title: 'NPC', short: 'NPC', glyph: 'pawn', component: NpcCard, scope: 'gm' },

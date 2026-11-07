@@ -120,3 +120,10 @@ export function pieceInHand(s: Pick<KitUiState, 'kit' | 'pieces' | 'wallPiece'>,
   if (!slot || (piece.slot !== slot && !(active === 'pillar' && piece.slot === 'corner'))) return false
   return (s.pieces[piece.slot] ?? '') === piece.id
 }
+
+/** Build one level up or down (PgUp / PgDn, the scene bar's ▲ ▼); a cutaway set by hand follows. */
+export function stepLevel(by: number): void {
+  const s = useKitUi.getState()
+  const level = Math.max(0, Math.min(31, s.level + by))
+  s.set({ level, ...(s.cutaway !== null ? { cutaway: level } : {}) })
+}

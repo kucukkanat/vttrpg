@@ -9,7 +9,8 @@
  *   the hand      the selected token's card and actions, bottom centre
  *   the scroll    chat on the right edge, rolled up or open
  *   dice well     bottom right; dice roll inside it
- *   GM screen     bottom left (GM): Play | Build and the GM drawer
+ *   GM screen     bottom left (GM): Play | Build and, in Play, the GM drawer; Build adds the
+ *                 scene bar, the Library and Inspector docks and the tool strip (src/ui/build/)
  *   one card      any other panel, one at a time
  *
  * Phones keep the same pieces as a bottom bar and sheets (PhoneBar.tsx). One React tree for every
@@ -60,6 +61,8 @@ import './Table.css'
 // their identity across renders and the canvas is never remounted by a layout change.
 const TableCanvas = lazy(() => import('@/table/TableCanvas').then((m) => ({ default: m.TableCanvas })))
 const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => ({ default: m.DiceTrayOverlay })))
+// The Build workspace is GM-only and used in Build alone: loaded the first time the GM opens Build.
+const BuildWorkspace = lazy(() => import('../build/BuildWorkspace'))
 
 /** Dice in the well: a camera close over a small tray, so a die reads at the well's size. */
 const WELL_ZOOM = 2.4
@@ -115,13 +118,13 @@ export function GameShell({ controller }: { controller: GameController }) {
     void import('../library/reshare').then((m) => { if (live) cancel = m.reshareOnStart(controller.assets) })
     return () => { live = false; cancel?.() }
   }, [isGm, display, controller])
-  // Players have no Prep or Build; a GM demoted mid-session drops back to Play.
+  // Players have no Build; a GM demoted mid-session drops back to Play.
   useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
 
   const openPanel = useCallback((id: string) => useTableLayout.getState().open(id, isGm, phone), [isGm, phone])
 
   const chatOpen = layout.scrollOpen
-  const journalOpen = panelShown(layout, 'journal', isGm, phone)
+  const journalOpen = panelShown(layout, 'journal', isGm)
   const unread = useUnread(chat.length, chatOpen)
   const journalUnread = useUnreadNotes(controller, journalOpen)
   useGameAlerts(controller, { chat: chatOpen, journal: journalOpen }, openPanel)
@@ -221,7 +224,7 @@ export function GameShell({ controller }: { controller: GameController }) {
           <div className="empty">
             <div>
               <p>No active scene.</p>
-              <p className="muted small">{isGm ? 'Raise the GM screen (Prep) and add one.' : 'Waiting for the GM.'}</p>
+              <p className="muted small">{isGm ? 'Add one from the scene list.' : 'Waiting for the GM.'}</p>
               {isGm && <button type="button" onClick={() => openPanel('scenes')}>Open Scenes</button>}
             </div>
           </div>
@@ -239,8 +242,9 @@ export function GameShell({ controller }: { controller: GameController }) {
         {meta?.activeScene && <Dock controller={controller} />}
         {!phone && <CardHost controller={controller} panels={panels} />}
         {!phone && <Scroll controller={controller} chat={panels.find((p) => p.id === 'chat')} unread={unread} />}
-        {!phone && isGm && <GmScreen controller={controller} panels={panels} live={liveLine} onLive={() => openPanel('sound')}
+        {!phone && isGm && <GmScreen live={liveLine} onLive={() => openPanel('sound')}
           drawer={<GmDrawer me={controller.pubkey} playing={playing.size} journalNew={journalUnread} />} />}
+        {!phone && isGm && chrome && mode === 'build' && <Suspense fallback={null}><BuildWorkspace controller={controller} /></Suspense>}
         <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}

@@ -17,15 +17,79 @@ each thing has exactly one home (research and audit: `research_notes/UI redesign
 | The hand | bottom centre | the selected token (a player's own when nothing is selected): name (opens the character card), find-on-table, HP, saves and skills as cards, End turn; GM adds −/+, Conditions, the skill list and combat join/leave. Hide, Assign and Remove live in the token menu (⋯, right-click, long-press) |
 | The scroll | right edge | chat. Rolled up it is a rod with the unread count; `]` or a tap unrolls it. The composer has one seal control for the whisper target and the roll mode (advantage, who sees rolls) and a log filter |
 | Dice well | bottom right | dice roll inside the well, never over the board; the result reads out on a paper slip beside it; the brass Roll coin opens the dice pad |
-| GM screen | bottom left, GM only | a leather plaque with **Play / Prep / Build** and a live line (sounds playing, the round). **Prep** raises three leaves over the board: Scenes & encounters (Scenes, Prep), Cast (Tokens, Skill editor), Reference (Sound, Players, Journal, Credits). **Build** folds into a tool tray (Library, Tools, Kit, Scene settings) beside a live board: the Library picks a model up (a ghost on the cursor; click stamps, R or the wheel turns, Alt is free, Esc puts it down), Alt-click on a prop is the eyedropper. My models cards have a menu (Rename, Remove from library, confirmed on the card) and show the upload status. A thin budget bar at the tray's foot shows the scene's triangles, draw calls and texture memory against this device's graphics tier, warning-coloured over the low tier; hovering it lists the five heaviest models with Select all of these. Co-GMs in Build see each other's cursor ring and name, a faint ghost of what they hold and a thin outline on what they have selected, in their colour; it clears when they leave Build or idle for 30 s, and players never see it. A first Build visit gets one-time tips (pick up, turn, put down, undo, paste). Credits lists the scene's models that need attribution: a Reference tab for the GM, a card for players. The board's frame takes the mode's colour: brass, green, blue |
+| GM screen | bottom left, GM only | a leather plaque with **Play / Build** and a live line (sounds playing, the round). Play runs the table; **Build** makes the world and opens the Build workspace around the board (see "Build" below). The board's frame takes the mode's colour: brass, blue |
 | GM drawer | on the plaque, GM in Play | a button beside Play \| Build fans out Sound ("2 playing"), Players ("3 here"), Journal ("1 new"), Tables, NPC, Encounters ("Ambush ready") and Credits; each opens as the one card. NPC places its result near the camera, hidden, selects it, closes and offers Undo. Encounters › Run places the creatures (hidden, or visible by a toggle) and asks "Roll initiative for N creatures?": out of combat it starts combat with them included, in combat their rows join as groups |
-| One card | over the board's left side | any other panel (Character, Skills, Initiative, Journal, Players, Sound, Scenes for players): one at a time, Esc or ✕ puts it away |
+| One card | over the board's left side | any other panel (Character, Skills, Initiative, Journal, Players, Sound, Scenes, Credits, the Skill editor…): one at a time, Esc or ✕ puts it away |
 | Command palette | Ctrl/⌘-K or Search | every action, panel, token and scene, with where it lives and its key |
 | The bell | top rail | whispers, handouts and anything else with an action, kept until handled (toasts still flash; `ui/attention.ts`) |
 
-`shell/tableLayout.ts` holds this state (mode, card, scroll, leaf tabs, palette, bell, phone sheet)
-and `routePanel(id)` decides where any registry panel opens, so `openPanel(id)` from shortcuts,
-toasts and panels needs no knowledge of the layout.
+`shell/tableLayout.ts` holds this state (mode, card, scroll, palette, bell, phone sheet, and the
+Build docks' fold state, remembered per device) and `routePanel(id)` decides where any registry
+panel opens, so `openPanel(id)` from shortcuts, toasts and panels needs no knowledge of the layout:
+
+| Asked for | GM | Player |
+|---|---|---|
+| chat | the scroll | the scroll |
+| library | Build, Library on Models | card |
+| kit | Build, Library on Kit | – |
+| prep (old name) | Build, Library on Creatures | – |
+| tokens | Build, Library filtered to In this scene | card |
+| build | Build, Inspector on the scene (no tool, nothing selected) | – |
+| anything else | the one card | the one card |
+
+There are two modes, `'play'` and `'build'`; an old `'prep'` (stored or in memory) opens Build.
+
+## Build
+
+The GM's Build workspace (`src/ui/build/`, loaded the first time Build opens). One rule: the
+Library adds, the Inspector edits, the tool strip draws, the scene bar switches scenes and levels.
+
+```
+┌ Scene ▾ · ▼ Level 0 ▲ · ✂ auto · ↶ ↷ · budget · [Done] ┐
+│ Library │                                   │ Inspector │
+│ (rail)  │              BOARD                │           │
+│         │  [Select V][Paint P][Walls W][Light L][Fog B]  │
+```
+
+| Piece | Where | What it holds |
+|---|---|---|
+| Scene bar | top centre | the scene switcher (the live scene's name: the scene list with Live, Switch, Preview, rename and remove, and + Add: library scenes, GLB, map image, UVTT / Foundry import), the level being built ▲ ▼ (PgUp / PgDn) and the cutaway (✂ auto follows the selected token, or cut at the level), undo and redo, the compact budget meter (hover for the breakdown), **Done** back to Play |
+| Library dock | left | the shelf row (Models · Kit · Creatures · Saved, `library/libraryView.ts`) over the Library panel (search, filters, cards; picking a card is "place"). Folds to a narrow rail; on a first visit it starts folded, and asking for anything it holds opens it |
+| Inspector dock | right | one context at a time (`build/inspectorContext.ts`): the selection, else the active tool's options, else the scene. Folds to a rail |
+| Tool strip | bottom centre | Select (V), Paint (P, the grid kit), Walls (W), Light (L), Fog (B). Each sets the build tool state, so the prop keys and box select stand down as before; the active tool again goes back to Select |
+
+The Inspector's contexts:
+
+- **Prop:** name, solid, locked, Save as group, Delete; position, rotation and scale (expressions
+  such as `1.5*2`) in a folded section. **Several props:** what is selected, Save as group, Delete,
+  the group transform. **Token:** name, Sheet › (the character card), Skills › (the skill editor
+  card), Start / Join / Leave combat; colour and size, vision and light, owner and visibility
+  (with Remove) folded. This is the one token editor; players get it in the Tokens card for their
+  own tokens. **Scene part:** the node editor.
+- **Paint:** the kit tool (floor, wall, door, window, stairs, roof, pillar, erase, pick), the
+  piece in hand and its turn, room outline, the kit, the pieces (folded). Hold Alt to erase.
+  **Walls:** Wall / Door / Erase, show walls, players may open doors, detect walls from a map
+  image (folded), remove drawn walls. **Light:** reach and colour for new lights, the placed
+  lights (folded). **Fog:** Reveal / Hide, brush size, Reveal all, Hide all, Reset.
+- **Scene:** name and map, grid (cells, offset; fit the model), light and weather (darkness,
+  weather, ambience), starting fog, table display (open, copy link, share my view, pull everyone),
+  and Credits ›.
+
+Placing from the Library: a card picks the model up (a ghost on the cursor; click stamps, R or
+the wheel turns, Alt is free, Esc puts it down), Alt-click on a prop is the eyedropper, and My
+models cards have a menu (Rename, Remove from library) and show the upload status. Co-GMs in Build
+see each other's cursor ring and name, a faint ghost of what they hold and an outline on their
+selection, in their colour; it clears when they leave Build or idle for 30 s, and players never
+see it. A first Build visit gets one-time tips (pick up, turn, put down, undo, paste).
+
+Sections start folded and remember being opened per device (`build/folds.ts`). Prefab capture is
+"Save as group" on a selection; stamping saved groups lives in the Library's Saved shelf. In Build
+the hand steps back (the Inspector edits tokens), the edit bar keeps Snap, the gizmo mode and
+Deselect, and Roll initiative, Ping and the Journal leave the screen until Play.
+
+Visible controls at 1440 × 900 (buttons, fields, tabs on screen and not covered): Build idle 30,
+with a tool 31–40 (Paint is the most), with a prop 39, with a token 34; with the Library dock
+open the Library panel adds about 28. Play idle stays at 18 (19 with the getting-started callout).
 
 ## Breakpoints
 
@@ -52,9 +116,14 @@ in landscape (812 × 375) is treated as a tablet.
 └──────────────────────┘
 ```
 
+In Build the GM's bar is **Library · Tools · Inspector · Scene · Done**, one sheet at a time:
+the Library (shelf row and cards; picking a card closes the sheet so the next tap places), the
+build tools (Select, Walls, Light, Fog; picking one closes the sheet), the Inspector, and the
+scene (level, cutaway, undo, redo, budget, the scene list). Kit painting and imports stay on
+tablets and desktops.
+
 - Five targets: Dice (the pad), Scroll (badge), Sheet (character card), Screen for the GM (Play /
-  Prep / Build, then the leaf and tab) or Journal for players (badge), Tools (camera and table
-  tools, Search, every other panel).
+  Build) or Journal for players (badge), Tools (camera and table tools, Search, every other panel).
 - One sheet at a time: opening any place closes the others (`open(id, isGm, phone)`).
 - Sheets keep the half/full drag, Esc and the keyboard inset as before (`BottomSheet.tsx`).
 - Aiming a skill closes the sheet; the table's own aim bar has Cancel.
@@ -215,7 +284,7 @@ Conditions on tokens, in the token bar's GM toggles and on the character card sh
   `prefers-color-scheme`; the Players panel or the palette switches by hand (`vtt.theme`).
 - The table's materials do not change with the theme: the wooden rail, the leather GM screen,
   brass fittings and the felt well (`--wood`, `--leather`, `--brass*`, `--felt` in global.css).
-  Cards, the scroll, leaves, the tray and the palette are paper in every theme: `.skin-paper`
+  Cards, the scroll, the Build docks and the palette are paper in every theme: `.skin-paper`
   re-declares the colour tokens locally, so any panel mounted on paper reads as ink on parchment
   without changes of its own. `palette.test.ts` checks AA contrast for dark, daylight and paper.
 - Body text is Alegreya Sans, names and numbers Alegreya (both bundled, SIL OFL).
@@ -252,8 +321,8 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 ## GM-only controls
 
 - `PanelDef.scope: 'gm'` panels are filtered out for players everywhere, the palette included.
-- The GM screen (plaque, leaves, tray), the combat control and Invite exist only for the GM;
-  players only ever have Play. A GM demoted mid-session drops back to Play.
+- The GM screen (the plaque and the Build workspace), the combat control and Invite exist only for
+  the GM; players only ever have Play. A GM demoted mid-session drops back to Play.
 - Inside panels the GM checks `controller.connection.isGm` (unchanged).
 
 ## Keyboard shortcuts (desktop, ignored while typing in a field)
@@ -266,7 +335,7 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `[` / `]` | put the card away / unroll or roll up the scroll |
 | `/` | write in the scroll (unrolls it) |
 | `1`–`9` | open the n-th panel as the card (again to put it away) |
-| `Esc` | close a tip, card, menu or the raised screen; cancel aiming; deselect |
+| `Esc` | close a tip, card or menu; cancel aiming; put a build tool away; deselect |
 | `G` / `F` / `T` / `M` | grid / first person / top-down / ruler (table) |
 | `Q` / `E` | turn the top-down view 45° |
 | `Enter` | cast the staged aim |
@@ -275,6 +344,10 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `i` | on a focused skill chip: pin its tooltip |
 
 The shell never binds a key the table uses.
+
+Build tools (GM in Build; `ui/build/buildTools.ts`): `V` Select, `P` Paint, `W` Walls, `L` Light,
+`B` Fog. Fog is `B` (brush) because `F` is first person and `G` the grid in both modes; plain
+letters only, so Cmd/Ctrl+V still pastes.
 
 Build keys, with props selected in Build or edit mode (GM; `table/build/transformKeys.ts`):
 
@@ -303,11 +376,12 @@ Kit keys, while a Kit tool is out (GM; `table/kits/`):
 | drag | Floor: a rectangle of floor. Wall: walls along the grid lines (corners, tees and crossings join by themselves); Shift or "Room outline" draws the four walls of a room. Roof: a roof over the room. Erase: everything in the rectangle |
 | click | Door / Window: put one in the wall under the pointer. Stairs: stairs up to the next level. Pillar: on the grid corner. Pick: take the piece under the pointer in hand |
 | `R` / `Shift+R` | turn the piece in hand a quarter |
-| `PgUp` / `PgDn` | build one level up or down (also the ▲ ▼ control at the board's top right) |
+| `PgUp` / `PgDn` | build one level up or down (also ▲ ▼ in Build's scene bar; in Play the board's own control at the top right) |
+| `Alt` (hold) | erase with any tool while held |
 | `Esc` | put the tool away |
 
 Every tool shows a ghost (blue: what it adds, red: what gives way) and every stroke is one
-`tiles.place`, so one undo step. The cutaway (the tray's slider, or ✂ on the board) hides every
+`tiles.place`, so one undo step. The cutaway (✂ in the scene bar, or on the board in Play) hides every
 level above the cut, props and tokens included; on "auto" it follows the selected token's level,
 or the level being built while a Kit tool is out. Kits need a tablet or a desktop.
 
@@ -340,7 +414,7 @@ keyboards still reach the table's own keys.
 - [x] Table layout: top rail, standees, tool rail, the hand, the scroll, dice well, GM screen, one card
 - [x] Every panel has one home (`routePanel`, tested) and is reachable from the command palette
 - [x] Dice roll inside the well only
-- [x] GM screen: Play / Prep (three leaves) / Build (tool tray), mode-coloured board frame
+- [x] GM screen: Play / Build (the Build workspace: scene bar, Library and Inspector docks, tool strip), mode-coloured board frame
 - [x] One home each for the roll mode (the scroll's seal), Hide / Assign / Remove (token menu), turn order (standees)
 - [x] The bell keeps actionable notices until handled
 - [x] Phone: five-target bar, one sheet at a time, the hand above the bar, safe areas, keyboard inset

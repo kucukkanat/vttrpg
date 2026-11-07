@@ -8,7 +8,7 @@ import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
-import { toggleBuildTool, type BuildTool } from '@/table/build/buildState'
+import { toggleBuildTool, useBuildUi, type BuildTool } from '@/table/build/buildState'
 import type { CatalogueEntry } from '@/core/catalogue'
 import { searchCatalogue } from '../catalogue'
 import { pickUpEntry, useBuiltinCatalogue, useMyModels } from '../library/useCatalogue'
@@ -20,8 +20,9 @@ import { setTextScale, setThemePref } from '../theme/theme'
 import { endCombat, startCombat } from '../panels/InitiativePanel'
 import { requestInvite } from '../panels/TopBar'
 import { focusChatInput, toggleShortcutsOverlay } from './useShortcuts'
-import { useTableLayout } from './tableLayout'
-import { setTableMode } from './TableChrome'
+import { routePanel, setTableMode, showSceneInInspector, useTableLayout } from './tableLayout'
+import { useLibraryView } from '../library/libraryView'
+import { pickStripTool, STRIP_TOOLS } from '../build/buildTools'
 import { openDrawerCard } from './GmDrawer'
 import { filterCommands, GROUP_ORDER, isPaletteKey, type Command, type CommandGroup } from './commands'
 import { Icon } from '../icons'
@@ -62,32 +63,46 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
 
     // Open: every panel, wherever it lives.
     for (const p of panels) {
-      const where = p.id === 'chat' ? 'The scroll' : p.id === 'build' ? 'GM screen · Build' : isGm && DRAWER_PANELS.has(p.id) ? 'GM drawer' : ['scenes', 'prep', 'tokens', 'skills-editor'].includes(p.id) && isGm ? 'GM screen · Prep' : 'Card'
-      // Drawer items open as the one card in Play, whatever the old Prep route says.
-      const open = isGm && DRAWER_PANELS.has(p.id) ? () => openDrawerCard(p.id) : () => actions.openPanel(p.id)
+      const route = routePanel(p.id, isGm)
+      const drawer = isGm && DRAWER_PANELS.has(p.id)
+      const where = route.kind === 'scroll' ? 'The scroll' : route.kind === 'build' ? 'Build · Library' : drawer ? 'GM drawer' : 'Card'
+      // Drawer items open as the one card in Play.
+      const open = drawer ? () => openDrawerCard(p.id) : () => actions.openPanel(p.id)
       add('Open', { id: `open:${p.id}`, title: p.id === 'chat' ? 'Open the scroll (chat)' : `Open ${p.title}`, words: `${p.short} panel show ${PANEL_ALIASES[p.id] ?? ''}`, where, run: open })
     }
     add('Open', { id: 'chat:focus', title: 'Write in the scroll', words: 'chat say message whisper type', keys: '/', where: 'The scroll', run: () => { actions.openPanel('chat'); requestAnimationFrame(() => focusChatInput()) } })
 
     if (isGm) {
-      add('GM screen', { id: 'mode:play', title: 'Play mode: run the table', words: 'mode drawer', run: () => setTableMode('play') })
+      add('GM screen', { id: 'mode:play', title: 'Play mode: run the table', words: 'mode drawer done', run: () => setTableMode('play') })
       // "prep" and "cast" still find Build, where scenes, creatures and the cast now live.
-      add('GM screen', { id: 'mode:build', title: 'Build mode: make the world', words: 'mode prep cast scenes creatures walls doors fog lights props', run: () => setTableMode('build') })
+      add('GM screen', { id: 'mode:build', title: 'Build mode: make the world', words: 'mode prep cast scenes encounters creatures npc walls doors fog lights props', run: () => setTableMode('build') })
       add('GM screen', { id: 'drawer:tables', title: 'Roll on a random table', words: 'tables random oracle prep', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('tables') } })
       add('GM screen', { id: 'drawer:npc', title: 'New NPC', words: 'npc generator name stat block creature prep cast', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('npc') } })
       add('GM screen', { id: 'drawer:encounters', title: 'Run an encounter', words: 'encounters run fight ambush creatures prep place', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('encounters') } })
       add('GM screen', { id: 'drawer:fog', title: 'Fog brush: reveal', words: 'fog of war reveal paint brush explored play', where: 'Tool rail', run: () => { setTableMode('play'); toggleBuildTool('fog-reveal') } })
       add('GM screen', { id: 'drawer:fog-hide', title: 'Fog brush: hide', words: 'fog of war hide cover paint brush play', where: 'Tool rail', run: () => { setTableMode('play'); toggleBuildTool('fog-hide') } })
+      const shelf = (s: 'models' | 'kit' | 'creatures' | 'saved', filter: 'all' | 'in-scene' = 'all') => () => {
+        setTableMode('build')
+        useLibraryView.getState().set({ shelf: s, filter })
+        useTableLayout.getState().set({ buildLibraryOpen: true })
+      }
       const tools: [BuildTool, string, string][] = [
         ['wall', 'Draw walls', 'line of sight'], ['door', 'Draw doors', 'open close lock'], ['erase', 'Erase walls and doors', 'delete remove'],
         ['fog-reveal', 'Reveal fog', 'brush paint explored'], ['fog-hide', 'Hide under fog', 'brush paint'], ['light', 'Place a light', 'lamp torch colour'],
       ]
       for (const [tool, title, words] of tools) {
-        add('Build', { id: `build:${tool}`, title, words, where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'build' }); toggleBuildTool(tool) } })
+        add('Build', { id: `build:${tool}`, title, words, where: 'Build · tools', run: () => { setTableMode('build'); useBuildUi.getState().set({ tool }) } })
       }
-      add('Build', { id: 'build:library', title: 'Model library', words: 'props models place stamp furniture assets', where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'library' }) } })
-      add('Build', { id: 'build:eyedropper', title: 'Eyedropper: pick a prop’s model up', words: 'same again copy model', keys: 'Alt+click', where: 'GM screen · Build', run: () => { setTableMode('build'); toggleBuildTool('eyedropper') } })
-      add('Build', { id: 'build:scene', title: 'Scene settings', words: 'darkness weather ambience fog grid', where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'scenes' }) } })
+      for (const t of STRIP_TOOLS) {
+        add('Build', { id: `strip:${t.id}`, title: `${t.label} tool`, words: t.title, keys: t.key, where: 'Build · tool strip', run: () => { setTableMode('build'); pickStripTool(t.id) } })
+      }
+      add('Build', { id: 'build:library', title: 'Model library', words: 'props models place stamp furniture assets', where: 'Build · Library', run: shelf('models') })
+      add('Build', { id: 'build:kit', title: 'Kit pieces', words: 'floors walls doors stairs roofs grid kit paint', where: 'Build · Library', run: shelf('kit') })
+      add('Build', { id: 'build:creatures', title: 'Creatures', words: 'npc monsters stat blocks prep encounters cast', where: 'Build · Library', run: shelf('creatures') })
+      add('Build', { id: 'build:saved', title: 'Saved groups and encounters', words: 'prefabs groups encounters stamp', where: 'Build · Library', run: shelf('saved') })
+      add('Build', { id: 'build:in-scene', title: 'What is in this scene', words: 'tokens props lights outliner cast list', where: 'Build · Library', run: shelf('models', 'in-scene') })
+      add('Build', { id: 'build:eyedropper', title: 'Eyedropper: pick a prop’s model up', words: 'same again copy model', keys: 'Alt+click', where: 'Build', run: () => { setTableMode('build'); toggleBuildTool('eyedropper') } })
+      add('Build', { id: 'build:scene', title: 'Scene settings', words: 'darkness weather ambience fog grid display credits', where: 'Build · Inspector', run: () => { setTableMode('build'); showSceneInInspector(); useTableLayout.getState().set({ buildInspectorOpen: true }) } })
       add('Build', { id: 'build:undo', title: 'Undo your last edit', words: 'restore removal move', keys: 'Cmd/Ctrl+Z', run: () => void undoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'undo'), ttl: 2500 })) })
       add('Build', { id: 'build:redo', title: 'Redo', words: 'again repeat', keys: 'Cmd/Ctrl+Shift+Z', run: () => void redoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'redo'), ttl: 2500 })) })
     }
@@ -165,7 +180,7 @@ function useLibraryCommands(isGm: boolean, query: string): Command[] {
     const pool: CatalogueEntry[] = [...mine, ...(builtin ?? [])]
     return searchCatalogue(pool, query).slice(0, MAX_MODEL_RESULTS).map((e) => ({
       id: `model:${e.id}`, group: 'Library' as const, title: `Place ${e.title}`, where: e.kit ? 'Library · kit' : 'Library',
-      run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'library' }); pickUpEntry(e) },
+      run: () => { setTableMode('build'); useLibraryView.getState().set({ shelf: 'models' }); pickUpEntry(e) },
     }))
   }, [isGm, query, builtin, mine])
 }

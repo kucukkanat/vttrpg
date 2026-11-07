@@ -7,7 +7,6 @@ import type { Scene } from '@/core/doc'
 import { createImageScene, importSceneFile, readImageSize, suggestColumns, type ImageSize, type ImportHooks } from '@/import'
 import { imageSceneLayout, pixelsPerCell, useTableUi } from '@/table'
 import { setPreviewScene } from '@/table/tableState'
-import { fogStatus, isFogEnabled } from '@/table/vision'
 import { libraryModels, libraryRef, loadLibraryIndex, titleCase } from '../library'
 import { pushToast } from '../toasts'
 import './ScenesPanel.css'
@@ -34,16 +33,16 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 
 /**
- * Scenes: the list (Live badge on the active one, Switch and Preview on the others), ways to add a
- * scene, and the active scene's weather, ambience, darkness and fog. Preview shows a scene on the
- * GM's table only (`tableState.previewScene`); the bar over the table offers the switch from there.
+ * Scenes: the list (Live badge on the active one, Switch and Preview on the others, rename and
+ * remove), and ways to add a scene. The GM's scene switcher in Build's scene bar and the scene
+ * card in Play both show it; the live scene's settings are the Build Inspector's scene context.
+ * Preview shows a scene on the GM's table only (`tableState.previewScene`); the bar over the table offers the switch from there.
  * Adding stages the scene without switching; the GM switches when ready (a toast offers it). The
  * first scene of a game goes live at once, since there is nothing to interrupt.
  */
 export function ScenesPanel({ controller }: { controller: GameController }) {
   const scenes = useGame((s) => s.scenes)
   const meta = useGame((s) => s.meta)
-  const activeFog = useGame((s) => (s.meta?.activeScene ? s.fog[s.meta.activeScene] : undefined))
   const sceneErrors = useTableUi((s) => s.sceneErrors)
   const previewScene = useTableUi((s) => s.previewScene)
   const [library, setLibrary] = useState<LibraryEntry[]>([])
@@ -51,10 +50,10 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
   const [imagePrompt, setImagePrompt] = useState<ImagePrompt | null>(null)
   const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
-  // The add-scene buttons live behind the header's "+ Add" so the list and the live scene's
-  // settings get the room; they open by themselves while the game has no scene yet.
+  // The add-scene buttons live behind the header's "+ Add" so the list gets the room; they open by
+  // themselves while the game has no scene yet.
   const [adding, setAdding] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(() => readFlag(SETTINGS_KEY))
+  const [renaming, setRenaming] = useState<SceneId | null>(null)
   const isGm = controller.connection.isGm
   const cellSize = controller.rules?.pack.manifest.grid.cellSize ?? 1.5
   useEffect(() => { void loadLibraryIndex().then((l) => setLibrary(libraryModels(l, 'scene'))) }, [])
@@ -142,21 +141,12 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
     if (f) handler(f)
   }
 
-  const active = meta?.activeScene ? scenes[meta.activeScene] : undefined
-  const update = (patch: Partial<Scene>) => active && void controller.dispatch({ type: 'scene.update', scene: active.id, patch })
-  const remove = (id: SceneId) => void controller.dispatch({ type: 'scene.remove', scene: id })
-
-  // --- fog ------------------------------------------------------------------------------------
-  const fogOn = active ? isFogEnabled(active) : false
-  const explored = (activeFog?.revealed.length ?? 0) > 0 || !!activeFog?.revealAll
-  const revealAll = () => active && void controller.dispatch({ type: 'fog.revealAll', scene: active.id })
-  const hideAll = () => active && void controller.dispatch({ type: 'fog.reset', scene: active.id })
-  /** Back to the starting state: fog on and nothing explored. */
-  const resetFog = async () => {
-    if (!active) return
-    if (!fogOn) await controller.dispatch({ type: 'scene.update', scene: active.id, patch: { fogEnabled: true } })
-    if (explored) await controller.dispatch({ type: 'fog.reset', scene: active.id })
+  const rename = (id: SceneId, name: string) => {
+    const n = name.trim()
+    setRenaming(null)
+    if (n && n !== scenes[id]?.name) void controller.dispatch({ type: 'scene.update', scene: id, patch: { name: n } })
   }
+  const remove = (id: SceneId) => void controller.dispatch({ type: 'scene.remove', scene: id })
 
   const showAdd = adding || Object.keys(scenes).length === 0
 
@@ -178,7 +168,11 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
             <li key={s.id} className={live ? 'selected' : ''}>
               <span className="scene-name">
                 {err && <span className="scene-warn" role="img" aria-label="Failed to load" title={`Couldn't load ${s.name}: ${err}`}><Icon name="warning" size={16} /></span>}
-                <span className="scene-title">{s.name}</span>
+                {renaming === s.id
+                  ? <input className="scene-rename" defaultValue={s.name} autoFocus aria-label={`Rename ${s.name}`}
+                    onBlur={(e) => rename(s.id, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { e.stopPropagation(); setRenaming(null) } }} />
+                  : <span className="scene-title">{s.name}</span>}
                 {s.image && !s.model ? <span className="muted small"> · map</span> : null}
               </span>
               {live
@@ -193,6 +187,9 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
                     </button>
                   </>
                 )}
+              {isGm && renaming !== s.id && (
+                <button className="icon scene-rename-btn" onClick={() => setRenaming(s.id)} title={`Rename ${s.name}`} aria-label={`Rename ${s.name}`}><Icon name="pencil" size={16} /></button>
+              )}
               {isGm && (
                 <button className="icon scene-remove" disabled={live} onClick={() => remove(s.id)}
                   title={live ? 'Switch to another scene before removing the live one' : `Remove ${s.name}`} aria-label={`Remove ${s.name}`}>×</button>
@@ -238,46 +235,6 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
         </div>
       )}
       {status && <p className={`small ${status.tone === 'error' ? 'error' : 'muted'}`} style={{ margin: '6px 0 0' }}>{status.text}</p>}
-      {isGm && active && (
-        <>
-          <details className="scene-settings" open={settingsOpen}
-            onToggle={(e) => { const open = (e.currentTarget as HTMLDetailsElement).open; setSettingsOpen(open); writeFlag(SETTINGS_KEY, open) }}>
-            <summary className="disclosure">
-              <span>Scene settings</span>
-              <span className="muted small scene-settings-sum">{settingsSummary(active, fogOn)}</span>
-            </summary>
-          <div className="grid2">
-            <label>Weather
-              <select value={active.weather ?? 'none'} onChange={(e) => update({ weather: e.target.value as Scene['weather'] })}>
-                {['none', 'rain', 'snow', 'fog', 'embers'].map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
-            </label>
-            <label>Ambience
-              <select value={active.ambientPreset ?? 'none'} onChange={(e) => update({ ambientPreset: e.target.value as Scene['ambientPreset'] })}>
-                {['none', 'wind', 'fire', 'rain', 'cave', 'tavern', 'forest'].map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
-            </label>
-            <label style={{ gridColumn: '1 / -1' }}><span>Darkness <span className="muted">{Math.round(active.darkness * 100)}%</span></span>
-              <input type="range" min={0} max={1} step={0.05} value={active.darkness} onChange={(e) => update({ darkness: Number(e.target.value) })} />
-            </label>
-          </div>
-          <div className="fog-block">
-            <div className="fog-head">
-              <label className="check">
-                <input type="checkbox" checked={fogOn} onChange={(e) => update({ fogEnabled: e.target.checked })} />
-                Fog of war
-              </label>
-              <span className="muted small fog-status">{fogStatus(active, activeFog)}</span>
-            </div>
-            <div className="row">
-              <button className="tiny" disabled={!fogOn || !!activeFog?.revealAll} title="Players see the whole map" onClick={revealAll}>Reveal all</button>
-              <button className="tiny" disabled={!fogOn || !explored} title="Forget what has been explored; tokens reveal what they see from here" onClick={hideAll}>Hide all</button>
-              <button className="tiny" disabled={fogOn && !explored} title="Fog on with nothing explored" onClick={() => void resetFog()}>Reset</button>
-            </div>
-          </div>
-          </details>
-        </>
-      )}
       {isGm && Object.keys(scenes).length === 0 && (
         <p className="muted small">
           Add a scene from the library, a GLB following the Blender convention, a map image, or import a Universal VTT (.dd2vtt / .uvtt)
@@ -287,26 +244,6 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
     </div>
   )
 }
-
-const SETTINGS_KEY = 'vtt.scenes.settings'
-
-function readFlag(key: string): boolean {
-  try { return localStorage.getItem(key) === '1' } catch { return false }
-}
-function writeFlag(key: string, on: boolean) {
-  try { localStorage.setItem(key, on ? '1' : '0') } catch { /* private mode */ }
-}
-
-/** One line for the closed settings row: what is on, so the GM need not open it to check. */
-function settingsSummary(scene: Scene, fogOn: boolean): string {
-  const parts: string[] = []
-  if (scene.weather && scene.weather !== 'none') parts.push(scene.weather)
-  if (scene.ambientPreset && scene.ambientPreset !== 'none') parts.push(scene.ambientPreset)
-  parts.push(`${Math.round(scene.darkness * 100)}% dark`)
-  parts.push(fogOn ? 'fog on' : 'fog off')
-  return parts.join(' · ')
-}
-
 
 /**
  * Grid size for a map image: columns across (rows follow from the aspect ratio), cell size from the

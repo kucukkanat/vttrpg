@@ -1,16 +1,17 @@
 /**
  * Edit bar: shown over the bottom of the table while edit mode is on (double tap on a token or prop,
- * or "Edit" in its menu), and in Build while props are selected. Names what is being edited, toggles
+ * or "Edit" in its menu), and in Build while props are selected (there without Details: the Build
+ * Inspector shows them). Names what is being edited, toggles
  * snapping, cycles the prop gizmo's mode (like Tab), toggles the advanced prop gizmo (like A; with
  * world or local axes), and opens "Details" with the numeric editors (size, model, solid, hide a
- * room part…; in advanced mode the prop inspector with expressions) and, for the GM, adding props.
+ * room part…; in advanced mode the prop inspector with expressions).
  * "Done" (or another double tap) leaves edit mode and lets go of the props.
  */
 import { useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
-import { AddProp, Selected } from '../panels/ObjectPanel'
+import { Selected } from '../panels/ObjectPanel'
 import { PropInspector } from '../panels/PropInspector'
 import { Icon } from '@/ui/icons'
 import { MODE_LABEL, nextMode } from '@/table/build/transformKeys'
@@ -37,6 +38,8 @@ export function EditBar({ controller }: { controller: GameController }) {
   const space = useTableUi((s) => s.gizmoSpace)
   const gizmoMode = useTableUi((s) => s.gizmoMode)
   const props = useGame((s) => s.propSelection.length > 0)
+  // In Build the Inspector holds the details; the bar keeps snap, the gizmo mode and Done.
+  const building = useTableUi((s) => s.buildMode)
   // Phones get no advanced mode.
   const phone = useBreakpoint() === 'phone'
   const done = () => {
@@ -46,18 +49,12 @@ export function EditBar({ controller }: { controller: GameController }) {
 
   return (
     <div className="edit-dock">
-      {details && (
+      {details && !building && (
         <div className="dock-card edit-details" role="region" aria-label="Edit details">
           {isGm && props && advanced && !phone && <PropInspector controller={controller} />}
           {selection && scene && sceneId
             ? <Selected key={`${selection.kind}:${selection.id}`} controller={controller} selection={selection} scene={scene} sceneId={sceneId} onDeselect={() => setSelection(null)} />
             : <p className="muted small">Tap a token or prop{isGm ? ', or a part of the room,' : ''} to edit it.</p>}
-          {isGm && sceneId && (
-            <div className="edit-details-extra">
-              {selection?.kind !== 'scene' && <button type="button" className="tiny" onClick={() => setSelection({ kind: 'scene', id: sceneId })}>Edit the whole scene</button>}
-              <AddProp controller={controller} sceneId={sceneId} scene={scene} />
-            </div>
-          )}
         </div>
       )}
       <div className="dock-bar edit-bar" role="toolbar" aria-label="Edit mode">
@@ -74,7 +71,7 @@ export function EditBar({ controller }: { controller: GameController }) {
           </button>
         )}
         {isGm && props && !phone && (
-          <button type="button" className={`tiny${advanced ? ' on' : ''}`} aria-pressed={advanced} title="Advanced: tilt on every axis, stretch per axis, type exact values (A)" onClick={() => { set({ advanced: !advanced }); if (!advanced) setDetails(true) }}>
+          <button type="button" className={`tiny${advanced ? ' on' : ''}`} aria-pressed={advanced} title="Advanced: tilt on every axis, stretch per axis, type exact values (A)" onClick={() => { set({ advanced: !advanced }); if (!advanced && !building) setDetails(true) }}>
             Advanced
           </button>
         )}
@@ -83,10 +80,12 @@ export function EditBar({ controller }: { controller: GameController }) {
             {space === 'world' ? 'World' : 'Local'}
           </button>
         )}
-        <button type="button" className={`tiny${details ? ' on' : ''}`} aria-expanded={details} onClick={() => setDetails(!details)}>
-          Details <Icon name={details ? 'chevron-down' : 'chevron-up'} size={14} />
-        </button>
-        <button type="button" className="tiny primary" onClick={done} title="Leave edit mode (or double tap)">Done</button>
+        {!building && (
+          <button type="button" className={`tiny${details ? ' on' : ''}`} aria-expanded={details} onClick={() => setDetails(!details)}>
+            Details <Icon name={details ? 'chevron-down' : 'chevron-up'} size={14} />
+          </button>
+        )}
+        <button type="button" className="tiny primary" onClick={done} title={building ? 'Let go of the props (Esc)' : 'Leave edit mode (or double tap)'}>{building ? 'Deselect' : 'Done'}</button>
       </div>
     </div>
   )

@@ -53,6 +53,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Cmd/Ctrl+Shift+Z, Ctrl+Y', what: 'Redo what you undid (GM)', group: 'Table' },
   { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
   { keys: 'Arrows', what: 'Move through the token menu or the search results', group: 'Table' },
+  { keys: 'V / P / W / L / B', what: 'Build tools: Select, Paint (kit), Walls, Light, Fog brush', group: 'Build' },
+  { keys: 'PgUp / PgDn', what: 'Build one level up or down', group: 'Build' },
   { keys: 'Shift+click', what: 'Add a prop to the selection, or drop it from it', group: 'Build' },
   { keys: 'Drag', what: 'On empty board in Build: select every prop in the box (Shift adds; Alt-drag moves the camera)', group: 'Build' },
   { keys: 'Alt+drag', what: 'On a prop: drag copies of the selection, the originals stay', group: 'Build' },
