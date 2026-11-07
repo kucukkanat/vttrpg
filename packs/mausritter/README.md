@@ -13,10 +13,10 @@ understands is described here; the engine (`src/rules`) never special-cases a pa
 
 | File | Purpose |
 |---|---|
-| `pack.json` | Manifest: id, name, version, grid defaults, `resolution`, list of the other files |
+| `pack.json` | Manifest: id, name, version, grid defaults, `resolution`, optional `damage` and `concentration`, list of the other files |
 | `attributes.json` | `[{ id, name, abbr?, min?, max?, derived? }]` |
 | `resources.json` | `[{ id, name, max, resetOn? }]`; `max` is an expression |
-| `conditions.json` | `[{ id, name, description, icon?, modifiers? }]`; `modifiers` maps attribute ids to numbers |
+| `conditions.json` | `[{ id, name, description, icon?, modifiers?, category?, resist?, immune?, vulnerable? }]`; `modifiers` maps attribute ids to numbers, `category` is `buff`, `debuff` or `neutral`, the last three list damage type ids (`all` for every type) |
 | `sheet.json` | Layout rendered by the generic sheet component |
 | `chargen.json` | Character generation steps and tables |
 | `skills/*.json` | Skills and spells: cost, targeting, effect rows, VFX cues |
@@ -38,6 +38,38 @@ Tells the engine how to turn a roll with a known target number into an outcome:
 
 `critical` is set when the resolution die shows its lowest or highest face. The outcome of a
 roll is `{ success, critical, target }`; without a target only `critical` is filled.
+
+Advantage and disadvantage work on the resolution die: the first single `d20` (or the
+`roll-under` die) of a formula becomes `2d20kh1` or `2d20kl1`, keeping the better or worse,
+where better is higher for `d20-vs-dc` and lower for `roll-under`. Formulas without that die
+(damage) are left alone. The kept die is the natural one for `critical` and for `save.natural`.
+
+### Damage model (optional)
+
+```json
+"damage": {
+  "resource": "hp", "temp": "temp_hp",
+  "resist": "resistances", "vulnerable": "vulnerabilities", "immune": "immunities",
+  "types": [{ "id": "fire", "name": "Fire" }]
+}
+```
+
+`resource` is what damage and apply-damage cards hit; `temp` names a plain number spent first
+and never healed (a `heal` row on it keeps the higher value: temporary points do not stack).
+`resist` / `vulnerable` / `immune` are sheet keys holding lists of type ids; active conditions
+add theirs. Immunity zeroes typed damage, resistance halves it (rounding down), vulnerability
+doubles it. Untyped damage only meets `all`. Packs without a model keep plain damage.
+
+### Concentration (optional)
+
+```json
+"concentration": { "condition": "concentrating", "save": "d20 + con_mod + save_prof.con * pb", "dc": "max(10, floor(damage / 2))" }
+```
+
+Skills marked `"concentration": true` end the caster's previous concentration skill (and every
+condition it added) and show `condition` on the caster. Damage to a concentrating token posts a
+save prompt with the `dc` (where `damage` is the damage taken); a failed save, dropping to 0 or
+"Drop it" ends the concentration.
 
 ## Sheet data
 
@@ -137,10 +169,10 @@ target, `target.x` is the current target.
 | Row | Behaviour |
 |---|---|
 | `roll` without `vs` | Rolled once; result available as `rolls.<label>.total` and `last.total` |
-| `roll` with `vs` | Rolled once per target against the `vs` expression; `save.success`, `save.total`, `save.critical` are set for that target, using the pack's resolution |
-| `damage` | Per target: `resource` current is reduced by the formula's result, floored at 0 |
+| `roll` with `vs` | Rolled once per target against the `vs` expression; `save.success`, `save.total`, `save.critical`, `save.natural` are set for that target, using the pack's resolution. Advantage on a skill use applies to rows whose formula does not read `target.*` (attacks, not the targets' saves) |
+| `damage` | Per target: `resource` current is reduced by the formula's result, floored at 0. Optional `type` (an id, or `{melee.type}` read from the sheet) applies the damage model |
 | `heal` | Per target: raised by the formula's result, capped at the resource's `max` when present |
-| `condition` | `add` / `remove` condition ids on each target (or the caster if there are none) |
+| `condition` | `add` / `remove` condition ids on each target (or the caster if there are none). Optional `duration: { turns, tick?: start\|end, on?: source\|target }` counts the added conditions down on that token's turns while initiative runs |
 | `move` | Reported as a message; the table applies movement |
 | `message` | Text with `{expression}` placeholders; emitted per target when it mentions `target` |
 

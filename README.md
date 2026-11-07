@@ -5,6 +5,7 @@ hosted on GitHub Pages.
 
 - `PLAN.md` — product plan, decisions, roadmap
 - `ARCHITECTURE.md` — module boundaries and contribution rules
+- `docs/ROLLS.md` — roll modes and the privacy of hidden rolls, damage cards, durations, concentration
 
 ## Develop
 
