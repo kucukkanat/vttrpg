@@ -19,6 +19,8 @@ describe('inspector context', () => {
   it('shows the paint options with a kit piece in hand, and the creature options with creatures', () => {
     expect(inspectorContext({ ...none, tool: 'kit' })).toEqual({ kind: 'paint' })
     expect(inspectorContext({ ...none, tool: 'creature' })).toEqual({ kind: 'creature' })
+    expect(inspectorContext({ ...none, selectedToken: 't1', editing: false })).toBeNull()
+    expect(inspectorContext({ ...none, selectedToken: 't1', editing: true })).toEqual({ kind: 'token' })
   })
 
   it('puts a selection before the tool', () => {

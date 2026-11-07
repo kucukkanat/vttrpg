@@ -8,6 +8,7 @@
  *                  creatures are in hand (src/ui/build/Inspector.tsx, loaded on first use). On
  *                  phones it opens and closes the Inspector sheet instead.
  */
+import { useEditMode } from './editMode'
 import { lazy, Suspense, useEffect, useRef } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
@@ -27,7 +28,8 @@ export function useInspectorContext(): InspectorContext | null {
   const propCount = useGame((s) => s.propSelection.length)
   const selectedToken = useGame((s) => s.selectedToken)
   const tool = useBuildUi((s) => s.tool)
-  return inspectorContext({ selection, propCount, selectedToken, tool })
+  const editing = useEditMode((s) => s.on)
+  return inspectorContext({ selection, propCount, selectedToken, tool, editing })
 }
 
 export function LibraryHost({ controller }: { controller: GameController }) {

@@ -22,12 +22,14 @@ export interface InspectorInput {
   propCount: number
   selectedToken: string | null
   tool: BuildTool | null
+  /** The GM's Edit toggle: tokens get the Inspector only while editing; in play the hand is enough. */
+  editing?: boolean
 }
 
-export function inspectorContext({ selection, propCount, selectedToken, tool }: InspectorInput): InspectorContext | null {
+export function inspectorContext({ selection, propCount, selectedToken, tool, editing = true }: InspectorInput): InspectorContext | null {
   if (propCount > 1) return { kind: 'props', count: propCount }
   if (propCount === 1) return { kind: 'prop' }
-  if (selectedToken || selection?.kind === 'token') return { kind: 'token' }
+  if (editing && (selectedToken || selection?.kind === 'token')) return { kind: 'token' }
   if (selection?.kind === 'node') return { kind: 'node' }
   if (tool === 'kit') return { kind: 'paint' }
   if (tool === 'creature') return { kind: 'creature' }
