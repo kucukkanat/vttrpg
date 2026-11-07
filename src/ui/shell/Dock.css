@@ -99,3 +99,11 @@
 .condition-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .token-bar-head > button { flex: none; white-space: nowrap; }
+
+/* Phones: Hide, Assign and Remove stay in the ⋯ menu so the GM row is one line and the bar stays short. */
+.game--phone .token-bar-gm .gm-secondary { display: none; }
+/* With End turn showing, the outlined bar already says whose turn it is; drop the badge so the head stays one line. */
+.game--phone .token-bar-head:has(.end-turn) .token-bar-turn { display: none; }
+/* Phones: one head row; the name gives way first. */
+.game--phone .token-bar-head { flex-wrap: nowrap; gap: var(--sp-1); }
+.game--phone .token-bar-head .token-bar-hp button { min-width: 36px; padding: 0; }

@@ -145,12 +145,12 @@ export function SkillBar({ controller }: { controller: GameController }) {
             <button type="button" className={`tiny${open === 'conditions' ? ' on' : ''}`} aria-expanded={open === 'conditions'} onClick={() => toggle('conditions')}>
               Conditions{token.conditions.length ? ` (${token.conditions.length})` : ''}
             </button>
-            <button type="button" className="tiny" onClick={() => void controller.dispatch({ type: 'token.update', token: token.id, patch: { hidden: !token.hidden } })}>
+            <button type="button" className="tiny gm-secondary" onClick={() => void controller.dispatch({ type: 'token.update', token: token.id, patch: { hidden: !token.hidden } })}>
               {token.hidden ? 'Show' : 'Hide'}
             </button>
             <InitiativeButton controller={controller} token={token} active={active} inOrder={inOrder} />
-            <button type="button" className={`tiny${open === 'assign' ? ' on' : ''}`} aria-expanded={open === 'assign'} onClick={() => toggle('assign')}>Assign</button>
-            <button type="button" className="tiny danger" onClick={() => { void controller.dispatch({ type: 'token.remove', token: token.id }); useGame.getState().clearSelection() }}>Remove</button>
+            <button type="button" className={`tiny gm-secondary${open === 'assign' ? ' on' : ''}`} aria-expanded={open === 'assign'} onClick={() => toggle('assign')}>Assign</button>
+            <button type="button" className="tiny danger gm-secondary" onClick={() => { void controller.dispatch({ type: 'token.remove', token: token.id }); useGame.getState().clearSelection() }}>Remove</button>
           </div>
         )}
       </div>

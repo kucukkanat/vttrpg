@@ -60,7 +60,7 @@ function measure(id: TipId): Box | null {
 }
 
 function obstacles(): Box[] {
-  return Array.from(document.querySelectorAll('.dock .dock-bar, .dock .dock-card, .tabbar'))
+  return Array.from(document.querySelectorAll('.dock .dock-bar, .dock .dock-card, .tabbar, .cam-pill, .init-strip-wrap .chip, .hud > .chip'))
     .map((el) => toBox(el.getBoundingClientRect()))
     .filter((b) => b.width > 0 && b.height > 0)
 }
