@@ -121,6 +121,12 @@ export const editRuntime: {
   gestureEndedAt: 0,
 }
 
+/** This builder's own pointer and ghost, read by the builder presence sender (BuilderPresence.tsx). */
+export const builderLocal: {
+  /** Where the held model's ghost rests now, or null when nothing is held over the board. */
+  heldAt: { x: number; y: number; z: number } | null
+} = { heldAt: null }
+
 /** Coarse pointer (touch first) on a phone-width screen: no box select and no advanced mode. */
 export function isPhoneLike(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false

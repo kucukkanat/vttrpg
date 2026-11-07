@@ -29,7 +29,7 @@ import { useAssetLoad } from '../TokenMesh'
 import { useModel } from '../useModel'
 import { nextRoll, putDownModel, useBuildUi } from './buildState'
 import { eyedrop } from './eyedrop'
-import { propIdOfHit } from './editRuntime'
+import { builderLocal, propIdOfHit } from './editRuntime'
 import { pickSurface, placedProps, sceneSurfaceLabel, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
 
 const noRaycast = () => undefined
@@ -188,6 +188,9 @@ export function PlaceLayer({ bounds, tool }: { bounds: Bounds2; tool: 'place' | 
   const press = useRef<{ id: number; x: number; y: number } | null>(null)
   const lastRay = useRef<Ray | null>(null)
   const placing = tool === 'place' && !!held
+  // Where the ghost rests, for other builders to see (BuilderPresence.tsx).
+  useEffect(() => { builderLocal.heldAt = placing && hover ? { x: hover.x, y: hover.y, z: hover.z } : null }, [placing, hover])
+  useEffect(() => () => { builderLocal.heldAt = null }, [])
 
   // Keys while holding: Esc puts it down, R / Shift+R turn it. Capture phase, so the table's own
   // R (turn the selection) does not also fire while a model is in hand.
@@ -305,33 +308,37 @@ function Ghost({ held, at, yaw, k }: { held: HeldModel; at: { x: number; y: numb
   )
 }
 
-function GhostPiece({ model, title, scale, size }: { model: HeldModel['model']; title: string; scale: { x: number; y: number; z: number }; size?: [number, number, number] }) {
+/** One model drawn as a ghost; `opacity` and `color` let another builder's hand look fainter and in their colour. */
+export function GhostPiece({ model, title, scale, size, opacity = GHOST_OPACITY, color = BUILD.proposal }: {
+  model: HeldModel['model']; title: string; scale: { x: number; y: number; z: number }; size?: [number, number, number] | undefined
+  opacity?: number; color?: string
+}) {
   const { url } = useAssetLoad(model)
   return (
     <group scale={[scale.x, scale.y, scale.z]}>
       {url ? (
-        <Suspense fallback={<SizeBox size={size} />}>
-          <GhostModel url={url} sha256={model.sha256} name={title} />
+        <Suspense fallback={<SizeBox size={size} color={color} />}>
+          <GhostModel url={url} sha256={model.sha256} name={title} opacity={opacity} color={color} />
         </Suspense>
-      ) : <SizeBox size={size} />}
+      ) : <SizeBox size={size} color={color} />}
     </group>
   )
 }
 
-/** A wire box of the catalogue size while the model loads. */
-function SizeBox({ size }: { size?: [number, number, number] }) {
+/** A wire box of the catalogue size while the model loads (or when nothing better is known). */
+export function SizeBox({ size, color = BUILD.proposal }: { size?: [number, number, number] | undefined; color?: string }) {
   const [w, h, d] = size ?? [0.6, 0.6, 0.6]
   return (
     <mesh position-y={h / 2} raycast={noRaycast}>
       <boxGeometry args={[w, h, d]} />
-      <meshBasicMaterial color={BUILD.proposal} wireframe transparent opacity={0.7} />
+      <meshBasicMaterial color={color} wireframe transparent opacity={0.7} />
     </mesh>
   )
 }
 
 const GHOST_OPACITY = 0.55
 
-function GhostModel({ url, sha256, name }: { url: string; sha256: string; name: string }) {
+function GhostModel({ url, sha256, name, opacity, color }: { url: string; sha256: string; name: string; opacity: number; color: string }) {
   const gltf = useModel(url, sha256, name)
   const { object, materials, footprint } = useMemo(() => {
     const o = gltf.scene.clone(true) as Group
@@ -344,7 +351,7 @@ function GhostModel({ url, sha256, name }: { url: string; sha256: string; name: 
       const ghost = (src: Material) => {
         const c = src.clone()
         c.transparent = true
-        c.opacity = GHOST_OPACITY * (src.opacity ?? 1)
+        c.opacity = opacity * (src.opacity ?? 1)
         c.depthWrite = false
         mats.push(c)
         return c
@@ -354,7 +361,7 @@ function GhostModel({ url, sha256, name }: { url: string; sha256: string; name: 
     const box = new Box3().setFromObject(o)
     const fp = box.isEmpty() ? null : { w: box.max.x - box.min.x, d: box.max.z - box.min.z, cx: (box.min.x + box.max.x) / 2, cz: (box.min.z + box.max.z) / 2 }
     return { object: o, materials: mats, footprint: fp }
-  }, [gltf])
+  }, [gltf, opacity])
   useEffect(() => () => { for (const m of materials) m.dispose() }, [materials])
   return (
     <>
@@ -362,7 +369,7 @@ function GhostModel({ url, sha256, name }: { url: string; sha256: string; name: 
       {footprint && (
         <mesh rotation-x={-Math.PI / 2} position={[footprint.cx, 0.01, footprint.cz]} raycast={noRaycast} renderOrder={21}>
           <planeGeometry args={[footprint.w, footprint.d]} />
-          <meshBasicMaterial color={BUILD.proposal} transparent opacity={0.22} depthWrite={false} />
+          <meshBasicMaterial color={color} transparent opacity={0.22} depthWrite={false} />
         </mesh>
       )}
     </>
