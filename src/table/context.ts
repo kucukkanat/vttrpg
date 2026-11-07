@@ -6,6 +6,7 @@ import type { GridSpec } from '@/core/geometry'
 import type { PlayerPubkey, SceneId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import type { Presence } from '@/core/presence'
+import type { GraphicsPreset } from './graphics'
 import type { LoadedScene } from './sceneLoader'
 
 export interface ViewerInfo {
@@ -24,6 +25,8 @@ export interface TableContextValue {
   onIntent(intent: Intent): void
   onPresence(p: Partial<Presence>): void
   resolveAsset(ref: AssetRef): Promise<string>
+  /** This device's graphics preset (graphics.ts). */
+  graphics: GraphicsPreset
 }
 
 export const TableContext = createContext<TableContextValue | null>(null)

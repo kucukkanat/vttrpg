@@ -16,6 +16,7 @@ import { buildInviteUrl, selectAll, useCopy } from '../invite'
 import { ListRow } from '../components'
 import { colorName } from '../colorName'
 import { setSkipDice, useSkipDicePreference } from '@/dice/skipDice'
+import { GRAPHICS_LABELS, GRAPHICS_TIERS, resolveTier, setGraphicsSetting, useGraphicsSetting, type GraphicsSetting } from '@/table'
 import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
@@ -37,6 +38,8 @@ const css = `
 .players-pick { width: 100%; min-height: 48px; font-size: var(--fs-lg); margin-top: var(--sp-2); }
 .players-prefs { margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 .players-prefs .check { margin: 0; }
+.players-graphics { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; }
+.players-graphics select { width: auto; }
 .players-toggle { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-2); cursor: pointer; font-size: var(--fs-md); }
 .players-toggle input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--accent); }
 `
@@ -183,8 +186,27 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <input type="checkbox" checked={skipDice} onChange={(e) => setSkipDice(e.target.checked)} />
           <span>Skip 3D dice <span className="muted small">· results still show in chat</span></span>
         </label>
+        <GraphicsSelect />
       </div>
     </div>
+  )
+}
+
+/**
+ * Graphics quality on this device (stored locally, never synced). Auto names the tier it picked.
+ * Every tier keeps the same look; lower ones trade resolution, shadows and frame rate for battery.
+ */
+function GraphicsSelect() {
+  const setting = useGraphicsSetting()
+  const auto = GRAPHICS_LABELS[resolveTier('auto')]
+  return (
+    <label className="players-graphics">
+      <span>Graphics</span>
+      <select value={setting} onChange={(e) => setGraphicsSetting(e.target.value as GraphicsSetting)} aria-label="Graphics quality on this device">
+        <option value="auto">Auto ({auto})</option>
+        {GRAPHICS_TIERS.map((t) => <option key={t} value={t}>{GRAPHICS_LABELS[t]}</option>)}
+      </select>
+    </label>
   )
 }
 
