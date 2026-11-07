@@ -19,6 +19,7 @@ import { firstOwnedToken, useGame } from '@/state/store'
 import { newSeed, rollFromSeed } from '@/dice/fair'
 import { useTableUi } from '@/table/tableState'
 import { readResource } from '@/table/tokenHud'
+import { useMoveDraft } from '@/table/twoTapMove'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { requestSkillEditor } from '../skilleditor/requests'
@@ -42,6 +43,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
     return sel && sel.owner === me ? sel : firstOwnedToken(s, me as PlayerPubkey)
   })
   const aimingAny = useTargeting((s) => s.pending !== null)
+  const moving = useMoveDraft((s) => s.draft !== null)
   const [card, setCard] = useState<{ token: TokenId; kind: Card } | null>(null)
   const casting = useSkillCasting(controller, token)
   const init = useGame((s) => s.initiative)
@@ -53,7 +55,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const tokenId = token?.id
   useEffect(() => { setPreview(null); return () => setPreview(null) }, [tokenId, aimingAny])
 
-  if (!token || aimingAny) return null
+  // Aiming a skill or previewing a two-tap move: the table's own bar takes the bottom.
+  if (!token || aimingAny || moving) return null
   const { skills, canUse, labelOf, shortfall, use, character } = casting
   const open = card?.token === token.id ? card.kind : null
   const toggle = (kind: Card) => setCard(open === kind ? null : { token: token.id, kind })
