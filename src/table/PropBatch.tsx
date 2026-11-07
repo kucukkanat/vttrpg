@@ -215,7 +215,7 @@ function InstancedProps({ model, props }: { model: InstanceModel; props: Prop[] 
   useCursor(!!hoveredProp && gm && !hoveredProp.locked, 'grab')
 
   return (
-    <group {...handlers}>
+    <group userData={{ propSlots: slots }} {...handlers}>
       {meshes.map((m) => <primitive key={m.uuid} object={m} />)}
       {hoveredProp && model.local && <HoverOutline prop={hoveredProp} local={model.local} />}
     </group>

@@ -5,11 +5,11 @@
  */
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Box3, Group, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
 import type { CatalogueEntry } from '@/core/catalogue'
+import { readModel } from '@/table/gltf'
 import { sizeBadge } from './libraryLogic'
 
 const SIZE_PX = 220
@@ -23,8 +23,9 @@ class Quiet extends Component<{ children: ReactNode; reset: string }, { failed: 
   render() { return this.state.failed ? null : this.props.children }
 }
 
-function Spinning({ url }: { url: string }) {
-  const gltf = useGLTF(url)
+function Spinning({ url, sha256 }: { url: string; sha256: string }) {
+  const gl = useThree((s) => s.gl)
+  const { gltf } = readModel(url, { renderer: gl, sha256 })
   const group = useRef<Group>(null)
   const { object, scale, offset } = useMemo(() => {
     const o = gltf.scene.clone(true)
@@ -66,7 +67,7 @@ export default function HoverPreview({ entry, anchor, resolve }: { entry: Catalo
           <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#ffd6a0" />
           {url && (
             <Quiet reset={url}>
-              <Suspense fallback={null}><Spinning url={url} /></Suspense>
+              <Suspense fallback={null}><Spinning url={url} sha256={entry?.model.sha256 ?? url} /></Suspense>
             </Quiet>
           )}
         </Canvas>

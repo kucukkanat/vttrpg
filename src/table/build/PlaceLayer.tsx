@@ -7,28 +7,28 @@
  *   wheel turns it 15° (Shift: 90°) and the wheel does not zoom meanwhile; it snaps to the tray's
  *   step (half a cell by default), Alt is free. A click stamps one (one `props.place`, one undo
  *   step) and keeps holding; Esc or right-click puts it down. On touch a tap stamps where tapped.
- * - Tool 'eyedropper': the next prop clicked is picked up with its turn, tilt and scale.
- * - `AltEyedropper`: Alt-click a prop while the GM screen is in Build does the same, any time.
+ * - Tool 'eyedropper': the next prop clicked is picked up with its turn, tilt and scale (Alt-click
+ *   on a prop does the same while building; that lives in propPointer.ts).
  * - `CardDrop`: a library card dragged onto the board places one where it is dropped.
  *
- * Props are found by the `propId` their PropMesh group carries in `userData`.
+ * Props are found through `userData`: a standalone PropMesh group carries its `propId`, an
+ * instanced PropBatch group its `propSlots` (instance id to prop id).
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { useGLTF } from '@react-three/drei'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { Box3, Group, Material, Mesh, Object3D, Plane, Ray, Raycaster, Vector2, Vector3, type Camera, type Intersection } from 'three'
 import type { Prop } from '@/core/doc'
 import { newId, type PropId } from '@/core/ids'
-import { propScale } from '@/core/props'
 import { useGame } from '@/state/store'
 import { noteRecentlyPlaced } from '@/ui/library/libraryPrefs'
 import { BUILD } from '@/ui/theme/palette'
 import { useTable } from '../context'
 import type { Bounds2 } from '../grid'
-import { knownLegacyFit } from '../propMigration'
 import { FloorCatcher, FloorLabel } from '../RulerLayer'
 import { useAssetLoad } from '../TokenMesh'
-import { nextRoll, pickUpModel, putDownModel, useBuildUi } from './buildState'
+import { useModel } from '../useModel'
+import { nextRoll, putDownModel, useBuildUi } from './buildState'
+import { eyedrop } from './eyedrop'
 import { pickSurface, placedProp, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
 
 const noRaycast = () => undefined
@@ -44,20 +44,24 @@ const isTyping = (t: EventTarget | null) => {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
 }
 
-/** The prop a scene object belongs to, from the `propId` on its PropMesh group. */
-function propIdOf(o: Object3D | null): string | undefined {
-  for (let x = o; x; x = x.parent) {
-    const id = (x.userData as { propId?: unknown }).propId
-    if (typeof id === 'string') return id
+interface PropUserData { propId?: unknown; propSlots?: { idAt(slot: number | undefined): string | undefined } }
+
+/** The prop a ray hit belongs to: a PropMesh group's `propId`, or a PropBatch's instance slot. */
+function propIdOf(hit: Pick<Intersection, 'object' | 'instanceId'>): string | undefined {
+  for (let x: Object3D | null = hit.object; x; x = x.parent) {
+    const d = x.userData as PropUserData
+    if (typeof d.propId === 'string') return d.propId
+    if (d.propSlots) return d.propSlots.idAt(hit.instanceId)
   }
   return undefined
 }
 
-/** The PropMesh groups under `root` (not descending into them). */
+/** The prop groups (standalone and instanced) under `root`, not descending into them. */
 function propRoots(root: Object3D): Object3D[] {
   const out: Object3D[] = []
   const walk = (o: Object3D) => {
-    if (typeof (o.userData as { propId?: unknown }).propId === 'string') { out.push(o); return }
+    const d = o.userData as PropUserData
+    if (typeof d.propId === 'string' || d.propSlots) { out.push(o); return }
     for (const c of o.children) walk(c)
   }
   walk(root)
@@ -85,7 +89,7 @@ function usePicker(): Picker {
     const toHits = (list: Intersection[]): SurfaceHit[] => {
       const props = useGame.getState().props
       return list.map((h) => {
-        const propId = propIdOf(h.object)
+        const propId = propIdOf(h)
         if (h.face) normal.copy(h.face.normal).transformDirection(h.object.matrixWorld)
         else normal.set(0, 1, 0)
         return { distance: h.distance, y: h.point.y, normalY: normal.y, propId, label: propId ? props[propId as PropId]?.name : undefined }
@@ -113,27 +117,11 @@ function usePicker(): Picker {
       },
       propAt(ray) {
         raycaster.ray.copy(ray)
-        const id = cast().map((h) => propIdOf(h.object)).find((x) => !!x)
+        const id = cast().map((h) => propIdOf(h)).find((x) => !!x)
         return id ? useGame.getState().props[id as PropId] : undefined
       },
     }
   }, [scene, grid, floorY])
-}
-
-/** The held model as a stamp of this prop: its model, catalogue id, tilt and scale. */
-function heldFromProp(p: Prop): HeldModel {
-  return {
-    ...(p.catalogue ? { catalogue: p.catalogue } : {}),
-    title: p.name,
-    model: p.model,
-    tilt: { x: p.rotation.x, z: p.rotation.z },
-    scale: { ...propScale(p, knownLegacyFit(p.id) ?? 1) },
-  }
-}
-
-/** Pick a prop's model up again (the eyedropper), keeping its turn and scale. */
-export function eyedrop(p: Prop): void {
-  pickUpModel(heldFromProp(p), p.rotation.y)
 }
 
 /** Sends one stamp: one intent, one undo step; then the next scatter roll and Recently placed. */
@@ -282,7 +270,7 @@ function Ghost({ held, at, yaw, k }: { held: HeldModel; at: { x: number; y: numb
       <group scale={[s.x * k, s.y * k, s.z * k]}>
         {url ? (
           <Suspense fallback={<SizeBox size={held.size} />}>
-            <GhostModel url={url} />
+            <GhostModel url={url} sha256={held.model.sha256} name={held.title} />
           </Suspense>
         ) : <SizeBox size={held.size} />}
       </group>
@@ -303,8 +291,8 @@ function SizeBox({ size }: { size?: [number, number, number] }) {
 
 const GHOST_OPACITY = 0.55
 
-function GhostModel({ url }: { url: string }) {
-  const gltf = useGLTF(url)
+function GhostModel({ url, sha256, name }: { url: string; sha256: string; name: string }) {
+  const gltf = useModel(url, sha256, name)
   const { object, materials, footprint } = useMemo(() => {
     const o = gltf.scene.clone(true) as Group
     const mats: Material[] = []
@@ -347,33 +335,6 @@ function rayAt(camera: Camera, el: HTMLElement, clientX: number, clientY: number
   const ndc = new Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   return raycaster.ray
-}
-
-/**
- * Alt-click on a prop while the GM screen is in Build: pick its model up (the eyedropper). Runs in
- * the capture phase so the prop's own click (select, drag) does not also happen.
- */
-export function AltEyedropper() {
-  const gl = useThree((s) => s.gl)
-  const camera = useThree((s) => s.camera)
-  const picker = usePicker()
-  useEffect(() => {
-    const el = gl.domElement
-    const raycaster = new Raycaster()
-    const onDown = (e: PointerEvent) => {
-      if (!e.altKey || e.button !== 0 || e.target !== el) return
-      const s = useBuildUi.getState()
-      if (!s.building || s.tool === 'place') return
-      const prop = picker.propAt(rayAt(camera, el, e.clientX, e.clientY, raycaster))
-      if (!prop) return
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      eyedrop(prop)
-    }
-    window.addEventListener('pointerdown', onDown, true)
-    return () => window.removeEventListener('pointerdown', onDown, true)
-  }, [gl, camera, picker])
-  return null
 }
 
 /** Drop target for library cards dragged onto the board: places one where it lands. */

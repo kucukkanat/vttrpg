@@ -20,6 +20,7 @@ import { doubleTapEdit, tapTwice } from './editTap'
 import { knownLegacyFit } from './propMigration'
 import { useTableUi } from './tableState'
 import { capture, DRAG_THRESHOLD_PX, LONG_PRESS_MS } from './TokenMesh'
+import { eyedrop, wantsEyedrop } from './build/eyedrop'
 
 type PropEvent = ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>
 
@@ -92,6 +93,8 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     const prop = id ? useGame.getState().props[id] : undefined
     if (!id || !prop) return
     e.stopPropagation()
+    // Build: Alt-click is the eyedropper (pick this model up again).
+    if (gm && wantsEyedrop(e.nativeEvent)) { eyedrop(prop); return }
     if (e.button === 2) { setSelection({ kind: 'prop', id }); return }
     if (e.button !== 0) return
     if (!(gm && !prop.locked)) {

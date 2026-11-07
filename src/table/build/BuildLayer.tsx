@@ -27,7 +27,7 @@ import { CAMERA_SHARE_INTERVAL_MS, followedCamera, makeView, takePull, viewMoved
 import { exploredCells } from '../vision'
 import type { Pt2, WallSegment } from '../walls'
 import { useBuildUi, type BuildTool } from './buildState'
-import { AltEyedropper, CardDrop, PlaceLayer } from './PlaceLayer'
+import { CardDrop, PlaceLayer } from './PlaceLayer'
 import { capturePrefab, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
 import { blockingSegments, cleanPoint, endpointsOf, isDrawable, pointSegmentDistance, sceneWalls, segmentsNear, snapWallPoint, wallsNear } from './wallEdit'
 import { BUILD } from '@/ui/theme/palette'
@@ -96,7 +96,6 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
       {active && (active === 'place' || active === 'eyedropper'
         ? <PlaceLayer tool={active} bounds={bounds} />
         : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
-      {gm && !viewer?.display && <AltEyedropper />}
       {gm && !viewer?.display && <CardDrop />}
       <ViewSync />
     </>
