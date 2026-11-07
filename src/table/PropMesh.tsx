@@ -1,25 +1,25 @@
 /**
  * Props: standalone GLB models placed in a scene (furniture, trees, crates). Tap selects, the GM
- * drags unlocked props on the floor, and `solid` props publish their footprint so fog and the
+ * drags unlocked props (the whole selection) on the floor, and `solid` props publish their footprint so fog and the
  * shoulder camera treat them as walls.
  */
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor } from '@react-three/drei'
-import { Box3, EdgesGeometry, Group, Mesh, Plane, PlaneGeometry, Vector3 } from 'three'
+import { Box3, EdgesGeometry, Group, Mesh, PlaneGeometry } from 'three'
 import type { Prop } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
-import { isLegacyScale, propScale, uniformScale } from '@/core/props'
+import { isLegacyScale, propScale } from '@/core/props'
 import type { SceneId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
-import { footprintWalls, snapTranslation } from './editing'
+import { footprintWalls } from './editing'
 import { legacyPropFit } from './fitScale'
 import { noteLegacyFit, queuePropMigration } from './propMigration'
 import { useTableUi } from './tableState'
 import { HOVER, SELECT } from '@/ui/theme/palette'
-import { doubleTapEdit, tapTwice } from './editTap'
-import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetLoad } from './TokenMesh'
+import { GlbMini, ModelBoundary, useAssetLoad } from './TokenMesh'
+import { usePropPointer } from './build/usePropPointer'
+import { registerPropObject } from './build/editRuntime'
 import { MissingModel } from './MissingAsset'
 
 const noRaycast = () => undefined
@@ -60,24 +60,22 @@ function localBounds(object: Group): Box3 {
 
 export function PropMesh({ prop }: { prop: Prop }) {
   const { grid, floorY, viewer, onIntent } = useTable()
-  const selected = useGame((s) => s.selection?.kind === 'prop' && s.selection.id === prop.id)
-  const setSelection = useGame((s) => s.setSelection)
-  const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'prop' && s.editPreview.target.id === prop.id ? s.editPreview : null))
+  // Selection, drags, Shift-click, Alt-drag duplicate, long-press menu: build/usePropPointer.ts.
+  const gm = !viewer || viewer.isGm
+  const { selected, draggable, handlers } = usePropPointer({ prop, gm, grid, floorY, onIntent })
+  const preview = useTableUi((s) => s.propPreview?.[prop.id] ?? null)
   const targeting = useTableUi((s) => s.targeting !== null)
-  const snap = useTableUi((s) => s.snap)
   const uiSet = useTableUi((s) => s.set)
-  const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const { url, missing } = useAssetLoad(prop.model)
   const [hovered, setHovered] = useState(false)
   const [object, setObject] = useState<Group | null>(null)
   const group = useRef<Group>(null)
+  useEffect(() => registerPropObject(prop.id, group.current), [prop.id])
 
-  const gm = !viewer || viewer.isGm
-  const draggable = gm && !prop.locked
   useCursor(hovered && draggable, 'grab')
 
   const position = preview?.position ?? prop.position
-  const rotation = preview ? { x: prop.rotation.x, y: preview.rotationY, z: prop.rotation.z } : prop.rotation
+  const rotation = preview?.rotation ?? prop.rotation
   const cell = grid.cellSize
 
   // Models draw at their real size times the per-axis scale. A version 1 prop (number scale) is
@@ -90,7 +88,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
     if (gm) queuePropMigration(prop.id, legacyFit, onIntent)
   }, [object, legacy, legacyFit, prop.id, gm, onIntent])
   const base = propScale(prop, legacyFit)
-  const scale: Vec3 = preview?.scaleVec ?? base
+  const scale: Vec3 = preview?.scale ?? base
 
   // Selection outline from the model's own bounds (inside the scaled group); footprint for
   // line-of-sight from the world bounds, republished whenever the model or transform changes.
@@ -120,93 +118,12 @@ export function PropMesh({ prop }: { prop: Prop }) {
   }, [object, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, scale.x, scale.y, scale.z, prop.solid, prop.id, uiSet, removeWalls])
   useEffect(() => removeWalls, [removeWalls])
 
-  // Floor drag (GM, unlocked). Mirrors the token drag but previews through `editPreview`.
-  const drag = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean; longPress: ReturnType<typeof setTimeout> | null; plane: Plane; offX: number; offZ: number } | null>(null)
-  const hit = useMemo(() => new Vector3(), [])
-  const toggleSelect = useCallback(() => setSelection(selected ? null : { kind: 'prop', id: prop.id }), [setSelection, selected, prop.id])
-
-  const endDrag = (commit: boolean) => {
-    const d = drag.current
-    if (!d) return
-    if (d.longPress) clearTimeout(d.longPress)
-    drag.current = null
-    if (controls) controls.enabled = true
-    const pv = useTableUi.getState().editPreview
-    uiSet({ editDrag: false, editPreview: null })
-    if (!d.moved) return
-    if (commit && pv && pv.target.kind === 'prop' && pv.target.id === prop.id) {
-      const p = pv.position
-      if (Math.abs(p.x - prop.position.x) > 1e-4 || Math.abs(p.z - prop.position.z) > 1e-4) {
-        onIntent({ type: 'props.update', updates: [{ id: prop.id, patch: { position: { x: p.x, y: prop.position.y, z: p.z } } }] })
-      }
-    }
-  }
-
-  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
-    if (targeting) return
-    e.stopPropagation()
-    if (e.button === 2) { setSelection({ kind: 'prop', id: prop.id }); return }
-    if (e.button !== 0) return
-    if (!draggable) {
-      const twice = tapTwice(`prop:${prop.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY)
-      if (twice && doubleTapEdit(gm ? { kind: 'prop', id: prop.id } : null)) return
-      setSelection({ kind: 'prop', id: prop.id })
-      return
-    }
-    capture(e).setPointerCapture(e.pointerId)
-    uiSet({ editDrag: true })
-    const plane = new Plane(new Vector3(0, 1, 0), -Math.max(floorY, prop.position.y))
-    const off = e.ray.intersectPlane(plane, hit) ? { x: hit.x - prop.position.x, z: hit.z - prop.position.z } : { x: 0, z: 0 }
-    drag.current = {
-      pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false,
-      longPress: e.pointerType === 'touch' ? setTimeout(() => { if (drag.current && !drag.current.moved) { toggleSelect(); endDrag(false) } }, LONG_PRESS_MS) : null,
-      plane, offX: off.x, offZ: off.z,
-    }
-  }
-  const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
-    const d = drag.current
-    if (targeting || !d || e.pointerId !== d.pointerId) return
-    e.stopPropagation()
-    if (!d.moved) {
-      if (Math.hypot(e.nativeEvent.clientX - d.startX, e.nativeEvent.clientY - d.startY) < DRAG_THRESHOLD_PX) return
-      d.moved = true
-      if (d.longPress) { clearTimeout(d.longPress); d.longPress = null }
-      if (controls) controls.enabled = false
-      if (!selected) setSelection({ kind: 'prop', id: prop.id })
-    }
-    if (!e.ray.intersectPlane(d.plane, hit)) return
-    let p = { x: hit.x - d.offX, y: prop.position.y, z: hit.z - d.offZ }
-    if (snap && !e.nativeEvent.altKey) p = { ...snapTranslation(p, grid), y: prop.position.y }
-    const cur = useTableUi.getState().editPreview
-    if (cur && cur.target.kind === 'prop' && cur.target.id === prop.id && cur.position.x === p.x && cur.position.z === p.z) return
-    uiSet({ editPreview: { target: { kind: 'prop', id: prop.id }, position: p, rotationY: prop.rotation.y, scale: uniformScale(base), scaleVec: base } })
-  }
-  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
-    const d = drag.current
-    if (targeting || !d || e.pointerId !== d.pointerId) return
-    e.stopPropagation()
-    capture(e).releasePointerCapture(e.pointerId)
-    const wasClick = !d.moved
-    endDrag(true)
-    if (!wasClick) return
-    if (tapTwice(`prop:${prop.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY) && doubleTapEdit({ kind: 'prop', id: prop.id })) return
-    // In edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
-    if (useTableUi.getState().editMode) setSelection({ kind: 'prop', id: prop.id })
-    else toggleSelect()
-  }
-  useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   return (
     <group
       ref={group}
       position={[position.x, position.y, position.z]}
       rotation={[rotation.x, rotation.y, rotation.z]}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={() => endDrag(false)}
-      onLostPointerCapture={() => endDrag(false)}
-      onContextMenu={(e) => { if (targeting) return; e.stopPropagation(); e.nativeEvent.preventDefault(); setSelection({ kind: 'prop', id: prop.id }) }}
+      {...handlers}
       onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); setHovered(true) }}
       onPointerOut={() => setHovered(false)}
     >

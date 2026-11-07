@@ -13,8 +13,13 @@
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
  * Tools (`tableState.tool`, HUD buttons): the ruler measures distances (RulerLayer, M); ping marks a
  * spot for every client (PingLayer; also a double-tap or a long touch on empty floor).
- * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
- * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
+ * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo for tokens, scene
+ * nodes and the scene; build/PropGizmo for props), scene nodes are selectable.
+ * Props in Build or edit mode (build/PropEditor): Shift-click adds to the selection, dragging empty
+ * board in Build draws a selection box, Tab cycles move / turn / scale, X / Y / Z then a number and
+ * Enter transforms exactly, R turns 15° (Shift 90°), End drops onto the surface below, A shows the
+ * advanced gizmo, Ctrl/Cmd C / V / D copy, paste and duplicate, Delete removes the selection.
+ * G stays the grid key in every mode.
  * Rendering follows the device's graphics preset (graphics.ts): resolution, shadows, antialiasing
  * and an idle frame-rate cap. A lost WebGL context pauses the table behind a notice and remounts
  * the canvas once the browser gives the GPU back (or on Reload).
@@ -34,6 +39,9 @@ import { ambientLevels, fogColor, fogRange } from './atmosphere'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
 import { BuildLayer, useDrawnBlocking } from './build/BuildLayer'
 import { EditGizmo } from './EditGizmo'
+import { PropEditor } from './build/PropEditor'
+import { PropEditOverlay } from './build/PropEditOverlay'
+import { removeSelection } from './build/propActions'
 import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
@@ -178,7 +186,10 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
 
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
   useEffect(() => {
-    uiSet({ firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
+    uiSet({
+      firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {},
+      propPreview: null, boxSelect: null, transformEntry: null, propMenu: null,
+    })
   }, [sceneId, uiSet])
 
   // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
@@ -228,8 +239,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         case 'q': case 'Q': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn - 1 }); break
         case 'e': case 'E': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn + 1 }); break
         case 'Delete': case 'Backspace': {
-          const sel = useGame.getState().selection
-          if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'props.remove', ids: [sel.id] }); setSelection(null) }
+          // Every selected prop in one intent (one undo step).
+          if (gm && useGame.getState().propSelection.length) { e.preventDefault(); removeSelection(onIntent) }
           break
         }
         case 'Escape': setSelection(null); break
@@ -374,6 +385,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
           <EditGizmo />
+          <PropEditor />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />
         </TableContext.Provider>
@@ -384,6 +396,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
       {!targeting && <MoveBar onIntent={onIntent} grid={grid} floorY={floorY} viewer={viewer ?? null} />}
+      <PropEditOverlay gm={gm} />
       {glLost && <ContextLostNotice onReload={remountCanvas} />}
     </div>
   )

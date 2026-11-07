@@ -19,6 +19,10 @@
  *
  * Keyboard: focus starts on the first item, arrows walk the items (wrapping), Home / End jump, Esc
  * closes, and focus returns to whatever opened the menu (the token bar's ⋯).
+ *
+ * Props have their own menu (`tableState.propMenu`, GM only; right-click or a still long-press on a
+ * prop): Duplicate, Turn 90°, Drop to surface, Edit and Delete, acting on the whole prop selection
+ * (the prop is selected first). The long-press version is the same radial ring.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { Token } from '@/core/doc'
@@ -36,6 +40,8 @@ import { useSession } from '../session'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from './useShortcuts'
 import { tokenSkillList } from '../skillbar/tokenSkills'
+import { dropSelection, duplicateSelection, removeSelection, turnSelection } from '@/table/build/propActions'
+import type { Prop } from '@/core/doc'
 import './ContextMenu.css'
 
 /** The pack's first skill that reads as an attack: deals damage and is aimed at something. Falls back to the first aimed skill. */
@@ -75,8 +81,107 @@ export function ContextMenu() {
   const close = useCallback(() => useTableUi.getState().set({ contextMenu: null }), [])
   // The token left the document while the menu was up (removed by someone else).
   useEffect(() => { if (req && !token) close() }, [req, token, close])
-  if (!req || !token || !controller) return null
-  return <Menu key={`${req.token}:${req.x},${req.y}`} req={req} token={token} controller={controller} onClose={close} />
+  return (
+    <>
+      {req && token && controller && <Menu key={`${req.token}:${req.x},${req.y}`} req={req} token={token} controller={controller} onClose={close} />}
+      <PropMenuHost />
+    </>
+  )
+}
+
+function PropMenuHost() {
+  const req = useTableUi((s) => s.propMenu)
+  const prop = useGame((s) => (req ? s.props[req.prop] : undefined))
+  const controller = useSession().controller
+  const close = useCallback(() => useTableUi.getState().set({ propMenu: null }), [])
+  useEffect(() => { if (req && !prop) close() }, [req, prop, close])
+  if (!req || !prop || !controller || !controller.connection.isGm) return null
+  return <PropMenu key={`${req.prop}:${req.x},${req.y}`} req={req} prop={prop} controller={controller} onClose={close} />
+}
+
+/** Shared by both menus: place the box at the request point inside the HUD's padding. */
+function measureBox(el: HTMLElement, x: number, y: number) {
+  const parent = el.offsetParent as HTMLElement | null
+  const rect = parent?.getBoundingClientRect()
+  const cs = parent ? getComputedStyle(parent) : null
+  const px = (v: string | undefined) => { const n = parseFloat(v ?? ''); return Number.isFinite(n) ? n : 8 }
+  return {
+    x: x - (rect?.left ?? 0), y: y - (rect?.top ?? 0),
+    width: rect?.width ?? window.innerWidth, height: rect?.height ?? window.innerHeight,
+    pad: { left: px(cs?.paddingLeft), top: px(cs?.paddingTop), right: px(cs?.paddingRight), bottom: px(cs?.paddingBottom) },
+  }
+}
+
+/** The prop menu: radial on a long-press, a list on right-click. Every action covers the prop selection. */
+function PropMenu({ req, prop, controller, onClose }: { req: NonNullable<ReturnType<typeof useTableUi.getState>['propMenu']>; prop: Prop; controller: GameController; onClose(): void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  const count = useGame((s) => s.propSelection.length)
+  const radial = !!req.radial
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const box = measureBox(el, req.x, req.y)
+    if (radial) { const { cx, cy } = radialLayout(0, box); setPos({ left: cx, top: cy }); return }
+    setPos(placeMenu({ ...box, w: el.offsetWidth, h: el.offsetHeight }))
+  }, [req.x, req.y, radial])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); onClose() } }
+    const onDown = (e: PointerEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    window.addEventListener('keydown', onKey, true)
+    window.addEventListener('pointerdown', onDown, true)
+    return () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointerdown', onDown, true) }
+  }, [onClose])
+  useEffect(() => { ref.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus() }, [])
+  useEffect(() => { if (radial) haptic('press') }, [radial])
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])
+    const next = menuKeyTarget(e.key, items.indexOf(document.activeElement as HTMLElement), items.length)
+    if (next === null) return
+    e.preventDefault()
+    items[next]?.focus()
+  }
+  const dispatch = (intent: Parameters<GameController['dispatch']>[0]) => void controller.dispatch(intent)
+  const run = (fn: () => void) => () => { fn(); onClose() }
+  const items: RadialItem[] = [
+    { key: 'dup', label: 'Duplicate', icon: 'plus', run: run(() => duplicateSelection(dispatch)) },
+    { key: 'turn', label: 'Turn 90°', icon: 'rotate', run: run(() => turnSelection(90, dispatch)) },
+    { key: 'drop', label: 'Drop to surface', icon: 'chevron-down', run: run(() => dropSelection(dispatch)) },
+    { key: 'edit', label: 'Edit', icon: 'wrench', run: run(() => startEditing({ kind: 'prop', id: prop.id })) },
+    { key: 'del', label: count > 1 ? `Delete ${count}` : 'Delete', icon: 'trash', run: run(() => removeSelection(dispatch)) },
+  ]
+  const title = count > 1 ? `${count} props` : prop.name
+  const style = pos ? { left: pos.left, top: pos.top } : { left: 0, top: 0, visibility: 'hidden' as const }
+  if (radial) {
+    const { items: spots } = radialLayout(items.length, { x: 0, y: 0, width: 0, height: 0, pad: { left: 0, top: 0, right: 0, bottom: 0 } })
+    return (
+      <div ref={ref} className="ctx-radial" role="menu" aria-label={`${title} actions`} style={style} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
+        <span className="ctx-radial-name" aria-hidden="true">{title}</span>
+        {items.map((it, i) => (
+          <button key={it.key} type="button" role="menuitem" className="ctx-radial-item"
+            style={{ '--rx': `${spots[i]!.x}px`, '--ry': `${spots[i]!.y}px`, '--i': i } as CSSProperties} onClick={it.run}>
+            <Icon name={it.icon!} className="ctx-radial-icon" />
+            <span className="ctx-radial-label">{it.label}</span>
+          </button>
+        ))}
+        <button type="button" className="ctx-radial-close" aria-label="Close menu" onClick={onClose}><Icon name="close" /></button>
+      </div>
+    )
+  }
+  return (
+    <div ref={ref} className="ctx-menu" role="menu" aria-label={`${title} actions`} style={style} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
+      <div className="ctx-head"><span className="ctx-name">{title}</span></div>
+      {items.map((it) => (
+        <button key={it.key} type="button" role="menuitem" className={`ctx-row${it.key === 'del' ? ' ctx-row--danger' : ''}`} onClick={it.run}>
+          {it.label}
+          {it.key === 'dup' && <span className="ctx-sub">Ctrl+D</span>}
+          {it.key === 'turn' && <span className="ctx-sub">Shift+R</span>}
+          {it.key === 'drop' && <span className="ctx-sub">End</span>}
+          {it.key === 'del' && <span className="ctx-sub">Del</span>}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 /** Radial menu metrics: ring radius to the button centres, and the button size (44px+ touch targets). */
