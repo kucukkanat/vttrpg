@@ -9,7 +9,7 @@
  *   the hand      the selected token's card and actions, bottom centre
  *   the scroll    chat on the right edge, rolled up or open
  *   dice well     bottom right; dice roll inside it
- *   GM screen     bottom left (GM): Play / Prep / Build
+ *   GM screen     bottom left (GM): Play | Build and the GM drawer
  *   one card      any other panel, one at a time
  *
  * Phones keep the same pieces as a bottom bar and sheets (PhoneBar.tsx). One React tree for every
@@ -43,6 +43,7 @@ import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
 import { panelShown, useTableLayout } from './tableLayout'
 import { HeldBar } from '../library/HeldBar'
 import { Bell, CardHost, CombatControl, DiceWell, GmScreen, JournalBook, PresenceRow, Scroll } from './TableChrome'
+import { GmDrawer } from './GmDrawer'
 import { CommandPalette, type PaletteActions } from './CommandPalette'
 import { PhoneBar, PhoneSheets } from './PhoneBar'
 import { Cues } from '../cues'
@@ -209,7 +210,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   return (
     <div className={cls} style={style}>
       <TopBar controller={controller} compact={phone} center={<CombatControl controller={controller} />} trailing={trailing}
-        onScene={() => layout.set({ card: 'scenes' })} />
+        onScene={() => layout.set({ card: isGm ? 'scene-switcher' : 'scenes' })} />
 
       <section className="table">
         {meta?.activeScene ? (
@@ -238,7 +239,8 @@ export function GameShell({ controller }: { controller: GameController }) {
         {meta?.activeScene && <Dock controller={controller} />}
         {!phone && <CardHost controller={controller} panels={panels} />}
         {!phone && <Scroll controller={controller} chat={panels.find((p) => p.id === 'chat')} unread={unread} />}
-        {!phone && isGm && <GmScreen controller={controller} panels={panels} live={liveLine} onLive={() => openPanel('sound')} />}
+        {!phone && isGm && <GmScreen controller={controller} panels={panels} live={liveLine} onLive={() => openPanel('sound')}
+          drawer={<GmDrawer me={controller.pubkey} playing={playing.size} journalNew={journalUnread} />} />}
         <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}

@@ -21,7 +21,7 @@ import { Icon, type IconName } from '../icons'
 const BudgetMeter = lazy(() => import('../library/BudgetMeter'))
 
 /** Esc (outside a field) runs `onClose` while `active`. Capture phase, so it wins over table keys. */
-function useEscape(active: boolean, onClose: () => void) {
+export function useEscape(active: boolean, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -36,7 +36,7 @@ function useEscape(active: boolean, onClose: () => void) {
 }
 
 /** Closes on a pointer-down outside `ref` (deferred a tick so the opening tap does not close it). */
-function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+export function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -133,9 +133,8 @@ export function DiceWell({ dice, roll, who, compact = false }: { dice: ReactNode
 }
 
 const MODES: { id: TableMode; label: string; hint: string }[] = [
-  { id: 'play', label: 'Play', hint: 'The board and the hand; the screen folded away' },
-  { id: 'prep', label: 'Prep', hint: 'Raise the screen: scenes, encounters, cast, reference' },
-  { id: 'build', label: 'Build', hint: 'The tool tray: the model library, walls, doors, fog, lights, scene settings' },
+  { id: 'play', label: 'Play', hint: 'Run the table: the board, the hand and the GM drawer' },
+  { id: 'build', label: 'Build', hint: 'Make the world: models, kits, walls, lights, fog and scene settings' },
 ]
 
 /** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
@@ -150,7 +149,7 @@ export function setTableMode(mode: TableMode) {
  * The GM screen. Folded, a leather plaque (bottom left) with the mode and a live line (sounds
  * playing, the round). Prep raises three leaves over the board; Build folds into the tool tray.
  */
-export function GmScreen({ controller, panels, live, onLive }: { controller: GameController; panels: PanelDef[]; live: string; onLive(): void }) {
+export function GmScreen({ controller, panels, live, onLive, drawer }: { controller: GameController; panels: PanelDef[]; live: string; onLive(): void; drawer?: ReactNode }) {
   const mode = useTableLayout((s) => s.mode)
   const leafTabs = useTableLayout((s) => s.leafTabs)
   const buildTab = useTableLayout((s) => s.buildTab)
@@ -190,10 +189,13 @@ export function GmScreen({ controller, panels, live, onLive }: { controller: Gam
           <strong>GM screen</strong>
           <span className="t-plaque-state">{mode === 'play' ? 'folded' : mode === 'prep' ? 'raised' : 'tray'}</span>
         </div>
-        <div className="t-modes" role="radiogroup" aria-label="Mode">
-          {MODES.map((m) => (
-            <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
-          ))}
+        <div className="t-plaque-row">
+          <div className="t-modes" role="radiogroup" aria-label="Mode">
+            {MODES.map((m) => (
+              <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
+            ))}
+          </div>
+          {mode !== 'build' && drawer}
         </div>
         {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
       </div>
@@ -232,7 +234,7 @@ export function GmScreenSheet({ controller, panels }: { controller: GameControll
           <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} onClick={() => setTableMode(m.id)}>{m.label}</button>
         ))}
       </div>
-      {mode === 'play' && <p className="muted small">Play: the screen is folded. Prep raises scenes, encounters, the cast and reference; Build opens the tool tray.</p>}
+      {mode === 'play' && <p className="muted small">Play: run the table. Build makes the world: models, kits, walls, lights, fog and scenes.</p>}
       {mode === 'prep' && (
         <div className="t-leaf-tabs t-leaf-tabs--leaves" role="tablist" aria-label="Leaf">
           {LEAVES.map((l) => (

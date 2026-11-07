@@ -2,7 +2,7 @@
  * Things over the table: the camera and table tools (the tool rail), the dice well's readout and
  * pad, and the shared overlay layers. All ignore pointer events except on their own controls.
  */
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import type { ChatMessage, RollAdvantage, RollVisibility } from '@/core/doc'
@@ -17,9 +17,14 @@ import { useSession } from '../session'
 import { newSeed } from '@/dice'
 import { DICE_SETTLED_EVENT } from '@/dice/choreography'
 import { useRollMode } from '../rollMode'
+import { useBuildUi } from '@/table/build/buildState'
+import { useTableLayout } from './tableLayout'
+import { fogButtonTitle, fogToolAvailable, isFogTool } from './fogTool'
 import './Hud.css'
 
 const READOUT_MS = 8000
+
+const FogPopout = lazy(() => import('./FogPopout'))
 
 /**
  * Camera and table tools: Eyes (first person from your token; off means the free orbit camera),
@@ -75,6 +80,47 @@ export function CameraPill() {
           <Icon name="pin" className="cam-icon" />
         </button>
       </div>
+      <FogButton />
+    </div>
+  )
+}
+
+/**
+ * GM in Play: Fog on the rail, with a pop-out for the brush (Reveal / Hide, size, Reveal all, Hide
+ * all). It arms the same build fog tools Build uses. Esc or closing the pop-out puts the brush away.
+ */
+function FogButton() {
+  const { controller } = useSession()
+  const mode = useTableLayout((s) => s.mode)
+  const tool = useBuildUi((s) => s.tool)
+  const [open, setOpen] = useState(false)
+  const available = fogToolAvailable(!!controller?.connection.isGm, mode)
+  const brushing = isFogTool(tool)
+  const close = () => {
+    setOpen(false)
+    if (isFogTool(useBuildUi.getState().tool)) useBuildUi.getState().set({ tool: null })
+  }
+  useEffect(() => {
+    if (!open) return
+    const on = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (e.key !== 'Escape' || (t && ((t.tagName === 'INPUT' && (t as HTMLInputElement).type !== 'range') || t.tagName === 'TEXTAREA'))) return
+      close()
+    }
+    window.addEventListener('keydown', on)
+    return () => window.removeEventListener('keydown', on)
+  }, [open])
+  // Leaving Play (or losing the GM seat) folds the pop-out away.
+  useEffect(() => { if (!available) setOpen(false) }, [available])
+  if (!available || !controller) return null
+  return (
+    <div className="cam-group cam-group--fog">
+      <button type="button" className={`cam-btn cam-fog${brushing || open ? ' on' : ''}`} aria-pressed={brushing} aria-expanded={open} aria-haspopup="dialog"
+        title={fogButtonTitle(tool)} onClick={() => (open ? close() : setOpen(true))}>
+        <Icon name="fog" className="cam-icon" />
+        <span className="cam-label">Fog</span>
+      </button>
+      {open && <Suspense fallback={null}><FogPopout controller={controller} onClose={close} /></Suspense>}
     </div>
   )
 }

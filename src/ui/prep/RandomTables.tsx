@@ -39,3 +39,8 @@ export function RandomTables({ controller }: { controller: GameController }) {
     </div>
   )
 }
+
+/** The Tables card (GM drawer): the same roller in a panel body. */
+export function RandomTablesPanel({ controller }: { controller: GameController }) {
+  return <div className="panel"><RandomTables controller={controller} /></div>
+}

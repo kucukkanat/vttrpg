@@ -54,12 +54,16 @@ function readGroupPref(): boolean {
  * honour "copies of a creature share one roll" and initiative players already rolled from a sheet.
  * Resolves false when nobody can fight.
  */
-export async function startCombat(controller: GameController, opts: { group?: boolean; include?: TokenId } = {}): Promise<boolean> {
+export async function startCombat(controller: GameController, opts: { group?: boolean; include?: TokenId | readonly TokenId[] } = {}): Promise<boolean> {
   const s = useGame.getState()
   const scene = s.meta?.activeScene ?? null
   const eligible = combatants(s.tokens, scene)
-  const extra = opts.include ? s.tokens[opts.include] : undefined
-  if (extra && !eligible.some((t) => t.id === extra.id)) eligible.push(extra)
+  // Extra tokens join even when hidden (an encounter just placed, the token in hand).
+  const include: readonly TokenId[] = typeof opts.include === 'string' ? [opts.include] : opts.include ?? []
+  for (const id of include) {
+    const extra = s.tokens[id]
+    if (extra && !eligible.some((t) => t.id === extra.id)) eligible.push(extra)
+  }
   if (!eligible.length) {
     pushToast({ text: 'No tokens with a sheet in this scene', key: 'initiative' })
     return false

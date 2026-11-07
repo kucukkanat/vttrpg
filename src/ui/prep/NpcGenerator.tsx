@@ -18,7 +18,13 @@ import { CreaturePicker, creatureSummary, type Compendium } from '../panels/Crea
  * Packs with a compendium place NPCs from a stat block ("Use stat block"); packs that roll NPCs
  * like characters (Mausritter) keep "Roll a character sheet" with the pack's chargen.
  */
-export function NpcGenerator({ controller, disabled, compendium }: { controller: GameController; disabled: boolean; compendium: Compendium }) {
+export function NpcGenerator({ controller, disabled, compendium, onPlaced }: {
+  controller: GameController
+  disabled: boolean
+  compendium: Compendium
+  /** Called with the new tokens once they are on the board (the Play card closes itself here). */
+  onPlaced?(ids: TokenId[]): void
+}) {
   const rules = controller.rules
   const packId = rules?.pack.manifest.id
   const hasChargen = !!rules?.pack.chargen
@@ -45,12 +51,16 @@ export function NpcGenerator({ controller, disabled, compendium }: { controller:
         if (!creature) { setPicking(true); return }
         const row = newRow(Object.keys(tokens).length, { creatureRef: creature.ref, count: n, ...(name.trim() ? { overrides: { name: name.trim() } } : {}) })
         const { placed } = await placeRows(controller, [row], compendium.creatures, useGame.getState().creatures)
-        setLast(placed.flatMap((p) => p.tokens))
+        const ids = placed.flatMap((p) => p.tokens)
+        setLast(ids)
+        if (ids.length) onPlaced?.(ids)
         return
       }
       const names = name.trim() ? (n === 1 ? [name.trim()] : Array.from({ length: n }, (_, i) => `${name.trim()} ${i + 1}`)) : randomNames(packId, n)
       const specs = names.map((nm, i) => ({ name: nm, color: ENCOUNTER_COLORS[(Object.keys(tokens).length + i) % ENCOUNTER_COLORS.length]!, generateSheet: sheet && hasChargen }))
-      setLast((await spawnNpcs(controller, specs, { hidden: true })).map((s) => s.token.id))
+      const ids = (await spawnNpcs(controller, specs, { hidden: true })).map((s) => s.token.id)
+      setLast(ids)
+      if (ids.length) onPlaced?.(ids)
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
   }
   const alive = last.filter((id) => tokens[id])
