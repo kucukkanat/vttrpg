@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility, CreatureTemplate, Encounter } from './doc'
+import type { Token, Character, Scene, Prop, PropDoor, PropLight, PropWall, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility, CreatureTemplate, Encounter } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 import type { CatalogueEntry } from './catalogue'
@@ -74,6 +74,18 @@ export type Intent =
    * a GM client once a legacy prop's model has loaded; props already migrated are left alone.
    */
   | { type: 'props.migrate'; items: { id: PropId; fit: number }[] }
+  /**
+   * Open or close a door prop. The GM always; players when the scene allows doors
+   * (`playersOpenDoors`) and the door is not locked. Locking goes through `props.update`.
+   */
+  | { type: 'prop.door'; prop: PropId; open: boolean }
+  /**
+   * One-time conversion of a scene's drawn walls and doors, imported wall segments and placed
+   * lights into invisible wall, door and light props (src/core/partsMigration.ts). Sent by a GM
+   * client; the new props have ids derived from what they replace, so two GM clients racing
+   * write the same props once. Applied in one transaction: props placed, the old records removed.
+   */
+  | { type: 'props.convert'; scene: SceneId; props: Prop[]; walls: WallId[]; lights: LightId[]; sceneWalls?: boolean }
   /** @deprecated Single-prop forms kept for older clients; applied as a batch of one. */
   | { type: 'prop.add'; prop: Prop }
   /** @deprecated See `props.update`. */
@@ -152,6 +164,10 @@ export interface PropPatch {
   name?: string
   solid?: boolean
   locked?: boolean
+  /** Parts: an object sets the part, `null` takes it off. */
+  light?: PropLight | null
+  wall?: PropWall | null
+  door?: PropDoor | null
 }
 
 export interface PropUpdate {

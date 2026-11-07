@@ -6,6 +6,8 @@
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
 import { docBlockingSegments, moveBlocked, sceneWalls } from '@/table/build/wallEdit'
+import { moveSegments, propSegmentsByLevel } from '@/core/propParts'
+import { modelBoundsOf } from '@/table/modelBounds'
 import { levelOfHeight } from '@/core/kits'
 import { kitRuntime } from '@/table/kits/runtime'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
@@ -90,7 +92,9 @@ export function createController(opts: {
     const level = scene ? Math.max(0, levelOfHeight(t.position.y ?? 0, 0, scene.grid.cellSize)) : 0
     const kit = kitRuntime.moveWalls?.(t.scene, level) ?? []
     const base = level === 0 ? docBlockingSegments(scene, sceneWalls(s.walls, t.scene)) : []
-    return moveBlocked(t.position, intent.position, kit.length ? [...base, ...kit] : base)
+    // Wall and door props of the token's level, straight from the document.
+    const props = scene ? moveSegments(propSegmentsByLevel(s.props, t.scene, { floorY: 0, cellSize: scene.grid.cellSize, boundsOf: modelBoundsOf }).get(level)) : []
+    return moveBlocked(t.position, intent.position, [...base, ...kit, ...props])
   }
 
   /** The sheet a roll intent was made from, if it names one that still exists. */

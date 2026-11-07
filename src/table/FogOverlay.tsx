@@ -32,7 +32,7 @@ export function visibleByLevel(grid: GridSpec, viewers: readonly LevelViewer[], 
     if (!list) byLevel.set(v.level, (list = []))
     list.push(v)
   }
-  if (byLevel.size === 1 && byLevel.has(0) && !kits?.wallsAt(0).sight.length) return computeVisibleCells(grid, viewers, walls)
+  if (byLevel.size === 1 && byLevel.has(0)) return computeVisibleCells(grid, viewers, sightWallsAt(kits, 0, walls))
   const out = new Set<string>()
   for (const [level, list] of byLevel) {
     for (const k of computeVisibleCells(grid, list, sightWallsAt(kits, level, walls))) out.add(levelCellKey(k, level))

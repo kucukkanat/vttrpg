@@ -3,7 +3,7 @@
  * hand-built store state, and a tiny control bar to switch camera mode, GM / player view and
  * edit mode. The Edit panel needs a controller, so the bar has buttons that fire the same intents.
  */
-import { migratedScale } from '@/core/props'
+import { migratedScale, patchedProp } from '@/core/props'
 import { useEffect, useState } from 'react'
 import type { Prop, Scene, Token } from '@/core/doc'
 import type { TargetShape } from '@/core/geometry'
@@ -147,7 +147,7 @@ function applyLocally(intent: Intent) {
     }
     case 'props.update': {
       const next = { ...s.props }
-      for (const u of intent.updates) { const p = next[u.id]; if (p) next[u.id] = { ...p, ...u.patch, id: p.id } }
+      for (const u of intent.updates) { const p = next[u.id]; if (p) next[u.id] = patchedProp(p, u.patch) }
       s._replaceFromDoc({ props: next })
       break
     }
