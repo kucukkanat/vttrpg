@@ -25,10 +25,13 @@ export const editRuntime: {
   touchArm: { pointerId: number; prop: PropId } | null
   /** A two-finger gesture on the selection is running; a one-finger prop drag gives way to it. */
   gestureActive: boolean
+  /** When the last gesture ended (performance.now()); a finger lifting after it is not a tap. */
+  gestureEndedAt: number
 } = {
   sceneRoot: null,
   touchArm: null,
   gestureActive: false,
+  gestureEndedAt: 0,
 }
 
 /** Coarse pointer (touch first) on a phone-width screen: no box select and no advanced mode. */

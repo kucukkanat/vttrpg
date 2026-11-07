@@ -196,6 +196,7 @@ function PropTouchGestures() {
       const done = g
       g = null
       editRuntime.gestureActive = false
+      editRuntime.gestureEndedAt = performance.now()
       editRuntime.touchArm = null
       if (controls) controls.enabled = true
       useTableUi.getState().set({ propPreview: null, editDrag: false })

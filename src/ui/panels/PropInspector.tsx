@@ -5,7 +5,7 @@
  * table/build/expr.ts. A change applies to every selected prop as the same difference (position,
  * rotation) or factor (scale), in one `props.update`, so one undo step.
  */
-import { useEffect, useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { Prop } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import type { PropUpdate } from '@/core/intents'
@@ -52,29 +52,30 @@ export function inspectorUpdates(props: readonly Prop[], primary: Prop, field: F
   return out
 }
 
+const title: CSSProperties = { margin: '8px 0 4px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.06em', opacity: 0.8 }
+
 function NumberField({ label, value, onCommit }: { label: string; value: number; onCommit(text: string): boolean }) {
-  const [text, setText] = useState(fmt(value))
+  // What is being typed; null shows the current value (which follows the document).
+  const [draft, setDraft] = useState<string | null>(null)
   const [bad, setBad] = useState(false)
-  const [focused, setFocused] = useState(false)
-  useEffect(() => { if (!focused) setText(fmt(value)) }, [value, focused])
   const commit = () => {
-    if (text.trim() === fmt(value)) { setBad(false); return }
-    const ok = onCommit(text)
+    if (draft === null || draft.trim() === fmt(value)) { setDraft(null); setBad(false); return }
+    const ok = onCommit(draft)
     setBad(!ok)
-    if (ok) setText(fmt(value))
+    if (ok) setDraft(null)
   }
   return (
-    <label className="inspector-field" style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: '1 1 0' }}>
-      <span className="muted small" style={{ width: 12 }}>{label}</span>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: '1 1 0' }}>
+      <span style={{ width: 12, fontSize: 12, opacity: 0.8 }}>{label}</span>
       <input
-        value={text} inputMode="decimal" spellCheck={false} aria-invalid={bad} aria-label={label}
+        value={draft ?? fmt(value)} inputMode="decimal" spellCheck={false} aria-invalid={bad} aria-label={label}
         style={{ minHeight: 36, width: '100%', minWidth: 0, borderColor: bad ? 'var(--error, #e66)' : undefined }}
-        onFocus={(e) => { setFocused(true); e.target.select() }}
-        onChange={(e) => { setText(e.target.value); setBad(false) }}
-        onBlur={() => { commit(); setFocused(false) }}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => { setDraft(e.target.value); setBad(false) }}
+        onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).select() }
-          else if (e.key === 'Escape') { setText(fmt(value)); setBad(false); (e.target as HTMLInputElement).blur() }
+          if (e.key === 'Enter') { commit(); const el = e.target as HTMLInputElement; requestAnimationFrame(() => el.select()) }
+          else if (e.key === 'Escape') { setDraft(null); setBad(false); (e.target as HTMLInputElement).blur() }
         }}
       />
     </label>
@@ -104,10 +105,10 @@ export function PropInspector({ controller }: { controller: GameController }) {
   const rows: [Field, string][] = [['position', 'Position (m)'], ['rotation', 'Rotation (°)'], ['scale', 'Scale (×)']]
   return (
     <div className="prop-inspector" role="group" aria-label="Transform">
-      {props.length > 1 && <p className="muted small" style={{ margin: '0 0 4px' }}>{props.length} props: changes apply to all, as shown on {primary.name}.</p>}
-      {rows.map(([field, title]) => (
+      {props.length > 1 && <p className="small" style={{ margin: '0 0 4px', opacity: 0.8 }}>{props.length} props: changes apply to all, as shown on {primary.name}.</p>}
+      {rows.map(([field, label]) => (
         <div key={field} style={{ marginBottom: 6 }}>
-          <div className="muted small">{title}</div>
+          <div style={title}>{label}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             {AXES.map((axis) => (
               <NumberField key={axis} label={axis.toUpperCase()} value={shown[field][axis]} onCommit={commit(field, axis)} />
@@ -115,7 +116,7 @@ export function PropInspector({ controller }: { controller: GameController }) {
           </div>
         </div>
       ))}
-      <p className="muted small" style={{ margin: 0 }}>Type a value or an expression: 1.5*2, +0.5, *2.</p>
+      <p className="small" style={{ margin: '0 0 8px', opacity: 0.8 }}>Type a value or an expression: 1.5*2, +0.5, *2.</p>
     </div>
   )
 }

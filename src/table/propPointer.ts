@@ -48,6 +48,7 @@ interface DragState {
   /** Props that move, with their poses when the drag started. */
   group: Prop[]
   poses: Poses
+  startedAt: number
 }
 
 export interface PropPointerHandlers {
@@ -145,7 +146,7 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
           else select(id)
         }, LONG_PRESS_MS)
         : null,
-      plane, offX: off.x, offZ: off.z, duplicate: ne.altKey, group, poses: posesOf(group),
+      plane, offX: off.x, offZ: off.z, duplicate: ne.altKey, group, poses: posesOf(group), startedAt: performance.now(),
     }
   }
 
@@ -185,7 +186,8 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
     capture(e).releasePointerCapture(e.pointerId)
-    const wasClick = !d.moved && !editRuntime.gestureActive
+    // A finger lifting after a twist / pinch is not a tap.
+    const wasClick = !d.moved && !editRuntime.gestureActive && editRuntime.gestureEndedAt < d.startedAt
     const id = d.id
     endDrag(true)
     if (!wasClick) return

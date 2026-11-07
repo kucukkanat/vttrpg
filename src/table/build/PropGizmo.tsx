@@ -6,7 +6,7 @@
  * Simple (default), for what tabletop props need:
  *   - move: drag the props themselves (usePropPointer), snapped to half cells, Alt free
  *   - a turn ring on the floor around the selection: 15° steps, 90° with Shift, Alt free
- *   - a height arrow above it: 0.1 m steps, Alt free
+ *   - a height arrow standing on the ring: 0.1 m steps, Alt free
  *   - a scale cube on the ring: uniform, 0.05 steps, Alt free
  * Advanced (A, or the edit bar): adds X / Y / Z rings and a scale cube per axis, in world axes or
  * the primary prop's own (`gizmoSpace`).
@@ -245,8 +245,10 @@ function GizmoBody({ props }: { props: Prop[] }) {
   const hitR = (hitPx / 2) * wpp
   const show = !dragging
   const alpha = (on: boolean) => (on ? 1 : 0.7)
-  const arrowBase = Math.max(extent.top - c.y, 0) + 14 * wpp
   const arrowLen = ARROW_PX * wpp
+  // The height arrow stands on the ring, front left, clear of the props so it never hides behind one.
+  const arrowR = ring + hitR + 8 * wpp
+  const arrowAt = new Vector3(Math.sin(az - Math.PI / 4) * arrowR, 0, Math.cos(az - Math.PI / 4) * arrowR)
   const cube = CUBE_PX * wpp
   const cubeAt = new Vector3(Math.sin(az + Math.PI / 4) * ring, 0, Math.cos(az + Math.PI / 4) * ring)
   const axisList: Axis[] = ['x', 'y', 'z']
@@ -270,7 +272,7 @@ function GizmoBody({ props }: { props: Prop[] }) {
       </group>
 
       {/* Height arrow */}
-      <group position-y={arrowBase}>
+      <group position={arrowAt}>
         <mesh visible={show} position-y={arrowLen * 0.4} raycast={noRaycast} renderOrder={10}>
           <cylinderGeometry args={[line, line, arrowLen * 0.8, 8]} />
           <meshBasicMaterial color={AXIS_COLOR.y} opacity={alpha(mode === 'translate')} {...overlay} />

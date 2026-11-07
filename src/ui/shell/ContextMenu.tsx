@@ -142,7 +142,18 @@ function PropMenu({ req, prop, controller, onClose }: { req: NonNullable<ReturnT
     items[next]?.focus()
   }
   const dispatch = (intent: Parameters<GameController['dispatch']>[0]) => void controller.dispatch(intent)
-  const run = (fn: () => void) => () => { fn(); onClose() }
+  // The finger that long-pressed lifts over the ring; the click the browser may make of that lift is
+  // not a choice. Buttons answer once that finger is up (and a moment has passed).
+  const liftedAt = useRef<number | null>(null)
+  useEffect(() => {
+    if (!radial) return
+    const up = () => { liftedAt.current ??= performance.now() }
+    window.addEventListener('pointerup', up, true)
+    window.addEventListener('pointercancel', up, true)
+    return () => { window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', up, true) }
+  }, [radial])
+  const settled = () => !radial || (liftedAt.current !== null && performance.now() - liftedAt.current > 150)
+  const run = (fn: () => void) => () => { if (!settled()) return; fn(); onClose() }
   const items: RadialItem[] = [
     { key: 'dup', label: 'Duplicate', icon: 'plus', run: run(() => duplicateSelection(dispatch)) },
     { key: 'turn', label: 'Turn 90°', icon: 'rotate', run: run(() => turnSelection(90, dispatch)) },
@@ -164,7 +175,7 @@ function PropMenu({ req, prop, controller, onClose }: { req: NonNullable<ReturnT
             <span className="ctx-radial-label">{it.label}</span>
           </button>
         ))}
-        <button type="button" className="ctx-radial-close" aria-label="Close menu" onClick={onClose}><Icon name="close" /></button>
+        <button type="button" className="ctx-radial-close" aria-label="Close menu" onClick={() => { if (settled()) onClose() }}><Icon name="close" /></button>
       </div>
     )
   }
