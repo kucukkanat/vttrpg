@@ -11,6 +11,9 @@ import { BUILTIN_PACKS } from '@/rules'
 import { TEMPLATES, applyTemplate, templateById, type GameTemplate } from '../templates'
 import { useCoarsePointer, verb } from '../useMediaQuery'
 import type { GameController } from '../controller'
+import { PackPicker, type PickedPack } from './PackPicker'
+import { importGameFile } from '../importGame'
+import { pushToast } from '../toasts'
 
 const css = `
 .ng-step { margin: 18px 0 6px; display: flex; align-items: baseline; gap: 10px; }
@@ -42,7 +45,7 @@ export function NewGame() {
   const [name, setName] = useState('My table')
   const [displayName, setDisplayName] = useState('GM')
   const [templateId, setTemplateId] = useState(TEMPLATES[0]!.id)
-  const [pack, setPack] = useState(BUILTIN_PACKS[0]?.id ?? 'mausritter')
+  const [pack, setPack] = useState<PickedPack>({ id: BUILTIN_PACKS[0]?.id ?? 'mausritter', name: BUILTIN_PACKS[0]?.name ?? 'Mausritter' })
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +53,7 @@ export function NewGame() {
 
   const template = templateById(templateId) ?? TEMPLATES[0]!
   const busy = phase === 'creating' || phase === 'applying'
-  const canCreate = !busy && name.trim().length > 0 && displayName.trim().length > 0
+  const canCreate = !busy && name.trim().length > 0 && displayName.trim().length > 0 && (!!template.sceneFile || !pack.pending)
 
   async function create() {
     setError(null)
@@ -60,7 +63,8 @@ export function NewGame() {
     try {
       if (!c) {
         c = await startGame({
-          mode: 'create', name: name.trim(), packId: template.sceneFile ? template.packId : pack, displayName: displayName.trim(),
+          mode: 'create', name: name.trim(), packId: template.sceneFile ? template.packId : pack.id, displayName: displayName.trim(),
+          ...(template.sceneFile ? {} : { packSource: pack.source, packAsset: pack.asset }),
         })
         setController(c)
         setCreated(c)
@@ -98,13 +102,7 @@ export function NewGame() {
             <TemplateCard key={t.id} template={t} selected={t.id === templateId} disabled={busy} onPick={() => setTemplateId(t.id)} />
           ))}
         </div>
-        {!template.sceneFile && (
-          <label>System
-            <select value={pack} onChange={(e) => setPack(e.target.value)} disabled={busy}>
-              {BUILTIN_PACKS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
-        )}
+        {!template.sceneFile && <PackPicker value={pack} onChange={setPack} disabled={busy} />}
 
         <Step n={3} title="Open the table" />
         <p className="muted small" style={{ margin: '4px 0 0' }}>
@@ -122,12 +120,13 @@ export function NewGame() {
           {created && !busy && <button onClick={() => navigate('/game')}>Open table anyway</button>}
           <button disabled={busy} onClick={() => navigate('/')}>Back</button>
         </div>
+        <ImportSection displayName={displayName.trim() || 'GM'} disabled={busy} />
       </div>
     </Shell>
   )
 }
 
-function Step({ n, title }: { n: number; title: string }) {
+function Step({ n, title }: { n: number | string; title: string }) {
   return (
     <div className="ng-step">
       <span className="n">{n}</span>
@@ -146,5 +145,39 @@ function TemplateCard({ template, selected, disabled, onPick }: { template: Game
       </span>
       <span className="desc">{template.description}</span>
     </button>
+  )
+}
+
+/** "Or import a game file": a new game from an export, run by this device as GM. */
+function ImportSection({ displayName, disabled }: { displayName: string; disabled: boolean }) {
+  const { setController } = useSession()
+  const [state, setState] = useState<{ busy?: string; error?: string }>({})
+  const pick = async (file: File | undefined) => {
+    if (!file) return
+    setState({ busy: 'Reading the file…' })
+    try {
+      const { game, report } = await importGameFile(await file.text(), displayName, (busy) => setState({ busy }))
+      setController(game)
+      const notes = [
+        report.missing ? `${report.missing} assets were not in the file and load from their original sources, if they still exist.` : '',
+        report.bad ? `${report.bad} embedded assets were damaged and skipped.` : '',
+      ].filter(Boolean).join(' ')
+      const notice = [game.notice, notes].filter(Boolean).join(' ')
+      navigate('/game')
+      if (notice) pushToast({ text: notice, ttl: 0 })
+    } catch (e) {
+      setState({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return (
+    <>
+      <Step n="+" title="Or import a game file" />
+      <p className="muted small" style={{ margin: '4px 0 0' }}>A file exported from a table (top bar ▣ menu). You become its GM, with a new invite link.</p>
+      <label className="tiny-file" style={{ minHeight: 48, justifySelf: 'start', marginTop: 8 }}>
+        {state.busy ?? 'Choose a .vttgame.json file'}
+        <input type="file" accept="application/json,.json" hidden disabled={disabled || !!state.busy} onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
+      </label>
+      {state.error && <p className="error" role="alert">{state.error}</p>}
+    </>
   )
 }

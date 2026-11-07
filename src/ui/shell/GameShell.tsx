@@ -32,6 +32,8 @@ import { GmCallout } from '../onboarding/GmCallout'
 import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, presetLayouts, type LayoutPresetId, type TabletLayout } from './layoutPresets'
 import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
 import { Cues } from '../cues'
+import { downloadBlob, exportGame } from '../gameFile'
+import { pushToast } from '../toasts'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
@@ -145,6 +147,16 @@ export function GameShell({ controller }: { controller: GameController }) {
     '--right-w': `${desktop.right.open ? desktop.right.width : RAIL_W}px`,
     '--drawer-w': `${tablet.open && tablet.pinned ? DRAWER_W : 0}px`,
   } as CSSProperties
+  const exportFile = async () => {
+    pushToast({ key: 'export', text: 'Exporting the game…', ttl: 0 })
+    try {
+      const { blob, name, missing } = await exportGame(controller.connection.doc, controller.assets)
+      downloadBlob(blob, name)
+      pushToast({ key: 'export', text: missing ? `Exported ${name}; ${missing} assets could not be included` : `Exported ${name}` })
+    } catch (e) {
+      pushToast({ key: 'export', text: `Export failed: ${e instanceof Error ? e.message : String(e)}` })
+    }
+  }
   const pickPreset = (id: LayoutPresetId) => {
     const next = presetLayouts(id)
     if (next.desktop) setDesktop(next.desktop)
@@ -161,7 +173,7 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   return (
     <div className={cls} style={style}>
-      <TopBar controller={controller} compact={bp === 'phone'} trailing={<><ViewMenu isGm={isGm} preset={preset} onPreset={pickPreset} onZen={() => setZen(true)} />{drawerToggle}</>} />
+      <TopBar controller={controller} compact={bp === 'phone'} trailing={<><ViewMenu isGm={isGm} preset={preset} onPreset={pickPreset} onZen={() => setZen(true)} onExport={isGm ? () => void exportFile() : undefined} />{drawerToggle}</>} />
 
       {bp === 'desktop' ? (
         <SideColumn side="left" panels={panels.filter((p) => p.side === 'left')} width={desktop.left.width} open={desktop.left.open}

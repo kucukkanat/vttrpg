@@ -8,7 +8,7 @@ import { presetsFor, type LayoutPresetId } from './layoutPresets'
 import { isTypingTarget } from './useShortcuts'
 import './ViewMenu.css'
 
-export function ViewMenu({ isGm, preset, onPreset, onZen }: { isGm: boolean; preset: LayoutPresetId; onPreset(id: LayoutPresetId): void; onZen(): void }) {
+export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: boolean; preset: LayoutPresetId; onPreset(id: LayoutPresetId): void; onZen(): void; onExport?(): void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -35,6 +35,15 @@ export function ViewMenu({ isGm, preset, onPreset, onZen }: { isGm: boolean; pre
               <span className="view-item"><span>{p.label}</span><span className="muted small">{p.hint}</span></span>
             </button>
           ))}
+          {onExport && (
+            <>
+              <div className="menu-info muted small">Game file</div>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); onExport() }}>
+                <span aria-hidden className="view-check" />
+                <span className="view-item"><span>Export game file</span><span className="muted small">Everything, with maps and models, to keep or import elsewhere</span></span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
