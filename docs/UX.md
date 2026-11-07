@@ -165,6 +165,7 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `1`–`9` | toggle the n-th panel section (registry order) |
 | `Esc` | blur the focused field; cancel skill targeting / deselect (table) |
 | `G` / `F` / `C` | grid overlay / first person / camera mode (table, existing) |
+| `T` / `Q` / `E` | tactical top-down view / turn it 45° left / right (table) |
 | `Delete` | remove the selected token (GM, existing) |
 
 The shell never binds a key the table uses. Phone and tablet get no shortcut layer; hardware

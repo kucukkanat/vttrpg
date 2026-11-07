@@ -88,6 +88,7 @@ export function CameraPill() {
           <kbd aria-hidden>F</kbd>
         </button>
       </div>
+      <TacticalButtons orbit={active.mode === 'orbit'} />
       <DicePad />
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}
@@ -115,6 +116,39 @@ export function CameraPill() {
           <Icon name="pin" className="cam-icon" />
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Tactical view: top-down camera (T), turned in 45° steps (Q / E) while it is on. Also entered by
+ * zooming out past the orbit limit (CameraRig). Only with the orbit camera.
+ */
+function TacticalButtons({ orbit }: { orbit: boolean }) {
+  const tactical = useTableUi((s) => s.tactical)
+  const set = useTableUi((s) => s.set)
+  const turn = (by: number) => set({ tacticalTurn: useTableUi.getState().tacticalTurn + by })
+  const on = tactical && orbit
+  return (
+    <div className="cam-group" role="group" aria-label="Tactical view">
+      <button type="button" className={`cam-btn cam-tactical${on ? ' on' : ''}`} aria-pressed={on} disabled={!orbit && !tactical}
+        title={on ? 'Back to the angled camera (T)' : 'Top-down tactical view (T)'} onClick={() => set({ tactical: !on, firstPerson: false })}>
+        <Icon name="map" className="cam-icon" />
+        <span className="cam-label">Top</span>
+        <kbd aria-hidden>T</kbd>
+      </button>
+      {on && (
+        <>
+          <button type="button" className="cam-btn" aria-label="Turn the view left 45°" title="Turn left 45° (Q)" onClick={() => turn(-1)}>
+            <Icon name="chevron-left" className="cam-icon" />
+            <kbd aria-hidden>Q</kbd>
+          </button>
+          <button type="button" className="cam-btn" aria-label="Turn the view right 45°" title="Turn right 45° (E)" onClick={() => turn(1)}>
+            <Icon name="chevron-right" className="cam-icon" />
+            <kbd aria-hidden>E</kbd>
+          </button>
+        </>
+      )}
     </div>
   )
 }
