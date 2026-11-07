@@ -20,6 +20,7 @@ import { isFogEnabled } from '@/table/vision'
 import { copyText } from '../invite'
 import { pushToast } from '../toasts'
 import './BuildPanel.css'
+import { Icon } from '@/ui/icons'
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -235,7 +236,7 @@ function Prefabs({ controller }: { controller: GameController }) {
     <>
       <div className="row build-tools">
         <ToolButton tool="prefab-capture" label="Capture" title="Drag a rectangle over props and walls to save them as a prefab (snaps to whole cells)" />
-        {tool === 'prefab-stamp' && stamp && <button type="button" className="tiny" onClick={turn} title="Turn the stamp a quarter (R)">Turn ↻ {stamp.turns * 90}°</button>}
+        {tool === 'prefab-stamp' && stamp && <button type="button" className="tiny" onClick={turn} title="Turn the stamp a quarter (R)"><Icon name="rotate" size={14} /> Turn {stamp.turns * 90}°</button>}
       </div>
       {list.length === 0
         ? <p className="muted small build-note">Build something with props and walls, then capture it to stamp copies anywhere; stamps land on the grid so pieces line up.</p>

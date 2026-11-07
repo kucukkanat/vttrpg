@@ -9,6 +9,7 @@ import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS } from '@/assets'
 import { loadIdentity } from '@/net'
 import type { AssetRef } from '@/core/assets'
 import { PACK_BUNDLE_FORMAT, loadPackFromBundle, loadPackFromUrl, parsePackBundle } from '../packSource'
+import { Icon } from '@/ui/icons'
 
 export interface PickedPack {
   id: string
@@ -101,7 +102,7 @@ export function PackPicker({ value, onChange, disabled }: { value: PickedPack; o
       <div aria-live="polite" className="small">
         {state.busy && <span className="muted">{state.busy}</span>}
         {state.error && <span className="error" role="alert">{state.error}</span>}
-        {!state.busy && !state.error && state.ok && <span className="ok">✓ {state.ok}</span>}
+        {!state.busy && !state.error && state.ok && <span className="ok"><Icon name="check" size={14} /> {state.ok}</span>}
       </div>
     </div>
   )

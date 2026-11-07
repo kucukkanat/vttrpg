@@ -10,8 +10,10 @@ import type { DeclaredAction, Token } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
+import { HOSTILE, INK } from '@/ui/theme/palette'
 
-export const DECLARED_COLOR = '#ff9b4a'
+/** A declared enemy intent is a hostile telegraph: the palette's hostile role. */
+export const DECLARED_COLOR = HOSTILE
 const noRaycast = () => undefined
 
 /** What one viewer sees of the declarations in `scene`: lines to visible targets only. */
@@ -69,7 +71,7 @@ function mark(): SpriteMaterial {
   ctx.strokeStyle = 'rgba(0,0,0,0.7)'
   ctx.lineWidth = 3
   ctx.stroke()
-  ctx.fillStyle = '#1a1612'
+  ctx.fillStyle = INK
   ctx.font = 'bold 36px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'

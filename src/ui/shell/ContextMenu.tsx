@@ -25,6 +25,7 @@ import { useTargeting } from '../targeting'
 import { requestOpenPanel } from './useShortcuts'
 import { tokenSkillList } from '../skillbar/tokenSkills'
 import './ContextMenu.css'
+import { Icon } from '@/ui/icons'
 
 /** The pack's first skill that reads as an attack: deals damage and is aimed at something. Falls back to the first aimed skill. */
 export function firstAttackSkill(skills: readonly SkillDef[]): SkillDef | undefined {
@@ -156,14 +157,14 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
           <button type="button" role="menuitem" className="ctx-row" onClick={() => setMode('main')}>‹ Back</button>
           <div className="ctx-sep" role="separator" />
           <button type="button" role="menuitem" className="ctx-row" aria-checked={!token.owner || token.owner === controller.pubkey} onClick={() => assign(controller.pubkey)}>
-            GM{(!token.owner || token.owner === controller.pubkey) && <span className="ctx-sub">✓</span>}
+            GM{(!token.owner || token.owner === controller.pubkey) && <span className="ctx-sub"><Icon name="check" size={14} label="current owner" /></span>}
           </button>
           {players.map((p) => (
             <button key={p.pubkey} type="button" role="menuitem" className="ctx-row" aria-checked={token.owner === p.pubkey} onClick={() => assign(p.pubkey)}>
-              <span className="dot" style={{ background: p.color }} />{p.name}{token.owner === p.pubkey && <span className="ctx-sub">✓</span>}
+              <span className="dot" style={{ background: p.color }} />{p.name}{token.owner === p.pubkey && <span className="ctx-sub"><Icon name="check" size={14} label="current owner" /></span>}
             </button>
           ))}
-          {offlineOwner && <div className="ctx-head">{offlineOwner.slice(0, 8)} (offline) ✓</div>}
+          {offlineOwner && <div className="ctx-head">{offlineOwner.slice(0, 8)} (offline) <Icon name="check" size={14} label="current owner" /></div>}
           {players.length === 0 && <div className="ctx-head">No players present</div>}
         </>
       )}

@@ -59,6 +59,10 @@ const ICONS = {
   /** Pin the drawer: a thumbtack. */
   tack: <path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  /** View and layout presets: a framed panel. */
+  layout: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9h17M9.5 9v10.5" /></>,
+  /** Turn a quarter. */
+  rotate: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
   /** Stop playback: a rounded square. */
   stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
   /** Play / current turn: a triangle pointing right. */

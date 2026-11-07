@@ -158,7 +158,7 @@ details[open] > summary.disclosure::before { transform: rotate(90deg); }
 .ok { color: var(--ok); } .bad { color: var(--bad); }
 /* The display face: names, titles and the numbers that matter (totals, HP, rounds). Lining, tabular
    figures so numbers line up; body text, labels and controls keep the system stack. */
-.display, .host-title, .topbar .game-name, .cc-name, .cc-value, .token-bar-name, .init-round, .roll-total, .toast-total, .scene-transition__name {
+.display-face, .host-title, .topbar .game-name, .cc-name, .cc-value, .token-bar-name, .init-round, .roll-total, .toast-total, .scene-transition__name {
   font-family: var(--font-display); font-variant-numeric: lining-nums tabular-nums;
 }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }

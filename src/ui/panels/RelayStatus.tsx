@@ -13,7 +13,7 @@ export const RELAY_LIST_POLL_MS = 1000
 const css = `
 .relay-pop { position: absolute; left: 0; top: calc(100% + 4px); width: 360px; max-width: calc(100vw - 2 * var(--sp-3)); z-index: 40;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-3);
-  display: grid; gap: var(--sp-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .5); text-align: left; }
+  display: grid; gap: var(--sp-2); box-shadow: var(--shadow-lg); text-align: left; }
 .relay-pop p { margin: 0; }
 .relay-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .relay-list li { display: grid; grid-template-columns: auto 1fr; column-gap: var(--sp-2); align-items: center; min-height: 36px; }

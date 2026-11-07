@@ -28,22 +28,14 @@ import type { Pt2, WallSegment } from '../walls'
 import { useBuildUi, type BuildTool } from './buildState'
 import { capturePrefab, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
 import { blockingSegments, cleanPoint, endpointsOf, isDrawable, pointSegmentDistance, sceneWalls, segmentsNear, snapWallPoint, wallsNear } from './wallEdit'
+import { BUILD } from '@/ui/theme/palette'
 
 const noRaycast = () => undefined
 const DRAG_THRESHOLD_PX = 6
 /** How often a fog brush stroke sends what it has painted so far. */
 const BRUSH_SEND_MS = 200
 
-const COLORS = {
-  wall: '#ff9f43',
-  door: '#7bd88f',
-  doorOpen: '#5aa9ff',
-  locked: '#ff5a7a',
-  base: '#c9c2b0',
-  proposal: '#4fd1ff',
-  erase: '#ff5a7a',
-  pen: '#ffd166',
-}
+const COLORS = BUILD
 
 /** The drawn walls of a scene, stable across document syncs that did not touch them. */
 export function useSceneWalls(sceneId: SceneId): Wall[] {
@@ -497,7 +489,7 @@ function ToolCatcher({ tool, bounds, baseWalls }: { tool: BuildTool; bounds: Bou
       {(tool === 'wall' || tool === 'door') && hover && !pen && <Marker at={hover} y={y} r={0.12 * cell} color={COLORS.pen} />}
       {tool === 'prefab-capture' && pen && <RectOutline rect={snapRectToCells(pen.a, pen.b, grid)} y={y} color={COLORS.pen} />}
       {(tool === 'fog-reveal' || tool === 'fog-hide') && hover && (
-        <Marker at={hover} y={y} r={(brush + 0.5) * cell} color={tool === 'fog-reveal' ? '#ffe9a8' : '#6c63ff'} ring />
+        <Marker at={hover} y={y} r={(brush + 0.5) * cell} color={tool === 'fog-reveal' ? BUILD.fogReveal : BUILD.fogHide} ring />
       )}
       {tool === 'erase' && hover && <Marker at={hover} y={y} r={eraseRadius} color={COLORS.erase} ring />}
       {tool === 'erase' && painted && (

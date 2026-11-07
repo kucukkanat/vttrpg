@@ -58,6 +58,24 @@ export const STATUS = {
   magic: '#4c8dff',
   affliction: '#c77ddd',
 } as const
+/**
+ * The GM's build layer (walls, doors, fog brush). Walls are cream like measurement, open passages
+ * green, locked or erasing red-orange, the pen the selection colour; other players' proposals
+ * stay a distinct cyan so they never read as the GM's own work.
+ */
+export const BUILD = {
+  wall: '#e8dcc0',
+  door: '#3ee08f',
+  doorOpen: '#7cc4ff',
+  locked: '#ff5a1f',
+  base: '#c9c2b0',
+  proposal: '#4fd1ff',
+  erase: '#ff5a1f',
+  pen: '#f3ead8',
+  fogReveal: '#f3ead8',
+  fogHide: '#6c63ff',
+} as const
+
 /** Fill behind a status glyph and the glyph itself (monochrome). */
 export const STATUS_FILL = '#16161a'
 export const STATUS_GLYPH = '#f3ead8'
