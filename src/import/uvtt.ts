@@ -9,8 +9,8 @@
  *   lights: [{ position, range, intensity, color, shadows }]
  *   image: base64 PNG / JPEG / WebP
  *
- * Closed portals block sight like walls; open ones are gaps. Lights are ignored for now
- * (the table's lights come from tokens), noted in `notes`.
+ * Portals become doors (`MapWall.door`), open or closed as the map has them; the import places
+ * them as invisible door props. Lights are ignored for now, noted in `notes`.
  */
 import type { MapImage, MapPoint, MapWall, ParsedMap } from './types'
 
@@ -62,14 +62,14 @@ export function parseUvtt(input: unknown, opts: { name?: string } = {}): ParsedM
   polylines(json.line_of_sight, 'line_of_sight')
   polylines(json.objects_line_of_sight, 'objects_line_of_sight')
 
-  let openPortals = 0
+  // Portals become doors, open or closed as the map has them.
   for (const p of json.portals ?? []) {
     const b = p?.bounds
     if (!Array.isArray(b) || b.length < 2 || !isPoint(b[0]) || !isPoint(b[1])) continue
-    if (p.closed === false) { openPortals++; continue }
-    pushWall(walls, shift(b[0]), shift(b[1]))
+    const a = shift(b[0]), z = shift(b[1])
+    if (Math.hypot(z.x - a.x, z.y - a.y) < 1e-9) continue
+    walls.push({ a, b: z, door: { open: p.closed === false } })
   }
-  if (openPortals) notes.push(`${openPortals} open portal${openPortals === 1 ? '' : 's'} left as gaps`)
   const lights = Array.isArray(json.lights) ? json.lights.length : 0
   if (lights) notes.push(`${lights} map light${lights === 1 ? '' : 's'} ignored (use token lights)`)
 

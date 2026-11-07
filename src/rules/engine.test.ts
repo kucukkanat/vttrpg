@@ -196,6 +196,26 @@ describe('validate', () => {
     expect(engine.validate({ type: 'wall.remove', walls: ['w1' as never] }, asAlice, d(true))).toMatch(/GM/)
     expect(engine.validate({ type: 'fog.hide', scene, cells: ['0,0'] }, asAlice, d(true))).toMatch(/GM/)
   })
+  it('lets players open unlocked door props where the scene allows it; locking stays with the GM', () => {
+    const grid = { type: 'square' as const, cellSize: 1, origin: { x: 0, y: 0, z: 0 } }
+    const model = { sha256: 'builtin:no-model', kind: 'other', mime: 'application/x-vtt-part', size: 0, sources: [] } as never
+    const door = (id: string, locked = false) => ({ id: id as never, scene, name: 'Door', model, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, door: { open: false, locked, width: 1 } })
+    const base = doc()
+    const d = (playersOpenDoors: boolean): GameDocShape => ({
+      ...base,
+      scenes: { [scene]: { id: scene, name: 'S', grid, cameraMode: 'orbit', darkness: 0, playersOpenDoors } },
+      props: { ['p1' as never]: door('p1'), ['p2' as never]: door('p2', true), ['p3' as never]: { ...door('p3'), door: undefined, wall: { length: 1, blocks: 'both' } } },
+    })
+    const open = (prop: string): Intent => ({ type: 'prop.door', prop: prop as never, open: true })
+    expect(engine.validate(open('p1'), asAlice, d(true))).toBeNull()
+    expect(engine.validate(open('p1'), asAlice, d(false))).toMatch(/GM/)
+    expect(engine.validate(open('p2'), asAlice, d(true))).toMatch(/locked/)
+    expect(engine.validate(open('p3'), asAlice, d(true))).toMatch(/not a door/)
+    expect(engine.validate(open('p2'), asGm, d(false))).toBeNull()
+    const lock: Intent = { type: 'props.update', updates: [{ id: 'p1' as never, patch: { door: { open: false, locked: true, width: 1 } } }] }
+    expect(engine.validate(lock, asAlice, d(true))).toMatch(/GM/)
+    expect(engine.validate(lock, asGm, d(true))).toBeNull()
+  })
   it('lets a player end their own token\'s turn, and only while it is up', () => {
     const d = { ...doc(), initiative: { active: true, round: 1, turn: 0, order: [{ token: 't-alice' as TokenId, score: 12 }, { token: 't-bob' as TokenId, score: 8 }] } }
     expect(engine.validate({ type: 'initiative.next', token: 't-alice' as TokenId }, asAlice, d)).toBeNull()

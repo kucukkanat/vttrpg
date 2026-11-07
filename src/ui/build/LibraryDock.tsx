@@ -1,12 +1,17 @@
 /**
- * Build's Library dock on the left: the shelf switcher (Models · Kit · Creatures · Saved, from
- * `useLibraryView`) over the Library panel, which fills each shelf. Folds to a narrow rail.
+ * The GM's Library dock, open (the shell draws the folded rail and loads this on first open): the
+ * Edit pencil and the fold button in the header, the shelf row (`LIBRARY_SHELVES`, from
+ * `useLibraryView`) over the Library panel, which fills each shelf, and the scene budget meter in
+ * the footer. On phones the shelf row and the panel are the Library sheet.
  */
 import type { GameController } from '../controller'
 import { LibraryPanel } from '../library/LibraryPanel'
+import { BudgetMeter } from '../library/BudgetMeter'
 import { LIBRARY_SHELVES, useLibraryView } from '../library/libraryView'
 import { useTableLayout } from '../shell/tableLayout'
+import { EditToggle } from '../shell/EditToggle'
 import { Icon } from '../icons'
+import './inspector.css'
 
 export function ShelfRow() {
   const shelf = useLibraryView((s) => s.shelf)
@@ -21,27 +26,32 @@ export function ShelfRow() {
 }
 
 export function LibraryDock({ controller }: { controller: GameController }) {
-  const open = useTableLayout((s) => s.buildLibraryOpen)
   const set = useTableLayout((s) => s.set)
-  if (!open) {
-    return (
-      <button type="button" className="bw-rail bw-rail--left" onClick={() => set({ buildLibraryOpen: true })} aria-label="Open the Library" title="Library: everything you can add">
-        <Icon name="cube" size={18} />
-        <span className="bw-rail-word">Library</span>
-      </button>
-    )
-  }
   return (
-    <aside className="bw-dock bw-dock--left skin-paper" aria-label="Library">
-      <div className="paper-head bw-dock-head">
+    <aside className="lib-dock skin-paper" aria-label="Library">
+      <div className="paper-head lib-dock-head">
         <Icon name="cube" size={18} className="paper-glyph" />
         <h2 className="host-title paper-title">Library</h2>
-        <button type="button" className="icon" aria-label="Fold the Library" title="Fold the Library" onClick={() => set({ buildLibraryOpen: false })}><Icon name="chevron-left" size={18} /></button>
+        <EditToggle />
+        <button type="button" className="icon" aria-label="Fold the Library" title="Fold the Library (Esc)" onClick={() => set({ libraryOpen: false })}><Icon name="chevron-left" size={18} /></button>
       </div>
       <ShelfRow />
-      <div className="bw-dock-body bw-lib-body">
+      <div className="lib-dock-body bw-lib-body">
         <LibraryPanel controller={controller} bare />
       </div>
+      <div className="lib-dock-foot"><BudgetMeter /></div>
     </aside>
   )
 }
+
+/** Phones: the Library as the one sheet. Picking a card closes the sheet so the next tap places. */
+export function LibrarySheet({ controller }: { controller: GameController }) {
+  return (
+    <div className="lib-phone">
+      <div className="lib-phone-head"><ShelfRow /><EditToggle /></div>
+      <LibraryPanel controller={controller} bare />
+    </div>
+  )
+}
+
+export default LibraryDock

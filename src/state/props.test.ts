@@ -169,6 +169,28 @@ describe('undo and redo of build edits', () => {
     expect(await redoLast()).toBeNull()
   })
 
+  it('undoes and redoes light, wall and door parts; opening a door is never undone', async () => {
+    await dispatch({ type: 'props.place', props: [prop('t')] })
+    await dispatch({ type: 'props.update', updates: [{ id: 't' as PropId, patch: { light: { color: '#ffa040', radius: 6, flicker: true } } }] })
+    await dispatch({ type: 'props.update', updates: [{ id: 't' as PropId, patch: { light: { color: '#ffffff', radius: 3 } } }] })
+    await dispatch({ type: 'props.update', updates: [{ id: 't' as PropId, patch: { door: { open: false, width: 1 } } }] })
+    await dispatch({ type: 'props.update', updates: [{ id: 't' as PropId, patch: { door: { open: false, locked: true, width: 1 } } }] })
+    // Someone opens it (play, not an edit).
+    applyIntent(doc, env({ type: 'prop.door', prop: 't' as PropId, open: true }, other))
+    expect(props().get('t')!.door).toEqual({ open: true, locked: true, width: 1 })
+    await undoLast() // unlock: still open
+    expect(props().get('t')!.door).toEqual({ open: true, width: 1 })
+    await undoLast() // the door part goes
+    expect(props().get('t')!.door).toBeUndefined()
+    await undoLast()
+    expect(props().get('t')!.light).toEqual({ color: '#ffa040', radius: 6, flicker: true })
+    await undoLast()
+    expect(props().get('t')!.light).toBeUndefined()
+    await redoLast()
+    await redoLast()
+    expect(props().get('t')!.light).toEqual({ color: '#ffffff', radius: 3 })
+  })
+
   it('skips, with a note, props someone else changed since, and still undoes the rest', async () => {
     await dispatch({ type: 'props.place', props: [prop('a'), prop('b')] })
     await dispatch({ type: 'props.update', updates: [

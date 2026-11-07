@@ -4,8 +4,8 @@
  */
 export interface MapPoint { x: number; y: number }
 
-/** A line-of-sight blocker between two map points, in grid units. */
-export interface MapWall { a: MapPoint; b: MapPoint }
+/** A line-of-sight blocker between two map points, in grid units; with `door`, a door there. */
+export interface MapWall { a: MapPoint; b: MapPoint; door?: { open: boolean; locked?: boolean } }
 
 export interface MapImage {
   /** Encoded image bytes (PNG, JPEG or WebP). */

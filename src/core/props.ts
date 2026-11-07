@@ -26,6 +26,7 @@ import type { GameDocShape, Prop, Wall } from './doc'
 import type { Vec3 } from './geometry'
 import type { Intent, PropPatch } from './intents'
 import type { PropId } from './ids'
+import { badInvisible, badParts } from './propParts'
 
 /** Per-axis scale the validator accepts. Wide on purpose: migrated props of huge models get tiny scales. */
 export const PROP_SCALE_LIMITS = { min: 1e-4, max: 1e4 } as const
@@ -34,7 +35,7 @@ export const PROP_POSITION_LIMIT = 1e5
 /** Most props one intent may place, update or remove. */
 export const MAX_PROPS_PER_INTENT = 5000
 /** Fields `props.update` may patch. */
-export const PROP_PATCH_KEYS = ['position', 'rotation', 'scale', 'name', 'solid', 'locked'] as const satisfies readonly (keyof PropPatch)[]
+export const PROP_PATCH_KEYS = ['position', 'rotation', 'scale', 'name', 'solid', 'locked', 'light', 'wall', 'door'] as const satisfies readonly (keyof PropPatch)[]
 
 export const ONE_SCALE: Vec3 = Object.freeze({ x: 1, y: 1, z: 1 }) as Vec3
 
@@ -110,7 +111,7 @@ function badNewProp(p: unknown, doc: Pick<GameDocShape, 'scenes'>): string | nul
   if (prop.tags !== undefined && (!Array.isArray(prop.tags) || prop.tags.length > 64 || prop.tags.some((t) => typeof t !== 'string'))) return 'tags must be a list of words'
   if (prop.solid !== undefined && typeof prop.solid !== 'boolean') return 'solid must be true or false'
   if (prop.locked !== undefined && typeof prop.locked !== 'boolean') return 'locked must be true or false'
-  return null
+  return badParts(prop, false) ?? badInvisible(prop)
 }
 
 function badWall(w: unknown, doc: Pick<GameDocShape, 'scenes'>): string | null {
@@ -119,6 +120,13 @@ function badWall(w: unknown, doc: Pick<GameDocShape, 'scenes'>): string | null {
   if (!doc.scenes?.[wall.scene]) return 'wall in an unknown scene'
   const pt = (q: unknown) => !!q && finite((q as { x: number }).x) && finite((q as { z: number }).z)
   return pt(wall.a) && pt(wall.b) ? null : 'wall ends must be finite'
+}
+
+/** `p` with a `props.update` patch applied (a `null` part taken off). */
+export function patchedProp(p: Prop, patch: PropPatch): Prop {
+  const out = { ...p, ...patch, id: p.id } as Prop & Record<string, unknown>
+  for (const k of ['light', 'wall', 'door'] as const) if (out[k] === null) delete out[k]
+  return out as Prop
 }
 
 /** Why `patch` is not a valid `props.update` patch, or null. */
@@ -133,7 +141,7 @@ export function badPatch(patch: unknown): string | null {
   if (p.name !== undefined && typeof p.name !== 'string') return 'name must be text'
   if (p.solid !== undefined && typeof p.solid !== 'boolean') return 'solid must be true or false'
   if (p.locked !== undefined && typeof p.locked !== 'boolean') return 'locked must be true or false'
-  return null
+  return badParts(p, true)
 }
 
 function badBatch(list: unknown, what: string): string | null {
@@ -179,6 +187,8 @@ export function validatePropsIntent(intent: Intent, doc: Pick<GameDocShape, 'pro
         if (!u || typeof u !== 'object') return 'not an update'
         const bad = badExisting(u.id, doc) ?? badPatch(u.patch)
         if (bad) return bad
+        const gone = badInvisible(patchedProp(doc.props![u.id]!, u.patch))
+        if (gone) return gone
       }
       return duplicates(intent.updates.map((u) => u.id)) ? 'the same prop twice in one batch' : null
     }
@@ -196,6 +206,21 @@ export function validatePropsIntent(intent: Intent, doc: Pick<GameDocShape, 'pro
         if (!finite(it.fit) || it.fit <= 0 || it.fit > PROP_SCALE_LIMITS.max) return 'fit out of range'
       }
       return null
+    }
+    case 'prop.door':
+      if (!doc.props?.[intent.prop]?.door) return 'that is not a door'
+      return typeof intent.open === 'boolean' ? badExisting(intent.prop, doc) : 'open must be true or false'
+    case 'props.convert': {
+      if (!doc.scenes?.[intent.scene]) return 'unknown scene'
+      if (!Array.isArray(intent.props) || !Array.isArray(intent.walls) || !Array.isArray(intent.lights)) return 'nothing to convert'
+      if (intent.props.length > MAX_PROPS_PER_INTENT * 2) return 'too many props in one conversion'
+      for (const p of intent.props) {
+        const bad = badNewProp(p, doc)
+        if (bad) return bad
+        if (p.scene !== intent.scene) return 'a converted prop in another scene'
+        if (!p.wall && !p.door && !p.light) return 'a converted prop must be a wall, a door or a light'
+      }
+      return duplicates(intent.props.map((p) => p.id)) ? 'the same prop twice in one batch' : null
     }
     case 'prop.add':
       return validatePropsIntent({ type: 'props.place', props: [intent.prop] }, doc)
@@ -224,6 +249,8 @@ export function validatePropsIntent(intent: Intent, doc: Pick<GameDocShape, 'pro
  */
 function comparable(p: Prop, fit: number | undefined): Record<string, unknown> {
   const { legacyFit: _fit, ...rest } = p
+  // Opening a door is play, not an edit: it never makes undo skip the prop.
+  if (rest.door) rest.door = { ...rest.door, open: false }
   const f = fit ?? p.legacyFit
   if (isLegacyScale(rest.scale) && f !== undefined) return { ...rest, scale: migratedScale(rest.scale, f) }
   return rest
@@ -269,6 +296,12 @@ export function patchToward(current: Prop, target: Prop): PropPatch | null {
   if (current.name !== target.name) patch.name = target.name
   if (!!current.solid !== !!target.solid) patch.solid = !!target.solid
   if (!!current.locked !== !!target.locked) patch.locked = !!target.locked
+  for (const k of ['light', 'wall'] as const) {
+    if (!sameJson(current[k], target[k])) (patch as Record<string, unknown>)[k] = target[k] ? { ...target[k] } : null
+  }
+  // Undo never swings a door: whether it is open is play, so the patch keeps it as it is now.
+  const closed = (d: Prop['door']) => (d ? { ...d, open: false } : undefined)
+  if (!sameJson(closed(current.door), closed(target.door))) patch.door = target.door ? { ...target.door, open: current.door?.open ?? target.door.open } : null
   const fit = current.legacyFit ?? target.legacyFit
   const want = isLegacyScale(target.scale) ? (fit !== undefined ? migratedScale(target.scale, fit) : null) : target.scale
   const have = isLegacyScale(current.scale) ? (fit !== undefined ? migratedScale(current.scale, fit) : null) : current.scale

@@ -95,7 +95,7 @@ export function TopBar({ controller, compact = false, center, trailing, onScene 
       </div>
       {!compact && sceneName && (
         isGm && onScene ? (
-          <button type="button" className="t-scene" onClick={onScene} title="Switch the live scene">
+          <button type="button" className="t-scene" onClick={onScene} title="The scene: switch, add, and its settings">
             <span className="t-scene-label">Scene</span>
             <span className="t-scene-name">{sceneName}</span>
           </button>

@@ -1,9 +1,9 @@
 /**
  * Prop editing inside the canvas (GM): the gizmo, the power keys, copy / paste / duplicate, box
- * select on empty board in Build (mouse), the pointer's floor point for pastes, and the two-finger
+ * select on empty board with Edit on (mouse), the pointer's floor point for pastes, and the two-finger
  * twist / pinch on the selection (touch). Mounted once by TableCanvas.
  *
- * Keys (see transformKeys.ts for the full map) are active in Build or edit mode with a prop
+ * Keys (see transformKeys.ts for the full map) are active with Edit on or in edit mode with a prop
  * selection, never while typing, and not while a build tool, the ruler or targeting is in use.
  * They are handled in the window's capture phase so a typed number cannot also open a panel (1-9)
  * or toggle zen (Z).
@@ -262,7 +262,7 @@ function PropTouchGestures() {
   return null
 }
 
-/** Twist and pinch need a selection being edited (Build or edit mode), not a tool. */
+/** Twist and pinch need a selection being edited (Edit on or edit mode), not a tool. */
 function keysLiveTouch(): boolean {
   return keysLive() && useGame.getState().propSelection.length > 0
 }
@@ -290,7 +290,7 @@ function projectedRect(prop: Prop, camera: THREE_Camera, w: number, h: number, c
 type THREE_Camera = Parameters<Vector3['project']>[0]
 
 /**
- * Build mode, mouse: dragging on empty board draws a box and selects the props inside it (Shift
+ * Edit on, mouse: dragging on empty board draws a box and selects the props inside it (Shift
  * adds to the selection). A click on empty board deselects. Alt-drag and the other buttons still
  * move the camera. Not on phones, and not while a tool is out.
  */

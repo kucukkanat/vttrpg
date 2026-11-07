@@ -18,6 +18,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { Box3, Group, Material, Mesh, Object3D, Plane, Ray, Raycaster, Vector2, Vector3, type Camera, type Intersection } from 'three'
 import type { Prop } from '@/core/doc'
+import { isNoModel } from '@/core/propParts'
 import { newId, type PropId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { noteRecentlyPlaced } from '@/ui/library/libraryPrefs'
@@ -313,7 +314,16 @@ export function GhostPiece({ model, title, scale, size, opacity = GHOST_OPACITY,
   model: HeldModel['model']; title: string; scale: { x: number; y: number; z: number }; size?: [number, number, number] | undefined
   opacity?: number; color?: string
 }) {
-  const { url } = useAssetLoad(model)
+  const { url } = useAssetLoad(isNoModel(model) ? undefined : model)
+  if (isNoModel(model)) {
+    // A bare light source: a bulb where it will shine from.
+    return (
+      <mesh position-y={1.4 * 1.5} raycast={noRaycast}>
+        <sphereGeometry args={[0.18, 12, 8]} />
+        <meshBasicMaterial color={color} transparent opacity={opacity} />
+      </mesh>
+    )
+  }
   return (
     <group scale={[scale.x, scale.y, scale.z]}>
       {url ? (

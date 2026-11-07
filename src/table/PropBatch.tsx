@@ -38,6 +38,7 @@ import { localBounds, MemoPropMesh } from './PropMesh'
 import { usePropPointer } from './propPointer'
 import { capacityFor, hullBox, instanceBounds, InstanceSlots, partsBounds, propMatrix, sameItems, xzHull, type ModelHull, type XZ } from './propInstances'
 import { registerPropBatch } from './build/editRuntime'
+import { noteModelBounds } from './modelBounds'
 
 const noRaycast = () => undefined
 const HELPER = /^(COL|FOG)_/
@@ -118,6 +119,7 @@ function ModelBatch({ url, sha256, name, props }: { url: string; sha256: string;
   const mode = materialModeFor(gltf.scene, graphics.pbr)
   const prepared = useMemo(() => prepareModel(gltf.scene, mode, false), [gltf, mode])
   const model = useMemo(() => instanceModel(prepared, graphics.glow), [prepared, graphics.glow])
+  useEffect(() => { if (model?.local) noteModelBounds(sha256, model.local) }, [model, sha256])
   if (!model) return <>{props.map((p) => <MemoPropMesh key={p.id} prop={p} />)}</>
   return <InstancedProps model={model} props={props} />
 }

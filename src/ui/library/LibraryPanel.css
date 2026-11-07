@@ -175,3 +175,15 @@
 .lib-orow-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-sm); }
 .lib-orow-meta { margin-left: auto; flex: none; font-size: var(--fs-xs); white-space: nowrap; }
 @media (pointer: coarse) { .lib-orow-pick, .lib-crit-pick { min-height: 44px; } .lib-row-act { width: 36px; height: 36px; } }
+
+/* Wherever the Library is hosted (dock, card, phone sheet) it takes the host's height, so the
+   grid or list inside scrolls rather than the whole panel growing past the host. */
+.hosted > .panel.library-panel, .bsheet .panel.library-panel { flex: 1 1 auto; min-height: 0; }
+
+/* Lights shelf: a light source card shows its colour as a glow. */
+.lib-swatch { display: block; width: 70%; height: 70%; border-radius: 50%; }
+.lib-parts .lib-thumb { display: grid; place-items: center; color: var(--text-muted, currentColor); }
+
+/* The Walls & doors shelf's scene options: compact checkbox rows, not the form label grid. */
+.lib-scene-walls { display: grid; gap: var(--sp-1); }
+.lib-scene-walls label.check { display: flex; align-items: center; gap: var(--sp-2); margin: 0; min-height: var(--control); }

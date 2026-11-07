@@ -17,9 +17,9 @@ export interface Command {
   run(): void
 }
 
-export type CommandGroup = 'Suggested' | 'Open' | 'Table' | 'Dice' | 'Combat' | 'GM screen' | 'Build' | 'Library' | 'Tokens' | 'Scenes' | 'Game'
+export type CommandGroup = 'Suggested' | 'Open' | 'Table' | 'Dice' | 'Combat' | 'GM screen' | 'Library' | 'Tokens' | 'Scenes' | 'Game'
 
-export const GROUP_ORDER: readonly CommandGroup[] = ['Suggested', 'Open', 'Combat', 'Table', 'Dice', 'GM screen', 'Build', 'Library', 'Tokens', 'Scenes', 'Game']
+export const GROUP_ORDER: readonly CommandGroup[] = ['Suggested', 'Open', 'Combat', 'Table', 'Dice', 'GM screen', 'Library', 'Tokens', 'Scenes', 'Game']
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
 

@@ -65,6 +65,9 @@ const ICONS = {
   layout: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9h17M9.5 9v10.5" /></>,
   /** Turn a quarter. */
   rotate: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
+  /** Undo and redo: a hooked arrow back, and forward. */
+  undo: <><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></>,
+  redo: <><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></>,
   /** Stop playback: a rounded square. */
   stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
   /** Play / current turn: a triangle pointing right. */

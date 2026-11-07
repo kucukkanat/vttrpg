@@ -18,7 +18,6 @@ import { newSeed } from '@/dice'
 import { DICE_SETTLED_EVENT } from '@/dice/choreography'
 import { useRollMode } from '../rollMode'
 import { useBuildUi } from '@/table/build/buildState'
-import { useTableLayout } from './tableLayout'
 import { fogButtonTitle, fogToolAvailable, isFogTool } from './fogTool'
 import './Hud.css'
 
@@ -86,15 +85,14 @@ export function CameraPill() {
 }
 
 /**
- * GM in Play: Fog on the rail, with a pop-out for the brush (Reveal / Hide, size, Reveal all, Hide
- * all). It arms the same build fog tools Build uses. Esc or closing the pop-out puts the brush away.
+ * GM: Fog on the rail, with a pop-out for the brush (Reveal / Hide, size, Reveal all, Hide all). It
+ * arms the build fog tools. Esc or closing the pop-out puts the brush away.
  */
 function FogButton() {
   const { controller } = useSession()
-  const mode = useTableLayout((s) => s.mode)
   const tool = useBuildUi((s) => s.tool)
   const [open, setOpen] = useState(false)
-  const available = fogToolAvailable(!!controller?.connection.isGm, mode)
+  const available = fogToolAvailable(!!controller?.connection.isGm)
   const brushing = isFogTool(tool)
   const close = () => {
     setOpen(false)
@@ -110,7 +108,7 @@ function FogButton() {
     window.addEventListener('keydown', on)
     return () => window.removeEventListener('keydown', on)
   }, [open])
-  // Leaving Play (or losing the GM seat) folds the pop-out away.
+  // Losing the GM seat folds the pop-out away.
   useEffect(() => { if (!available) setOpen(false) }, [available])
   if (!available || !controller) return null
   return (

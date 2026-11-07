@@ -134,6 +134,13 @@ function merge<T extends object>(base: T, patch: Partial<T>): T {
   return out as T
 }
 
+/** A prop patch's `null` part means "take it off". */
+function withoutCleared(p: Prop): Prop {
+  const out = p as Prop & Record<string, unknown>
+  for (const k of ['light', 'wall', 'door'] as const) if (out[k] === null) delete out[k]
+  return out
+}
+
 function stripUndefined<T extends object>(o: T): T {
   return merge(o, {})
 }
@@ -375,9 +382,27 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'props.update':
         for (const u of intent.updates) {
           const p = props.get(u.id)
-          if (p) props.set(u.id, merge(p, { ...u.patch, id: p.id, editedBy: from }))
+          if (p) props.set(u.id, withoutCleared(merge(p, { ...u.patch, id: p.id, editedBy: from } as Partial<Prop>)))
         }
         break
+      case 'prop.door': {
+        // Not stamped as an edit: opening a door is play, so it never blocks the GM's undo.
+        const p = props.get(intent.prop)
+        if (!p?.door || p.door.open === intent.open) return
+        props.set(intent.prop, { ...p, door: { ...p.door, open: intent.open } })
+        break
+      }
+      case 'props.convert': {
+        // Ids come from what each prop replaces, so a second GM client's copy only removes.
+        for (const p of intent.props) if (!props.has(p.id)) props.set(p.id, { ...stripUndefined(p), createdBy: p.createdBy ?? from, editedBy: from })
+        for (const id of intent.walls) walls.delete(id)
+        for (const id of intent.lights) lights.delete(id)
+        if (intent.sceneWalls) {
+          const sc = scenes.get(intent.scene)
+          if (sc?.walls) { const { walls: _w, ...rest } = sc; scenes.set(intent.scene, rest as Scene) }
+        }
+        break
+      }
       case 'props.remove':
         for (const id of intent.ids) props.delete(id)
         break

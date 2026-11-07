@@ -24,14 +24,16 @@ describe('parseFoundryScene (v10+ export)', () => {
     expect(map.walls).toEqual([
       { a: { x: 0, y: 1 }, b: { x: 1, y: 1 } },
       { a: { x: 1, y: 0 }, b: { x: 1, y: 2 } },
-      { a: { x: 1, y: 2 }, b: { x: 2, y: 2 } }, // closed door blocks sight
+      { a: { x: 1, y: 2 }, b: { x: 2, y: 2 }, door: { open: false } },
+      { a: { x: 2, y: 0 }, b: { x: 2, y: 1 }, door: { open: true } },
     ])
   })
 
-  it('drops open doors, sight-transparent walls and zero-length walls, and notes the first two', () => {
-    expect(map.walls.length).toBe(3)
-    expect(map.notes).toContain('1 open door left as gaps')
+  it('keeps doors with their state, drops sight-transparent and zero-length walls, and notes the first', () => {
+    expect(map.walls.length).toBe(4)
     expect(map.notes).toContain('1 wall that do not block sight skipped')
+    const locked = parseFoundryScene({ ...v10, walls: [{ c: [100, 100, 200, 100], door: 1, ds: 2 }] })
+    expect(locked.walls).toEqual([{ a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, door: { open: false, locked: true } }])
   })
 
   it('lets a grid size override the file', () => {

@@ -2,11 +2,12 @@
  * Orchestrates a map import: detect the format, parse, get the image (embedded, or asked from the
  * user for Foundry exports), import it as an asset, build the scene and add + activate it.
  */
-import type { Scene } from '@/core/doc'
+import type { Prop, Scene } from '@/core/doc'
 import type { GridType } from '@/core/geometry'
 import { isFoundryScene, parseFoundryScene } from './foundry'
 import type { ImportController } from './mapImage'
-import { sceneFromParsedMap } from './scene'
+import { imageWallProps, sceneFromParsedMap } from './scene'
+import { MAX_PROPS_PER_INTENT } from '@/core/props'
 import type { ParsedMap } from './types'
 import { isUvtt, parseUvtt } from './uvtt'
 
@@ -30,6 +31,8 @@ export interface ImportHooks {
 
 export interface ImportResult {
   scene: Scene
+  /** The map's walls and doors, placed as invisible wall and door props. */
+  props: Prop[]
   parsed: ParsedMap
   /** What was skipped or approximated, for the GM. */
   notes: string[]
@@ -86,6 +89,9 @@ export async function importSceneFile(file: File, controller: ImportController, 
   const asset = await controller.assets.shareFile(imageFile)
   const scene = sceneFromParsedMap(parsed, asset, { cellSize: hooks.cellSize, gridType: hooks.gridType, darkness: hooks.darkness })
   await controller.dispatch({ type: 'scene.add', scene })
+  // Walls and doors arrive as invisible wall and door props, batched (one intent per 5000).
+  const props = imageWallProps(scene, parsed.walls)
+  for (let i = 0; i < props.length; i += MAX_PROPS_PER_INTENT) await controller.dispatch({ type: 'props.place', props: props.slice(i, i + MAX_PROPS_PER_INTENT) })
   if (hooks.activate !== false) await controller.dispatch({ type: 'scene.activate', scene: scene.id })
-  return { scene, parsed, notes }
+  return { scene, props, parsed, notes }
 }

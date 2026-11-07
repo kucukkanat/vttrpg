@@ -6,10 +6,10 @@
 
 export type TipId =
   | 'your-turn' | 'token-bar' | 'long-press' | 'edit-gesture' | 'dice'
-  /** The first Build visit: pick up, turn, put down, undo, paste. */
+  /** The first time editing: pick up, turn, put down, undo, paste. */
   | 'build-pickup' | 'build-turn' | 'build-putdown' | 'build-undo' | 'build-paste'
 
-/** The Build tips, in the order a first visit meets them. */
+/** The editing tips, in the order a first time meets them. */
 export const BUILD_TIPS: readonly TipId[] = ['build-pickup', 'build-turn', 'build-putdown', 'build-undo', 'build-paste']
 
 export const TIP_TEXT: Record<TipId, string> = {
@@ -44,11 +44,11 @@ export interface TipFacts {
   targets: ReadonlySet<TipId>
   /** Tips retired on this device. */
   seen: ReadonlySet<TipId>
-  /** The GM screen is in Build. */
+  /** The GM's Edit toggle is on. */
   building?: boolean
   /** A model is in hand (the place tool). */
   holding?: boolean
-  /** Something was placed during this Build visit. */
+  /** Something was placed while editing. */
   placed?: boolean
   /** Props are selected. */
   propSelected?: boolean

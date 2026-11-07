@@ -137,8 +137,10 @@ export interface TableUiState {
   /** What typed numbers and the highlighted gizmo handle act on; Tab cycles it (props). */
   gizmoMode: GizmoMode
   /**
-   * The GM screen is in Build (the shell publishes it): a prop selection gets the gizmo and the
-   * power keys, and dragging empty board draws a selection box (mouse).
+   * The GM's Edit toggle is on (the shell publishes it; ui/shell/editMode.ts): props can be
+   * selected and moved, a prop selection gets the gizmo and the power keys, and dragging empty
+   * board draws a selection box (mouse). Off, props ignore the GM's pointer (propPointer.ts).
+   * Always false for players.
    */
   buildMode: boolean
   /** Advanced gizmo for props: 3-axis rings, per-axis scale, numeric inspector (A, edit bar). */

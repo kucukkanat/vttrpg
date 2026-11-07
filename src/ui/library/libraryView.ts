@@ -5,14 +5,19 @@
  */
 import { create } from 'zustand'
 
-/** What kind of thing: models (props), kit pieces, creatures (tokens), saved groups and encounters. */
-export type LibraryShelf = 'models' | 'kit' | 'creatures' | 'saved'
+/**
+ * What kind of thing: models (props), light sources and lit models, walls and doors (invisible
+ * and modelled), kit pieces, creatures (tokens), saved groups and encounters.
+ */
+export type LibraryShelf = 'models' | 'lights' | 'walls' | 'kit' | 'creatures' | 'saved'
 
 /** Which of them: everything, recently placed, starred, placed in this scene (the outliner), the GM's imports. */
 export type LibraryFilter = 'all' | 'recent' | 'favourites' | 'in-scene' | 'mine'
 
 export const LIBRARY_SHELVES: readonly { id: LibraryShelf; label: string }[] = [
   { id: 'models', label: 'Models' },
+  { id: 'lights', label: 'Lights' },
+  { id: 'walls', label: 'Walls & doors' },
   { id: 'kit', label: 'Kit' },
   { id: 'creatures', label: 'Creatures' },
   { id: 'saved', label: 'Saved' },

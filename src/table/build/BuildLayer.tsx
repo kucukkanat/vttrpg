@@ -26,7 +26,9 @@ import { requestView, tableRuntime, useTableUi } from '../tableState'
 import { CAMERA_SHARE_INTERVAL_MS, followedCamera, makeView, takePull, viewMoved } from '../view'
 import { exploredCells } from '../vision'
 import type { Pt2, WallSegment } from '../walls'
-import { useBuildUi, type BuildTool } from './buildState'
+import { pickUpModel, useBuildUi, type BuildTool } from './buildState'
+import { SegmentLayer } from './SegmentLayer'
+import { lightSourceHeld } from './lightSources'
 import { CardDrop, PlaceLayer } from './PlaceLayer'
 import { CreatureLayer } from './CreatureLayer'
 import { capturePrefab, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
@@ -89,13 +91,21 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
   useEffect(() => () => useBuildUi.getState().set({ tool: null }), [])
 
   const active = gm && tool && !tableTool && !targeting ? tool : null
+  // Retired tools: drawing walls and doors arms the invisible segment tools, the light tool picks
+  // up a warm light source (both make props now; src/core/propParts.ts).
+  const segmentKind = useBuildUi((s) => s.segment)
+  useEffect(() => {
+    if (active === 'wall' || active === 'door') useBuildUi.getState().set({ tool: 'segment', segment: active })
+    if (active === 'light') pickUpModel(lightSourceHeld('warm'))
+  }, [active])
   return (
     <>
       <Doors />
       <Lights />
       {gm && ((active && active !== 'place' && active !== 'eyedropper' && active !== 'kit' && active !== 'creature') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
       {active === 'creature' && <CreatureLayer bounds={bounds} />}
-      {active && active !== 'kit' && active !== 'creature' && (active === 'place' || active === 'eyedropper'
+      {active === 'segment' && <SegmentLayer kind={segmentKind} bounds={bounds} />}
+      {active && active !== 'kit' && active !== 'creature' && active !== 'segment' && active !== 'wall' && active !== 'door' && active !== 'light' && (active === 'place' || active === 'eyedropper'
         ? <PlaceLayer tool={active} bounds={bounds} />
         : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
       {gm && !viewer?.display && <CardDrop />}

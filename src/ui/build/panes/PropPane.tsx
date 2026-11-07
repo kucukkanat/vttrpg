@@ -1,5 +1,6 @@
 /**
- * The Inspector on a prop selection. One prop: name, solid, locked, the transform (position,
+ * The Inspector on a prop selection. One prop: name, solid, locked, its kind's part (a light, a
+ * wall, a door: PropKindPanes.tsx), the transform (position,
  * rotation, scale; expressions such as 1.5*2 work), Save as group and Delete. Several props: what
  * is selected, the same transform applied to all, Save as group and Delete.
  */
@@ -12,6 +13,7 @@ import { PropInspector } from '../../panels/PropInspector'
 import { saveSelectionAsGroup } from '../../library/groups'
 import { pushToast } from '../../toasts'
 import { Fold } from '../Fold'
+import { PropKindPane } from './PropKindPanes'
 
 function useSelectedProps(): Prop[] {
   const ids = useGame((s) => s.propSelection)
@@ -60,6 +62,7 @@ export function PropPane({ controller }: { controller: GameController }) {
       </label>
       <label className="check"><input type="checkbox" checked={!!prop.solid} onChange={(e) => patch({ solid: e.target.checked })} /> Solid (blocks sight)</label>
       <label className="check"><input type="checkbox" checked={!!prop.locked} onChange={(e) => patch({ locked: e.target.checked })} /> Locked (no table drag)</label>
+      <PropKindPane controller={controller} prop={prop} />
       <SelectionActions controller={controller} props={props} />
       <Fold id="prop.transform" title="Position, rotation, scale">
         <PropInspector controller={controller} />

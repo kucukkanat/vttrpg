@@ -1,5 +1,5 @@
 /**
- * The Inspector with nothing selected and no tool out: the live scene. Folded sections for the
+ * The live scene's settings, on the GM's scene card (the scene title). Folded sections for the
  * name and map, the grid (and the model's fit), light and weather, the starting fog, the table
  * display, and a link to the credits card.
  */
@@ -25,7 +25,7 @@ const GRIDS: { id: GridType; label: string }[] = [{ id: 'square', label: 'Square
 export function ScenePane({ controller }: { controller: GameController }) {
   const scene = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene] : undefined))
   const fog = useGame((s) => (s.meta?.activeScene ? s.fog[s.meta.activeScene] : undefined))
-  if (!scene) return <p className="muted small">No live scene: add one from the scene menu above.</p>
+  if (!scene) return <p className="muted small">No live scene: add one from the list above.</p>
   const update = (patch: Partial<Scene>) => void controller.dispatch({ type: 'scene.update', scene: scene.id, patch })
   const fogOn = isFogEnabled(scene)
   const mood = [scene.weather && scene.weather !== 'none' ? scene.weather : '', scene.ambientPreset && scene.ambientPreset !== 'none' ? scene.ambientPreset : '', `${Math.round(scene.darkness * 100)}% dark`].filter(Boolean).join(' · ')

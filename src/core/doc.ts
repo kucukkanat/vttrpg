@@ -105,6 +105,54 @@ export interface Prop {
   locked?: boolean
   /** Blocks movement and line of sight when true (adds its footprint to the wall set). */
   solid?: boolean
+  /**
+   * Kind-specific parts (src/core/propParts.ts). A prop with `wall` or `door` joins the sight and
+   * movement walls of its level; one with `light` emits light. A prop that is only a part (an
+   * invisible wall, door or light source) carries the `NO_MODEL` marker as its model.
+   */
+  light?: PropLight
+  wall?: PropWall
+  door?: PropDoor
+}
+
+/** A light a prop emits: a point light (or a spot pointing down) above the prop. */
+export interface PropLight {
+  /** CSS hex colour. */
+  color: string
+  /** Reach in cells. */
+  radius: number
+  /** 0..2, 1 = normal. */
+  intensity?: number
+  /** A flame's flicker. */
+  flicker?: boolean
+  kind?: 'point' | 'spot'
+  /** Spot cone half-angle, radians. */
+  angle?: number
+}
+
+/** What a wall segment stops: sight only (a curtain), movement only (a fence, a window), or both. */
+export type WallBlocks = 'sight' | 'move' | 'both'
+
+/**
+ * A wall segment carried by a prop: centred on the prop, along its local X axis, turned with it.
+ * Without `length` (a visible wall model) the segment runs along the longer horizontal side of the
+ * model's bounds, through their centre. The prop's scale stretches it like the model.
+ */
+export interface PropWall {
+  /** Metres along local X before the prop's scale (an invisible wall keeps scale 1). */
+  length?: number
+  blocks: WallBlocks
+}
+
+/**
+ * A door carried by a prop: a gap that blocks sight and movement while closed. The segment is
+ * found like a wall's, with `width` in place of `length`. Locked doors only open for the GM.
+ */
+export interface PropDoor {
+  open: boolean
+  locked?: boolean
+  /** Metres along local X before the prop's scale; absent = from the model's bounds. */
+  width?: number
 }
 
 /**

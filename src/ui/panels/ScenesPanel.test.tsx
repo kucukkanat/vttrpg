@@ -67,7 +67,7 @@ describe('ScenesPanel', () => {
     expect(html).toContain('title="Couldn&#x27;t load Dungeon: The model file could not be found."')
     expect(html.match(/class="scene-warn"/g)).toHaveLength(1)
   })
-  it('offers the GM a rename on every scene, and no scene settings (those are the Build Inspector)', () => {
+  it('offers the GM a rename on every scene, and no scene settings (the scene card holds those)', () => {
     const html = render()
     expect(html.match(/class="icon scene-rename-btn"/g)).toHaveLength(2)
     expect(html).not.toContain('Fog of war')

@@ -1,18 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PANELS } from '../panels/registry'
-import { BUILD_FOLDS_KEY, normalizeMode, panelShown, readBuildFolds, routePanel, setTableMode, useTableLayout } from './tableLayout'
+import { LIBRARY_DOCK_KEY, openLibrary, panelShown, readLibraryOpen, routePanel, useTableLayout } from './tableLayout'
+import { EDIT_MODE_KEY, readEditMode, useEditMode } from './editMode'
 import { filterCommands, isPaletteKey, scoreCommand, type Command } from './commands'
 import { useLibraryView } from '../library/libraryView'
+import { closePhoneSheet } from '../library/sheet'
 import { useBuildUi } from '@/table/build/buildState'
 import { useKitUi } from '@/table/kits/kitState'
+import { useTableUi } from '@/table/tableState'
 import { useGame } from '@/state/store'
-import type { TokenId } from '@/core/ids'
+import type { PropId, TokenId } from '@/core/ids'
+
+function memoryStorage(): Storage {
+  const m = new Map<string, string>()
+  return {
+    get length() { return m.size },
+    clear: () => m.clear(),
+    getItem: (k) => m.get(k) ?? null,
+    key: (i) => [...m.keys()][i] ?? null,
+    removeItem: (k) => { m.delete(k) },
+    setItem: (k, v) => { m.set(k, String(v)) },
+  }
+}
 
 const reset = () => {
-  useTableLayout.setState({ mode: 'play', card: null, scrollOpen: false, palette: false, bell: false, phone: null, buildLibraryOpen: true, buildInspectorOpen: true })
+  useTableLayout.setState({ card: null, scrollOpen: false, palette: false, bell: false, phone: null, libraryOpen: false })
   useLibraryView.setState({ shelf: 'models', filter: 'all', query: '' })
   useBuildUi.setState({ tool: null })
   useKitUi.setState({ tool: null })
+  useEditMode.setState({ on: false })
 }
 
 describe('panel routes', () => {
@@ -25,60 +41,32 @@ describe('panel routes', () => {
     for (const p of PANELS.filter((d) => d.scope === 'all' && d.id !== 'chat')) expect(routePanel(p.id, false)).toEqual({ kind: 'card', id: p.id })
   })
 
-  it('the GM adds in the Build Library, edits the scene in the Build Inspector, and reads the rest as cards', () => {
-    expect(routePanel('library', true)).toEqual({ kind: 'build', shelf: 'models' })
-    expect(routePanel('kit', true)).toEqual({ kind: 'build', shelf: 'kit' })
-    expect(routePanel('prep', true)).toEqual({ kind: 'build', shelf: 'creatures' })
-    expect(routePanel('tokens', true)).toEqual({ kind: 'build', filter: 'in-scene' })
-    expect(routePanel('build', true)).toEqual({ kind: 'build', inspector: 'scene' })
+  it('the GM adds from the Library dock and reads the rest as cards', () => {
+    expect(routePanel('library', true)).toEqual({ kind: 'library', shelf: 'models' })
+    expect(routePanel('kit', true)).toEqual({ kind: 'library', shelf: 'kit' })
+    expect(routePanel('prep', true)).toEqual({ kind: 'library', shelf: 'creatures' })
+    expect(routePanel('tokens', true)).toEqual({ kind: 'library', filter: 'in-scene' })
+    expect(routePanel('build', true)).toEqual({ kind: 'library' })
     for (const id of ['scenes', 'sound', 'players', 'journal', 'credits', 'skills-editor', 'character', 'skills', 'initiative', 'tables', 'npc', 'encounters', 'scene-switcher']) {
       expect(routePanel(id, true)).toEqual({ kind: 'card', id })
     }
   })
 
-  it('every panel has a home, and none of them is a Prep leaf any more', () => {
+  it('every panel has a home, and players never get the Library dock', () => {
     for (const p of PANELS) {
-      expect(['scroll', 'card', 'build']).toContain(routePanel(p.id, true).kind)
-      if (p.scope === 'all') expect(routePanel(p.id, false).kind).not.toBe('build')
+      expect(['scroll', 'card', 'library']).toContain(routePanel(p.id, true).kind)
+      if (p.scope === 'all') expect(routePanel(p.id, false).kind).not.toBe('library')
     }
-  })
-})
-
-describe('modes', () => {
-  beforeEach(reset)
-
-  it('has two modes; an old or stored Prep becomes Build', () => {
-    expect(normalizeMode('prep')).toBe('build')
-    expect(normalizeMode('build')).toBe('build')
-    expect(normalizeMode('play')).toBe('play')
-    expect(normalizeMode(undefined)).toBe('play')
-    expect(normalizeMode('raised')).toBe('play')
-    useTableLayout.getState().set({ mode: 'prep' as never })
-    expect(useTableLayout.getState().mode).toBe('build')
-    setTableMode('prep')
-    expect(useTableLayout.getState().mode).toBe('build')
-  })
-
-  it('leaving Build puts the build and kit tools away', () => {
-    setTableMode('build')
-    useBuildUi.getState().set({ tool: 'kit' })
-    useKitUi.getState().set({ tool: 'floor' })
-    setTableMode('play')
-    expect(useTableLayout.getState().mode).toBe('play')
-    expect(useBuildUi.getState().tool).toBeNull()
-    expect(useKitUi.getState().tool).toBeNull()
   })
 })
 
 describe('table layout store', () => {
   beforeEach(reset)
 
-  it('opens the Library on the shelf a panel stands for', () => {
+  it('opens the Library dock on the shelf a panel stands for', () => {
     const s = useTableLayout.getState()
-    useTableLayout.setState({ buildLibraryOpen: false })
     s.open('prep', true)
-    expect(useTableLayout.getState().mode).toBe('build')
-    expect(useTableLayout.getState().buildLibraryOpen).toBe(true)
+    expect(useTableLayout.getState().libraryOpen).toBe(true)
     expect(useLibraryView.getState().shelf).toBe('creatures')
     s.open('kit', true)
     expect(useLibraryView.getState().shelf).toBe('kit')
@@ -90,16 +78,12 @@ describe('table layout store', () => {
     expect(useLibraryView.getState()).toMatchObject({ shelf: 'models', filter: 'all' })
   })
 
-  it('opens Build with the Inspector on the scene: no tool, nothing selected', () => {
-    useBuildUi.getState().set({ tool: 'wall' })
-    useGame.getState().setSelectedToken('t1' as TokenId)
-    useTableLayout.setState({ buildInspectorOpen: false })
+  it('opens the old Build as the Library as it stands, and leaves the card alone', () => {
+    useLibraryView.setState({ shelf: 'saved', filter: 'recent' })
+    useTableLayout.setState({ card: 'journal' })
     useTableLayout.getState().open('build', true)
-    const s = useTableLayout.getState()
-    expect(s.mode).toBe('build')
-    expect(s.buildInspectorOpen).toBe(true)
-    expect(useBuildUi.getState().tool).toBeNull()
-    expect(useGame.getState().selectedToken).toBeNull()
+    expect(useTableLayout.getState()).toMatchObject({ libraryOpen: true, card: 'journal' })
+    expect(useLibraryView.getState()).toMatchObject({ shelf: 'saved', filter: 'recent' })
   })
 
   it('keeps one card at a time, beside the scroll on wide screens', () => {
@@ -122,45 +106,80 @@ describe('table layout store', () => {
     expect(useTableLayout.getState().scrollOpen).toBe(false)
     expect(useTableLayout.getState().card).toBe('journal')
     s.open('library', true, true)
-    let now = useTableLayout.getState()
-    expect(now.mode).toBe('build')
+    const now = useTableLayout.getState()
     expect(now.phone).toBe('library')
     expect(now.card).toBeNull()
-    s.open('build', true, true)
-    now = useTableLayout.getState()
-    expect(now.phone).toBe('inspector')
+    expect(now.libraryOpen).toBe(false)
+    openLibrary(true, 'creatures')
+    expect(useLibraryView.getState().shelf).toBe('creatures')
   })
 })
 
-function memoryStorage(): Storage {
-  const m = new Map<string, string>()
-  return {
-    get length() { return m.size },
-    clear: () => m.clear(),
-    getItem: (k) => m.get(k) ?? null,
-    key: (i) => [...m.keys()][i] ?? null,
-    removeItem: (k) => { m.delete(k) },
-    setItem: (k, v) => { m.set(k, String(v)) },
-  }
-}
-
-describe('Build dock folds', () => {
+describe('Library dock', () => {
   beforeEach(() => { reset(); vi.stubGlobal('localStorage', memoryStorage()) })
   afterEach(() => { vi.unstubAllGlobals() })
 
-  it('reads the stored folds, defaulting to the Inspector open and the Library on its rail', () => {
-    expect(readBuildFolds(null)).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
-    expect(readBuildFolds('not json')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
-    expect(readBuildFolds('{"buildLibraryOpen":false}')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
-    expect(readBuildFolds('{"buildLibraryOpen":1,"buildInspectorOpen":false}')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: false })
-    expect(readBuildFolds('{"buildLibraryOpen":true}')).toEqual({ buildLibraryOpen: true, buildInspectorOpen: true })
+  it('starts folded, and reads anything unreadable as folded', () => {
+    expect(readLibraryOpen(null)).toBe(false)
+    expect(readLibraryOpen('not json')).toBe(false)
+    expect(readLibraryOpen('{"open":1}')).toBe(false)
+    expect(readLibraryOpen('{"open":true}')).toBe(true)
   })
 
-  it('remembers them per device', () => {
-    useTableLayout.getState().set({ buildLibraryOpen: false })
-    expect(readBuildFolds(localStorage.getItem(BUILD_FOLDS_KEY))).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
-    useTableLayout.getState().set({ buildInspectorOpen: false })
-    expect(readBuildFolds(localStorage.getItem(BUILD_FOLDS_KEY))).toEqual({ buildLibraryOpen: false, buildInspectorOpen: false })
+  it('remembers open or folded per device', () => {
+    useTableLayout.getState().set({ libraryOpen: true })
+    expect(readLibraryOpen(localStorage.getItem(LIBRARY_DOCK_KEY))).toBe(true)
+    useTableLayout.getState().set({ libraryOpen: false })
+    expect(readLibraryOpen(localStorage.getItem(LIBRARY_DOCK_KEY))).toBe(false)
+  })
+})
+
+describe('Edit toggle', () => {
+  beforeEach(() => { reset(); vi.stubGlobal('localStorage', memoryStorage()) })
+  afterEach(() => { vi.unstubAllGlobals() })
+
+  it('is off on a first visit and remembered per device', () => {
+    expect(readEditMode(null)).toBe(false)
+    expect(readEditMode('nope')).toBe(false)
+    expect(readEditMode('true')).toBe(true)
+    useEditMode.getState().toggle()
+    expect(useEditMode.getState().on).toBe(true)
+    expect(readEditMode(localStorage.getItem(EDIT_MODE_KEY))).toBe(true)
+  })
+
+  it('turns on when a Library card is picked, or a Library tool comes out', () => {
+    closePhoneSheet(false)
+    expect(useEditMode.getState().on).toBe(true)
+    useEditMode.getState().set(false)
+    useBuildUi.getState().set({ tool: 'kit' })
+    expect(useEditMode.getState().on).toBe(true)
+    useEditMode.getState().set(false)
+    useBuildUi.getState().set({ tool: 'fog-reveal' })
+    expect(useEditMode.getState().on).toBe(false)
+  })
+
+  it('turning it off lets go of props and of what came from the Library; tokens stay selected', () => {
+    useEditMode.getState().set(true)
+    useGame.getState().setPropSelection(['p1' as PropId])
+    useBuildUi.getState().set({ tool: 'place' })
+    useKitUi.getState().set({ tool: 'floor' })
+    useTableUi.getState().set({ editMode: true })
+    useEditMode.getState().set(false)
+    expect(useGame.getState().propSelection).toEqual([])
+    expect(useBuildUi.getState().tool).toBeNull()
+    expect(useKitUi.getState().tool).toBeNull()
+    expect(useTableUi.getState().editMode).toBe(false)
+    useGame.getState().setSelectedToken('t1' as TokenId)
+    useEditMode.getState().set(true)
+    useEditMode.getState().set(false)
+    expect(useGame.getState().selectedToken).toBe('t1')
+  })
+
+  it('leaves the fog brush alone', () => {
+    useEditMode.getState().set(true)
+    useBuildUi.getState().set({ tool: 'fog-hide' })
+    useEditMode.getState().set(false)
+    expect(useBuildUi.getState().tool).toBe('fog-hide')
   })
 })
 
@@ -169,7 +188,7 @@ describe('command palette search', () => {
   const cmds: Command[] = [
     { id: 'a', title: 'Open Journal', group: 'Open', words: 'handout notes', run: noop },
     { id: 'b', title: 'Roll 1d20', group: 'Dice', words: 'dice die', run: noop },
-    { id: 'c', title: 'Draw walls', group: 'Build', words: 'line of sight', where: 'Build · tools', run: noop },
+    { id: 'c', title: 'Draw walls', group: 'Library', words: 'line of sight build', where: 'Library', run: noop },
     { id: 'd', title: 'Journey onwards', group: 'Scenes', run: noop },
   ]
 
