@@ -222,7 +222,12 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         const t = doc.tokens?.[intent.token]
         if (!t || t.owner !== actor.pubkey) return 'you do not control that token'
         const init = doc.initiative
-        if (!init?.active || init.order[init.turn]?.token !== intent.token) return 'it is not that token\'s turn'
+        if (!init?.active) return 'it is not that token\'s turn'
+        // Group initiative: any member of the group that is up may end the shared turn.
+        const cur = init.order[init.turn]
+        const mine = init.order.find((e) => e.token === intent.token)
+        const up = !!cur && !!mine && (cur.token === mine.token || (cur.group !== undefined && cur.group === mine.group))
+        if (!up) return 'it is not that token\'s turn'
         return null
       }
       case 'initiative.start':

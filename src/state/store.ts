@@ -159,7 +159,10 @@ export function useEffectiveToken(pubkey: PlayerPubkey | string | null | undefin
 export function readInitiative(doc: Y.Doc): InitiativeState | null {
   const raw = doc.getMap('initiative').toJSON() as Partial<InitiativeState>
   if (!Array.isArray(raw.order)) return null
-  return { active: raw.active === true, round: raw.round ?? 0, turn: raw.turn ?? 0, order: raw.order }
+  const s: InitiativeState = { active: raw.active === true, round: raw.round ?? 0, turn: raw.turn ?? 0, order: raw.order }
+  if (raw.declared) s.declared = raw.declared
+  if (raw.log) s.log = raw.log
+  return s
 }
 
 /** Mirror a Y.Doc into the store. Returns an unsubscribe. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ConditionDef, ResourceDef } from '@/core/pack'
-import { chipAngle, chipLabel, conditionChips, CONDITION_PALETTE, hpBand, MAX_PIPS, readResource, UNKNOWN_CONDITION_COLOR } from './tokenHud'
+import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
+import { chipAngle, chipLabel, conditionChips, CONDITION_PALETTE, defenseAbbr, defenseAttribute, hpBand, MAX_PIPS, readDefense, readResource, UNKNOWN_CONDITION_COLOR, vitalState } from './tokenHud'
 
 const hp: ResourceDef = { id: 'hp', name: 'Hit Protection', max: 'hp.max' }
 const defs: ConditionDef[] = [
@@ -66,5 +66,37 @@ describe('condition chips', () => {
   it('spaces chips 40 degrees apart from the upper right', () => {
     expect(chipAngle(0)).toBeCloseTo(Math.PI / 4)
     expect(chipAngle(1)).toBeCloseTo(Math.PI / 4 - (40 * Math.PI) / 180)
+  })
+})
+
+describe('vitalState', () => {
+  it('is bloodied at half or less and dead at zero', () => {
+    expect(vitalState({ current: 6, max: 6 })).toBeNull()
+    expect(vitalState({ current: 4, max: 7 })).toBeNull()
+    expect(vitalState({ current: 3, max: 6 })).toBe('bloodied')
+    expect(vitalState({ current: 1, max: 6 })).toBe('bloodied')
+    expect(vitalState({ current: 0, max: 6 })).toBe('dead')
+    expect(vitalState(null)).toBeNull()
+  })
+})
+
+describe('defense', () => {
+  const ac: AttributeDef = { id: 'ac', name: 'Armor Class', abbr: 'AC', derived: 'armor_base + shield' }
+  it('finds the pack attribute by id, abbreviation or name', () => {
+    expect(defenseAttribute([{ id: 'str', name: 'Strength' }, ac])).toBe(ac)
+    expect(defenseAttribute([{ id: 'def', name: 'Defense' }])?.id).toBe('def')
+    expect(defenseAttribute([{ id: 'str', name: 'Strength' }])).toBeUndefined()
+    expect(defenseAttribute(undefined)).toBeUndefined()
+  })
+  it('evaluates derived values and falls back to the stored one', () => {
+    expect(readDefense({}, ac, (e) => (e === 'armor_base + shield' ? 15 : 0))).toBe(15)
+    expect(readDefense({ ac: 12 }, ac, () => { throw new Error('unknown') })).toBe(12)
+    expect(readDefense({ ac: { current: 11 } }, ac)).toBe(11)
+    expect(readDefense({}, ac)).toBeNull()
+    expect(readDefense({ ac: 12 }, undefined)).toBeNull()
+  })
+  it('labels the badge', () => {
+    expect(defenseAbbr(ac)).toBe('AC')
+    expect(defenseAbbr({ id: 'def', name: 'Defense' })).toBe('DEF')
   })
 })

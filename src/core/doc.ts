@@ -128,6 +128,12 @@ export interface ChatMessage {
   /** Present for kind 'roll'. */
   roll?: RollResult
   to?: PlayerPubkey[]
+  /** The sheet a roll was made from (sheet rolls; initiative rolled from a sheet joins the tracker). */
+  character?: CharacterId
+  /** Log channel for system lines; `combat` marks skill results and encounter summaries. */
+  channel?: 'combat'
+  /** The end-of-encounter report, rendered as a table (kind 'system'). */
+  summary?: EncounterSummary
 }
 
 export interface RollResult {
@@ -186,6 +192,59 @@ export interface Note {
 export interface InitiativeEntry {
   token: TokenId
   score: number
+  /**
+   * Group initiative: adjacent entries with the same group share one score and act in one slot
+   * (a pack of goblins). Absent for a combatant acting alone.
+   */
+  group?: string
+}
+
+/**
+ * A GM-declared next action of a combatant ("telegraph"): drawn on the board and on the turn strip
+ * until the GM resolves it, the combatant uses a skill, or the encounter ends.
+ */
+export interface DeclaredAction {
+  token: TokenId
+  /** What it will do: the skill's name or the GM's own words ("Charges the door"). */
+  label: string
+  skill?: SkillId
+  /** Skill icon name, when the action is a skill that has one. */
+  icon?: string
+  targets: TokenId[]
+  at: number
+}
+
+/** One resource change during an encounter, collected for the end-of-combat summary. */
+export interface CombatLogEntry {
+  /** Who caused it (the caster of a skill); absent for a change made on the sheet by hand. */
+  source?: TokenId
+  target: TokenId
+  /** Sheet key of the resource (e.g. `hp`). */
+  resource: string
+  delta: number
+  /** The change took the resource from above zero to zero or below. */
+  ko?: boolean
+  round: number
+}
+
+/** End-of-encounter report: one row per combatant, in the order they fought. */
+export interface EncounterSummary {
+  rounds: number
+  rows: EncounterSummaryRow[]
+}
+
+export interface EncounterSummaryRow {
+  token: TokenId
+  name: string
+  /** A hidden token; players do not see the row. */
+  hidden?: boolean
+  dealt: number
+  taken: number
+  healed: number
+  /** Knockouts scored. */
+  kos: number
+  /** Ended the encounter at zero. */
+  down?: boolean
 }
 
 /**
@@ -198,6 +257,10 @@ export interface InitiativeState {
   round: number
   turn: number
   order: InitiativeEntry[]
+  /** Declared enemy actions by token id (absent when none). */
+  declared?: Record<string, DeclaredAction>
+  /** Resource changes since the encounter started (absent when none). */
+  log?: CombatLogEntry[]
 }
 
 export interface GameDocShape {

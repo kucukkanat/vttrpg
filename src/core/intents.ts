@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry } from './doc'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -63,7 +63,12 @@ export type Intent =
    */
   | { type: 'initiative.next'; token?: TokenId }
   | { type: 'initiative.remove'; token: TokenId }
-  | { type: 'initiative.end' }
+  /** GM only: end the encounter; with `summary` a combat report goes to the chat log. */
+  | { type: 'initiative.end'; summary?: EncounterSummary }
+  /** GM only: declare what a combatant will do next (shown to everyone until resolved). */
+  | { type: 'initiative.declare'; action: Omit<DeclaredAction, 'at'> }
+  /** GM only: the declared action is done or called off. */
+  | { type: 'initiative.resolve'; token: TokenId }
 
 export interface IntentEnvelope {
   id: string

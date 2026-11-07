@@ -3,11 +3,12 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, CombatLogEntry, DeclaredAction, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
+import { combatEntries, EMPTY_INITIATIVE, inCurrentSlot, nextTurn, sheetDeltas, sortInitiative, withOrder, withoutToken } from './initiative'
 
 export interface ApplyContext {
   /** Resolved roll for 'roll' intents (the GM computes it from the seed). */
@@ -54,56 +55,22 @@ export function skillNumbers(
 
 // ----------------------------------------------------------------- initiative
 
-export const EMPTY_INITIATIVE: InitiativeState = { active: false, round: 0, turn: 0, order: [] }
-
-/** Highest score first; equal scores keep their given order. */
-export function sortInitiative(order: InitiativeEntry[]): InitiativeEntry[] {
-  return order
-    .map((e, i) => ({ e, i }))
-    .sort((a, b) => b.e.score - a.e.score || a.i - b.i)
-    .map(({ e }) => e)
-}
-
-/** One turn on: past the end the round increments and the first combatant is up again. */
-export function nextTurn(s: InitiativeState): InitiativeState {
-  if (!s.active || s.order.length === 0) return s
-  const turn = s.turn + 1
-  return turn >= s.order.length ? { ...s, turn: 0, round: s.round + 1 } : { ...s, turn }
-}
-
-/**
- * The order replaced by `order`: the combatant whose turn it is keeps it when still listed;
- * otherwise the turn index is clamped (an empty order wraps it to 0).
- */
-export function withOrder(s: InitiativeState, order: InitiativeEntry[]): InitiativeState {
-  const current = s.order[s.turn]?.token
-  const idx = current === undefined ? -1 : order.findIndex((e) => e.token === current)
-  const turn = idx >= 0 ? idx : Math.min(s.turn, Math.max(0, order.length - 1))
-  return { ...s, order, turn }
-}
-
-/**
- * A combatant dropped: turns before it shift down; removing the one whose turn it is hands the
- * turn to the next in line, wrapping into a new round past the end.
- */
-export function withoutToken(s: InitiativeState, token: TokenId): InitiativeState {
-  const idx = s.order.findIndex((e) => e.token === token)
-  if (idx < 0) return s
-  const order = s.order.filter((e) => e.token !== token)
-  if (idx < s.turn) return { ...s, order, turn: s.turn - 1 }
-  if (idx === s.turn && s.turn >= order.length) return { ...s, order, turn: 0, round: order.length ? s.round + 1 : s.round }
-  return { ...s, order }
-}
+export { EMPTY_INITIATIVE, nextTurn, sortInitiative, withOrder, withoutToken } from './initiative'
 
 function readInitiative(map: Y.Map<unknown>): InitiativeState {
   const order = map.get('order')
   if (!Array.isArray(order)) return EMPTY_INITIATIVE
-  return {
+  const s: InitiativeState = {
     active: map.get('active') === true,
     round: typeof map.get('round') === 'number' ? (map.get('round') as number) : 0,
     turn: typeof map.get('turn') === 'number' ? (map.get('turn') as number) : 0,
     order: order as InitiativeEntry[],
   }
+  const declared = map.get('declared')
+  if (declared && typeof declared === 'object') s.declared = declared as Record<string, DeclaredAction>
+  const log = map.get('log')
+  if (Array.isArray(log)) s.log = log as CombatLogEntry[]
+  return s
 }
 
 function writeInitiative(map: Y.Map<unknown>, s: InitiativeState): void {
@@ -111,6 +78,15 @@ function writeInitiative(map: Y.Map<unknown>, s: InitiativeState): void {
   map.set('round', s.round)
   map.set('turn', s.turn)
   map.set('order', s.order)
+  if (s.declared && Object.keys(s.declared).length) map.set('declared', s.declared)
+  else if (map.has('declared')) map.delete('declared')
+  if (s.log?.length) map.set('log', s.log)
+  else if (map.has('log')) map.delete('log')
+}
+
+/** `s` with `entries` appended to the combat log. */
+function logged(s: InitiativeState, entries: CombatLogEntry[]): InitiativeState {
+  return entries.length ? { ...s, log: [...(s.log ?? []), ...entries] } : s
 }
 
 /** Shallow merge that removes keys set to undefined (Yjs cannot store undefined). */
@@ -175,9 +151,22 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         if (meta.get('activeScene') === intent.scene) return
         scenes.delete(intent.scene)
         break
-      case 'character.upsert':
+      case 'character.upsert': {
+        // A resource changed by hand mid-fight (the GM's HP buttons) still counts for the summary.
+        const prev = characters.get(intent.character.id)?.data as Record<string, unknown> | undefined
+        const init = readInitiative(initiative)
+        if (prev && init.active) {
+          const entries: CombatLogEntry[] = []
+          tokens.forEach((t) => {
+            if (t.character !== intent.character.id) return
+            const numbers = sheetDeltas(prev, intent.character.data, t.id)
+            entries.push(...combatEntries(init, numbers, (_, key) => resourceValue(prev[key])))
+          })
+          if (entries.length) writeInitiative(initiative, logged(init, entries))
+        }
         characters.set(intent.character.id, intent.character as unknown as Record<string, unknown>)
         break
+      }
       case 'character.remove':
         characters.delete(intent.character)
         break
@@ -193,6 +182,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
             kind: 'roll',
             text: intent.label ?? intent.formula,
             roll: ctx.roll ?? { formula: intent.formula, seed: intent.seed, dice: [], total: 0 },
+            ...(intent.character ? { character: intent.character } : {}),
           },
         ])
         break
@@ -212,12 +202,28 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
           (id) => (characters.get(id)?.data as Record<string, unknown> | undefined),
           tokensOf,
         )
+        // Mid-fight: log who hurt or healed whom (values read before the patches land).
+        const init = readInitiative(initiative)
+        const entries = combatEntries(init, numbers, (token, key) => {
+          const c = tokens.get(token)?.character
+          const data = c ? (characters.get(c)?.data as Record<string, unknown> | undefined) : undefined
+          return data ? resourceValue(data[key]) : undefined
+        }, intent.source)
         for (const p of ctx.skill?.patches ?? []) {
           const c = characters.get(p.character)
           if (c) characters.set(p.character, { ...c, data: { ...(c.data as object), ...p.data } })
         }
         for (const text of ctx.skill?.messages ?? []) {
-          chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text }])
+          chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text, channel: 'combat' }])
+        }
+        // The caster's declared action is now done.
+        if (init.active) {
+          let next = logged(init, entries)
+          if (next.declared?.[intent.source]) {
+            const { [intent.source]: _done, ...rest } = next.declared
+            next = { ...next, declared: rest }
+          }
+          if (next !== init) writeInitiative(initiative, next)
         }
         if (src && (ctx.skill?.vfx?.length || numbers.length)) {
           const ev: Extract<GameEvent, { kind: 'vfx' }> = { id: env.id, at, kind: 'vfx', cues: ctx.skill?.vfx ?? [], scene: src.scene, source: intent.source, targets: intent.targets, point: intent.point, label: intent.skill }
@@ -298,7 +304,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'initiative.next': {
         const init = readInitiative(initiative)
         if (!init.active) return
-        if (intent.token && init.order[init.turn]?.token !== intent.token) return
+        if (intent.token && !inCurrentSlot(init, intent.token)) return
         writeInitiative(initiative, nextTurn(init))
         break
       }
@@ -309,8 +315,28 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         break
       }
       case 'initiative.end':
+        if (intent.summary && readInitiative(initiative).active) {
+          const rounds = intent.summary.rounds
+          chat.push([{ id: env.id, author: from, at, kind: 'system', channel: 'combat', text: `Encounter over after ${rounds} ${rounds === 1 ? 'round' : 'rounds'}.`, summary: intent.summary }])
+        }
         writeInitiative(initiative, EMPTY_INITIATIVE)
         break
+      case 'initiative.declare': {
+        const init = readInitiative(initiative)
+        if (!init.active || !init.order.some((e) => e.token === intent.action.token)) return
+        const action: DeclaredAction = { ...intent.action, at }
+        if (action.skill === undefined) delete action.skill
+        if (action.icon === undefined) delete action.icon
+        writeInitiative(initiative, { ...init, declared: { ...init.declared, [action.token]: action } })
+        break
+      }
+      case 'initiative.resolve': {
+        const init = readInitiative(initiative)
+        if (!init.declared?.[intent.token]) return
+        const { [intent.token]: _done, ...rest } = init.declared
+        writeInitiative(initiative, { ...init, declared: rest })
+        break
+      }
     }
   }, from)
 }
