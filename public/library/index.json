@@ -1,5 +1,1409 @@
 [
   {
+    "sha256": "29f6d6167fca793f66eb8ceb86b5f73a1dbbbc701110af441076c5a16a30db1a",
+    "path": "kits/kaykit-dungeon/floor-dirt-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5168,
+    "name": "floor-dirt-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4cb74fd593c722cb2c64f1977ffe87c2023bc2b51eb41451e57ec0d235892c2a",
+    "path": "kits/kaykit-dungeon/floor-dirt-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2422,
+    "name": "floor-dirt-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cbaf2672412fb810e46eaf2ce379af194157376978e061829ac399157edfcbe5",
+    "path": "kits/kaykit-dungeon/floor-dirt-small-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3536,
+    "name": "floor-dirt-small-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e1b291bfa3cb032926488701eab26bc151c9ff7fc2815168eb2f2a28317b6e38",
+    "path": "kits/kaykit-dungeon/floor-dirt-small-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2390,
+    "name": "floor-dirt-small-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "771f08f1399340778bb1ff0e7206a2ac3f50e09847712568c0d0fd1a03c018da",
+    "path": "kits/kaykit-dungeon/floor-foundation-corner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6596,
+    "name": "floor-foundation-corner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "39beaeac247d794c54cd963149a9a62d1de8e405d7b8002c16868e5cd5884b66",
+    "path": "kits/kaykit-dungeon/floor-foundation-corner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3154,
+    "name": "floor-foundation-corner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "32e8eef503dc24fe730811ddd5c0c8fd104ad892525dbec19ff8180eed09cc24",
+    "path": "kits/kaykit-dungeon/floor-foundation-front.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4684,
+    "name": "floor-foundation-front.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "df132da0c67a5cb00b3edf7b317343ea44243afe16c12795a4e80a7ab5b077de",
+    "path": "kits/kaykit-dungeon/floor-foundation-front.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3250,
+    "name": "floor-foundation-front.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c1b65ca30f9b5d4091cc72e84a5b53be5142253f83065f6a981cd2893e25c96a",
+    "path": "kits/kaykit-dungeon/floor-tile-big-spikes.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 14552,
+    "name": "floor-tile-big-spikes.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1498e6ac5c8ce65d0c90539176703142f63be587314253e00cb46afeada3ec34",
+    "path": "kits/kaykit-dungeon/floor-tile-big-spikes.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4268,
+    "name": "floor-tile-big-spikes.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1871598b3725d6fa8225e20d77e9c8ccbd68c7ffef5e62f5bfbd28d7e601dce0",
+    "path": "kits/kaykit-dungeon/floor-tile-grate.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4788,
+    "name": "floor-tile-grate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9ff01b9bbd99180c7784338aadb660189f09f2e3d340563ced0bff55cfd5b893",
+    "path": "kits/kaykit-dungeon/floor-tile-grate.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3960,
+    "name": "floor-tile-grate.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e92833fceaf79f93da8c2ac246f1d562483f8770f02a70436f69ea6e10bdd5e1",
+    "path": "kits/kaykit-dungeon/floor-tile-large-rocks.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9364,
+    "name": "floor-tile-large-rocks.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6476e3ba32e4a0649ed42a2069057def140b5aa2d891c0057e04e63b9eec3501",
+    "path": "kits/kaykit-dungeon/floor-tile-large-rocks.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2974,
+    "name": "floor-tile-large-rocks.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6be7bc903ac1a2caed8aeb64dc097d278755a70e1d28a17903616fa9ae6fdf29",
+    "path": "kits/kaykit-dungeon/floor-tile-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5376,
+    "name": "floor-tile-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fe4418a29e3a08b2301a625f607973330dc91b34537f810f8a0714786ec043d1",
+    "path": "kits/kaykit-dungeon/floor-tile-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2816,
+    "name": "floor-tile-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f90ccb742c94480f93671d76247fc2354f224e13a01e74892ac37fa6ab5ad9f9",
+    "path": "kits/kaykit-dungeon/floor-tile-small-broken-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3640,
+    "name": "floor-tile-small-broken-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "918db38ac9239bb8ee2034343be6f94f05e9b655c9a4a0b619ad3915f7f27a8a",
+    "path": "kits/kaykit-dungeon/floor-tile-small-broken-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2770,
+    "name": "floor-tile-small-broken-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9bf4f6e51ba2b75e4e4e26af15a6f7139ef10e08e4a61a50cdb4a41d1bf6f7c6",
+    "path": "kits/kaykit-dungeon/floor-tile-small-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9644,
+    "name": "floor-tile-small-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "37c8d8948086de106e1694059c0c2f822598ad317506e2fa62902546ddf189c5",
+    "path": "kits/kaykit-dungeon/floor-tile-small-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3296,
+    "name": "floor-tile-small-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ee673dec2206acd574796eeda9e32fcfdd7d8627df45eec1b6ce8e8a380344de",
+    "path": "kits/kaykit-dungeon/floor-tile-small-weeds-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11992,
+    "name": "floor-tile-small-weeds-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ac7d47542bd1918b2ea1704fc61b5a2df48debbefeee4eac1859bdcfdb9f5563",
+    "path": "kits/kaykit-dungeon/floor-tile-small-weeds-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2958,
+    "name": "floor-tile-small-weeds-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fd0d18ebaa9234a8d7a89f75fcda176c1e2c78a23aab1bce56e7ac6eb9ddd61f",
+    "path": "kits/kaykit-dungeon/floor-tile-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3288,
+    "name": "floor-tile-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c5dc3efdce55400d45557a92b8916fd548528f2d25c31cce6f62db9f1361941d",
+    "path": "kits/kaykit-dungeon/floor-tile-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2644,
+    "name": "floor-tile-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0c3fb78a99f38c134424ca8a82771ad49e6ab5aa006e00a773d6feb5ce3e613d",
+    "path": "kits/kaykit-dungeon/floor-wood-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7044,
+    "name": "floor-wood-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c953358e66a11ca97d33e1b8733e76f58c0eecc840857627334de17dcfb68646",
+    "path": "kits/kaykit-dungeon/floor-wood-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3146,
+    "name": "floor-wood-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a699bd84dd53504f9afaddff897ec2cde3e1a7edb5a734b09203b237aa55e5d7",
+    "path": "kits/kaykit-dungeon/floor-wood-small-dark.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3608,
+    "name": "floor-wood-small-dark.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e419a915a87661f74806c409d0fa315b4e415c0eed8104c558a10b4dc275b88e",
+    "path": "kits/kaykit-dungeon/floor-wood-small-dark.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2596,
+    "name": "floor-wood-small-dark.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8cc09c994929180cd9fd0a84116090f178682e22b2e7c824431cc9de4e516e58",
+    "path": "kits/kaykit-dungeon/floor-wood-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3620,
+    "name": "floor-wood-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "db1956b475f032708d148dee3e193906e71aaa14e3450f22e8ff709d7f8ce584",
+    "path": "kits/kaykit-dungeon/floor-wood-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2938,
+    "name": "floor-wood-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "49231727732bd39559e8ea399b0b0a6300b36b0287b336cb1aa66ce80bf98b94",
+    "path": "kits/kaykit-dungeon/pillar-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18068,
+    "name": "pillar-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fbdc7c792702fd117f741d8ceab82f3c69a734f4a174e2adc39f24bea15a8d21",
+    "path": "kits/kaykit-dungeon/pillar-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3476,
+    "name": "pillar-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f2133e63986c4dd0b1b24f4e6a72a90d26960445cafc106846b936304e68cf52",
+    "path": "kits/kaykit-dungeon/pillar.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4684,
+    "name": "pillar.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "201c5f7ca5a1cc282cd2e93b99bddc864f0706deca233ac9dd4541aa63cda6ad",
+    "path": "kits/kaykit-dungeon/pillar.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2286,
+    "name": "pillar.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c04471375d4928f690c4e70412baa563114ee5036248b5dd0e634f89ed78bd8b",
+    "path": "kits/kaykit-dungeon/stairs-narrow.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11540,
+    "name": "stairs-narrow.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "76af9a420a15d380f3a45c549f65d840a876c0b93e4b56649d0e6e3417b30ee5",
+    "path": "kits/kaykit-dungeon/stairs-narrow.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4586,
+    "name": "stairs-narrow.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fa6106721f103d5f99f2b9682d83c50c5d316568a6163e0144c9f7131f7dd61d",
+    "path": "kits/kaykit-dungeon/stairs-walled.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 21128,
+    "name": "stairs-walled.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f477d3b047cd4916793de1c43692e7193e2b8269c0a4838de4a7dcd040676012",
+    "path": "kits/kaykit-dungeon/stairs-walled.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5334,
+    "name": "stairs-walled.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "03e22ad127d0801893b70a14e61fdc719d9b1cec09f51b86c0cf8b45eb615ec9",
+    "path": "kits/kaykit-dungeon/stairs-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6872,
+    "name": "stairs-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "75786ca4913e1b5c24948c7166b3e7bc65b1c6eaeb433a21a4fd9df2c761e0ca",
+    "path": "kits/kaykit-dungeon/stairs-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4718,
+    "name": "stairs-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "70711e6bbbd4ea758f2e51738f4b57d42cd92d822c1fb9d9c5e8fd01c2612640",
+    "path": "kits/kaykit-dungeon/stairs.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11520,
+    "name": "stairs.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9870576141a7aa22035842bafa75a9b70dd556a38ab49c6546bae5f5fc51492d",
+    "path": "kits/kaykit-dungeon/stairs.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4838,
+    "name": "stairs.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "250f340c592ee5e8809744468464f1b49acfc5a8443307e762cbaca41a833f54",
+    "path": "kits/kaykit-dungeon/wall-arched.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 20676,
+    "name": "wall-arched.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d96cb22ae43520f6f67d6391bd3352008b164221137055fc29d2cac37bed9e6a",
+    "path": "kits/kaykit-dungeon/wall-arched.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4122,
+    "name": "wall-arched.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2c5ffd3899b28c224ea5f64cb53f97affc065f4659f6b8f40a61ea972eb41a43",
+    "path": "kits/kaykit-dungeon/wall-archedwindow-gated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 17480,
+    "name": "wall-archedwindow-gated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2dc0ef27f41d1b66c8ca33c803341ef64418d91889be39fea0156b4ec026ed69",
+    "path": "kits/kaykit-dungeon/wall-archedwindow-gated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5308,
+    "name": "wall-archedwindow-gated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e059614775de07b87ae88eda0cd69569e3e9c8b61f363e563ace1dfe022c15f5",
+    "path": "kits/kaykit-dungeon/wall-broken.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 20412,
+    "name": "wall-broken.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9e2699ea45c910c0b75e40451fcaaf0686be1b1c15d49c606a42957fd8855d0d",
+    "path": "kits/kaykit-dungeon/wall-broken.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4714,
+    "name": "wall-broken.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a7e08922c8a82f1d446af0e02e22dfcc577870c864cbc99fb7528858fd26f6b9",
+    "path": "kits/kaykit-dungeon/wall-corner-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8052,
+    "name": "wall-corner-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1109af34ca33e734043c171fb7bc2556908679ac98c81c77ed0a014219330aa5",
+    "path": "kits/kaykit-dungeon/wall-corner-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2600,
+    "name": "wall-corner-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7de21421d5f4a479c4e16290be23c1e4ca07c59e1877d01b2713f6e075f8c9ed",
+    "path": "kits/kaykit-dungeon/wall-corner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 13400,
+    "name": "wall-corner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4c67c4c8673005f598d2953d6b24b138e20aa359606f6084f6c691eeab981e65",
+    "path": "kits/kaykit-dungeon/wall-corner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2968,
+    "name": "wall-corner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5c1427c5f4c8bc3753134087cf8da3dea026fa9e860d64cbb0530b7f0fea4b70",
+    "path": "kits/kaykit-dungeon/wall-cracked.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 38960,
+    "name": "wall-cracked.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "609f9a5131e5dcc6735ad62ce0821371001ddc4cfa1c7068328573a2e80948a6",
+    "path": "kits/kaykit-dungeon/wall-cracked.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4298,
+    "name": "wall-cracked.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "76c6297ebfeb464fc3d84daea7230b396b87a1a77bdefb525f678ff43bcb0b49",
+    "path": "kits/kaykit-dungeon/wall-crossing.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18816,
+    "name": "wall-crossing.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "84d65be49cc51758fdb2a149fdc2ee1c5d18c951a18927d6f0855c239042efc7",
+    "path": "kits/kaykit-dungeon/wall-crossing.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3540,
+    "name": "wall-crossing.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e7d0df1b752b8bd9540c6a6429c888455bbee8c16f36d02798d4be63934aa3c1",
+    "path": "kits/kaykit-dungeon/wall-doorway.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 19124,
+    "name": "wall-doorway.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a61480b091f59ca2752b963860f43921a7a83dd870be2871a452af1adbccecd1",
+    "path": "kits/kaykit-dungeon/wall-doorway.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4488,
+    "name": "wall-doorway.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "db59aaa18fda7011d124cc23d48d9f1f676f6257dc77ac2cf563c1bf04086e89",
+    "path": "kits/kaykit-dungeon/wall-endcap.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8432,
+    "name": "wall-endcap.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d9d907eaae0e25d1139e03d8285b66c16a3a364d4d1e5ac1473a83da2c86064a",
+    "path": "kits/kaykit-dungeon/wall-endcap.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2414,
+    "name": "wall-endcap.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "32aad4882880c204772daef3ab34138979d87659503596dd547bb34a46987d36",
+    "path": "kits/kaykit-dungeon/wall-gated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10348,
+    "name": "wall-gated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5451e79acfdff94c1a599feec552c86790f6328004e6c7eea4f574370b2239f3",
+    "path": "kits/kaykit-dungeon/wall-gated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6942,
+    "name": "wall-gated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8909336413d5719af66efdf0c6a0431000b10bf8eba36d800bb75ba193e7e7d8",
+    "path": "kits/kaykit-dungeon/wall-half.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9212,
+    "name": "wall-half.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f5edb10958b3b7c27e5e1627c064253e2b89697f34db0ab5b47292bfe7af46ac",
+    "path": "kits/kaykit-dungeon/wall-half.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3002,
+    "name": "wall-half.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "11d39729aef05a0c8ca3e7bfaac563ea11c9c44673c910ac8ba7fb1b3a347303",
+    "path": "kits/kaykit-dungeon/wall-pillar.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 14740,
+    "name": "wall-pillar.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4e2d71e316bd05e1a6bb66a95493174df86b64770315b6fecf79b026d81f52a4",
+    "path": "kits/kaykit-dungeon/wall-pillar.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3718,
+    "name": "wall-pillar.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fb082736f8669d5d8db6eeec858b07cba1ff3193b2f9edc834433778558e1fa5",
+    "path": "kits/kaykit-dungeon/wall-scaffold.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 17260,
+    "name": "wall-scaffold.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "59937bbd7b0e4d3afb4f2b767d1d788cbe6dc106f0930477948d58ec448d5ddd",
+    "path": "kits/kaykit-dungeon/wall-scaffold.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4376,
+    "name": "wall-scaffold.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "730883ed54f8aaa039a66891f159ede984bdab490921f68287c008dee3601376",
+    "path": "kits/kaykit-dungeon/wall-shelves.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 35280,
+    "name": "wall-shelves.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aff8ced5aac9a68e17d300db2a87601f82e837c404e0a27434f9d649c45e9d60",
+    "path": "kits/kaykit-dungeon/wall-shelves.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4992,
+    "name": "wall-shelves.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fe65bea3461c9de6d64a25ce60e9d253d2172f79b82fbdf6a9a3724c73dc2155",
+    "path": "kits/kaykit-dungeon/wall-sloped.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9048,
+    "name": "wall-sloped.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3b084c177482d4cbd89fd7ac5ef76c18ae80eadf48006a4bdb71fbfe81c001c8",
+    "path": "kits/kaykit-dungeon/wall-sloped.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3048,
+    "name": "wall-sloped.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d6ac6df92decbceb0e0aebeb0ac7e3b7470fb0a0d90178b13b26a4372676bb6d",
+    "path": "kits/kaykit-dungeon/wall-tsplit.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 16952,
+    "name": "wall-tsplit.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "71e318a364210735aad8125ed5657c30d46447df02d1e9c8632b6be22e78f952",
+    "path": "kits/kaykit-dungeon/wall-tsplit.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3696,
+    "name": "wall-tsplit.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "575b34726efa089d002055397f129a71485c210bdc6466c1d5399c5bdd3ceb60",
+    "path": "kits/kaykit-dungeon/wall-window-closed.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 16940,
+    "name": "wall-window-closed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "02f06b7b6fd4bd4fdbdcdcfaa28b952241fc36bf7ee9b388bafc766fa32e7d37",
+    "path": "kits/kaykit-dungeon/wall-window-closed.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4364,
+    "name": "wall-window-closed.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fec87697497a51f782fa9d1649b92af3935cdc01b78eb94a7c388d0b6aa6a1cb",
+    "path": "kits/kaykit-dungeon/wall-window-open.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 15708,
+    "name": "wall-window-open.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ce0d9520b9df9aead5b3b59ed94a88b9608d965b31f8b4518b7423cba8276a47",
+    "path": "kits/kaykit-dungeon/wall-window-open.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4484,
+    "name": "wall-window-open.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "adcd77a6228ee7eaa4f3bbc8302902debbb86891400aad0b4dbcb71ff9bf431c",
+    "path": "kits/kaykit-dungeon/wall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 14924,
+    "name": "wall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d72f79e8e07cee001884cc2d463924062a853d60c8d25b4d097c6d2972fbc901",
+    "path": "kits/kaykit-dungeon/wall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3830,
+    "name": "wall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "14b67144660182b5475d06b2910a0b06d7bfa12a5fe1d348514dce525e573e74",
+    "path": "kits/kenney-town/balcony-wall-fence.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4048,
+    "name": "balcony-wall-fence.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1020812ab9fdac86f3c63b72222933cced98ad60da62112452b82bb3a1252c99",
+    "path": "kits/kenney-town/balcony-wall-fence.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3948,
+    "name": "balcony-wall-fence.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "eb67891feddbddbe009e20c87405fe2e6dc4c9b30cb1efddd72cffaf5cfb4db6",
+    "path": "kits/kenney-town/chimney.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2700,
+    "name": "chimney.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "103f24bb5fcfc72e24fedf72ee6b30f5cbd2b8905fba6a12475c590548c414c8",
+    "path": "kits/kenney-town/chimney.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1972,
+    "name": "chimney.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ccd67c63c80718b3b92fabc4e518b573fc3da24f992c36e5a9aa475c57031f33",
+    "path": "kits/kenney-town/overhang.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3444,
+    "name": "overhang.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7322b7fbb9e2c4f971986c303b5dd199ca71272739aea67f0f1b873f5ff1ceb9",
+    "path": "kits/kenney-town/overhang.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3802,
+    "name": "overhang.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4842b20c7b7bc9336fa02977ed9aa5c9ebad4063cd8460dc98757439c11bec38",
+    "path": "kits/kenney-town/pillar-stone.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3676,
+    "name": "pillar-stone.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2ef523d9eae6fecc2c2cf5ff7c85ee5bab0be09365425e8214134e90b5b0fbd4",
+    "path": "kits/kenney-town/pillar-stone.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1834,
+    "name": "pillar-stone.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "afcab6cba10d4a1d0a0b40983b87403034d87098a3a6fb3989276fb09355964c",
+    "path": "kits/kenney-town/pillar-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2816,
+    "name": "pillar-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0a61cd1cb9025e1e90cb83e1bc39bd74ef45bf3694df0b278b221477d365ff28",
+    "path": "kits/kenney-town/pillar-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1554,
+    "name": "pillar-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "99f09f46140a88f33a3615e2829ead7ef3272f919a2c1864e545c7b14ad2bd13",
+    "path": "kits/kenney-town/planks-half.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3716,
+    "name": "planks-half.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "807f673cf2f0dd704183bf464bd47b25d52670ab62189a5f82a613f5194b6899",
+    "path": "kits/kenney-town/planks-half.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3432,
+    "name": "planks-half.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d7303c84fc0a7cf3f13c8acd1f467365897e9d151cb75bcca86d3fcf10aaa147",
+    "path": "kits/kenney-town/planks-opening.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4704,
+    "name": "planks-opening.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2b57fb0b8daf7672c718e398dd3d688c23ce51e4d0d4712f348b7bdc823e6ee5",
+    "path": "kits/kenney-town/planks-opening.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4684,
+    "name": "planks-opening.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "18840f0bd8f12157c8abfa5870b878bd2833028993a2cec6d4cb57c2ec802aa4",
+    "path": "kits/kenney-town/planks.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3700,
+    "name": "planks.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "87e3e8705dc9bb74695cf6335272e6ecfdef992958efeae1b24929bfdc6b7bff",
+    "path": "kits/kenney-town/planks.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4436,
+    "name": "planks.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2bea09360e3d2b70d3b385587b413c286ab836aa43a94e948c5fb434ae0eefe7",
+    "path": "kits/kenney-town/roof-corner-inner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2860,
+    "name": "roof-corner-inner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f4056885df62a8195d940c92c47b32ee6447224b6c2386f0ca1e10264d6665ac",
+    "path": "kits/kenney-town/roof-corner-inner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3212,
+    "name": "roof-corner-inner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "29e436eb0ee7075790610d29cda1d0042045f160e6d4a8f66b5bc563327bfb0e",
+    "path": "kits/kenney-town/roof-corner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3008,
+    "name": "roof-corner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6bcd84fcb2343ba585e386de3103b0945a6420bd10aad213637f29d4a8203941",
+    "path": "kits/kenney-town/roof-corner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2844,
+    "name": "roof-corner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "78525609941bc0253474c51a34a77ab2f3942a09a9d26723a77918653bb00d05",
+    "path": "kits/kenney-town/roof-gable-end.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3276,
+    "name": "roof-gable-end.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "17436851d3405efc08eb53522c6b4adc779e7e7489c41729d4e81a7ad43b9be5",
+    "path": "kits/kenney-town/roof-gable-end.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2894,
+    "name": "roof-gable-end.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6be95769c92b1bd748350ad9bb81bc1a4a901bcc002e8d83d92cda43ddc6a09b",
+    "path": "kits/kenney-town/roof-gable.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3556,
+    "name": "roof-gable.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3bbd7c4c058c6b31073c53a9a39b9115d089176d5ebbb396a9df785494fe1e69",
+    "path": "kits/kenney-town/roof-gable.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2978,
+    "name": "roof-gable.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b324ad21d83044924685a7c331221d5bb5279425185166c127cb465815419005",
+    "path": "kits/kenney-town/roof-high-gable.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3484,
+    "name": "roof-high-gable.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f0e37964ef2b8cf41dde9291ac5cdd7cc4e6b3e5a6c06471df0a126998acc407",
+    "path": "kits/kenney-town/roof-high-gable.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3472,
+    "name": "roof-high-gable.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "724d279c06035fb99ab09e90644b55208c94be2baa42aaf5a110977f685e87ee",
+    "path": "kits/kenney-town/roof-high.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3268,
+    "name": "roof-high.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1c1bf355813cefa690967a157bcac0e9e38a81cbdfaf31e5e17ec5815ca4a232",
+    "path": "kits/kenney-town/roof-high.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2834,
+    "name": "roof-high.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2d2a1591788aaa4d24a7e7503e5a466149d0105eea5bd479ff68cb23aaa32f9f",
+    "path": "kits/kenney-town/roof-point.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2880,
+    "name": "roof-point.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f7933c827164b33036deb8631aa6c1f62dfc2c2757e8bab44fdb4786c951bc84",
+    "path": "kits/kenney-town/roof-point.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2376,
+    "name": "roof-point.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b8ac77384eca99e1bb9be581f38567132d0d5139772c649bf8e9f3c816d02d0d",
+    "path": "kits/kenney-town/roof-window.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4940,
+    "name": "roof-window.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "266d29f40942948cef5a0a2c1d87d397313294766dbfc8295de8e85be61b2328",
+    "path": "kits/kenney-town/roof-window.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3310,
+    "name": "roof-window.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d2bdcc54d562cc6b4a22235105497a84a6e9963faf51ab0c3859410142dd18c0",
+    "path": "kits/kenney-town/roof.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3260,
+    "name": "roof.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6854d35c34be6d4ee4c92f2bd07d6806fa464452069793f774952d19ad1cbfc1",
+    "path": "kits/kenney-town/roof.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2894,
+    "name": "roof.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2d54f082f2953f28cba8c3f210b6dfe3a97cb916f97317115fd768e53fd7cb68",
+    "path": "kits/kenney-town/stairs-stone.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4156,
+    "name": "stairs-stone.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8ed4335c8a3da89056646aad22bcf73b333c2941d3ab0fccf673e4bfa722b205",
+    "path": "kits/kenney-town/stairs-stone.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2696,
+    "name": "stairs-stone.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "28728761ac0a812657e381ba9975d00724a13cc86c7e483459aeda352413b4dc",
+    "path": "kits/kenney-town/stairs-wide-stone.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4208,
+    "name": "stairs-wide-stone.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5fe1eea3105f586584d9e0c07155b4f9f64b9d58025ae59660b19dee8d1f591b",
+    "path": "kits/kenney-town/stairs-wide-stone.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2848,
+    "name": "stairs-wide-stone.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "adccf683a58cadb3d075cd6b917eaa15a6ed8cf817195ef063a28dfbbd8353f8",
+    "path": "kits/kenney-town/stairs-wood-handrail.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9688,
+    "name": "stairs-wood-handrail.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5d115872c624d6de89568f245b4ad45cbf5dcaeb934d755d8b9fa30c89586b7b",
+    "path": "kits/kenney-town/stairs-wood-handrail.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4200,
+    "name": "stairs-wood-handrail.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5a9e472dc9d9fccce41174d4b01eead40fcdc9c590c88a27ce19c3ae49dc7705",
+    "path": "kits/kenney-town/stairs-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7640,
+    "name": "stairs-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f341aa86e4a9f4407a540f60a4aefaff714c0e8424ae15cfe50ecdc821397e69",
+    "path": "kits/kenney-town/stairs-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3168,
+    "name": "stairs-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "10369a7f3cc3f7a86e03149f361487d9237141d19d0545c5620f9d40b691610b",
+    "path": "kits/kenney-town/wall-arch.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2792,
+    "name": "wall-arch.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fec0dbc6ff7363cd1e15fc066d437eb3c22b0fd62e3578a44795006a33ca7e80",
+    "path": "kits/kenney-town/wall-arch.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1958,
+    "name": "wall-arch.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "84947704dc3fdd6a0f44a51b8a9bea88fcfbe5b91aea00cc32753696cd0d9fe2",
+    "path": "kits/kenney-town/wall-broken.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5136,
+    "name": "wall-broken.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e619cf12c43c3c7c87503489e6e19b9869ea0283215714347baf386b0fd0c353",
+    "path": "kits/kenney-town/wall-broken.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2580,
+    "name": "wall-broken.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9bcbc3a8e357c8d101ba5854c94e85e2ae5c65d5b092a85767bc2580a5adbe19",
+    "path": "kits/kenney-town/wall-corner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3172,
+    "name": "wall-corner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5dcda38f64dda55a3d2d95b669a46ef3a977aead436dd6e2fb95eddeedd01d87",
+    "path": "kits/kenney-town/wall-corner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3790,
+    "name": "wall-corner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "734d9d26d2824ba08e67bf8cf9fa170a9fe6caaad741fe42a409992cedae7591",
+    "path": "kits/kenney-town/wall-detail-cross.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3600,
+    "name": "wall-detail-cross.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b6080c1c64d83f59231991b6924b57d06068cb64afb7117c9d95d5425841f96d",
+    "path": "kits/kenney-town/wall-detail-cross.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3482,
+    "name": "wall-detail-cross.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a0f850d36a51e8f7c0a7ba6d3062816925d01f10e2878b0c98df15ed814f9c53",
+    "path": "kits/kenney-town/wall-door.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6124,
+    "name": "wall-door.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5820574cd7220d6fc70956d92f1120d29bae486c27fff4433a5389be5baf595b",
+    "path": "kits/kenney-town/wall-door.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3482,
+    "name": "wall-door.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fc78e69648a640bca16e21f1acbb77aa4ec3a524bc092e0cd9b462197c4e5b74",
+    "path": "kits/kenney-town/wall-doorway-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4200,
+    "name": "wall-doorway-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "51e2c90e92714f8465bc23337bfd04a36512dc326d30508aed8b155f1de0196c",
+    "path": "kits/kenney-town/wall-doorway-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3172,
+    "name": "wall-doorway-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "37d89c277dcaf973565d2a4ed8798bfe106bfcab136b35d3c1c9aa9d891395e6",
+    "path": "kits/kenney-town/wall-doorway-square.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3400,
+    "name": "wall-doorway-square.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a7b247d7b3842f63a587544bdea302b56948c86c43f9028f63bb8d55dca4914f",
+    "path": "kits/kenney-town/wall-doorway-square.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3316,
+    "name": "wall-doorway-square.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7c2f741b1796afc72257728bebbb93c96b32b0160e6336a3092cf5011f2ee97f",
+    "path": "kits/kenney-town/wall-half.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2816,
+    "name": "wall-half.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "262bdf3df304fd87fa45507acbf67ec3687ce3c7f664fd7a287a0c3521e3321e",
+    "path": "kits/kenney-town/wall-half.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3108,
+    "name": "wall-half.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ce6d4af15040951e1b00945b2e415efd6eb2cdce21182e301e3a4c4866d9ec8c",
+    "path": "kits/kenney-town/wall-window-glass.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4604,
+    "name": "wall-window-glass.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f219d76e534430a780a70f25118058a2f308d99030df50acb8e1cdb807d7e451",
+    "path": "kits/kenney-town/wall-window-glass.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3268,
+    "name": "wall-window-glass.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d66c9cd6075b39aa9dc8092da0018c00438884aa2b7c8c02b6b8393ac65b79cf",
+    "path": "kits/kenney-town/wall-window-shutters.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6180,
+    "name": "wall-window-shutters.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "331136f333f2bdfe759fb3bca3d4546accbe464d8a2054913f6ff5a4fa061dc1",
+    "path": "kits/kenney-town/wall-window-shutters.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3588,
+    "name": "wall-window-shutters.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9c7a99a99edccbd20f1cd390106da5f4382c62b59e2847f37017276457c2bf0d",
+    "path": "kits/kenney-town/wall-window-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3744,
+    "name": "wall-window-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fd42dc2fe08812c6055eab34f427351e9d405bfc0a92d28e0da2831abcaf7aa2",
+    "path": "kits/kenney-town/wall-window-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3038,
+    "name": "wall-window-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2732feaa371e56977075ba699e81587d208eb176a5eb66808f8167a47e6d77e3",
+    "path": "kits/kenney-town/wall-wood-corner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3184,
+    "name": "wall-wood-corner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9e55e356314b091b9ab350869500ac81ed39aa2e0c3cd001639cf190869cc389",
+    "path": "kits/kenney-town/wall-wood-corner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3762,
+    "name": "wall-wood-corner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "13114083ec257712f454feb7db0566ee6ffc13f3de55ae9cd60cac5631861572",
+    "path": "kits/kenney-town/wall-wood-door.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6164,
+    "name": "wall-wood-door.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5a19e102de51ba61031122b864b10267e0fa7a7a759b0f9f63355551adf1bfee",
+    "path": "kits/kenney-town/wall-wood-door.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3626,
+    "name": "wall-wood-door.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4e1ddb58a3a9c07cdb09de2e830f6bd74c7d25b1aea7d6e26a284bbf219d0640",
+    "path": "kits/kenney-town/wall-wood-doorway-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4348,
+    "name": "wall-wood-doorway-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a1145464ba672b1c2f052a016a31379cbc438d21fe39cf21516b07b2393232d1",
+    "path": "kits/kenney-town/wall-wood-doorway-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3224,
+    "name": "wall-wood-doorway-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4232d75f9b240de6a6b3a6df972a0e108ddf1a6ad4b2bc4e5cfaaba7ef67fffc",
+    "path": "kits/kenney-town/wall-wood-window-shutters.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4016,
+    "name": "wall-wood-window-shutters.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "80d14f284b76200f6b9aa7b35c7ea90706ecf7305598f3495203a210db5b3c86",
+    "path": "kits/kenney-town/wall-wood-window-shutters.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3382,
+    "name": "wall-wood-window-shutters.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d2e814cb133fe6468de083c497bf92c7d326f7c8fff0798a52d7b7d76acc2a10",
+    "path": "kits/kenney-town/wall-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2780,
+    "name": "wall-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a454457b7ce51bc3329a27b33c6e97228ac59041a9be0421e8cbc2c963b25476",
+    "path": "kits/kenney-town/wall-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2760,
+    "name": "wall-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aca9ffb134d63a4bc09b4a2b7da2311e2d181ded55df7afcdb7a240f47c113a3",
+    "path": "kits/kenney-town/wall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2768,
+    "name": "wall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1ba4e07f22e136dbd329ecf9ab23c8d40ddfa63ca0e7fb3e8b8fdcc7806f0992",
+    "path": "kits/kenney-town/wall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2674,
+    "name": "wall.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "7bf2aaf2ad3fbeb8325b534fbe7f4b5a8dbac516e5b080f423ebb2742ea4025c",
     "path": "minis/goblin.glb",
     "kind": "glb",
@@ -60,6 +1464,3876 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "b9ca11cae8428113b5bba2d0c22087439a752b30a3cc1f9ea5af794da032d493",
+    "path": "models/kaykit-dungeon/banner-pattern-a-red.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4800,
+    "name": "banner-pattern-a-red.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5ae22ec97360040f92f84f3ac38d9b95c829ef0ea5f3a6b116ba2ef7e24ca3ae",
+    "path": "models/kaykit-dungeon/banner-pattern-a-red.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2816,
+    "name": "banner-pattern-a-red.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d50066169d34141f1f01635b347a62a1066389991a5945e25aae07db978ff55f",
+    "path": "models/kaykit-dungeon/banner-shield-blue.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 16068,
+    "name": "banner-shield-blue.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b9a994aa92fd2c713aaa386bbdc96d74a3e94feda2b669a57c0cc22cc5e787ea",
+    "path": "models/kaykit-dungeon/banner-shield-blue.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3478,
+    "name": "banner-shield-blue.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2ffd85bab69fafa4fe69e258aa9a71868190f06825d34aba24152f6ba68d6260",
+    "path": "models/kaykit-dungeon/barrel-large-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18236,
+    "name": "barrel-large-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aec5c10148d900656a68109791b6a6e26facf0ca288c50149352707e8bf562f1",
+    "path": "models/kaykit-dungeon/barrel-large-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4394,
+    "name": "barrel-large-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d6b0d4d49ab622be66dbbbb1e4cdc3f422a397ccd925b0690ce9fc439a70dc3b",
+    "path": "models/kaykit-dungeon/barrel-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10784,
+    "name": "barrel-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1b092e0f2aa761c57c18faf8b8fe0e73e6741c6d001559add914df432b96b8ce",
+    "path": "models/kaykit-dungeon/barrel-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4032,
+    "name": "barrel-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "287c831f5af5d47f4fcdefeda9774c457625f8908913bf277d7ad5a5ed4e9580",
+    "path": "models/kaykit-dungeon/barrel-small-stack.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 25788,
+    "name": "barrel-small-stack.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ed55f5e77aecf5bd789b39c3ef55158553638da715528d0336a2f2c693cdbf60",
+    "path": "models/kaykit-dungeon/barrel-small-stack.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4760,
+    "name": "barrel-small-stack.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "02e6ebd815ee89116ce5881108cfa7518bc974b1e8a1c8ff389de2be02c54857",
+    "path": "models/kaykit-dungeon/barrel-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6528,
+    "name": "barrel-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4d4adea713fb0f300ea625ce6862c6bcd41e0fef3f7ede6984a50d488d543c21",
+    "path": "models/kaykit-dungeon/barrel-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3772,
+    "name": "barrel-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "69f6e58ed6d91f8e09f34c29f5be0ecc89e2200c13f40675dc25e34ff877fe8c",
+    "path": "models/kaykit-dungeon/barrier-column.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4532,
+    "name": "barrier-column.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1ddd094f768a260067edd4ee49d6403049cfbfa94ca9f0921872a25fcb8c9bef",
+    "path": "models/kaykit-dungeon/barrier-column.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3518,
+    "name": "barrier-column.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1f197c10f5062f54113673ef00e9ee0936e03a8adf86b725ee719b45ad4baad8",
+    "path": "models/kaykit-dungeon/barrier.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4056,
+    "name": "barrier.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "81ec6fc56296d2f8285feba4484d3b51d604063d761399489612e5c09caa1ecf",
+    "path": "models/kaykit-dungeon/barrier.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3376,
+    "name": "barrier.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0cf99341be7b7438cb114db708390f1ad7355474efc37a6fa6ba476fb85020d2",
+    "path": "models/kaykit-dungeon/bed-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 24112,
+    "name": "bed-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "28d12867d345329f4f6841ef1a5dff23f2d513eda68095fc45aa98f18d1506a2",
+    "path": "models/kaykit-dungeon/bed-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5182,
+    "name": "bed-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e15789bf4239d4049433ebca62b227e9ef6a37017ee39b92b0812c0c1cd4cc56",
+    "path": "models/kaykit-dungeon/bed-floor.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5000,
+    "name": "bed-floor.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e011d1ffa2775515bddfe7511d9b342c0f81f57eea86318c184baace032b38eb",
+    "path": "models/kaykit-dungeon/bed-floor.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3282,
+    "name": "bed-floor.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8e138c16e17d01bd544a8b55d9d90085f5616a6c4f91ade8b31e110cd61e386a",
+    "path": "models/kaykit-dungeon/bottle-a-brown.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4412,
+    "name": "bottle-a-brown.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "757c590c776c85eac5b6103150a5489b1aefa7ebcc921d2d00ded7e4d56fa520",
+    "path": "models/kaykit-dungeon/bottle-a-brown.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2758,
+    "name": "bottle-a-brown.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e6a082e698a6d57b93735f97940024dd75ee7cb1003624ef2bfff31b73e99ab0",
+    "path": "models/kaykit-dungeon/bottle-a-labeled-green.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4520,
+    "name": "bottle-a-labeled-green.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f48d0c42aef7454352b55e43c7841e6960403903559ac85ccfbff57b98823694",
+    "path": "models/kaykit-dungeon/bottle-a-labeled-green.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2604,
+    "name": "bottle-a-labeled-green.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "921031a702928e45b7f3b7453e42188f7621d102e8a77b205d4d427d11e7e27a",
+    "path": "models/kaykit-dungeon/box-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5972,
+    "name": "box-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a62bec46ff5d1f51d65090e7fe8347ad2826132619e96624cf756c1428630e5a",
+    "path": "models/kaykit-dungeon/box-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4388,
+    "name": "box-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6202e4ced13562e490c86e77e6663a41676a7532c41cda7f50f7f304be1020ff",
+    "path": "models/kaykit-dungeon/box-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5936,
+    "name": "box-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aec313664c0b33292810cf1c783859029a0f0288d41b99a03634e31881739d1c",
+    "path": "models/kaykit-dungeon/box-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4280,
+    "name": "box-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c8c731acb0bce5b0556c0865478197c946d6d442bfe739c5d101d7b4dd760e53",
+    "path": "models/kaykit-dungeon/box-stacked.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 42676,
+    "name": "box-stacked.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3a791a8ae0053e8c0456fa558e20945630cfb0a8465c8f81fe48b88cfdd02fb0",
+    "path": "models/kaykit-dungeon/box-stacked.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5002,
+    "name": "box-stacked.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "71aa0b935d4ab467c1da2505509c29b40081a4f3dfdbb1f0418ff43db3eff4f3",
+    "path": "models/kaykit-dungeon/candle-lit.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4804,
+    "name": "candle-lit.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e6169310eea6ccf0a1865679d28ef6286daa5407f3e864f34c9241803e966093",
+    "path": "models/kaykit-dungeon/candle-lit.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2260,
+    "name": "candle-lit.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ce408362d64734739babf8410e632f7585154253edd93be0ac07f9d2e8c2b1b1",
+    "path": "models/kaykit-dungeon/candle-thin-lit.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4812,
+    "name": "candle-thin-lit.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "34414a9adb839ec4872821e10e9379e4b5240fb6a72b493611ad1b63926ae62f",
+    "path": "models/kaykit-dungeon/candle-thin-lit.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1986,
+    "name": "candle-thin-lit.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1f84184a07e6bbcc4c004a4fd2d785d83add708b20d3526b4daf8f040b2cfbc7",
+    "path": "models/kaykit-dungeon/candle-triple.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5644,
+    "name": "candle-triple.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d9f98f1389366f645a4173942879f6d12b5db4510c06616c41429c6dd14d6f37",
+    "path": "models/kaykit-dungeon/candle-triple.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2886,
+    "name": "candle-triple.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a8f9af14d6aaccfb3b277c769a76824da28f11011f58c33daec47f10b454e775",
+    "path": "models/kaykit-dungeon/chair.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8396,
+    "name": "chair.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "37b2467c4332d04e5ad99648759cab2d7bf97f10ea865fa67db21258541dd65f",
+    "path": "models/kaykit-dungeon/chair.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3728,
+    "name": "chair.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a7f7d8ab85ce227ab630b98b9764ade69e86ed55c59ea7ae26ec924a486e27fe",
+    "path": "models/kaykit-dungeon/chest.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 15452,
+    "name": "chest.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9cfb63631455f9c7f4cc2bf2e362dd4a11e02e161cf339e51a471020c80ea365",
+    "path": "models/kaykit-dungeon/chest.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4940,
+    "name": "chest.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "502ee4ccafb696e24a6b54d4caf71a2d57720c29e8fcb7f0245dd82dd2f36286",
+    "path": "models/kaykit-dungeon/coin-stack-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 34072,
+    "name": "coin-stack-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "81083a6e31a8bdca38b1500ce8dd8fd1cba0f98754f75f0b97f2102211305d53",
+    "path": "models/kaykit-dungeon/coin-stack-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5062,
+    "name": "coin-stack-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "30a63821abb8d2bfd281b9df0ab1420495a0a340208eedf9a235496081987f47",
+    "path": "models/kaykit-dungeon/coin-stack-medium.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 20276,
+    "name": "coin-stack-medium.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "752cba2e09587eb13846935c37cd99107a13a06f5f6d728156599cdbb8e6109c",
+    "path": "models/kaykit-dungeon/coin-stack-medium.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4784,
+    "name": "coin-stack-medium.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b2d8f90518fab3f647d0d7fadff1bbd3164dcce8356d3b825dd91e53f2cce3bf",
+    "path": "models/kaykit-dungeon/coin-stack-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10032,
+    "name": "coin-stack-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9d6751fb34e3465c96a2cf57eff355f16ffcc21b27d9e321280319de58ba0fe4",
+    "path": "models/kaykit-dungeon/coin-stack-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3974,
+    "name": "coin-stack-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "17d57b1376ec2a243bc9db0daba097fee85fc434efcf5f3bfb376a8c756cca97",
+    "path": "models/kaykit-dungeon/column.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3244,
+    "name": "column.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6dfc26fae21afee35bdb9f48c60aa0d05be277dd21490f84acc3055907678fa5",
+    "path": "models/kaykit-dungeon/column.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2940,
+    "name": "column.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "09d4d2108100c3b5a7e5e1b106d85502d41269a738ae40aba59036df29a16ec7",
+    "path": "models/kaykit-dungeon/crates-stacked.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 27184,
+    "name": "crates-stacked.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2653f15aa876d200342623a153cb7ec57d04af86c4c218dcde6c5062fd2cd262",
+    "path": "models/kaykit-dungeon/crates-stacked.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4784,
+    "name": "crates-stacked.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "eba9b0296c54f2f868f2776a5a6a903926c3a6780637262d3307f1a4bb5ed30f",
+    "path": "models/kaykit-dungeon/keg-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 36540,
+    "name": "keg-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8bf91c538c9db453e3c7f8205aa5e97a7abeb53e99c228af6b503e94f3b33988",
+    "path": "models/kaykit-dungeon/keg-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5554,
+    "name": "keg-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a207784fe46aec2ebe71d0b28b78922f127b8777ccf7ef2e78511110d61dbb37",
+    "path": "models/kaykit-dungeon/keg.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 15556,
+    "name": "keg.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "025d95ac3f1d3655f7da0a43abcaf5483ef1651ed39a5edf242456fb9930d1af",
+    "path": "models/kaykit-dungeon/keg.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4118,
+    "name": "keg.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "10d2f7e34b50365de55e40a7240ce099316345bd995746fa57f26bd15f5dc4cf",
+    "path": "models/kaykit-dungeon/key.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4520,
+    "name": "key.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7fd5757db3d64adb38bbf104def868fe3901b9263d0652c66c62ea655353a5ec",
+    "path": "models/kaykit-dungeon/key.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2998,
+    "name": "key.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "78aed220a4556fbb4dfc38c15e48c6b334207f3948e6c1cc170f35d29642da51",
+    "path": "models/kaykit-dungeon/keyring-hanging.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 12788,
+    "name": "keyring-hanging.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "bff33e1946d613725ab5035bcee833d71d5672077d952a6b9afc6e0d29fecdca",
+    "path": "models/kaykit-dungeon/keyring-hanging.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4096,
+    "name": "keyring-hanging.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "80d8acd27dcc94c0e2d961ea913031e8df8d163a6921723d49c1f7c496101f2d",
+    "path": "models/kaykit-dungeon/plate-food-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10048,
+    "name": "plate-food-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6e57e0eaa8861fd135273faf1569ed6c60057582e2baec19bfdedad06a76bfca",
+    "path": "models/kaykit-dungeon/plate-food-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3524,
+    "name": "plate-food-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6962043aa4829b70c7546e404e59629a369e0eed1e21ce52e83fbdf8ef85a0eb",
+    "path": "models/kaykit-dungeon/plate-stack.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6892,
+    "name": "plate-stack.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d14010a764a56dfa65b8b694708118881dd3b84fa241c9ff30388fbadae5caed",
+    "path": "models/kaykit-dungeon/plate-stack.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3374,
+    "name": "plate-stack.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "83b39b247b1c84a5658156c4e1efbb82d84ec4f9ba72f1b88d47f9fe323c9b3d",
+    "path": "models/kaykit-dungeon/rubble-half.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11040,
+    "name": "rubble-half.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "45fcd8204cab4ed67598f4268e36ca2261ffe5817dea19631a36a228de5b9935",
+    "path": "models/kaykit-dungeon/rubble-half.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3426,
+    "name": "rubble-half.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cd2a5a623900ee63817200d6fdad6f59e1fde49c055fde1359f63607b4533622",
+    "path": "models/kaykit-dungeon/rubble-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 19372,
+    "name": "rubble-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0c3b3d14b152227ebb1590c4329711a4e46b5c4efe3d9486b7e6a9fbc4edd264",
+    "path": "models/kaykit-dungeon/rubble-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3400,
+    "name": "rubble-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "faa400668dc024c490680d7d62328fcbe34598a5c03e4afcfa117848f3a8dfb3",
+    "path": "models/kaykit-dungeon/shelf-small-candles.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6600,
+    "name": "shelf-small-candles.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "097cb86bb981d524533283bc67553c6619bf03c3ee6728382d4d57ca81b3a9a8",
+    "path": "models/kaykit-dungeon/shelf-small-candles.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3638,
+    "name": "shelf-small-candles.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9caf578b990474b6861c681fa7d6efe9507fc28b2ce92e83387707f346772889",
+    "path": "models/kaykit-dungeon/shelves.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5276,
+    "name": "shelves.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0d65d7d545708922a58bd0edcebf65cda2bccd6418b86ccc5d84df94a8027be0",
+    "path": "models/kaykit-dungeon/shelves.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3728,
+    "name": "shelves.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f3b71beee73a07464c67b2b15a65617ee1b2f4d35ca99212116463971589c3ed",
+    "path": "models/kaykit-dungeon/stool.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5972,
+    "name": "stool.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "daeb581c747c096853d2662afa3e2fc866898c2dad8bf42a6fc39ffc6c19ff01",
+    "path": "models/kaykit-dungeon/stool.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3892,
+    "name": "stool.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "13f6dad7e05d008ac0563a413deabf15016f6fc0655a81921ba38cb8fc49e051",
+    "path": "models/kaykit-dungeon/sword-shield.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 13904,
+    "name": "sword-shield.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a592174628527044879fa0084805b56b3ea785ae2a361b3b3ebd3d27ae689026",
+    "path": "models/kaykit-dungeon/sword-shield.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4408,
+    "name": "sword-shield.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "23bb8c59da889f3f231a939cf43978c73e0218599152ca5ed6d172381ce2b48e",
+    "path": "models/kaykit-dungeon/table-long-tablecloth-decorated-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 29792,
+    "name": "table-long-tablecloth-decorated-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "62ae99cb3a8f930c6f860c2fe086270b417b1ce8028715187075758dd3317869",
+    "path": "models/kaykit-dungeon/table-long-tablecloth-decorated-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5546,
+    "name": "table-long-tablecloth-decorated-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "bb3db7b220c921ffc589a0f2f967a2043a65ee7c23bb417e967389ea2ca18571",
+    "path": "models/kaykit-dungeon/table-long.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7540,
+    "name": "table-long.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8ddd7634dc12738e55786e219a6f195f6d16445af37b2e42b8f3785d0b94d214",
+    "path": "models/kaykit-dungeon/table-long.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4142,
+    "name": "table-long.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "806b773922423d957a08df591f9545bedbde32a5d8b7a5b9bcfb1be37df94a04",
+    "path": "models/kaykit-dungeon/table-medium-broken.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8392,
+    "name": "table-medium-broken.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "62951f7e188b8c07830ebe6de5f6efb07dcf890607fb5b0e6edafc8765b4c721",
+    "path": "models/kaykit-dungeon/table-medium-broken.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4296,
+    "name": "table-medium-broken.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6d0769d15878d2e15f9282caf09da112a579615e9fa82ca966aad3b49e3e65eb",
+    "path": "models/kaykit-dungeon/table-medium-tablecloth.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7500,
+    "name": "table-medium-tablecloth.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "745589bd82d733ef07c365b34ca4d6fcc4bed2c05cbb90a5c37d90fd18ff7548",
+    "path": "models/kaykit-dungeon/table-medium-tablecloth.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4364,
+    "name": "table-medium-tablecloth.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "52510dde17c20a317dcaa3e79ea1278835e64ccaa84cd729af9a61fbd45c18f4",
+    "path": "models/kaykit-dungeon/table-medium.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7260,
+    "name": "table-medium.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5fbce2bff608f5987eef97a57ad89ddf9d9786373bf9927bae1b8ab458f4dc52",
+    "path": "models/kaykit-dungeon/table-medium.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4416,
+    "name": "table-medium.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a0ba6b6dac0e7715c4df9821d28243347ad6acdb71cc4ffa7314ae5152d87a86",
+    "path": "models/kaykit-dungeon/table-small-decorated-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18596,
+    "name": "table-small-decorated-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c00959568c5ffee97e04337af5efbb66e8981298304fac30ac9839fdb16cf7d4",
+    "path": "models/kaykit-dungeon/table-small-decorated-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4188,
+    "name": "table-small-decorated-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "88b9d5cb63c6aa6144ab5378cb2fde344d9f0d4ffb6f2fda774481eef1310c26",
+    "path": "models/kaykit-dungeon/table-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6220,
+    "name": "table-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fab4a058ab052301e967116d7c58bae85ed059cb066237d7ead7314e0b76a67b",
+    "path": "models/kaykit-dungeon/table-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3840,
+    "name": "table-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3894be0dbe41a3cf4e07ac96c2100820f017cf47f887575d0f3b03395f580b65",
+    "path": "models/kaykit-dungeon/torch-lit.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7640,
+    "name": "torch-lit.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8301dd8ee550694cf1f26792edc45f1f6b5cce2265b70f019e9f7123042a5034",
+    "path": "models/kaykit-dungeon/torch-lit.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2682,
+    "name": "torch-lit.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cff1b05ca237a192a69c1a06a8f1a564dbb4bca2a217709f2866704213ba367f",
+    "path": "models/kaykit-dungeon/torch-mounted.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7376,
+    "name": "torch-mounted.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4763bd1da97aed78d26f5c5d81dd90fe73fa3953c696182de653aa835cdca843",
+    "path": "models/kaykit-dungeon/torch-mounted.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3126,
+    "name": "torch-mounted.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3608d8c8b2f18d3abaf6b92c7d3e4a6ae75a64a98e15362c51f01966f8b32297",
+    "path": "models/kaykit-dungeon/trunk-large-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6632,
+    "name": "trunk-large-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a39dcfa63de4db270a7babdbf75841712c91f05ff4cae9d6e15cf15e8fdf9726",
+    "path": "models/kaykit-dungeon/trunk-large-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4414,
+    "name": "trunk-large-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e20a128581f1c425cb9626102a7148d1320983570dccf51e0146eb3dea41321d",
+    "path": "models/kaykit-dungeon/trunk-medium-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5456,
+    "name": "trunk-medium-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c865427d0950289f2bf9897b4b458528a0f542f2849c1de1a0b22e9e28a9058a",
+    "path": "models/kaykit-dungeon/trunk-medium-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3834,
+    "name": "trunk-medium-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8503693090642ca934fc3bdeba7b7976f0124bec2694ae880fc67f684317cca1",
+    "path": "models/kaykit-furniture/bed-double-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11160,
+    "name": "bed-double-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "efd9448da837edb2a12077ce6d7fd5a7a1e24faa3bf18293dbb70cfd360f6c95",
+    "path": "models/kaykit-furniture/bed-double-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4534,
+    "name": "bed-double-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "89cf2c666250587bc85314ffbbd1a66f8be25b043e5a89630ebe508e583ccfad",
+    "path": "models/kaykit-furniture/bed-single-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10012,
+    "name": "bed-single-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aec9b70d6b6e738a58dea86fe526a2df86446be1fcf6b8c54bdcfe88877b04a5",
+    "path": "models/kaykit-furniture/bed-single-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4220,
+    "name": "bed-single-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3dd4d746e2852f2d2316871e56758b4b2e3ae07bc1c2842da7085809771330e3",
+    "path": "models/kaykit-furniture/book-set.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6264,
+    "name": "book-set.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e635871d1f1a2136d36d1f77683646b539ec6cb8ffaf1e19a641d13897313198",
+    "path": "models/kaykit-furniture/book-set.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5398,
+    "name": "book-set.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6dc381d60aaed9d139e106f7b70613ec3fe8a4193f94d4eb494990b1134641b7",
+    "path": "models/kaykit-furniture/cabinet-medium-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 19500,
+    "name": "cabinet-medium-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3e709f57ee7b3184ca02b17b867bce50fd151c51e64ebfbf2ae5229c6eab269e",
+    "path": "models/kaykit-furniture/cabinet-medium-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5172,
+    "name": "cabinet-medium-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4c741909b97e221d255b482065f81c0d059cea0109e09df3ff41916d3483ae44",
+    "path": "models/kaykit-furniture/chair-a-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7892,
+    "name": "chair-a-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "98619873c32c85a2642e479cd886cac63ca55fd2c54144e0327384600c4418e6",
+    "path": "models/kaykit-furniture/chair-a-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3816,
+    "name": "chair-a-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6dacb70ff992f432636989c2187c5ad3b28fcb8bf47e94e1d4fddf7fbba974ad",
+    "path": "models/kaykit-furniture/chair-stool-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6168,
+    "name": "chair-stool-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a911e1a407670f0eeb30a96ca2d89ce05b7b7819c78e99823ab564489f90fe8d",
+    "path": "models/kaykit-furniture/chair-stool-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3584,
+    "name": "chair-stool-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "747fefeafc4be56ec816399584385c14dc9cff4cca150471c7ff0ea55e6a93fc",
+    "path": "models/kaykit-furniture/pictureframe-large-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3344,
+    "name": "pictureframe-large-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "81a513aae5646bde3a59b5f62b7cb51347675bdfdbf5d0bd759d5a1fa96dd543",
+    "path": "models/kaykit-furniture/pictureframe-large-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3500,
+    "name": "pictureframe-large-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "003bd042687021b63a4eb3150b70f5e83f6ba65a63d532e93289c1c4db3f05e1",
+    "path": "models/kaykit-furniture/rug-oval-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4620,
+    "name": "rug-oval-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e682cbb74bb24c05c2c1526b7eb3664345f9393afd8582b49a3ab8424c68cdd6",
+    "path": "models/kaykit-furniture/rug-oval-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2610,
+    "name": "rug-oval-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "08fe5379ea4ebe2d274c55b34b42c411e13c2f59d3e3995807e5564f324cc55b",
+    "path": "models/kaykit-furniture/rug-rectangle-stripes-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3140,
+    "name": "rug-rectangle-stripes-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6f58daa5661400d00b02bd7a3488e65901913590731cdb04aa58223eddf65464",
+    "path": "models/kaykit-furniture/rug-rectangle-stripes-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2928,
+    "name": "rug-rectangle-stripes-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7e9438d785d50e109a34f16708372841905cc41111fb936ba8c708784e928605",
+    "path": "models/kaykit-furniture/shelf-a-big.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5900,
+    "name": "shelf-a-big.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7af257106c2850911636928376b5a1b541ceb784e7d8d6bc726de76312e8ab64",
+    "path": "models/kaykit-furniture/shelf-a-big.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3004,
+    "name": "shelf-a-big.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ffde13adf99424016fe084729cb54740f666dcee3c278bf0a14d7a73af14ce41",
+    "path": "models/kaykit-furniture/shelf-b-large-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11572,
+    "name": "shelf-b-large-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9942777f3db0357d40f2f1974e987bc36561579f263a496c95ba58c25290810c",
+    "path": "models/kaykit-furniture/shelf-b-large-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4804,
+    "name": "shelf-b-large-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c983d8ec3f090dacf22c37728c6d0df33defa2ebe6a54c99aaa21489b5f098d0",
+    "path": "models/kaykit-furniture/table-medium.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5396,
+    "name": "table-medium.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "018d578710beaa99abae42cfa0f99e7c15b7bca8fb92995b1c5081b64f6d0835",
+    "path": "models/kaykit-furniture/table-medium.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3478,
+    "name": "table-medium.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "bf7fdbdb0861f299a6f986cf7a6feec99005b34c8d2cbed518d653f02696fe77",
+    "path": "models/kaykit-halloween/arch-gate.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 19888,
+    "name": "arch-gate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3b8a88fa3ee885169356a942916f0f8e7575118d588de57594d6fc3052e3b81e",
+    "path": "models/kaykit-halloween/arch-gate.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6454,
+    "name": "arch-gate.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "adfb79ff81098adf7cafe28667bc41f131162bf622abda5cf0adaa7a072a669b",
+    "path": "models/kaykit-halloween/bench-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18800,
+    "name": "bench-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ec9310d80dbdb1c24386ab57a1a4a3b6ee0ffce0c170937f0386b85f7f58d0a6",
+    "path": "models/kaykit-halloween/bench-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5028,
+    "name": "bench-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4cf82570a2b8813eb743aa54edf907fea68962e924421662ae99dee96e9afba0",
+    "path": "models/kaykit-halloween/coffin-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 31956,
+    "name": "coffin-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2fec74c751c818c2b2e1a305add746196fcb55dfbfee9b69cb15f0bee34354b1",
+    "path": "models/kaykit-halloween/coffin-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4082,
+    "name": "coffin-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "90752955d88b583e9a83399a123a49e1bc08f6cc769fbda015399ee524e4c30c",
+    "path": "models/kaykit-halloween/coffin.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7568,
+    "name": "coffin.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a863a801089b8c25800a587ddb8c0e040727538eba5e9e62215631a552263d3c",
+    "path": "models/kaykit-halloween/coffin.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3170,
+    "name": "coffin.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c9f6da05e328dc65ab47b36c5284b9b55f96a391b4a7423c6b1f6aad80012587",
+    "path": "models/kaykit-halloween/crypt.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 19628,
+    "name": "crypt.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "19421bc108527b7a49a00d9674e17c418f6d7e0e3a5a7bb63b1bae440d3af03f",
+    "path": "models/kaykit-halloween/crypt.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5262,
+    "name": "crypt.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7c423d0c5f65d8c94a71b516bae8ba3520f5f8fba3cef4827c638a7a60acd34d",
+    "path": "models/kaykit-halloween/fence-gate.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 14780,
+    "name": "fence-gate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "948887a96183730e1f589259b4ad5b5c2cabff212a275bd4493de86311ccccf8",
+    "path": "models/kaykit-halloween/fence-gate.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6438,
+    "name": "fence-gate.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8291c5b5364337b5e1831774d91355998668835f629ee70524fbc92c86c0ba02",
+    "path": "models/kaykit-halloween/fence.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10372,
+    "name": "fence.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c8d7cfa3a85f61e60ffc2148ba6934120c75db580b720505b742657e63c6a47f",
+    "path": "models/kaykit-halloween/fence.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6446,
+    "name": "fence.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f5756fc40149f5da6a62e86f49e2f48358579937e1825345c467000148ddae0a",
+    "path": "models/kaykit-halloween/grave-a-destroyed.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10428,
+    "name": "grave-a-destroyed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7d5b3f0d5d7f71f308e09a8dfc58f3ef632d0364ba2fc2e95db4bc21d681970b",
+    "path": "models/kaykit-halloween/grave-a-destroyed.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3734,
+    "name": "grave-a-destroyed.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a739c863dffe2fd7dda1df59194f8fea613d18a9da958296115e18c57e7518a3",
+    "path": "models/kaykit-halloween/grave-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7176,
+    "name": "grave-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "36a99d14cb2286f64d711da199ee6fa99732f6ac3ffa8b0bfccbd003b2947743",
+    "path": "models/kaykit-halloween/grave-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3368,
+    "name": "grave-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ea44a6971729835250327389f861166f3d2c6e47e58b5ca229ebdae647f6f6d2",
+    "path": "models/kaykit-halloween/gravestone.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6156,
+    "name": "gravestone.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9588efe2096bd3cb39f92f95d838d62f5842b47e4e7f691e2c2169d6bfe92b72",
+    "path": "models/kaykit-halloween/gravestone.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3676,
+    "name": "gravestone.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "118a98c7b284e5bdd2c1c8019ce53b5cb85b6f1e3b2d88edb3cce26d9aee63cc",
+    "path": "models/kaykit-halloween/lantern-hanging.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9740,
+    "name": "lantern-hanging.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3ec984c4a97ee861a6b7a4be600669777431d5b796a9df3517b1f16cb796ec18",
+    "path": "models/kaykit-halloween/lantern-hanging.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3476,
+    "name": "lantern-hanging.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e756df92ba534e29722bda8f6369e286ee9777cc576ec23e95b032f1a31e32cc",
+    "path": "models/kaykit-halloween/lantern-standing.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7184,
+    "name": "lantern-standing.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "64d7a82cd60fadc34dd1aedca2b5b308c7b1835fc2c1a5b5c8989030b86f59f4",
+    "path": "models/kaykit-halloween/lantern-standing.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3868,
+    "name": "lantern-standing.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8500e7d6653dac1ed3e603d15195464ca4bf00000031598d70278dac6d1b6bc5",
+    "path": "models/kaykit-halloween/post-lantern.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11448,
+    "name": "post-lantern.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7f526d79c85aa05ba44924d8e6f15f05c21e27de859acd3e3c7431ac34151059",
+    "path": "models/kaykit-halloween/post-lantern.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3210,
+    "name": "post-lantern.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1d09a3cb3ba56e6abdf10f9a705596293067f0ff976177c1b02c317434303f7b",
+    "path": "models/kaykit-halloween/post-skull.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 12976,
+    "name": "post-skull.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "10e6eaab7b583d23862c6977d6dc28eb2a50d839789969a041e5e57446ba6331",
+    "path": "models/kaykit-halloween/post-skull.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3046,
+    "name": "post-skull.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "16326452236a2bb534c2dbfd3d538d730882b4e19bebce3f2c1641840eb03f2a",
+    "path": "models/kaykit-halloween/pumpkin-orange-jackolantern.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7556,
+    "name": "pumpkin-orange-jackolantern.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ae2ffbf3740950eb63e3f8e99a09db0aac0b5429ccd1868f48dc2eb0988ed6fc",
+    "path": "models/kaykit-halloween/pumpkin-orange-jackolantern.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3294,
+    "name": "pumpkin-orange-jackolantern.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "53156d5c39b304a72ff4f55d63b72af1f2750e1b219040cbac7d924c45229860",
+    "path": "models/kaykit-halloween/ribcage.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 22208,
+    "name": "ribcage.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cc069ed76320b5217f5002d941d84d36fda8aede46592cfe540ce496d2bd7cc4",
+    "path": "models/kaykit-halloween/ribcage.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5630,
+    "name": "ribcage.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e5d49cdd7af914938b4bcf804bc63386bee5bfe472e1f399f90bcab7c179e818",
+    "path": "models/kaykit-halloween/shrine-candles.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8732,
+    "name": "shrine-candles.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "21378f99ad489e5eea96751584930727fc2cb5b770005f1c6345e4882ffcb118",
+    "path": "models/kaykit-halloween/shrine-candles.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3670,
+    "name": "shrine-candles.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "231dadc272d88dc0fae275e97733ca4b63cd65e87f130b01d6a04675fc74dd3a",
+    "path": "models/kaykit-halloween/skull-candle.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11312,
+    "name": "skull-candle.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7c432de49b3ea1650a90eb56b40a3aeca4ea97343b9e7c3c15db378011500737",
+    "path": "models/kaykit-halloween/skull-candle.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3636,
+    "name": "skull-candle.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "21e3e301dd34a3b74b0f02a6e0a993d4132faa1896b0319385fbaf3fec50bfce",
+    "path": "models/kaykit-halloween/skull.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7376,
+    "name": "skull.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6007d88438a1e7a22c7a09ea3b557ac0787cc9d993f0cc02de9f2f90f4b03ade",
+    "path": "models/kaykit-halloween/skull.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3078,
+    "name": "skull.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cce6ab1494794b496857489ac403871ca41b6223cef02cc5f90d99260a54eead",
+    "path": "models/kaykit-halloween/tree-dead-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4456,
+    "name": "tree-dead-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d98f3f28b51ed104465b1bd5edb22e05beaccc9d365100a4f4d327a3495262a5",
+    "path": "models/kaykit-halloween/tree-dead-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2072,
+    "name": "tree-dead-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "667fedd2d075666727a664e0eb7f1c96acd3d11a51938dcab0913950d2bb93a4",
+    "path": "models/kaykit-halloween/tree-pine-orange-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9064,
+    "name": "tree-pine-orange-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "96c71f7ffdca0cad7b12ef0fb65601e17c58b6524864e7c2004917d8f5f87e5b",
+    "path": "models/kaykit-halloween/tree-pine-orange-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3182,
+    "name": "tree-pine-orange-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "066aa532e103b96defb09a453236fb6d7e90edd45f303665847bc9e3839720cd",
+    "path": "models/kaykit-medieval/barrel.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6316,
+    "name": "barrel.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "abb018509932893733c403b91fc76b86d671c8beec5936bff40d378a3d7c676d",
+    "path": "models/kaykit-medieval/barrel.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3598,
+    "name": "barrel.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "393d0baa5627a6e2920bc2d611e35054cde487f0c17840422c976164a9be6b0d",
+    "path": "models/kaykit-medieval/bucket-arrows.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7852,
+    "name": "bucket-arrows.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4f097c3e02e83ec9ccb9e40ed74e1a9bdd0b67d53ca1adb1910cadf62730d49e",
+    "path": "models/kaykit-medieval/bucket-arrows.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4240,
+    "name": "bucket-arrows.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b8a868d080a686c5b223375f74308729519d47be1a4298887c1275a407d76b4f",
+    "path": "models/kaykit-medieval/bucket-water.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4396,
+    "name": "bucket-water.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f4bebe7a68cdc6b7ee4e07ff7aa1d71001fa885b122634c0ac9f381786510745",
+    "path": "models/kaykit-medieval/bucket-water.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3688,
+    "name": "bucket-water.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "931185ca5d8187cf58201ceab305da4dc17a7c7dc39f73716480a6436950a394",
+    "path": "models/kaykit-medieval/building-stage-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 16872,
+    "name": "building-stage-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "63554bb54f1dcc81ebee24cc56f014631cc669a84615950272609ccb42515ddd",
+    "path": "models/kaykit-medieval/building-stage-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3304,
+    "name": "building-stage-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "84864038a3413c126f0a5168d838e32f1b63b5b1ffcaeedb8f85e319021ec281",
+    "path": "models/kaykit-medieval/crate-a-big.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4248,
+    "name": "crate-a-big.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6a1764b484a71b24a7088385afa6b71b808b1862b30199231f5f9ac4929d827a",
+    "path": "models/kaykit-medieval/crate-a-big.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3924,
+    "name": "crate-a-big.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3a5b3710895abab6a64667314de0d8aff79db39a2a650ae01117062e06cf0f75",
+    "path": "models/kaykit-medieval/ladder.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3616,
+    "name": "ladder.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "345a4f53cc7babcec3d36d66c45aef957f0bd14b017f891193211cd20406200f",
+    "path": "models/kaykit-medieval/ladder.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3856,
+    "name": "ladder.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b77ddb931c74fddc36ec7b37a2562c72869344fd4fa8f25a8bbd3d73ebb84c56",
+    "path": "models/kaykit-medieval/resource-lumber.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6624,
+    "name": "resource-lumber.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0ee48de78142f7fa987a571b3e4dee564af114438cbea499ba57cf758a9c3561",
+    "path": "models/kaykit-medieval/resource-lumber.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3490,
+    "name": "resource-lumber.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "de99251f2165841878c3b9bcd53252c9785c7fdb80077490911bdb6a14727cb8",
+    "path": "models/kaykit-medieval/rock-single-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2580,
+    "name": "rock-single-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ec8a04f65ce4082e01d839d2950fe49157d602b3cc73b399c55c4a202500acf8",
+    "path": "models/kaykit-medieval/rock-single-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1878,
+    "name": "rock-single-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "91e8446fbe559af276f812dcd01849f2f4fea28247b9f8e13e92d1a71a9c4298",
+    "path": "models/kaykit-medieval/rock-single-c.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2944,
+    "name": "rock-single-c.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9da68038da6ed3599e2e5e154a65954ef64382d12aae0b6f241b430d6930cb7b",
+    "path": "models/kaykit-medieval/rock-single-c.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2388,
+    "name": "rock-single-c.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3d7f6832a1f78371ac03b0a9410516d310926c4022dc236167d62cd0495e21a6",
+    "path": "models/kaykit-medieval/sack.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3512,
+    "name": "sack.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1ae29495c669bcac9d93a2b1edb0368016bbaccb9fd36d6e041898962a4010b8",
+    "path": "models/kaykit-medieval/sack.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3222,
+    "name": "sack.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b1c32af67fce21de36ff28c24e3c04013edaf248023ddce445275cd914fa6e5a",
+    "path": "models/kaykit-medieval/target.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4408,
+    "name": "target.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9939dc127d06b9937484152aa177c88e12c956ac92ad3d503191c0bddbe2e2c6",
+    "path": "models/kaykit-medieval/target.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3980,
+    "name": "target.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8e0224e793d1061675f254bcc8c9fd0b462be3ae13b8cff50b98113fed1296e2",
+    "path": "models/kaykit-medieval/tent.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3756,
+    "name": "tent.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b1b0938b7130d728cd453d39caf74c858ce9ed1ee4f0f1b8c2a7f6a35b053b91",
+    "path": "models/kaykit-medieval/tent.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3790,
+    "name": "tent.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0db227b6e1825cbddc92af892a41fde19482040e83e97e9ff7ced8b784bebc94",
+    "path": "models/kaykit-medieval/tree-single-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3252,
+    "name": "tree-single-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9ea68543ddd9921931a331aa2cb9e31c61ecc58d54509d8d4c3275a9974a985b",
+    "path": "models/kaykit-medieval/tree-single-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2178,
+    "name": "tree-single-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cd0b5c32e3d1d8171bb8750fac99deb8fdcd758b31e544f70a6aea520088fdd6",
+    "path": "models/kaykit-medieval/tree-single-b.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4520,
+    "name": "tree-single-b.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4fad9fe1cb9d652cada936bcc97f1286f375364f6dabe4af0b0a8c86e878822d",
+    "path": "models/kaykit-medieval/tree-single-b.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2414,
+    "name": "tree-single-b.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c5cb47f4c7f4dab9e60d897d9c7cfdcd9000a7ec906fd5b2f10cd2e89d200cf1",
+    "path": "models/kaykit-medieval/trees-a-small.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11888,
+    "name": "trees-a-small.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "73486f75956486c1cadf8a1a65f43f6363c1b829e4085f6a7951a83c52a7508e",
+    "path": "models/kaykit-medieval/trees-a-small.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3684,
+    "name": "trees-a-small.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b4dfa1e1e9706985c884996278214ab560ce21327ee9627479371dac379df898",
+    "path": "models/kaykit-medieval/waterplant-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3528,
+    "name": "waterplant-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b43340f72f1fbf7bdbc071cd52a1a54331dd3805b4ee06f5a19e3dace53991ed",
+    "path": "models/kaykit-medieval/waterplant-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2596,
+    "name": "waterplant-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "afa4da32e58d4a19e2790e00dc62a8fde2fe0c16abb32ab88c169d4dbbb7c71c",
+    "path": "models/kaykit-medieval/wheelbarrow.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8088,
+    "name": "wheelbarrow.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ca9338b817654a9c07afd932d9309fadaa0b3345ad14b84f17ed5c450950389a",
+    "path": "models/kaykit-medieval/wheelbarrow.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4068,
+    "name": "wheelbarrow.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7ba6198c8d6c76961811c4b7ab5fa5cc7c4d7e26a031732a798c2c01ce4d7c54",
+    "path": "models/kaykit-restaurant/chair-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8448,
+    "name": "chair-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8457e180048d9f324d5d07be60da9da88ac30c1265e361524e17fb4b2985759f",
+    "path": "models/kaykit-restaurant/chair-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3828,
+    "name": "chair-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c8733bd68c2ec8ec876ad275ad5e7f174f4d6df0d0444b08912dec3bb84b1f1e",
+    "path": "models/kaykit-restaurant/crate-carrots.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 26004,
+    "name": "crate-carrots.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5ac95dd2df4752e0a1758572eab64734995b61f5ea1cbfd7650a49c4a927fe0a",
+    "path": "models/kaykit-restaurant/crate-carrots.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4876,
+    "name": "crate-carrots.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ad409a2f97bf717228dbc5783f354ffbca88f91337e866804438800540827d0e",
+    "path": "models/kaykit-restaurant/crate-cheese.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 21160,
+    "name": "crate-cheese.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6b720d5ae3ffb209f679d040c9374b67338fe8aba4080c50774a5b410c455fa0",
+    "path": "models/kaykit-restaurant/crate-cheese.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4566,
+    "name": "crate-cheese.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "23d6d021b1c8d5ba1381f6091bdf8d2943d90d56718af5950b894d9385b40c27",
+    "path": "models/kaykit-restaurant/crate-ham.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11848,
+    "name": "crate-ham.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a7573ab65b941ff3f547a62483460d5c4f305af9284f57c05c633b4f65745b42",
+    "path": "models/kaykit-restaurant/crate-ham.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4432,
+    "name": "crate-ham.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b434b8d1d5a6e25ab20aa536591de0c93d683b8bcd060beaf757ade3f2793091",
+    "path": "models/kaykit-restaurant/crate-potatoes.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 12832,
+    "name": "crate-potatoes.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1e66c62fd3fa4242d48f1a1181fb0ccb9d42f04e89f253073ac250b605357cda",
+    "path": "models/kaykit-restaurant/crate-potatoes.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4390,
+    "name": "crate-potatoes.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "26ef4df2238441d95d7b5ec07bef868f9a040fe1204a3930f3dd72cd3fe0c7fe",
+    "path": "models/kaykit-restaurant/food-ingredient-cheese.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6348,
+    "name": "food-ingredient-cheese.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7955b95b54dc79c004ee92889150453fb10fc5fbaaa39550c6b3f165d5c064c4",
+    "path": "models/kaykit-restaurant/food-ingredient-cheese.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3214,
+    "name": "food-ingredient-cheese.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5dc886624a8061ae5a7942e9991ffb110945babdc547f3594c23623a0259c64f",
+    "path": "models/kaykit-restaurant/food-ingredient-ham.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5752,
+    "name": "food-ingredient-ham.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c40001cc7a434d9d09eb32038e8e3975f2f8bf6b32d861495842dff2341450e9",
+    "path": "models/kaykit-restaurant/food-ingredient-ham.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2824,
+    "name": "food-ingredient-ham.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "12f32f58bda913ec1eac01b713a2ff7dc055227617c8e15921cc3586fcbe7301",
+    "path": "models/kaykit-restaurant/food-stew.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10540,
+    "name": "food-stew.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e5db05a6f31c7fb6662e3713894a2fd8d27365733381da516fc33690de43c34b",
+    "path": "models/kaykit-restaurant/food-stew.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3270,
+    "name": "food-stew.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dd858f526d6929f157c0555b96d38507c5d267a30993a88dbf303a7add6536bd",
+    "path": "models/kaykit-restaurant/jar-a-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4612,
+    "name": "jar-a-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c7dc2c2566aafb970a87b1b950bf039fcc2119a8871fe5d33a2daedb277fceff",
+    "path": "models/kaykit-restaurant/jar-a-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2744,
+    "name": "jar-a-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "390df0e05b56454cc4d6ea078a9c02cf07c200429e5573fa0937a37164627743",
+    "path": "models/kaykit-restaurant/jar-b-medium.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4856,
+    "name": "jar-b-medium.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "df581054207b5a356e440686fcff8873cf0be7cbc3ae2ab1103551439ec53e91",
+    "path": "models/kaykit-restaurant/jar-b-medium.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2798,
+    "name": "jar-b-medium.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9d17fbff3007dfc29d16de851682d39475a8457219639e3fd4a53517bf19f17b",
+    "path": "models/kaykit-restaurant/kitchentable-a-large-decorated.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 29284,
+    "name": "kitchentable-a-large-decorated.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c49f956d62d2b4e0ac1d32c85001cbe5c5ccb315778042e1cfea010cb75b0608",
+    "path": "models/kaykit-restaurant/kitchentable-a-large-decorated.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6260,
+    "name": "kitchentable-a-large-decorated.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "89a4c49bf0882a6a72c3d23d2d43381707f8773e0818d970b1ca30879813014c",
+    "path": "models/kaykit-restaurant/pot-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6412,
+    "name": "pot-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fce7e60999ee3f8124611c13d5e18daa35e591c8ab2d0a46ddeffd19bbd19a06",
+    "path": "models/kaykit-restaurant/pot-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2910,
+    "name": "pot-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c0dfd54af84cf9c9f597f3574ddf1f51af2bb7686ecdce2beb5217cc8f8ccb25",
+    "path": "models/kaykit-restaurant/table-round-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5932,
+    "name": "table-round-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "34820eec1c11b5486dfc8748981fce678dc1d13bdad4d712614658bfcfa45443",
+    "path": "models/kaykit-restaurant/table-round-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2506,
+    "name": "table-round-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "472fc60de09abbe3b2d99e610dc7b3cb5bca664cab0842263fbb4c07a1f1f284",
+    "path": "models/kenney-castle/door.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4560,
+    "name": "door.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f3c63faede71d5442085310b2195587819fb6867c5a29addb0e387bb67de560d",
+    "path": "models/kenney-castle/door.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2976,
+    "name": "door.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "18a4ad3940a93aea68d5b77b7d629b61254c9316b6d1361f8e3ab680504d2347",
+    "path": "models/kenney-castle/flag-banner-long.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3176,
+    "name": "flag-banner-long.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3de8c06c7a7a526ba5639cfe8fece3ec032eee8ac70b63a15359f89fce131bd8",
+    "path": "models/kenney-castle/flag-banner-long.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1850,
+    "name": "flag-banner-long.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dbbee3e9482d05ea7d223a5bda225e76930799c62dcd0b8c8cec56bef5300fd3",
+    "path": "models/kenney-castle/metal-gate.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6376,
+    "name": "metal-gate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0aa1b654dc9f195290459ef1f2295e948581b0d7fa5b94c53698a3669740d880",
+    "path": "models/kenney-castle/metal-gate.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5304,
+    "name": "metal-gate.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "35cf6c80647e1bec4dd40629c64826c4cf4b904783c48e9a339972a1b17c49f2",
+    "path": "models/kenney-castle/siege-ballista.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 12200,
+    "name": "siege-ballista.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a3b536bd2db8f6cbbe14f6724286ce50935fc2831b57135fa12711f475a7af8d",
+    "path": "models/kenney-castle/siege-ballista.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4204,
+    "name": "siege-ballista.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e3fa8578415ddb71f88f00f80ce36fb31da5324118d16a32ff1b496222ad19b8",
+    "path": "models/kenney-castle/siege-catapult.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 15452,
+    "name": "siege-catapult.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a8d1c0838446f6fe80aed11462172f65a9e2aec7ae2bcac18c6f2eee68a2c3b5",
+    "path": "models/kenney-castle/siege-catapult.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6122,
+    "name": "siege-catapult.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9f276342608f303130da33bc1d781040f67ad4582fcc588ffa7687d02ccd883e",
+    "path": "models/kenney-castle/siege-ram.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 18556,
+    "name": "siege-ram.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "092b112506115787ae44c71af06bc98cd18c0080c3568961bde29a54541e550f",
+    "path": "models/kenney-castle/siege-ram.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5040,
+    "name": "siege-ram.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "24cbe4a40bec3d2dfd17252d51d7134d51aeb10263802b641b269b774a421e33",
+    "path": "models/kenney-castle/siege-tower.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 24100,
+    "name": "siege-tower.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1da5ba36a7ba8f2a3beda5ccf68bab3db25341bfb0dd59b57f5fe716953873d6",
+    "path": "models/kenney-castle/siege-tower.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5620,
+    "name": "siege-tower.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e7dc80c56a37c737e46b4f925062dc05c3352d90208e22ca5a05bd6d8cbad026",
+    "path": "models/kenney-castle/siege-trebuchet.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 20932,
+    "name": "siege-trebuchet.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0da7d6789e0833e3e6b5f28207bbbc4f05d335dbfd93f2745866e143b20bb66a",
+    "path": "models/kenney-castle/siege-trebuchet.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 7120,
+    "name": "siege-trebuchet.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "11e486c5805cad268ab28091fb9ab4352aacfcb914db52de3c72bb4b2b581086",
+    "path": "models/kenney-castle/tower-square-mid-windows.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6328,
+    "name": "tower-square-mid-windows.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5b3ff48b29eec4f4861c357258eec012349626c66a5f6124d0e2ea183f56e3ac",
+    "path": "models/kenney-castle/tower-square-mid-windows.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4388,
+    "name": "tower-square-mid-windows.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "851724e46e1eac92001dde7f9f52ca3b41f9d209a450545c0286b701510ce2a0",
+    "path": "models/kenney-castle/tower-square-roof.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4520,
+    "name": "tower-square-roof.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6e3defa541d6aaadbc25f5980d34dc0ebb769e38c9904fb775e5a486844a348f",
+    "path": "models/kenney-castle/tower-square-roof.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3604,
+    "name": "tower-square-roof.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "59b146034d20cc24a5f26c48fc48bb0b6cdd5418da90f3da473630bd83d4630a",
+    "path": "models/kenney-dungeon/banner.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5064,
+    "name": "banner.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ac6ed61360ab9696912f0dced82042c12e6fdd053db1eabfc143de745f65f761",
+    "path": "models/kenney-dungeon/banner.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3700,
+    "name": "banner.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e5296e584e6d6c930acfa8b762743e0f6eabc3d3a73616c375f52bf0343611aa",
+    "path": "models/kenney-dungeon/pot.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5376,
+    "name": "pot.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9db40446f1f0bc19439cafd7e350a126863b0c88c64e36e6f8a9ce07099798cb",
+    "path": "models/kenney-dungeon/pot.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3526,
+    "name": "pot.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4f58d2087f1857a524077e67db4ee16ef41787a3cb2d6592cb6c660a3757d92f",
+    "path": "models/kenney-dungeon/potion.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3684,
+    "name": "potion.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "927cb36d6579fb20195c5f67dc1f4b4155018b001f32bdd36da1642ff9aef24c",
+    "path": "models/kenney-dungeon/potion.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3166,
+    "name": "potion.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f89b9130ba36e563a9d8c7d7f4921eb16b545cfde8a082599ce158701b757c97",
+    "path": "models/kenney-dungeon/shield-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4264,
+    "name": "shield-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f4e202d32f3eae26bc82932e6c4916199966508767f0b9fc86e052728405a17e",
+    "path": "models/kenney-dungeon/shield-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3332,
+    "name": "shield-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0684f77457c57672aa1c6de699786a6058144197f43d3cd747cdeb34f2704534",
+    "path": "models/kenney-dungeon/trap.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6484,
+    "name": "trap.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "89d1fc69930f730e1864f27d86e6de07c41f07ddd74fb08b7f2c82df0535cf3e",
+    "path": "models/kenney-dungeon/trap.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3604,
+    "name": "trap.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ff8b461cc0c22526b83b6dd97f28d18c89aea873c688c6bd336e132fcf4b306b",
+    "path": "models/kenney-dungeon/weapon-sword.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3412,
+    "name": "weapon-sword.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e9847b40317e2f55ab95eda63d16ad284ccf7e654fca2c7ced4e92549c4074e1",
+    "path": "models/kenney-dungeon/weapon-sword.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2202,
+    "name": "weapon-sword.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0ac443e449f556862f9e7b9f9022eb56bde3bd970262e8681a8eae79cb1577f9",
+    "path": "models/kenney-dungeon/wood-structure.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6508,
+    "name": "wood-structure.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "40eb3ae5d4de4a490310477ba26204bcb53a0d4f9decf6b8e117a491454f33e6",
+    "path": "models/kenney-dungeon/wood-structure.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6264,
+    "name": "wood-structure.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "798afa04907d7dc3acf35be99a4c02941da9a83c813b662cca65b2bc1ad946ce",
+    "path": "models/kenney-dungeon/wood-support.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3912,
+    "name": "wood-support.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a994dc78d40116f170e1a7c668f7dce853d80f14efb8aff582df6a543b503a47",
+    "path": "models/kenney-dungeon/wood-support.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4166,
+    "name": "wood-support.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "be692a90ed3144083d712f3bbc0cffbcdee09310d0e7fbe19413e8d7da9dcf54",
+    "path": "models/kenney-furniture/bookcase-closed-doors.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6440,
+    "name": "bookcase-closed-doors.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c130ff36f66c1c7776465a6bf001652a83b32b6a7eb98b463dfaf3c26043c6c0",
+    "path": "models/kenney-furniture/bookcase-closed-doors.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2876,
+    "name": "bookcase-closed-doors.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cbc3beb0761d1732db0de8aa45a347c8f33af7a6555f96c60a05cf578e6c8c95",
+    "path": "models/kenney-furniture/bookcase-open.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5548,
+    "name": "bookcase-open.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7415cc0123bc8c57548ddbc2c9903ee7dab28d8b1e09e216d727181723e6a800",
+    "path": "models/kenney-furniture/bookcase-open.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5168,
+    "name": "bookcase-open.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4f9c0ed4b978c62d370d4da181932ff442e63190c93dceb1ebdc113260bf215d",
+    "path": "models/kenney-furniture/coat-rack-standing.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5004,
+    "name": "coat-rack-standing.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "79c65ca5c11a8dfbf9d9b060ea60410ef8dcd2880737302de3ec88a6f2008a7e",
+    "path": "models/kenney-furniture/coat-rack-standing.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3094,
+    "name": "coat-rack-standing.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5f51c6ec3bfb3195a37ac374b11e8427d74d4662d877907b18bf837befe2dfce",
+    "path": "models/kenney-furniture/potted-plant.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3568,
+    "name": "potted-plant.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7c7a01abcb84d83299709718087eaa8008833e26ce4239c5119f4a3e6e4aa659",
+    "path": "models/kenney-furniture/potted-plant.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2826,
+    "name": "potted-plant.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dd4e20792b7a5444e38b55a061051a89fa7f215a718c73184738fcc913b88e52",
+    "path": "models/kenney-furniture/side-table-drawers.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5620,
+    "name": "side-table-drawers.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1fb5d9cb7d8d0691dbaebf0db31a2fc1507e182df0796756fb9a7413905d7abc",
+    "path": "models/kenney-furniture/side-table-drawers.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4360,
+    "name": "side-table-drawers.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b558a603c205e84434586d4cd26ef412a8cae861049a90fb2cd2aa3b55b69897",
+    "path": "models/kenney-furniture/table-cross.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4752,
+    "name": "table-cross.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2a6c16c0f5d181812baa60ce83e52fcd1d61b7c939511c26898ff7aac632dd88",
+    "path": "models/kenney-furniture/table-cross.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3914,
+    "name": "table-cross.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b48a7ae898fe74151c00c0b26e620ce1aef1815cef9f4608c2c790bccdc71517",
+    "path": "models/kenney-graveyard/altar-stone.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4992,
+    "name": "altar-stone.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4bb3cada2a06d673c818a9d7a8f1c222b1e8a06321110e3b2732c79aa587c641",
+    "path": "models/kenney-graveyard/altar-stone.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4012,
+    "name": "altar-stone.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d4877772ca95a47b921b52dae9f96e21b4f1e579e78cb8cbf358f33f45f5c2a0",
+    "path": "models/kenney-graveyard/bench.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4828,
+    "name": "bench.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "099ef3d82ae325e79389838e58d341fe2080bf2c80ecf5b20f0c3cf1e577d8a2",
+    "path": "models/kenney-graveyard/bench.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5134,
+    "name": "bench.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "763cdac5ec3fea2e49ef7883e52be145d2098f4752e01ba8566d92bb488b9d7e",
+    "path": "models/kenney-graveyard/candle-multiple.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4412,
+    "name": "candle-multiple.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c40e39b8e991e2c4824e27dfb17dd8fd567dc21f7786d0426b2afc022e34f69d",
+    "path": "models/kenney-graveyard/candle-multiple.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3576,
+    "name": "candle-multiple.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ff50970f03e71e2b1d2c9e454e6edd46e6d0ee0138a9098764655a4ff8f7e981",
+    "path": "models/kenney-graveyard/coffin-old.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5292,
+    "name": "coffin-old.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4f46385eae49d131e43be3a33106d6e2798ad9196ea4df0ec4ceb8095cad1d2b",
+    "path": "models/kenney-graveyard/coffin-old.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3718,
+    "name": "coffin-old.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "20f9b0e14a87949daa9d7e413abf9d66d11f48df3c99e01737cbf69fbb879465",
+    "path": "models/kenney-graveyard/cross.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4444,
+    "name": "cross.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6ff5bc018c7306e83cc62ab4c1bc4cdafd65e87a92bc920bddd958fc67402c3e",
+    "path": "models/kenney-graveyard/cross.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2886,
+    "name": "cross.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "551aedbe4ef47873172c5b4f1dbd07be11345b35fca1bd3f98b1c4ddeb99154b",
+    "path": "models/kenney-graveyard/crypt-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3780,
+    "name": "crypt-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4b1a952b8c6ef184cb7b196b54e53440ea04f8aa098bde972199f9fa0365cead",
+    "path": "models/kenney-graveyard/crypt-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4200,
+    "name": "crypt-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b35587aa6755de1c2e179dcd3264ee3c4b28b473581cc07fadd1b9ffca37f2ae",
+    "path": "models/kenney-graveyard/grave-border.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 9760,
+    "name": "grave-border.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8c3c46759de4ea5f14876e78a322465bd8b3093935cf1fc4840a919d32272a96",
+    "path": "models/kenney-graveyard/grave-border.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3582,
+    "name": "grave-border.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5ba4d1f5b61fc912622bd3279f542b0cabf0956e06d7c21cc62cef5a2047e229",
+    "path": "models/kenney-graveyard/gravestone-broken.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4100,
+    "name": "gravestone-broken.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8962ffd743c5ca7627cc84de5a64736b19e04e80a49b0e6bc21097aa6095e358",
+    "path": "models/kenney-graveyard/gravestone-broken.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3326,
+    "name": "gravestone-broken.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "57e89d3973e462ad73c17362badaad0b2bde6e28ec69c712abdb5f19cf1c8a64",
+    "path": "models/kenney-graveyard/gravestone-cross.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4988,
+    "name": "gravestone-cross.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6459fc50ea88eeae1debada385e4dd0af4313159f1eb44a71b0d32af59d4562c",
+    "path": "models/kenney-graveyard/gravestone-cross.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3170,
+    "name": "gravestone-cross.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b6aa8b5200f4a49229b4ffdad171039f589657750772a5c0532a70a49842ed29",
+    "path": "models/kenney-graveyard/gravestone-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4564,
+    "name": "gravestone-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "eda2eb009c54ce28bb6239d8070aaf8386c9b68fff381e6a101eca1ed98b2827",
+    "path": "models/kenney-graveyard/gravestone-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3390,
+    "name": "gravestone-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1b2dd7a6969623c4dd61a7f4afa559dc5e21570fd0a6aeff3daf2e8906ecb71a",
+    "path": "models/kenney-graveyard/hay-bale.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4668,
+    "name": "hay-bale.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c87df7f855423e98ad4a7db98d39cec5db6265f413833347643c2353165f44e7",
+    "path": "models/kenney-graveyard/hay-bale.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3724,
+    "name": "hay-bale.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "09884b47c642f9af02312f9981c8be600053cffa5ef80d08c18ff735bdad4bdb",
+    "path": "models/kenney-graveyard/iron-fence.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6692,
+    "name": "iron-fence.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f96500f125dddfd070e853e91368a3cb627a44093f5f22d7a54d0335818e1347",
+    "path": "models/kenney-graveyard/iron-fence.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5806,
+    "name": "iron-fence.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e46f7fbddcdbff671c21835bf1ce040091d82613252e5d198496a6e81108eee6",
+    "path": "models/kenney-graveyard/lantern-candle.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5376,
+    "name": "lantern-candle.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "50a28edd797e30f0582df15bb833c6bc7adc81004383062b1cbf0ed28cf2593e",
+    "path": "models/kenney-graveyard/lantern-candle.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3670,
+    "name": "lantern-candle.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d85800230612e0a8471843c9bfbe6f38ee6e65fcc5ac93f82e97255b2a6faeb2",
+    "path": "models/kenney-graveyard/lightpost-double.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11308,
+    "name": "lightpost-double.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "abeba5aaa5b33772a8a7f7b60e31d466c032d16533bb35cf6543e2ea25150062",
+    "path": "models/kenney-graveyard/lightpost-double.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3284,
+    "name": "lightpost-double.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9c8bde5fe0d18337734509888d51b7dd15081979ad2beb8f7ffc159150bfd4e3",
+    "path": "models/kenney-graveyard/pillar-obelisk.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3308,
+    "name": "pillar-obelisk.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "07faa8d47e79a203901a813d68ee0f33757082a8153da54232fbb3fe22871a64",
+    "path": "models/kenney-graveyard/pillar-obelisk.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2566,
+    "name": "pillar-obelisk.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "20f113ccb700ee653cfba3e39b02a620fb010528bf97830fb266ad6be83b1487",
+    "path": "models/kenney-graveyard/pine-crooked.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8228,
+    "name": "pine-crooked.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "082de741d687e577341142c5dca13dd93246dbd6c3609de652291370397f6941",
+    "path": "models/kenney-graveyard/pine-crooked.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2972,
+    "name": "pine-crooked.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6cc29fe26135942a7c2f791214f2cea3015bd3813d1b2d16116747b4887477d4",
+    "path": "models/kenney-graveyard/rocks-tall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7448,
+    "name": "rocks-tall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "60b94df861f7f2cee7ff5e7b8ee2c3dbf246df4333a47df702a7224d8166e796",
+    "path": "models/kenney-graveyard/rocks-tall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3110,
+    "name": "rocks-tall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "10ebe647e54951738d12e557fcd3ae7845720695e20a768e152c2204ed8051bd",
+    "path": "models/kenney-graveyard/shovel-dirt.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6312,
+    "name": "shovel-dirt.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9f2fca9fbade509b8641d559516d99a3b805abb0c15f1791f4e236bb1c59b153",
+    "path": "models/kenney-graveyard/shovel-dirt.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3706,
+    "name": "shovel-dirt.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "40d60e18988a84c38aefc94a2b9c7df16833cf2adac9e5ba938086591de773d2",
+    "path": "models/kenney-graveyard/stone-wall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3176,
+    "name": "stone-wall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f1f1168953e6feee86febbd425bf90fc5ca5f02a23ea417835392312d968a617",
+    "path": "models/kenney-graveyard/stone-wall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3448,
+    "name": "stone-wall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7f61c0a14080ad55967175e82b5216b1aef27e2c827e8db77f7e77cdc5907046",
+    "path": "models/kenney-graveyard/trunk.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5628,
+    "name": "trunk.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9cf1ba045c26d67ecdad72791cbbbbc329181049e1bfeb9230d3a53b0833234b",
+    "path": "models/kenney-graveyard/trunk.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3478,
+    "name": "trunk.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d63cf78190a2ed36f7a7b21badafa373cf7c71000aeb1a7f263767d4fb116d40",
+    "path": "models/kenney-graveyard/urn-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4852,
+    "name": "urn-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "344565650f7801a251454b945c280689ba4b4379d1bc07e872e93dbc0fc005ce",
+    "path": "models/kenney-graveyard/urn-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2506,
+    "name": "urn-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "bf6e2b8344d458139c9916b70d0192c8be25767e98a868b56fa7ea31126fb1e3",
+    "path": "models/kenney-nature/bridge-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5392,
+    "name": "bridge-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b867623c7e2f909819ee1a5c21fa57dceb0334387705e131437ff91b796d631a",
+    "path": "models/kenney-nature/bridge-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4238,
+    "name": "bridge-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2f020d2999ebb3ab14171b5e79c40fca3d07535fe6787d374d367f67c64a0616",
+    "path": "models/kenney-nature/campfire-stones.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6704,
+    "name": "campfire-stones.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "66eb7bc19c29c2e713cf37ab8f8ed3ec0e12e8c37449717a19e4e129ad80104d",
+    "path": "models/kenney-nature/campfire-stones.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2956,
+    "name": "campfire-stones.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8551793441f11bb2304df8cb7d12e6ee2dd20a5845c8be5eb1658b12e4f1769a",
+    "path": "models/kenney-nature/crops-corn-stage-d.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 8316,
+    "name": "crops-corn-stage-d.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "600a15005de7ecd252ea988bc0e1167672d5e62c8949018674ef4f3b471aba4e",
+    "path": "models/kenney-nature/crops-corn-stage-d.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3024,
+    "name": "crops-corn-stage-d.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9edba2aa6adf8cdcee4a3958d766dc799a473cac3766a9eb34748154f8cd163f",
+    "path": "models/kenney-nature/crops-wheat-stage-b.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10216,
+    "name": "crops-wheat-stage-b.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aba88696774eeebb33fdb33c64f9950f76bb030557745780370face79c60dcee",
+    "path": "models/kenney-nature/crops-wheat-stage-b.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5468,
+    "name": "crops-wheat-stage-b.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ce7eccc782704e1f634aafea278b2a2b8d33b58146cb80d1284a0b47c4e4ebed",
+    "path": "models/kenney-nature/fence-simple.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3136,
+    "name": "fence-simple.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d7a104c4339f41654cd2d2f588131e8ba38da4bf2540bb88941d1744340f98b2",
+    "path": "models/kenney-nature/fence-simple.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4430,
+    "name": "fence-simple.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cb07e5852d4d9c472844d06e3d65fe909f6e4266539fbe0b2608701ca19e1e99",
+    "path": "models/kenney-nature/flower-red-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3752,
+    "name": "flower-red-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d4449e0091e5d1fb736bf13780ab7f0d9fe381431bb8f0cbff19070419bdf140",
+    "path": "models/kenney-nature/flower-red-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2818,
+    "name": "flower-red-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6603edb3e3e6b590c3469ffe8a04549cfd8ce9e29ac6b9713e0d5656ebb17fee",
+    "path": "models/kenney-nature/grass-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7208,
+    "name": "grass-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "209b84a4d55c5fe14edfbe0be3f5b456b0419fcbceae912dbd917c840444019d",
+    "path": "models/kenney-nature/grass-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4784,
+    "name": "grass-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a71c031ce714494bc06967d2cb230659d4c1c709e66b82f4085fb58ca86d0237",
+    "path": "models/kenney-nature/hanging-moss.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3056,
+    "name": "hanging-moss.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "af1a1b192acab1218f30ba8d1694b049e8be9ce89dc916e625811f63db055554",
+    "path": "models/kenney-nature/hanging-moss.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1786,
+    "name": "hanging-moss.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "62769cc6ba28901cb5770d2c70b849dcb1bd5d133784e6a76e1adede6d231575",
+    "path": "models/kenney-nature/log-stack.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5008,
+    "name": "log-stack.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6488b9c87f6e6d749899f01b976a3e1571129951323767ae3157ce4e7cb1afb9",
+    "path": "models/kenney-nature/log-stack.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4304,
+    "name": "log-stack.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "77d188a8f8e75d78429f338478eb0ceff8e2a3576a4f7324ae038d835f0d0267",
+    "path": "models/kenney-nature/log.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5816,
+    "name": "log.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "86b0fb8c6927d44d2e41a9f8c4e96ff1d7ddc6c89ae88c3640e79b3f55f215bd",
+    "path": "models/kenney-nature/log.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3396,
+    "name": "log.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5c217061a2100bb87e67a626bf167b680dd5743ae9b270c2d967e7d3a84e63e6",
+    "path": "models/kenney-nature/mushroom-red-group.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5104,
+    "name": "mushroom-red-group.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c32042543f7d5f4f7bfc68cb3a0cb99515645959a653aa52222902bd81b3b1cd",
+    "path": "models/kenney-nature/mushroom-red-group.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3550,
+    "name": "mushroom-red-group.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e7e75117f73c7a76eb6bcbdad057c3b94d29bc2be10fbc1ad771ae57f1f55d7b",
+    "path": "models/kenney-nature/plant-bush-detailed.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4912,
+    "name": "plant-bush-detailed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cc11d9f5e610cc9c2630d63a405b586f9505d4e0f6420c01305fbb8c39a96e4c",
+    "path": "models/kenney-nature/plant-bush-detailed.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2890,
+    "name": "plant-bush-detailed.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "56a361d37ccd54c3233d863be0b7b9fe9f2325d8d95509b3b4e2bc901550e194",
+    "path": "models/kenney-nature/plant-bush-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3884,
+    "name": "plant-bush-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cef1aa0f3c1ec864702900bdb54986dd01c2a30f3a12bf5dad5efc183ef420f8",
+    "path": "models/kenney-nature/plant-bush-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3310,
+    "name": "plant-bush-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0c983f50273be3934bbbb4195dbbc595a35c6657bc5c7a39cb1cd1180d1007b3",
+    "path": "models/kenney-nature/plant-bush.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3120,
+    "name": "plant-bush.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "43b68d5a3254757dd9d7296f2d4c8c84b607ac744a0c6f9ddbe1143db851a542",
+    "path": "models/kenney-nature/plant-bush.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2662,
+    "name": "plant-bush.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1550d74ad2073ac857c16371cf5e51cea112cab133626cd5b68273d219e6e967",
+    "path": "models/kenney-nature/plant-flat-tall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2824,
+    "name": "plant-flat-tall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "01279dad51ff273fa1437b502f1e6a229faefa31326f278b63afce3425e098bf",
+    "path": "models/kenney-nature/plant-flat-tall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2382,
+    "name": "plant-flat-tall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "24d185ce2d222035cb7f7259f992602023edc898c4bfd77eb16cc00cdac0a4a7",
+    "path": "models/kenney-nature/rock-large-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4000,
+    "name": "rock-large-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dbc220ee6edfd42cbf4d9243dc7c4820f3e8cf2db311abe2a4abaee4cf6cdf02",
+    "path": "models/kenney-nature/rock-large-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2306,
+    "name": "rock-large-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a2e56d3c5275421e565c663f2419929173efc40f35f82040803fc889935911b4",
+    "path": "models/kenney-nature/rock-large-d.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3764,
+    "name": "rock-large-d.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d399b5be481eacdec872768c7ccd90df99a6431c070b52997765dfa9fb49da82",
+    "path": "models/kenney-nature/rock-large-d.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2680,
+    "name": "rock-large-d.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2b47fe4efde400acdc176874c0aaa741402837359c87791b26c9c75fc8540499",
+    "path": "models/kenney-nature/rock-tall-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4752,
+    "name": "rock-tall-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d96e1aaabab497d888ec76e5ad204fcd71f01a6a61c759fc254f7a41ffe6f2f0",
+    "path": "models/kenney-nature/rock-tall-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2796,
+    "name": "rock-tall-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "844b8be4297b0b028eec8f30356d69713ed5c90dd8e32ccc5edc0a8012ceb287",
+    "path": "models/kenney-nature/sign.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 2940,
+    "name": "sign.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4316968b988e8bc461b8a2d9dc7d39630baa15a9b931238d2d88a5a9afb114c2",
+    "path": "models/kenney-nature/sign.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2352,
+    "name": "sign.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "638ea44e1c5b6124bc023a3a69217df990a11a39369b3cb840c83e0820ddc9ac",
+    "path": "models/kenney-nature/statue-column.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4356,
+    "name": "statue-column.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c7a69c208cfd04165550b259e6979ff2a95974025ba56cdecf4ffa6b63dd60bb",
+    "path": "models/kenney-nature/statue-column.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2660,
+    "name": "statue-column.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4ca7027521e8015f54db6b4560ecef3b9f1fb20c11a09dff82d4b48e7d2a70a4",
+    "path": "models/kenney-nature/statue-head.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5460,
+    "name": "statue-head.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "97d56ad42b1b4d8c2f481e375a29025fca64029739edc6832aad605f1578844a",
+    "path": "models/kenney-nature/statue-head.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2556,
+    "name": "statue-head.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3d039eb7c8bc3d434f884b5d6de9fc3e423e1f9b8c7f5be7bca288008f6eaea7",
+    "path": "models/kenney-nature/statue-obelisk.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3036,
+    "name": "statue-obelisk.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "65cacdd8b32db3053e447611f2a5c5e9a7616f9a1ddd426979a3dc68251e95a5",
+    "path": "models/kenney-nature/statue-obelisk.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2092,
+    "name": "statue-obelisk.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "25c464d0539d32491ab4581769aa63e83aa4d1651ed105739624981e7f95fc18",
+    "path": "models/kenney-nature/stone-tall-b.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5152,
+    "name": "stone-tall-b.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "00d2159f331c721fc5d430f9ab9761d3e8761c4f5345446acfb8d166bad17475",
+    "path": "models/kenney-nature/stone-tall-b.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2934,
+    "name": "stone-tall-b.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ec8f08d9a62109c76664573922363fb7822a9b1600446ce8cc4382d0968f6179",
+    "path": "models/kenney-nature/stump-old-tall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4632,
+    "name": "stump-old-tall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dff067239b4886dfcfeede9668231e7364a5ddbe5d8512b957bbadc2e4f11e69",
+    "path": "models/kenney-nature/stump-old-tall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2530,
+    "name": "stump-old-tall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f4396ee0303d73856444fce9c619d442300aa496c25ff66ae885bde7d3dba3da",
+    "path": "models/kenney-nature/stump-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3260,
+    "name": "stump-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "c0dc25810c5aa9a50fe0fea040863b65be04103929782044cf1eaececd0aa682",
+    "path": "models/kenney-nature/stump-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2810,
+    "name": "stump-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6e28eebd493c7c36410e4f88b072c842fae05f1c4bf89afc7daf15843c0ae520",
+    "path": "models/kenney-nature/tent-detailed-open.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5596,
+    "name": "tent-detailed-open.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a0aa024b40d6a313884b3c846fce2c92034e7418c15a76f2e2b62bf7e7626d06",
+    "path": "models/kenney-nature/tent-detailed-open.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3676,
+    "name": "tent-detailed-open.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "67393de139439d46bb8c20ed48cb333140a5e21c49ad6bf4d87ef0614870059c",
+    "path": "models/kenney-nature/tree-default.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4256,
+    "name": "tree-default.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "204a1f8f3b5d02f066e94f12c2fbdbc2e5354c889076987174f38f9adb461858",
+    "path": "models/kenney-nature/tree-default.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2230,
+    "name": "tree-default.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "571407f7162004ff47998a1058cf7dc26658df8077ec2c8e0b74c32e332fc00f",
+    "path": "models/kenney-nature/tree-detailed.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10340,
+    "name": "tree-detailed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f0885a165f478737852fc8097a7060d3b56ef6ee5144d56aaffbc5b82868952a",
+    "path": "models/kenney-nature/tree-detailed.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2938,
+    "name": "tree-detailed.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "04efa5b68f2c613cae8fe49b18b1b672b061107cb1615fc7876b63afbbaedd55",
+    "path": "models/kenney-nature/tree-fat-fall.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3288,
+    "name": "tree-fat-fall.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "3375f62704902c6ba614024e09789ee4e94e0ac6b7886663578b386d2d9fcc2e",
+    "path": "models/kenney-nature/tree-fat-fall.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2526,
+    "name": "tree-fat-fall.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "741b1e8b0a1bbf9fd7d65703c252b285302d4261a5b9f88a8195d4cffa69178e",
+    "path": "models/kenney-nature/tree-oak.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5676,
+    "name": "tree-oak.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b0fa03e01ed49e9402f5097d35a43c27b6c1ab013f02f467f69559ea14755018",
+    "path": "models/kenney-nature/tree-oak.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2790,
+    "name": "tree-oak.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8f13b10918b1e3e48a2232c803004069e129f81f02416e54ac255b14f8c4bf53",
+    "path": "models/kenney-nature/tree-pine-round-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5348,
+    "name": "tree-pine-round-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "fd9455f0eb1d6eaf2b1828ba14b4d7ff66456c3c9f848253126af9003bd7bf8f",
+    "path": "models/kenney-nature/tree-pine-round-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2532,
+    "name": "tree-pine-round-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e5a4697ec123688feac1b59aa64e7e5d4a59656a674aa9d46b90bf117f29492b",
+    "path": "models/kenney-nature/tree-pine-tall-a.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3632,
+    "name": "tree-pine-tall-a.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "67fed0577beca2f83fbc9457f2cd9c6bae0cf4177a3c6292f497495c3372087c",
+    "path": "models/kenney-nature/tree-pine-tall-a.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2108,
+    "name": "tree-pine-tall-a.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a7bcf05663b8db726958bf6e3f67b7c66e14a3c613141a0385f95ebe7a121e74",
+    "path": "models/kenney-nature/tree-thin.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6444,
+    "name": "tree-thin.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b75e4fe26c7582ddfbb8498707659a501b15e9a18a7c1994ddc8b2f54e48238e",
+    "path": "models/kenney-nature/tree-thin.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2734,
+    "name": "tree-thin.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7e55afcd3d317f39f3731fcb208be8687926b882338fd7949b8f88c8af5d9ae2",
+    "path": "models/kenney-survival/bedroll.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3960,
+    "name": "bedroll.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "365d6564897dc60f3ed02731ab6bdcb991ef78bc5ac76cfda8c4369ec96b5aa8",
+    "path": "models/kenney-survival/bedroll.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3332,
+    "name": "bedroll.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "2010e5514411e5f3e3af8189c224c5f241e3519ece0f4fba4d45f7ad140dd6a0",
+    "path": "models/kenney-survival/bucket.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3128,
+    "name": "bucket.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "24450aef556183017c545a5b490f012d407f6153223d74aa1ab9fd73b391fc54",
+    "path": "models/kenney-survival/bucket.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3206,
+    "name": "bucket.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "217b89d592b4794392b2d76b808d2930d246e3dec49f72030dcccf1ae8b90795",
+    "path": "models/kenney-survival/campfire-pit.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7448,
+    "name": "campfire-pit.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d68a3755dfba3a41dd27ce0863472f1bfe5815b61e85817f4928f79db01f2bfb",
+    "path": "models/kenney-survival/campfire-pit.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3708,
+    "name": "campfire-pit.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6808d0260e0f082290300448c4e040ebb1ecb942ec0fe72dff0b3c4c222e9aee",
+    "path": "models/kenney-survival/campfire-stand.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3664,
+    "name": "campfire-stand.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "73ff030b7cb28c08c1ff8670d45460cb9fee282afd202f5f881132a2f1bcb4f3",
+    "path": "models/kenney-survival/campfire-stand.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3922,
+    "name": "campfire-stand.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "15810ba91df53a48ae61bce07644faefa367d4fb91fa1313418ea21d55866ebd",
+    "path": "models/kenney-survival/chest.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6896,
+    "name": "chest.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e24aec460d19321abfbd116a7516c4699478188df6566f0e006166c5886170ba",
+    "path": "models/kenney-survival/chest.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3884,
+    "name": "chest.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "577058aca8a63fc5d46185ac6f7ba041bc74ceeb39b50129a170e911a8858e9f",
+    "path": "models/kenney-survival/fence-fortified.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4684,
+    "name": "fence-fortified.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "51d2669bce91abd125342c61a2138dde42ebb6bcfaf8a01555ec0828635a025b",
+    "path": "models/kenney-survival/fence-fortified.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4904,
+    "name": "fence-fortified.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "433ca760b59d1bdbaf910d5d0ac323264c120ddcabbd5594aff7669ce5f66f83",
+    "path": "models/kenney-survival/resource-wood.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3288,
+    "name": "resource-wood.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "bbe5c3a16c5b323c672ec59f1f4de077c7a0251fcd1a2292a740450a488719e3",
+    "path": "models/kenney-survival/resource-wood.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2690,
+    "name": "resource-wood.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "b919b4fbff0f1b4553b2d91eacd3e3dd909b318bb53e984fadc14fdc25afe50e",
+    "path": "models/kenney-survival/signpost.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3080,
+    "name": "signpost.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1fbff4c8dde71d476f801235c87cb9596ed5b2791892498c52e0759080c4024f",
+    "path": "models/kenney-survival/signpost.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2870,
+    "name": "signpost.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "594d48b785f3d18d769a263d8ede114335d9964a3c279ca33a2b2603a7af7a9a",
+    "path": "models/kenney-survival/tent.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4668,
+    "name": "tent.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "7180f6f2a1fa0fe9bc2336905c440b67db2198a307eebd3e77dd0d5bf5a38a7d",
+    "path": "models/kenney-survival/tent.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5694,
+    "name": "tent.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0401ded752315feed303df07a2a9ed6f7a39c2a0088aeb78794c1fd75d3a667c",
+    "path": "models/kenney-survival/tool-axe.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3620,
+    "name": "tool-axe.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4db9d559678121970943f6b718d362bfe8f19e91279f52074a409d83e0945dc1",
+    "path": "models/kenney-survival/tool-axe.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2180,
+    "name": "tool-axe.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0ed36bff09d7c01f19b90889e034b5818743c313238480b7cdfc8f9a3f822253",
+    "path": "models/kenney-survival/tool-pickaxe.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3544,
+    "name": "tool-pickaxe.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "8990cb68b3658e288c4af089898ce70f08f0d10a1f4983a96545b9ca28791ab2",
+    "path": "models/kenney-survival/tool-pickaxe.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2562,
+    "name": "tool-pickaxe.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9a61ebc8261057e644af0d86462954e3bece74509458383bbc24f138df1bad02",
+    "path": "models/kenney-survival/workbench-anvil.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 7436,
+    "name": "workbench-anvil.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "1dd7f9ac8592ce28beeada26ce7b593ee5edc2118a5b3655f7a1656347a32408",
+    "path": "models/kenney-survival/workbench-anvil.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4596,
+    "name": "workbench-anvil.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "82bec075d9962db90530b41c649a444a1081f9f76e6bfc35a045967818d2fe7e",
+    "path": "models/kenney-survival/workbench-grind.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5892,
+    "name": "workbench-grind.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "103836079fbe506a4e3df10480fe492f8033f410dbad806e74dc7abb92f2b7c9",
+    "path": "models/kenney-survival/workbench-grind.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4360,
+    "name": "workbench-grind.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dd843214edb3a15665fba4af73b26e19f85971f9070cb91f225479ec3861963d",
+    "path": "models/kenney-survival/workbench.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6144,
+    "name": "workbench.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "eef00336a18e3eecaaba82d86e13c4c10ada7718a99982c06bf84d654aca62e0",
+    "path": "models/kenney-survival/workbench.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3674,
+    "name": "workbench.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9e7f6a2910adfaa819857227ecc2270336da152caa0186550c6ddb2a345fddae",
+    "path": "models/kenney-town/banner-red.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3640,
+    "name": "banner-red.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "ea383f27b2ee55b6adc533f4b4de7adf0fd457a39891fdbb3247eb7c7ff4f7f0",
+    "path": "models/kenney-town/banner-red.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2134,
+    "name": "banner-red.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cae512cbae9be0aa2ae71dc9609d4ab75a8c1e36254b05da49fc44b6ca1941ee",
+    "path": "models/kenney-town/cart-high.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 14400,
+    "name": "cart-high.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5a7f8947eefa47415eadcaddd3d17e00d77251afdae625e9efbc93371128196c",
+    "path": "models/kenney-town/cart-high.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 6190,
+    "name": "cart-high.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "92b8d2a63c4811d4f31c0c70e3497941811387943ae57a241acc79bf16eb4b32",
+    "path": "models/kenney-town/cart.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 10220,
+    "name": "cart.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "6d10c1c75b765a7c273c66750c7c134249298907599ce92223c7abb661e57f68",
+    "path": "models/kenney-town/cart.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5004,
+    "name": "cart.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "aba83575bb46593eecbd9c0d0d7892770e0a50d88526384c34929d3932fca747",
+    "path": "models/kenney-town/fence.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3404,
+    "name": "fence.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "f57ab9955a85463ed3fc729c2a0bacaf0f273c8a0dddcc1f955634f5f13d1e9e",
+    "path": "models/kenney-town/fence.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4464,
+    "name": "fence.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "eeb96625330d507b5f8806e108d5e4d5cc624a0dba4dc14be1c1f2becb2a10f9",
+    "path": "models/kenney-town/fountain-round.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 11060,
+    "name": "fountain-round.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "81f4829bb04880e7b40fa5b288149f6c28db9082eb589255379c7ffef15297cb",
+    "path": "models/kenney-town/fountain-round.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2794,
+    "name": "fountain-round.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "25a0844ec823c77d504cacb5172f46ed54d4ae2b79f6cd0773bd02e548659340",
+    "path": "models/kenney-town/fountain-square-detail.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 6924,
+    "name": "fountain-square-detail.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "87a6ac759d86289dbf5bcc3eb7708253c6bec79304ed8439e5a8d3759e2b1d20",
+    "path": "models/kenney-town/fountain-square-detail.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4558,
+    "name": "fountain-square-detail.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "d40d750941817508ae697508e4f42aaf18febb5a1a7abe4540c2646e0603e905",
+    "path": "models/kenney-town/hedge-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 3380,
+    "name": "hedge-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "5fb5f1efde3df74b06f86ad770f8e2611a815ad32f1223f44d2b0093adc63be9",
+    "path": "models/kenney-town/hedge-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3870,
+    "name": "hedge-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "49ce725f91f7d747c8d06b1b6f3501601bc15935709e1be1de6d924ba2571600",
+    "path": "models/kenney-town/lantern.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4212,
+    "name": "lantern.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "9f42473f1c0714beeed16b6cbb817ba27db792da80f63781256177ebe70c943a",
+    "path": "models/kenney-town/lantern.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1950,
+    "name": "lantern.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "587eaf3403e512aae7903809f0812f1a5dcc0f4978cf2b49e27711f94f666c3d",
+    "path": "models/kenney-town/rock-large.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5404,
+    "name": "rock-large.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "dc9c7fb8414b66dc498a313a7054ecd19b5c541e753e79396ee5362859be547d",
+    "path": "models/kenney-town/rock-large.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2866,
+    "name": "rock-large.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "28231989642ece9186c24538d616d9c1225dded8c3894225a3adf5c88c6bd0fd",
+    "path": "models/kenney-town/stall-bench.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4528,
+    "name": "stall-bench.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "4af0f0c7405ee30bccebd58566f985ac17fcf377f98ba7a9b1d8a09b838f4039",
+    "path": "models/kenney-town/stall-bench.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3826,
+    "name": "stall-bench.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "26ca06a57e5a85a1febfda97bc1569c319338600292f9338ccc32c0bd09f0143",
+    "path": "models/kenney-town/stall-red.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 5904,
+    "name": "stall-red.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "0955f404d64341d7326b2be9db8c0fbf117ccc66b5cc6822e88560087f5df0c1",
+    "path": "models/kenney-town/stall-red.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 5004,
+    "name": "stall-red.webp",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "766b5075e4e33f7abbd427496f53402f3d5ffab8a404f926a5818d2f40ccb35a",
+    "path": "models/kenney-town/tree.glb",
+    "kind": "glb",
+    "mime": "model/gltf-binary",
+    "size": 4364,
+    "name": "tree.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "108ad1b8dcb7ef7636e4397173ba5d6ff4bff5e805bd446a172e472ae3a465f4",
+    "path": "models/kenney-town/tree.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2286,
+    "name": "tree.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "46aecf1d459b638088726fe65dada6f2c3348ba5efd43bf59ad84d43ddcf2cc1",
     "path": "placeholder.json",
     "kind": "json",
@@ -79,6 +5353,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "6e06ef7f63b5250ecbf883596cc959448a26c094a7d997889221c33f66ba91dd",
+    "path": "props/barrel.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3160,
+    "name": "barrel.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "c6dad7ec0ac257ad1b4112f0bfb5d00493628aed6d38eeb7410e2332f22f9f85",
     "path": "props/bed.glb",
     "kind": "glb",
@@ -86,6 +5369,15 @@
     "mime": "model/gltf-binary",
     "size": 5800,
     "name": "bed.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "cededd6af6fea96623e26b5fcb2ea6b9873ae5e03d65beefbacdca55b72672f7",
+    "path": "props/bed.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4174,
+    "name": "bed.webp",
     "license": "CC0-1.0"
   },
   {
@@ -99,6 +5391,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "3f7c80d27c63424d84d0476b9bc625aac86e33ead1941cd47a343a722b3a14e5",
+    "path": "props/bookshelf.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4156,
+    "name": "bookshelf.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "8eb2ecdb311461515dd3264a514465144053d4e0e9919cd7ef18a5190d3236d2",
     "path": "props/campfire.glb",
     "kind": "glb",
@@ -106,6 +5407,15 @@
     "mime": "model/gltf-binary",
     "size": 19204,
     "name": "campfire.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "82a57606ed16e085ed477224264e93b3c496c13fbab53ba6c429862ab1958538",
+    "path": "props/campfire.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4256,
+    "name": "campfire.webp",
     "license": "CC0-1.0"
   },
   {
@@ -119,6 +5429,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "916fe1bb6eb0a77d021f786636db50df2045f6d92993b6d27d3687bec953c0a4",
+    "path": "props/cauldron.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3336,
+    "name": "cauldron.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "e0728dfebd6824b08c65d1987210ca17d691ae2a427e6979439ae0c3d7aa873a",
     "path": "props/chair.glb",
     "kind": "glb",
@@ -126,6 +5445,15 @@
     "mime": "model/gltf-binary",
     "size": 7232,
     "name": "chair.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "22bddfb4a80564b31ecf207b41cd576ed86f31f56cdbfbd78ed391b119102982",
+    "path": "props/chair.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3200,
+    "name": "chair.webp",
     "license": "CC0-1.0"
   },
   {
@@ -139,6 +5467,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "fae5ac393d88c3e18a38465cd96dfed22f9706f3c118763e39b98787f5effe63",
+    "path": "props/chest.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3588,
+    "name": "chest.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "56c7503d490e027d124aecd200af7545b555cafbca36b7861f8de6949d66dae5",
     "path": "props/crate.glb",
     "kind": "glb",
@@ -146,6 +5483,15 @@
     "mime": "model/gltf-binary",
     "size": 6548,
     "name": "crate.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "e3a8cb63933ae58e45bde335adb7d69d61c4da90b5c47154bcee53bc500feafb",
+    "path": "props/crate.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3958,
+    "name": "crate.webp",
     "license": "CC0-1.0"
   },
   {
@@ -159,6 +5505,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "54e8040815f0e34761567407f568f8c966fc329d0dfafb010930138c55c1c86f",
+    "path": "props/rock.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 2546,
+    "name": "rock.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "d34de91f1efbe81493f34d9afc33f34273949b4301e44b46d2fee9a0a4ae00e3",
     "path": "props/table.glb",
     "kind": "glb",
@@ -166,6 +5521,15 @@
     "mime": "model/gltf-binary",
     "size": 10760,
     "name": "table.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "91fad583ff31390721cbd5d4899b039f89615e3e94c9d8a0c03bdbed9303e559",
+    "path": "props/table.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4246,
+    "name": "table.webp",
     "license": "CC0-1.0"
   },
   {
@@ -179,6 +5543,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "03763f04a71637cb5e37cdc9e2aa477cd3dc51630839e1216d5cdf42ac4fe089",
+    "path": "props/torch-stand.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 1870,
+    "name": "torch-stand.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "5a27016e8ba5ba12b8a4ecd461be1dc6eff45d93831d0b7a5adeeef9679be205",
     "path": "props/weapon-rack.glb",
     "kind": "glb",
@@ -189,6 +5562,15 @@
     "license": "CC0-1.0"
   },
   {
+    "sha256": "8b1570c0da3610d1763dfc19c7f32a86d8e1af0003533ff09506de72d228189c",
+    "path": "props/weapon-rack.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 4408,
+    "name": "weapon-rack.webp",
+    "license": "CC0-1.0"
+  },
+  {
     "sha256": "2f358cf4a1b0839b84a53ef5ba37c7906f13762577780749733522cb162d4a55",
     "path": "props/well.glb",
     "kind": "glb",
@@ -196,6 +5578,15 @@
     "mime": "model/gltf-binary",
     "size": 17748,
     "name": "well.glb",
+    "license": "CC0-1.0"
+  },
+  {
+    "sha256": "a3ecab0808171c39c1984c1f0425a5e5d5ef4fbf3eb259ebaeb024100f857f05",
+    "path": "props/well.webp",
+    "kind": "image",
+    "mime": "image/webp",
+    "size": 3700,
+    "name": "well.webp",
     "license": "CC0-1.0"
   },
   {
