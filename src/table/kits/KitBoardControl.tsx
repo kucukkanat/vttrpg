@@ -9,7 +9,7 @@ import { useKitUi } from './kitState'
 import type { KitScene } from './useKitScene'
 
 const box: React.CSSProperties = {
-  position: 'absolute', left: 'max(12px, env(safe-area-inset-left))', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column',
+  position: 'absolute', right: 'max(12px, env(safe-area-inset-right))', top: 12, display: 'flex', flexDirection: 'column',
   alignItems: 'stretch', gap: 4, padding: 4, borderRadius: 10, background: 'var(--scrim, rgba(10,10,14,0.7))', color: 'var(--on-glass, #f3ead8)',
   fontSize: 12, fontWeight: 600, zIndex: 3, touchAction: 'manipulation', userSelect: 'none',
 }

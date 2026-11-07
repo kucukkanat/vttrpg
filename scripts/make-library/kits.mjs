@@ -20,10 +20,17 @@ import { LIBRARY } from './paths.mjs'
 
 /** Straight wall `len` cells long, blocking along its whole length. */
 const wallLos = (len) => [{ a: [-len / 2, 0], b: [len / 2, 0] }]
-/** Wall with an opening of one cell in the middle: the sides block, the middle is `kind` (or open). */
+/**
+ * Wall with an opening in the middle: the sides block, the middle is `kind` (or open). The opening
+ * reaches a quarter cell past the centres of the two cells it spans, so a token can step straight
+ * through (and see straight through) from either cell; a segment that only touched a cell centre
+ * would block the move.
+ */
+const OPENING = 0.75
 const openingLos = (len, kind) => {
-  const out = [{ a: [-len / 2, 0], b: [-0.5, 0] }, { a: [0.5, 0], b: [len / 2, 0] }]
-  if (kind) out.push({ a: [-0.5, 0], b: [0.5, 0], kind })
+  const half = Math.min(OPENING, len / 2)
+  const out = half < len / 2 ? [{ a: [-len / 2, 0], b: [-half, 0] }, { a: [half, 0], b: [len / 2, 0] }] : []
+  if (kind) out.push({ a: [-half, 0], b: [half, 0], kind })
   return out
 }
 /** A square post `half` cells from its centre to each side. */

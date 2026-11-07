@@ -24,6 +24,7 @@ import {
   type EdgeAddr, type KitManifest, type KitPiece,
 } from '@/core/kits'
 import { BUILD } from '@/ui/theme/palette'
+import { useGame } from '@/state/store'
 import { useTable } from '../context'
 import type { Bounds2 } from '../grid'
 import { cellKey as gridCellKey, worldToCell } from '../grid'
@@ -54,6 +55,7 @@ export function KitLayer({ kit, bounds }: { kit: KitScene; bounds: Bounds2 }) {
   const targeting = useTableUi((s) => s.targeting !== null)
   const active = gm && buildTool === 'kit' && kitTool && !tableTool && !targeting ? kitTool : null
   useLevelKeys(gm)
+  useDevProbe()
   return (
     <>
       <KitTiles kit={kit} />
@@ -61,6 +63,36 @@ export function KitLayer({ kit, bounds }: { kit: KitScene; bounds: Bounds2 }) {
       {active && <KitTool key={active} tool={active} kit={kit} bounds={bounds} />}
     </>
   )
+}
+
+/** Dev builds: `window.__kitDev.project(x, y, z)` gives the screen point of a world point, for scripted checks. */
+function useDevProbe() {
+  const camera = useThree((s) => s.camera)
+  const gl = useThree((s) => s.gl)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const w = window as unknown as { __kitDev?: unknown }
+    w.__kitDev = {
+      project: (x: number, y: number, z: number) => {
+        const v = new Vector3(x, y, z).project(camera)
+        const r = gl.domElement.getBoundingClientRect()
+        return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }
+      },
+      calls: () => gl.info.render.calls,
+      /** World point on the plane y = `y` under a screen point. */
+      unproject: (sx: number, sy: number, y = 0) => {
+        const r = gl.domElement.getBoundingClientRect()
+        const ndc = new Vector3(((sx - r.left) / r.width) * 2 - 1, -((sy - r.top) / r.height) * 2 + 1, 0.5)
+        const dir = ndc.unproject(camera).sub(camera.position).normalize()
+        const t = (y - camera.position.y) / dir.y
+        return { x: camera.position.x + dir.x * t, z: camera.position.z + dir.z * t }
+      },
+      tiles: () => useGame.getState().tiles,
+      visible: () => [...(useTableUi.getState().visible ?? [])],
+      tokens: () => Object.values(useGame.getState().tokens).map((t) => ({ id: t.id, name: t.name, position: t.position, scene: t.scene })),
+    }
+    return () => { delete w.__kitDev }
+  }, [camera, gl])
 }
 
 /** PgUp / PgDn: the level the GM builds on (and the cutaway, when it is set by hand). */

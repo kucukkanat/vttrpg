@@ -99,8 +99,21 @@ export function planArea(occ: Occupancy, level: number, manifest: KitManifest, p
   const slot = cellSlotFor(piece.slot, rot) as 'f' | 's' | 'r'
   const cells = cellsOfAreaPiece(piece, at, rot)
   clearArea(b, level, slot, cells)
-  // Stairs open a stairwell in the floor above.
-  if (piece.slot === 'stair') clearArea(b, level + 1, 'f', cells)
+  // Stairs open a stairwell in the floor above; a big floor tile cut by it is patched back with
+  // one-cell tiles around the hole when its kit has them.
+  if (piece.slot === 'stair') {
+    const hole = new Set(cells.map((c) => `${c.x},${c.z}`))
+    const cut = new Set<Occupant>()
+    for (const c of cells) { const o = occ.cell(level + 1, c.x, c.z, 'f'); if (o) cut.add(o) }
+    for (const o of cut) {
+      b.clear(o.key)
+      const small = o.manifest.pieces.find((p) => p.id === o.manifest.defaults.floorSmall)
+      if (!small || small.footprint[0] !== 1 || small.footprint[1] !== 1) continue
+      for (const c of cellsOfAreaPiece(o.piece, o.at, o.value.rot)) {
+        if (!hole.has(`${c.x},${c.z}`)) b.put(cellKey({ x: c.x, level: level + 1, z: c.z, slot: 'f' }), o.manifest, small, 0)
+      }
+    }
+  }
   b.put(cellKey({ x: at.x, level, z: at.z, slot }), manifest, piece, rot)
   return b.build(existingIn(occ))
 }
