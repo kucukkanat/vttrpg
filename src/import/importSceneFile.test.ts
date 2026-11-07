@@ -6,8 +6,16 @@ import uvtt from './__fixtures__/tiny.dd2vtt.json'
 import foundry from './__fixtures__/tiny-foundry.json'
 import { detectMapFormat, importSceneFile, parseMapJson } from './importSceneFile'
 import { createImageScene } from './mapImage'
-import { buildImageScene, sceneFromParsedMap } from './scene'
+import { buildImageScene, imageWallProps, sceneFromParsedMap, segmentWallProps } from './scene'
 import { parseUvtt } from './uvtt'
+import type { Prop } from '@/core/doc'
+import type { PropId } from '@/core/ids'
+import { hasModel, propSegment } from '@/core/propParts'
+
+/** The world segment each invisible prop spans, with its door state. */
+const spans = (props: Prop[]) => props.map((p) => ({ ...propSegment(p, undefined, 1)!, ...(p.door ? { door: { open: p.door.open, ...(p.door.locked ? { locked: true } : {}) } } : {}) }))
+let n = 0
+const ids = () => `p${++n}` as PropId
 
 function stubController() {
   const intents: Intent[] = []
@@ -24,17 +32,26 @@ const PNG: AssetRef = { sha256: 'png' as AssetHash, kind: 'image', mime: 'image/
 
 describe('buildImageScene', () => {
   it('lays the image out with the top-left cell on (0,0) and scales walls to world units', () => {
-    const scene = buildImageScene({ name: 'm', asset: PNG, widthCells: 2, heightCells: 2, cellSize: 1.5, walls: [{ a: { x: 0, y: 1 }, b: { x: 2, y: 1 } }] })
+    const scene = buildImageScene({ name: 'm', asset: PNG, widthCells: 2, heightCells: 2, cellSize: 1.5 })
     expect(scene.model).toBeUndefined()
     expect(scene.grid).toEqual({ type: 'square', cellSize: 1.5, origin: { x: 0, y: 0, z: 0 } })
     expect(scene.image).toEqual({ asset: PNG, widthCells: 2, heightCells: 2, offset: { x: 0.75, y: 0, z: 0.75 } })
     // map y = 1 (between the two rows) is the boundary between cell rows 0 and 1: z = 0.75
-    expect(scene.walls).toEqual([{ a: { x: -0.75, z: 0.75 }, b: { x: 2.25, z: 0.75 } }])
+    const props = imageWallProps(scene, [{ a: { x: 0, y: 1 }, b: { x: 2, y: 1 } }], { makeId: ids })
+    expect(props.every((p) => !hasModel(p) && p.scene === scene.id && p.wall?.blocks === 'both')).toBe(true)
+    expect(spans(props)).toEqual([{ a: { x: -0.75, z: 0.75 }, b: { x: 2.25, z: 0.75 } }])
+    expect(scene.walls).toBeUndefined()
     expect(scene.cameraMode).toBe('orbit')
     expect(scene.darkness).toBe(0.8)
   })
-  it('omits walls when there are none', () => {
-    expect(buildImageScene({ name: 'm', asset: PNG, widthCells: 1, heightCells: 1, cellSize: 1 }).walls).toBeUndefined()
+  it('makes no props when there are no walls', () => {
+    expect(imageWallProps(buildImageScene({ name: 'm', asset: PNG, widthCells: 1, heightCells: 1, cellSize: 1 }), [])).toEqual([])
+  })
+  it('turns detected world segments into one batch of tagged invisible walls', () => {
+    const props = segmentWallProps({ id: 's' as never }, [{ a: { x: 0, z: 0 }, b: { x: 3, z: 0 } }, { a: { x: 1, z: 1 }, b: { x: 1, z: 1 } }], { tags: ['detected'], makeId: ids })
+    expect(props).toHaveLength(1)
+    expect(props[0]!.tags).toEqual(['detected'])
+    expect(spans(props)).toEqual([{ a: { x: 0, z: 0 }, b: { x: 3, z: 0 } }])
   })
 })
 
@@ -44,9 +61,10 @@ describe('sceneFromParsedMap', () => {
     const scene = sceneFromParsedMap(parsed, PNG, { cellSize: 2 })
     expect(scene.name).toBe('tiny')
     expect(scene.image!.widthCells).toBe(2)
-    expect(scene.walls!.length).toBe(4)
+    const props = imageWallProps(scene, parsed.walls, { makeId: ids })
+    expect(props.length).toBe(5)
     // wall from (0,1)-(1,1) in grid units -> x from -1 to 1 at z = 1 (cell size 2, corner at -1)
-    expect(scene.walls![0]).toEqual({ a: { x: -1, z: 1 }, b: { x: 1, z: 1 } })
+    expect(spans(props)[0]).toEqual({ a: { x: -1, z: 1 }, b: { x: 1, z: 1 } })
   })
 })
 
@@ -63,15 +81,18 @@ describe('importSceneFile', () => {
     const scene = result!.scene
     expect(scene.image!.asset.sha256).toBe('sha-tiny.png')
     expect(scene.image!.widthCells).toBe(2)
-    expect(scene.walls).toEqual([
+    expect(scene.walls).toBeUndefined()
+    expect(spans(result!.props)).toEqual([
       { a: { x: -0.5, z: 0.5 }, b: { x: 0.5, z: 0.5 } },
       { a: { x: 0.5, z: 0.5 }, b: { x: 0.5, z: 1.5 } },
       { a: { x: 1.5, z: -0.5 }, b: { x: 1.5, z: 1.5 } },
-      { a: { x: 0.5, z: 0.5 }, b: { x: 1.5, z: 0.5 } },
+      { a: { x: 0.5, z: 0.5 }, b: { x: 1.5, z: 0.5 }, door: { open: false } },
+      { a: { x: -0.5, z: -0.5 }, b: { x: 0.5, z: -0.5 }, door: { open: true } },
     ])
-    expect(intents.map((i) => i.type)).toEqual(['scene.add', 'scene.activate'])
-    expect(intents[1]).toEqual({ type: 'scene.activate', scene: scene.id })
-    expect(result!.notes).toContain('1 open portal left as gaps')
+    // One batch of props between adding and activating the scene.
+    expect(intents.map((i) => i.type)).toEqual(['scene.add', 'props.place', 'scene.activate'])
+    expect(intents[1]).toEqual({ type: 'props.place', props: result!.props })
+    expect(intents[2]).toEqual({ type: 'scene.activate', scene: scene.id })
   })
 
   it('asks for the image on a Foundry export and imports the picked file', async () => {
@@ -84,8 +105,9 @@ describe('importSceneFile', () => {
     expect(imported).toEqual([picked])
     expect(result!.scene.name).toBe('Tiny Cellar')
     expect(result!.scene.darkness).toBe(0.6)
-    expect(result!.scene.walls!.length).toBe(3)
-    expect(intents.length).toBe(2)
+    expect(result!.props.length).toBe(4)
+    expect(result!.props.filter((p) => p.door).map((p) => p.door!.open)).toEqual([false, true])
+    expect(intents.map((i) => i.type)).toEqual(['scene.add', 'props.place', 'scene.activate'])
   })
 
   it('returns null and changes nothing when the image prompt is cancelled', async () => {

@@ -20,7 +20,7 @@
  */
 export { parseUvtt, isUvtt, decodeImage, sniffImage } from './uvtt'
 export { parseFoundryScene, isFoundryScene, foundryGridSize, foundryPaddingOffset } from './foundry'
-export { buildImageScene, sceneFromParsedMap, DEFAULT_DARKNESS } from './scene'
+export { buildImageScene, sceneFromParsedMap, imageWallProps, segmentWallProps, DEFAULT_DARKNESS } from './scene'
 export type { ImageSceneOptions } from './scene'
 export { readImageSize, createImageScene, suggestColumns } from './mapImage'
 export type { ImportController, ImageSize, MapImageOptions } from './mapImage'

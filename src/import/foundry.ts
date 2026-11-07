@@ -11,7 +11,8 @@
  *
  * Canvas pixels are turned into map grid units by removing the padding offset (sceneX / sceneY,
  * computed as Foundry does: padding times the background size, rounded up to whole cells) and
- * dividing by the grid size. Open doors and sight-transparent walls are left out. The background
+ * dividing by the grid size. Doors keep their state (`MapWall.door`: open, closed or locked);
+ * sight-transparent walls are left out. The background
  * image must be supplied separately by the user.
  */
 import type { MapWall, ParsedMap } from './types'
@@ -78,18 +79,18 @@ export function parseFoundryScene(input: unknown, gridSize?: number): ParsedMap 
   const off = foundryPaddingOffset(width, height, size, padding)
   const notes: string[] = []
   const walls: MapWall[] = []
-  let openDoors = 0, transparent = 0
+  let transparent = 0
   for (const w of json.walls ?? []) {
     const c = w?.c
     if (!Array.isArray(c) || c.length < 4 || !c.slice(0, 4).every((v) => typeof v === 'number' && Number.isFinite(v))) continue
-    if ((w.door ?? 0) > 0 && w.ds === 1) { openDoors++; continue }
-    if (w.sight === 0 || (w.sight === undefined && w.sense === 0)) { transparent++; continue }
+    const isDoor = (w.door ?? 0) > 0
+    if (!isDoor && (w.sight === 0 || (w.sight === undefined && w.sense === 0))) { transparent++; continue }
     const a = { x: (c[0]! - off.x) / size, y: (c[1]! - off.y) / size }
     const b = { x: (c[2]! - off.x) / size, y: (c[3]! - off.y) / size }
     if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-9) continue
-    walls.push({ a, b })
+    // Doors (secret ones too) keep their state: ds 0 closed, 1 open, 2 locked.
+    walls.push(isDoor ? { a, b, door: w.ds === 1 ? { open: true } : w.ds === 2 ? { open: false, locked: true } : { open: false } } : { a, b })
   }
-  if (openDoors) notes.push(`${openDoors} open door${openDoors === 1 ? '' : 's'} left as gaps`)
   if (transparent) notes.push(`${transparent} wall${transparent === 1 ? '' : 's'} that do not block sight skipped`)
   const gridType = typeof json.grid === 'object' && json.grid ? json.grid.type : json.gridType
   if (typeof gridType === 'number' && gridType > 1) notes.push('hex grid in the source; shown as squares')
