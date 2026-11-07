@@ -62,6 +62,9 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   }
 
   const manifest = guardManifest(await read('pack.json'))
+  // A pack's display font lives in the pack folder; hand the theme hook a URL it can load.
+  const font = manifest.theme?.displayFont
+  if (font?.src) manifest.theme = { ...manifest.theme, displayFont: { ...font, src: resolvePackUrl(baseUrl, font.src) } }
   const f = manifest.files
   const [attributes, resources, conditions, sheet] = await Promise.all([
     read(f.attributes).then((v) => guardAttributes(v, f.attributes)),
@@ -94,6 +97,14 @@ function expr(src: unknown, file: string, where: string): string {
   return src
 }
 
+const isHex = (v: unknown): v is string => isStr(v) && /^#[0-9a-f]{6}$/i.test(v)
+function guardTheme(v: unknown): boolean {
+  if (!isRec(v)) return false
+  if (!opt(v.accent, isHex) || !opt(v.accentFg, isHex) || !opt(v.frameTint, isHex)) return false
+  const f = v.displayFont
+  return f === undefined || (isRec(f) && isStr(f.family) && opt(f.src, isStr) && opt(f.weight, isStr))
+}
+
 function guardResolution(v: unknown): v is RollResolution {
   if (!isRec(v)) return false
   if (v.kind === 'roll-under') return isStr(v.die)
@@ -109,6 +120,8 @@ export function guardManifest(v: unknown): PackManifest {
   if (!opt(v.description, isStr) || !opt(v.license, isStr)) throw new PackError(file, 'description/license must be strings')
   if (!isRec(v.grid) || !['square', 'hex', 'none'].includes(v.grid.type as string) || !isNum(v.grid.cellSize))
     throw new PackError(file, '"grid" must be { type: square|hex|none, cellSize: number }')
+  if (v.theme !== undefined && !guardTheme(v.theme))
+    throw new PackError(file, '"theme" must be { accent?, accentFg?, frameTint?: "#rrggbb", displayFont?: { family, src?, weight? } }')
   if (v.resolution !== undefined && !guardResolution(v.resolution))
     throw new PackError(file, '"resolution" must be { kind: "roll-under", die } or { kind: "d20-vs-dc" }')
   const files = v.files

@@ -19,6 +19,8 @@ export interface PackManifest {
    * `d20-vs-dc`: success when the total is >= the target.
    */
   resolution?: RollResolution
+  /** Optional look for games of this pack: tints the chrome, never moves it (src/ui/theme/theme.ts). */
+  theme?: PackTheme
   /** Files relative to the pack folder. */
   files: {
     attributes: string
@@ -28,6 +30,18 @@ export interface PackManifest {
     chargen?: string
     skills?: string[]
   }
+}
+
+/**
+ * Pack theme hook. `accent` replaces the brand amber (primary buttons, links) when it stays AA
+ * readable on the current theme; `frameTint` washes the chrome panels; `displayFont` replaces the
+ * display face for names, titles and totals (`src` relative to the pack folder, woff2).
+ */
+export interface PackTheme {
+  accent?: string
+  accentFg?: string
+  frameTint?: string
+  displayFont?: { family: string; src?: string; weight?: string }
 }
 
 export type RollResolution =

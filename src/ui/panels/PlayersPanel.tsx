@@ -16,6 +16,7 @@ import { buildInviteUrl, selectAll, useCopy } from '../invite'
 import { ListRow } from '../components'
 import { colorName } from '../colorName'
 import { setSkipDice, useSkipDicePreference } from '@/dice/skipDice'
+import { setTextScale, setThemePref, useAppearance, type TextScale, type ThemePref } from '../theme/theme'
 import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
@@ -37,6 +38,8 @@ const css = `
 .players-pick { width: 100%; min-height: 48px; font-size: var(--fs-lg); margin-top: var(--sp-2); }
 .players-prefs { margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 .players-prefs .check { margin: 0; }
+.players-appearance { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); }
+.players-appearance label { margin: 0; }
 .players-toggle { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-2); cursor: pointer; font-size: var(--fs-md); }
 .players-toggle input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--accent); }
 `
@@ -97,6 +100,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
   }
 
   const skipDice = useSkipDicePreference()
+  const appearance = useAppearance()
   // GM-only meta flag, written straight to the doc like `meta.names` (the GM is the doc's authority).
   const setShowHp = (on: boolean) => {
     if (!isGm) return
@@ -183,6 +187,24 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <input type="checkbox" checked={skipDice} onChange={(e) => setSkipDice(e.target.checked)} />
           <span>Skip 3D dice <span className="muted small">· results still show in chat</span></span>
         </label>
+        <div className="players-appearance">
+          <label>
+            <span className="small muted">Theme</span>
+            <select value={appearance.theme} onChange={(e) => setThemePref(e.target.value as ThemePref)}>
+              <option value="system">Match the device</option>
+              <option value="dark">Dark</option>
+              <option value="daylight">Daylight (high contrast)</option>
+            </select>
+          </label>
+          <label>
+            <span className="small muted">Text size</span>
+            <select value={appearance.textScale} onChange={(e) => setTextScale(e.target.value as TextScale)}>
+              <option value="default">Default</option>
+              <option value="large">Large</option>
+              <option value="larger">Larger</option>
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   )

@@ -4,7 +4,9 @@ import { App } from './ui/App'
 import './ui/global.css'
 import { registerPwa } from './pwa'
 import { BuildTag } from './ui/BuildTag'
+import { initAppearance } from './ui/theme/theme'
 
+initAppearance()
 registerPwa()
 console.info(`VTTRPG build ${__BUILD_ID__} (${__BUILD_TIME__})`)
 

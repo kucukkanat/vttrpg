@@ -31,6 +31,7 @@ import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
 import { Icon } from '@/ui/icons'
+import { usePackTheme } from '../theme/theme'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
 // the shell's chrome renders before it downloads. Both are module-level so the components keep
@@ -60,6 +61,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   const chat = useGame((s) => s.chat)
   const presence = useGame((s) => s.presence)
   const targeting = useSkillTargeting(controller)
+  usePackTheme(controller.rules?.pack.manifest.theme)
   const keyboard = useKeyboardInset()
 
   // Layout state per breakpoint. Phone tab is session-only (a panel id, or MORE_ID while the More
