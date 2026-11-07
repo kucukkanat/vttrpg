@@ -18,7 +18,7 @@ export type TableMode = 'play' | 'prep' | 'build'
 export const LEAVES = [
   { id: 'world', title: 'Scenes & encounters', panels: ['scenes', 'prep'] },
   { id: 'cast', title: 'Cast', panels: ['tokens', 'skills-editor'] },
-  { id: 'reference', title: 'Reference', panels: ['sound', 'players', 'journal'] },
+  { id: 'reference', title: 'Reference', panels: ['sound', 'players', 'journal', 'credits'] },
 ] as const
 
 export type LeafId = (typeof LEAVES)[number]['id']
