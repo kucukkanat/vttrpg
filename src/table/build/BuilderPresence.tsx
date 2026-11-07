@@ -12,7 +12,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Line } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Box3, Plane, Raycaster, Vector2, Vector3 } from 'three'
 import { activeBuilders, BUILD_SEND_MS, BuildPresenceTracker, type Presence, type PresenceBuild } from '@/core/presence'
 import type { CatalogueEntry } from '@/core/catalogue'
@@ -25,6 +25,7 @@ import { useTableUi } from '../tableState'
 import { useBuildUi } from './buildState'
 import { builderLocal, propBounds } from './editRuntime'
 import { GhostPiece, SizeBox } from './PlaceLayer'
+import { useFrameStats } from './sceneBudget'
 
 const noRaycast = () => undefined
 /** Other builders' ghosts are fainter than your own. */
@@ -39,8 +40,31 @@ export function BuilderPresence() {
     <>
       <BuilderSender />
       <OtherBuilders me={viewer.pubkey} />
+      <FrameStatsProbe />
     </>
   )
+}
+
+/** How often the Build tray's budget meter gets a new frame sample. */
+const FRAME_SAMPLE_MS = 500
+
+/**
+ * In Build: samples the last frame's triangles and draw calls from `renderer.info` for the tray's
+ * budget meter. Runs before each render, so it reads the previous frame; never asks for frames.
+ */
+function FrameStatsProbe() {
+  const buildMode = useTableUi((s) => s.buildMode)
+  const last = useRef(0)
+  useFrame(({ gl }) => {
+    if (!buildMode) return
+    const now = performance.now()
+    if (now - last.current < FRAME_SAMPLE_MS) return
+    last.current = now
+    const { triangles, calls } = gl.info.render
+    const cur = useFrameStats.getState()
+    if (cur.triangles !== triangles || cur.calls !== calls) useFrameStats.setState({ triangles, calls, at: Date.now() })
+  })
+  return null
 }
 
 /** Publishes this GM's cursor, hand and selection while in Build. */
