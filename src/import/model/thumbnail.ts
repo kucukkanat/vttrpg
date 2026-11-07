@@ -7,8 +7,7 @@ import {
   AmbientLight, Box3, DirectionalLight, HemisphereLight, Mesh, PerspectiveCamera, PMREMGenerator, Scene, Sphere,
   SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture,
 } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { createGltfLoader } from '@/table/gltf'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 export const THUMBNAIL_PX = 256
@@ -48,8 +47,8 @@ export function thumbnailDirection(): [number, number, number] {
 }
 
 export async function loadGlb(glb: Uint8Array): Promise<{ scene: Object3D; dispose(): void }> {
-  const loader = new GLTFLoader()
-  loader.setMeshoptDecoder(MeshoptDecoder)
+  // The shared loader (src/table/gltf.ts): Draco, meshopt and, with the thumbnail renderer, KTX2.
+  const loader = createGltfLoader(typeof document === 'undefined' ? {} : { renderer: getRenderer() })
   const buf = glb.byteOffset === 0 && glb.byteLength === glb.buffer.byteLength ? glb.buffer : glb.slice().buffer
   const gltf = await loader.parseAsync(buf as ArrayBuffer, '')
   return { scene: gltf.scene, dispose: () => disposeObject(gltf.scene) }

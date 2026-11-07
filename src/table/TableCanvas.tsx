@@ -19,7 +19,7 @@
  * and an idle frame-rate cap. A lost WebGL context pauses the table behind a notice and remounts
  * the canvas once the browser gives the GPU back (or on Reload).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Box3, Color, Fog, NeutralToneMapping, SRGBColorSpace, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
@@ -43,7 +43,7 @@ import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
 import { MoveBar, moveMissed, TwoTapMoveLayer } from './MovePreview'
-import { Props } from './PropMesh'
+import { Props } from './Props'
 import { RangePreview } from './RangePreview'
 import { DeclaredActions } from './DeclaredActions'
 import { RulerLayer } from './RulerLayer'
@@ -83,6 +83,8 @@ export interface TableCanvasProps {
   targeting?: TargetingProps
   className?: string
   style?: CSSProperties
+  /** Extra scene content inside the canvas (dev stories: probes, benchmarks). */
+  children?: ReactNode
 }
 
 // Stable objects: R3F re-applies `camera` / `gl` props whenever the object identity changes.
@@ -152,7 +154,7 @@ export function TableCanvas(props: TableCanvasProps) {
   )
 }
 
-function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting }: Omit<TableCanvasProps, 'className' | 'style'> & { sceneId: SceneId; scene: Scene; onReady(scene: SceneId, ready: boolean): void }) {
+function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting, children }: Omit<TableCanvasProps, 'className' | 'style'> & { sceneId: SceneId; scene: Scene; onReady(scene: SceneId, ready: boolean): void }) {
   const resolve = resolveAsset ?? defaultResolveAsset
   /** Events older than the canvas are never replayed. */
   const mountedAt = useRef(Date.now()).current
@@ -356,7 +358,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         {!uncapped && <FramePacer graphics={graphics} />}
         <ContextGuard onLost={onContextLost} onRestored={remountCanvas} />
         <TableContext.Provider value={ctx}>
-          {url && <SceneLoaderBridge key={modelRetry} url={url} onLoaded={handleLoaded} onError={handleLoadError} />}
+          {url && <SceneLoaderBridge key={modelRetry} url={url} sha256={scene.model?.sha256} onLoaded={handleLoaded} onError={handleLoadError} />}
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
@@ -376,6 +378,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <EditGizmo />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />
+          {children}
         </TableContext.Provider>
       </Canvas>
       {model && !loaded && !error && <Overlay>Loading scene…</Overlay>}
@@ -595,17 +598,17 @@ function CameraShake({ cellSize }: { cellSize: number }) {
 }
 
 /** Loads the GLB inside the canvas so the renderer is available for KTX2 detection. */
-function SceneLoaderBridge({ url, onLoaded, onError }: { url: string; onLoaded(s: LoadedScene): void; onError(e: unknown): void }) {
+function SceneLoaderBridge({ url, sha256, onLoaded, onError }: { url: string; sha256?: string; onLoaded(s: LoadedScene): void; onError(e: unknown): void }) {
   const gl = useThree((s) => s.gl)
   useEffect(() => {
     let live = true
     let result: LoadedScene | null = null
-    loadSceneModel(url, { renderer: gl }).then(
+    loadSceneModel(url, sha256 ? { renderer: gl, sha256 } : { renderer: gl }).then(
       (s) => { if (live) { result = s; onLoaded(s) } else disposeScene(s) },
       (e: unknown) => { if (live) onError(e) },
     )
     return () => { live = false; if (result) disposeScene(result) }
-  }, [url, gl, onLoaded, onError])
+  }, [url, sha256, gl, onLoaded, onError])
   return null
 }
 
