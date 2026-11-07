@@ -92,8 +92,8 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
     <>
       <Doors />
       <Lights />
-      {gm && ((active && active !== 'place' && active !== 'eyedropper') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
-      {active && (active === 'place' || active === 'eyedropper'
+      {gm && ((active && active !== 'place' && active !== 'eyedropper' && active !== 'kit') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
+      {active && active !== 'kit' && (active === 'place' || active === 'eyedropper'
         ? <PlaceLayer tool={active} bounds={bounds} />
         : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
       {gm && !viewer?.display && <CardDrop />}

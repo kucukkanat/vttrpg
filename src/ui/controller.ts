@@ -6,6 +6,8 @@
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
 import { docBlockingSegments, moveBlocked, sceneWalls } from '@/table/build/wallEdit'
+import { levelOfHeight } from '@/core/kits'
+import { kitRuntime } from '@/table/kits/runtime'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import { vfxBus } from '@/table/vfx/bus'
 import { numbersEvent } from '@/table/vfx/numbers'
@@ -73,7 +75,7 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters, tiles: s.tiles }
   }
 
   /** A player's token move through a drawn or imported wall or a closed door (the table stops such drags too). */
@@ -82,7 +84,13 @@ export function createController(opts: {
     const s = useGame.getState()
     const t = s.tokens[intent.token]
     if (!t) return false
-    return moveBlocked(t.position, intent.position, docBlockingSegments(s.scenes[t.scene], sceneWalls(s.walls, t.scene)))
+    const scene = s.scenes[t.scene]
+    // Storeys: the token moves on its level, blocked by that level's kit walls (the scene's own
+    // walls belong to level 0), as the mounted table reports them.
+    const level = scene ? Math.max(0, levelOfHeight(t.position.y ?? 0, 0, scene.grid.cellSize)) : 0
+    const kit = kitRuntime.moveWalls?.(t.scene, level) ?? []
+    const base = level === 0 ? docBlockingSegments(scene, sceneWalls(s.walls, t.scene)) : []
+    return moveBlocked(t.position, intent.position, kit.length ? [...base, ...kit] : base)
   }
 
   /** The sheet a roll intent was made from, if it names one that still exists. */

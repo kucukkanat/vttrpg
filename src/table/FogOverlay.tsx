@@ -13,6 +13,32 @@ import { revealsFor, seesThrough, useTable } from './context'
 import { useTableUi } from './tableState'
 import { ALL_CELLS, computeVisibleCells, exploredCells, fogRasterLayout, fogStrength, isFogEnabled, rasterizeFog, type CellSet, type Viewer2D } from './vision'
 import type { WallSegment } from './walls'
+import { levelBase } from '@/core/kitGeometry'
+import { levelCellKey, levelView, tokenLevel } from './kits/levels'
+import { sightWallsAt, type KitScene } from './kits/useKitScene'
+import type { GridSpec } from '@/core/geometry'
+
+type LevelViewer = Viewer2D & { level: number }
+
+/**
+ * Cells visible to viewers on several levels: each level's viewers see past the walls of that
+ * level only, and their cells carry the level in the key (`levelCellKey`; level 0 keeps the plain
+ * keys of single-level scenes).
+ */
+export function visibleByLevel(grid: GridSpec, viewers: readonly LevelViewer[], walls: readonly WallSegment[], kits: KitScene | undefined): Set<string> {
+  const byLevel = new Map<number, Viewer2D[]>()
+  for (const v of viewers) {
+    let list = byLevel.get(v.level)
+    if (!list) byLevel.set(v.level, (list = []))
+    list.push(v)
+  }
+  if (byLevel.size === 1 && byLevel.has(0) && !kits?.wallsAt(0).sight.length) return computeVisibleCells(grid, viewers, walls)
+  const out = new Set<string>()
+  for (const [level, list] of byLevel) {
+    for (const k of computeVisibleCells(grid, list, sightWallsAt(kits, level, walls))) out.add(levelCellKey(k, level))
+  }
+  return out
+}
 
 const noRaycast = () => undefined
 
@@ -42,7 +68,7 @@ const frag = /* glsl */ `
  * and explored-but-unseen cells are darkened a little more for revealed cells to stand out.
  */
 export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bounds2; walls: readonly WallSegment[]; brightFloor?: boolean }) {
-  const { grid, floorY, viewer, sceneId, scene, onIntent } = useTable()
+  const { grid, floorY, viewer, sceneId, scene, onIntent, kits } = useTable()
   const tokens = useGame((s) => s.tokens)
   const fog = useGame((s) => s.fog[sceneId])
   const drag = useTableUi((s) => s.drag)
@@ -51,17 +77,19 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
     () => Object.values(tokens).filter((t) => t.scene === sceneId && !t.hidden),
     [tokens, sceneId],
   )
-  const position = (t: Token): Viewer2D =>
-    drag && drag.token === t.id
-      ? { x: drag.x, z: drag.z, vision: t.vision }
-      : { x: t.position.x, z: t.position.z, vision: t.vision }
+  const position = (t: Token): LevelViewer => {
+    const level = tokenLevel(t.position.y, floorY, grid)
+    return drag && drag.token === t.id
+      ? { x: drag.x, z: drag.z, vision: t.vision, level }
+      : { x: t.position.x, z: t.position.z, vision: t.vision, level }
+  }
 
   // Cells seen by tokens whose sight this client is responsible for revealing.
   const revealTokens = useMemo(() => sceneTokens.filter((t) => revealsFor(viewer, t)), [sceneTokens, viewer])
   const visibleReveal = useMemo(
-    () => computeVisibleCells(grid, revealTokens.map(position), walls),
+    () => visibleByLevel(grid, revealTokens.map(position), walls, kits),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [grid, revealTokens, walls, drag],
+    [grid, revealTokens, walls, drag, kits],
   )
   // What this viewer sees: GM sees through every token, a table display through every player's,
   // players only through their own (see `seesThrough`).
@@ -69,12 +97,13 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
     const others = sceneTokens.filter((t) => seesThrough(viewer, t) && !revealsFor(viewer, t))
     if (others.length === 0) return visibleReveal
     const out = new Set(visibleReveal)
-    for (const k of computeVisibleCells(grid, others.map(position), walls)) out.add(k)
+    for (const k of visibleByLevel(grid, others.map(position), walls, kits)) out.add(k)
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grid, sceneTokens, viewer, visibleReveal, walls, drag])
+  }, [grid, sceneTokens, viewer, visibleReveal, walls, drag, kits])
 
   const explored = useMemo(() => exploredCells(fog), [fog])
+  const viewLevel = kits?.viewLevel ?? 0
   const fogOn = isFogEnabled(scene)
 
   // Optimistically remember what we already asked to reveal, so we do not re-send every render.
@@ -126,11 +155,13 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
       for (const k of pending.current.cells) merged.add(k)
       all = merged
     }
-    rasterizeFog(grid, layout, visibleDisplay, all, texture.image.data as Uint8Array)
+    // The fog drawn is the one of the level on view (the cutaway's); level 0 for single-level scenes.
+    rasterizeFog(grid, layout, levelView(visibleDisplay, viewLevel), levelView(all, viewLevel), texture.image.data as Uint8Array)
     texture.needsUpdate = true
-  }, [grid, layout, visibleDisplay, explored, texture])
+  }, [grid, layout, visibleDisplay, explored, texture, viewLevel])
 
   const strength = fogStrength(scene)
+  const fogY = levelBase(viewLevel, floorY, grid.cellSize)
   const gm = !viewer || viewer.isGm
   const uiSet = useTableUi((s) => s.set)
   useEffect(() => {
@@ -145,7 +176,7 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
   const h = bounds.maxZ - bounds.minZ
   return (
     <mesh
-      position={[(bounds.minX + bounds.maxX) / 2, floorY + 0.03, (bounds.minZ + bounds.maxZ) / 2]}
+      position={[(bounds.minX + bounds.maxX) / 2, fogY + 0.03, (bounds.minZ + bounds.maxZ) / 2]}
       rotation-x={-Math.PI / 2}
       material={material}
       raycast={noRaycast}

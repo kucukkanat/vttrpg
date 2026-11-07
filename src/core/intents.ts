@@ -124,6 +124,15 @@ export type Intent =
   | { type: 'light.add'; light: PlacedLight }
   | { type: 'light.update'; light: LightId; patch: Partial<PlacedLight> }
   | { type: 'light.remove'; light: LightId }
+  /**
+   * Grid kit tiles (GM and co-GMs; see src/core/kits.ts and src/core/tiles.ts). One paint stroke is
+   * one intent: `keys` are cell keys `x,level,z,slot`, `values[i]` is `kit:piece:rot[:variant]`
+   * with `kit` indexing this intent's `kits`, or `''` to clear the cell. Applied in one transaction.
+   */
+  | { type: 'tiles.place'; scene: SceneId; kits: string[]; keys: string[]; values: string[] }
+  | { type: 'tiles.erase'; scene: SceneId; keys: string[] }
+  /** Open or close a kit door. The GM always; players when the scene allows doors (`playersOpenDoors`). */
+  | { type: 'tiles.door'; scene: SceneId; key: string; open: boolean }
   /** Prefabs (GM only). Stamping one is a single `props.place` carrying the walls. */
   | { type: 'prefab.upsert'; prefab: Prefab }
   | { type: 'prefab.remove'; prefab: PrefabId }

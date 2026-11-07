@@ -38,6 +38,10 @@ import { CameraRig } from './CameraRig'
 import { ambientLevels, fogColor, fogRange } from './atmosphere'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
 import { BuildLayer, useDrawnBlocking } from './build/BuildLayer'
+import { KitLayer } from './kits/KitLayer'
+import { KitBoardControl } from './kits/KitBoardControl'
+import { heightVisible, levelCellKey, tokenLevel } from './kits/levels'
+import { useKitScene } from './kits/useKitScene'
 import { BuilderPresence } from './build/BuilderPresence'
 import { EditGizmo } from './EditGizmo'
 import { PropEditor } from './build/PropEditor'
@@ -315,6 +319,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   // Walls and doors drawn on the table (build tools); a closed door blocks like a wall.
   const drawnWalls = useDrawnBlocking(sceneId)
   const walls = useMemo(() => (drawnWalls.length ? [...baseWalls, ...drawnWalls] : baseWalls), [baseWalls, drawnWalls])
+  // Grid kit tiles: occupancy, walls per level, cutaway.
+  const kits = useKitScene(sceneId, grid, floorY)
   useEffect(() => {
     const c = bounds3.getCenter(new Vector3())
     tableRuntime.sceneCenter = { x: c.x, y: floorY, z: c.z }
@@ -333,8 +339,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
 
   const graphics = useGraphics()
   const ctx: TableContextValue = useMemo(
-    () => ({ sceneId, scene, grid, floorY, loaded, walls, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve, graphics }),
-    [sceneId, scene, grid, floorY, loaded, walls, viewer, onIntent, onPresence, resolve, graphics],
+    () => ({ sceneId, scene, grid, floorY, loaded, walls, kits, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve, graphics }),
+    [sceneId, scene, grid, floorY, loaded, walls, kits, viewer, onIntent, onPresence, resolve, graphics],
   )
   // WebGL context loss (app switch on a phone, a GPU reset): notice while lost, then a fresh canvas.
   const [glLost, setGlLost] = useState(false)
@@ -376,6 +382,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} clip={floorRect} />}
           <Props sceneId={sceneId} />
+          <KitLayer kit={kits} bounds={bounds2} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
@@ -402,6 +409,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {targeting && <TargetingBar targeting={targeting} />}
       {!targeting && <MoveBar onIntent={onIntent} grid={grid} floorY={floorY} viewer={viewer ?? null} />}
       <PropEditOverlay gm={gm} />
+      {gm && !viewer?.display && <KitBoardControl kit={kits} />}
       {glLost && <ContextLostNotice onReload={remountCanvas} />}
     </div>
   )
@@ -655,13 +663,16 @@ function Tokens({ sceneId, viewer }: { sceneId: SceneId; viewer: ViewerInfo | nu
   const tokens = useGame((s) => s.tokens)
   const presence = useGame((s) => s.presence)
   const visible = useTableUi((s) => s.visible)
-  const { grid } = useTable()
-  // Players only see tokens standing in cells they can see (their own always).
+  const { grid, floorY, kits } = useTable()
+  const cut = kits?.cut ?? Infinity
+  // Players only see tokens standing in cells they can see (their own always). The cutaway hides
+  // tokens above its level.
   const list = useMemo(() => Object.values(tokens).filter((t) => {
     if (t.scene !== sceneId) return false
+    if (!heightVisible(t.position.y, cut, floorY, grid)) return false
     if (!visible || !viewer || viewer.isGm || canControl(viewer, t)) return true
-    return visible.has(cellKey(worldToCell(grid, t.position.x, t.position.z)))
-  }), [tokens, sceneId, visible, viewer, grid])
+    return visible.has(levelCellKey(cellKey(worldToCell(grid, t.position.x, t.position.z)), tokenLevel(t.position.y, floorY, grid)))
+  }), [tokens, sceneId, visible, viewer, grid, cut, floorY])
   const ghosts = useMemo(
     () => Object.values(presence).filter((p) => p.dragging && p.pubkey !== viewer?.pubkey && tokens[p.dragging.token]?.scene === sceneId),
     [presence, tokens, sceneId, viewer],

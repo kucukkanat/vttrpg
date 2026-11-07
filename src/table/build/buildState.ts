@@ -28,6 +28,8 @@ export type BuildTool =
   | 'place'
   /** The eyedropper: the next prop clicked on the board is picked up, with its turn and scale. */
   | 'eyedropper'
+  /** A grid kit tool (kits/kitState.ts says which). */
+  | 'kit'
 
 /** Walls proposed by detection, waiting for the GM to accept or discard them. */
 export interface WallProposal {

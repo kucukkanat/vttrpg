@@ -9,6 +9,8 @@ import type { SkillDef } from '@/core/pack'
 import type { CatalogueEntry } from '@/core/catalogue'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
+import type { SceneTiles } from '@/core/kits'
+import { KITS_KEY, readChunk, readSceneTiles } from './tilesDoc'
 
 /** What the local user has selected on the table. Tokens stay mirrored in `selectedToken`. */
 export type Selection =
@@ -52,6 +54,11 @@ export interface GameState {
   walls: Record<WallId, Wall>
   prefabs: Record<PrefabId, Prefab>
   lights: Record<LightId, PlacedLight>
+  /**
+   * Grid kit tiles by scene, mirrored chunk by chunk: an edit replaces only the chunk records it
+   * touched (and the scene record holding them), so chunk renderers rebuild only what changed.
+   */
+  tiles: Record<SceneId, SceneTiles>
   /** The game's own models (imports and uploads), by catalogue id. */
   catalogue: Record<string, CatalogueEntry>
   presence: Record<string, Presence>
@@ -84,7 +91,7 @@ export interface GameState {
   addPropsToSelection(ids: readonly PropId[]): void
   clearPropSelection(): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'catalogue'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'tiles' | 'catalogue'>>): void
 }
 
 let noticeSeq = 0
@@ -106,6 +113,7 @@ export const useGame = create<GameState>((set) => ({
   walls: {} as Record<WallId, Wall>,
   prefabs: {} as Record<PrefabId, Prefab>,
   lights: {} as Record<LightId, PlacedLight>,
+  tiles: {} as Record<SceneId, SceneTiles>,
   catalogue: {},
   presence: {},
   notices: [],
@@ -239,7 +247,7 @@ export function bindDoc(doc: Y.Doc): () => void {
     chat: doc.getArray('chat'), fog: doc.getMap('fog'), events: doc.getArray('events'), props: doc.getMap('props'),
     notes: doc.getMap('notes'), customSkills: doc.getMap('customSkills'), initiative: doc.getMap('initiative'),
     creatures: doc.getMap('creatures'), encounters: doc.getMap('encounters'), walls: doc.getMap('walls'),
-    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'), catalogue: doc.getMap('catalogue'),
+    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'), tiles: doc.getMap('tiles'), catalogue: doc.getMap('catalogue'),
   }
   const keys = Object.keys(types) as DocKey[]
   // An empty `meta` map mirrors as an empty object, as it always has.
@@ -264,7 +272,14 @@ export function bindDoc(doc: Y.Doc): () => void {
     if (next) { props = next as Record<PropId, Prop>; dirty.add('props') }
   }
   propsMap.observeDeep(onProps)
-  const offOthers = keys.filter((k) => k !== 'props').map((key) => {
+  const tilesMap = types.tiles as Y.Map<unknown>
+  let tiles = readTilesMirror(tilesMap)
+  const onTiles = (events: Y.YEvent<Y.AbstractType<unknown>>[]) => {
+    const next = patchTiles(tiles, tilesMap, events)
+    if (next !== tiles) { tiles = next; dirty.add('tiles') }
+  }
+  tilesMap.observeDeep(onTiles)
+  const offOthers = keys.filter((k) => k !== 'props' && k !== 'tiles').map((key) => {
     const mark = () => { dirty.add(key) }
     types[key].observeDeep(mark)
     return () => types[key].unobserveDeep(mark)
@@ -272,7 +287,7 @@ export function bindDoc(doc: Y.Doc): () => void {
 
   const snapshot = (which: Iterable<DocKey>): DocPartial => {
     const out: Record<string, unknown> = {}
-    for (const key of which) out[key] = key === 'props' ? props : read(key)
+    for (const key of which) out[key] = key === 'props' ? props : key === 'tiles' ? tiles : read(key)
     return out as DocPartial
   }
   // Observers run in the transaction's cleanup, before the doc's 'update' event, so by then
@@ -288,6 +303,75 @@ export function bindDoc(doc: Y.Doc): () => void {
   return () => {
     doc.off('update', sync)
     propsMap.unobserveDeep(onProps)
+    tilesMap.unobserveDeep(onTiles)
     for (const off of offOthers) off()
   }
+}
+
+function readTilesMirror(map: Y.Map<unknown>): Record<SceneId, SceneTiles> {
+  const out: Record<string, SceneTiles> = {}
+  for (const [id, scene] of map.entries()) out[id] = readSceneTiles(scene)
+  return out as Record<SceneId, SceneTiles>
+}
+
+/**
+ * The tiles mirror after a transaction's events: scenes, chunks and kit tables that changed are
+ * re-read; every other scene and chunk record keeps its identity. Returns `prev` when nothing
+ * changed.
+ */
+export function patchTiles(prev: Record<SceneId, SceneTiles>, map: Y.Map<unknown>, events: Y.YEvent<Y.AbstractType<unknown>>[]): Record<SceneId, SceneTiles> {
+  let next: Record<string, SceneTiles> | null = null
+  const scenes = (): Record<string, SceneTiles> => (next ??= { ...prev })
+  // Scene records copied in this batch, and chunk records replaced in it (both safe to patch).
+  const ownScenes = new Set<string>()
+  const ownChunks = new Set<Record<string, string>>()
+  const sceneCopy = (id: string): SceneTiles => {
+    const all = scenes()
+    if (!ownScenes.has(id)) {
+      const old = all[id] ?? { kits: [], chunks: {} }
+      all[id] = { kits: old.kits, chunks: { ...old.chunks } }
+      ownScenes.add(id)
+    }
+    return all[id]!
+  }
+  for (const ev of events) {
+    if (ev.target === map) {
+      // Whole scenes added or removed.
+      for (const id of ev.changes.keys.keys()) {
+        const v = map.get(id)
+        ownScenes.delete(id)
+        if (v === undefined) delete scenes()[id]
+        else scenes()[id] = readSceneTiles(v)
+      }
+      continue
+    }
+    const sceneId = ev.path[0]
+    if (typeof sceneId !== 'string') continue
+    const sm = map.get(sceneId) as Y.Map<unknown> | undefined
+    if (!sm || typeof sm.get !== 'function') continue
+    const t = sceneCopy(sceneId)
+    if (ev.path.length === 1) {
+      // Chunks added or removed, or the kit table changed.
+      for (const key of ev.changes.keys.keys()) {
+        if (key === KITS_KEY) { t.kits = readSceneTiles(sm).kits; continue }
+        const c = sm.get(key)
+        if (c === undefined) delete t.chunks[key]
+        else { const rec = readChunk(c); ownChunks.add(rec); t.chunks[key] = rec }
+      }
+      continue
+    }
+    const chunkId = ev.path[1]
+    if (typeof chunkId !== 'string') continue
+    const chunk = sm.get(chunkId) as Y.Map<string> | undefined
+    const cur = t.chunks[chunkId]
+    let rec = cur
+    if (!rec || !ownChunks.has(rec)) { rec = { ...(cur ?? {}) }; ownChunks.add(rec) }
+    for (const key of ev.changes.keys.keys()) {
+      const v = chunk?.get(key)
+      if (typeof v === 'string') rec[key] = v
+      else delete rec[key]
+    }
+    t.chunks[chunkId] = rec
+  }
+  return next ? (next as Record<SceneId, SceneTiles>) : prev
 }

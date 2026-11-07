@@ -23,8 +23,10 @@ import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
 import { useSession } from '@/ui/session'
 import { canControl, useTable } from './context'
-import { snapToCell } from './grid'
+import { snapToCell, worldToCell } from './grid'
 import { moveBlocked } from './build/wallEdit'
+import { onStair, standAt, tokenDrawY, tokenLevel } from './kits/levels'
+import { moveWallsAt } from './kits/useKitScene'
 import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
@@ -421,7 +423,20 @@ export function useAssetUrl(ref: Token['model']): string | null {
 }
 
 export function TokenMesh({ token }: { token: Token }) {
-  const { grid, floorY, viewer, walls, onIntent, onPresence } = useTable()
+  const { grid, floorY: sceneFloorY, viewer, walls: sceneWalls, onIntent, onPresence, kits } = useTable()
+  // Storeys: the token stands on the level its height says (level 0, the scene floor, without kit
+  // tiles); it is drawn, dragged and blocked on that level.
+  const level = tokenLevel(token.position.y, sceneFloorY, grid)
+  const floorY = tokenDrawY(token.position.y, sceneFloorY, grid)
+  const walls = useMemo(() => moveWallsAt(kits, level, sceneWalls), [kits, level, sceneWalls])
+  /** Height a move to (x, z) lands at: the floor tile or stair there (kit storeys), else the scene floor. */
+  const landY = (x: number, z: number): number => {
+    if (!kits?.tiles) return sceneFloorY
+    const from = worldToCell(grid, token.position.x, token.position.z)
+    const to = worldToCell(grid, x, z)
+    const max = kits.cut === Infinity ? level : kits.cut
+    return standAt(kits.occ, { level, stair: onStair(token.position.y, sceneFloorY, grid), x: from.q, z: from.r }, { x: to.q, z: to.r }, max, sceneFloorY, grid).y
+  }
   const selected = useGame((s) => s.selectedTokens.includes(token.id))
   const setSelected = useGame((s) => s.setSelectedToken)
   const toggleSelected = useGame((s) => s.toggleSelected)
@@ -548,7 +563,7 @@ export function TokenMesh({ token }: { token: Token }) {
     onPresence({ dragging: undefined })
     if (commit && ghost && ghost.token === token.id) {
       if (Math.abs(ghost.x - token.position.x) > 1e-4 || Math.abs(ghost.z - token.position.z) > 1e-4) {
-        onIntent({ type: 'token.move', token: token.id, position: { x: ghost.x, y: floorY, z: ghost.z } })
+        onIntent({ type: 'token.move', token: token.id, position: { x: ghost.x, y: landY(ghost.x, ghost.z), z: ghost.z } })
         // The rest of the selection moves by the same delta: one intent per token the viewer may move.
         const s = useGame.getState()
         for (const m of groupMoveTargets(ghost, s.tokens, s.selectedTokens)) {
@@ -556,7 +571,7 @@ export function TokenMesh({ token }: { token: Token }) {
           if (!t || !canControl(viewer, t)) continue
           const p = snapToCell(grid, m.x, m.z)
           if (Math.abs(p.x - t.position.x) > 1e-4 || Math.abs(p.z - t.position.z) > 1e-4) {
-            onIntent({ type: 'token.move', token: m.token, position: { x: p.x, y: floorY, z: p.z } })
+            onIntent({ type: 'token.move', token: m.token, position: { x: p.x, y: t.position.y ?? floorY, z: p.z } })
           }
         }
       }

@@ -8,6 +8,7 @@ import type { CatalogueEntry } from './catalogue'
 import type { Cell, GridSpec, Vec3 } from './geometry'
 import type { CharacterId, LightId, NoteId, PackId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
 import type { SkillDef, VfxCue } from './pack'
+import type { SceneTiles } from './kits'
 
 export type CameraMode = 'orbit' | 'token'
 
@@ -498,6 +499,12 @@ export interface GameDocShape {
   prefabs?: Record<PrefabId, Prefab>
   lights?: Record<LightId, PlacedLight>
   /**
+   * Grid kit tiles by scene (src/core/kits.ts). In the Yjs doc: `tiles` (Y.Map) -> scene id ->
+   * Y.Map holding `kits` (the scene's kit table, a plain array) and one Y.Map<string> per 16×16
+   * chunk (`cx,cz`), keyed by cell key `x,level,z,slot` with values `kit:piece:rot[:variant]`.
+   */
+  tiles?: Record<SceneId, SceneTiles>
+  /**
    * The game's own models ("My models" in the library): imported or uploaded catalogue entries,
    * keyed by `CatalogueEntry.id`, with encrypted AssetRefs so every player can load them. Co-GMs
    * see and place them too. Written only through `catalogue.add` / `catalogue.remove` (GM).
@@ -505,4 +512,4 @@ export interface GameDocShape {
   catalogue?: Record<string, CatalogueEntry>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights', 'creatures', 'encounters', 'catalogue'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights', 'creatures', 'encounters', 'tiles', 'catalogue'] as const
