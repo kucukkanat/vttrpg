@@ -1,36 +1,48 @@
 /**
- * The game screen's layout. One tree for all breakpoints: the top bar, the table and the
- * chrome slots are always at the same positions, so crossing a breakpoint re-arranges CSS grid
- * areas without remounting the 3D canvas. See docs/UX.md.
+ * The game screen: the table layout (docs/UX.md "Table layout"). The board fills the screen and
+ * everything else sits on or around it, one home per thing:
+ *
+ *   top rail      the game's plaque, the live scene, the combat control, who is here, the bell,
+ *                 search (Ctrl/⌘-K) and the menu
+ *   standees      turn order along the top edge, only in combat
+ *   tool rail     camera and table tools on the left edge, and the journal
+ *   the hand      the selected token's card and actions, bottom centre
+ *   the scroll    chat on the right edge, rolled up or open
+ *   dice well     bottom right; dice roll inside it
+ *   GM screen     bottom left (GM): Play / Prep / Build
+ *   one card      any other panel, one at a time
+ *
+ * Phones keep the same pieces as a bottom bar and sheets (PhoneBar.tsx). One React tree for every
+ * width, so the 3D canvas never remounts when the layout changes.
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useGame } from '@/state/store'
 import type { AssetRef } from '@/core/assets'
 import { sharedAudioEngine } from '@/audio'
 import type { GameController } from '../controller'
-import { PANELS, type PanelDef } from '../panels/registry'
-import { TopBar } from '../panels/TopBar'
+import { PANELS } from '../panels/registry'
+import { TopBar, requestInvite } from '../panels/TopBar'
 import { useSkillTargeting } from '../panels/SkillsPanel'
 import { ClaimPrompt, PresenceBeacon } from '../panels/ClaimPrompt'
+import { InitiativeChip } from '../panels/InitiativePanel'
+import { usePlaying } from '../panels/soundboard'
 import { useBreakpoint } from './useBreakpoint'
 import { usePersisted } from './usePersisted'
 import { useKeyboardInset } from './useKeyboardInset'
 import { useUnread, useUnreadNotes } from './useUnread'
 import { focusChatInput, useShortcuts } from './useShortcuts'
-import { BottomSheet, type SheetSize } from './BottomSheet'
-import { TabBar } from './TabBar'
-import { MoreList } from './MoreList'
-import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
-import { Drawer } from './Drawer'
-import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
-import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
+import { CameraPill, HudLayers } from './Hud'
 import { Dock } from './Dock'
 import { useGameAlerts } from './useGameAlerts'
 import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
-import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, presetLayouts, type LayoutPresetId, type TabletLayout } from './layoutPresets'
+import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, type LayoutPresetId } from './layoutPresets'
 import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
+import { panelShown, useTableLayout } from './tableLayout'
+import { Bell, CardHost, CombatControl, DiceWell, GmScreen, JournalBook, PresenceRow, Scroll } from './TableChrome'
+import { CommandPalette, type PaletteActions } from './CommandPalette'
+import { PhoneBar, PhoneSheets } from './PhoneBar'
 import { Cues } from '../cues'
 import { downloadBlob, exportGame } from '../gameFile'
 import { pushToast } from '../toasts'
@@ -38,14 +50,17 @@ import { OnboardingTips } from '../onboarding/OnboardingTips'
 import { Icon } from '@/ui/icons'
 import { usePackTheme } from '../theme/theme'
 import { canSeeRoll } from '../rollMode'
+import './Table.css'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
 // the shell's chrome renders before it downloads. Both are module-level so the components keep
-// their identity across renders and the canvas is never remounted by a breakpoint change.
+// their identity across renders and the canvas is never remounted by a layout change.
 const TableCanvas = lazy(() => import('@/table/TableCanvas').then((m) => ({ default: m.TableCanvas })))
 const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => ({ default: m.DiceTrayOverlay })))
-/** Where phone dice shrink to when they yield: the roll toast, while it is on screen. */
-const rollToastBox = () => document.querySelector('.roll-toast')?.getBoundingClientRect() ?? null
+
+/** Dice in the well: a camera close over a small tray, so a die reads at the well's size. */
+const WELL_ZOOM = 2.4
+const PHONE_WELL_ZOOM = 2
 
 function TableLoading() {
   return (
@@ -55,109 +70,85 @@ function TableLoading() {
   )
 }
 
-const TABLET_DEFAULT: TabletLayout = { tab: 'chat', open: true, pinned: true }
-const DRAWER_W = 360
-
 export function GameShell({ controller }: { controller: GameController }) {
   const deviceBp = useBreakpoint()
-  // Layout preset per device (layoutPresets.ts): Compact uses the phone arrangement at any width.
   const [view, setView] = usePersisted<{ preset: LayoutPresetId }>('vtt.shell.preset', { preset: DEFAULT_PRESET })
   const preset = isPresetId(view.preset) ? view.preset : DEFAULT_PRESET
   const bp = presetBreakpoint(preset, deviceBp)
+  const phone = bp === 'phone'
   const display = isDisplayPreset(preset)
   // Zen: every bit of chrome hidden over the table for this session; Z, Esc or the corner button restores.
   const [zen, setZen] = useState(false)
   useZenKeys(zen, setZen)
   const isGm = controller.connection.isGm
   const panels = useMemo(() => PANELS.filter((p) => p.scope === 'all' || isGm), [isGm])
-  const phoneTabs = useMemo(() => splitPhoneTabs(panels, isGm), [panels, isGm])
   const meta = useGame((s) => s.meta)
   const chat = useGame((s) => s.chat)
   const presence = useGame((s) => s.presence)
+  const combat = useGame((s) => s.initiative?.active ? s.initiative : null)
   const targeting = useSkillTargeting(controller)
   usePackTheme(controller.rules?.pack.manifest.theme)
   const keyboard = useKeyboardInset()
+  const layout = useTableLayout()
+  const mode = isGm ? layout.mode : 'play'
 
-  // Layout state per breakpoint. Phone tab is session-only (a panel id, or MORE_ID while the More
-  // list is showing); tablet and desktop persist.
-  const [phoneTab, setPhoneTab] = useState<string | null>(null)
-  const [sheetSize, setSheetSize] = useState<SheetSize>('half')
-  const [tablet, setTablet] = usePersisted<TabletLayout>('vtt.shell.tablet', TABLET_DEFAULT)
-  const [desktop, setDesktop] = usePersisted<DesktopLayout>('vtt.shell.desktop', DESKTOP_DEFAULT, { version: DESKTOP_LAYOUT_VERSION, migrate: migrateDesktopLayout })
+  // The scroll starts rolled up (the rod shows unread messages); per device after the first toggle.
+  const [scrollPref, setScrollPref] = usePersisted<{ open: boolean | null }>('vtt.shell.scroll', { open: null })
+  useEffect(() => {
+    useTableLayout.getState().set({ scrollOpen: !phone && (scrollPref.open ?? false) })
+    // Only on mount and when the device class changes; later toggles are the user's.
+  }, [bp]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!phone) setScrollPref({ open: layout.scrollOpen }) }, [layout.scrollOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Players have no Prep or Build; a GM demoted mid-session drops back to Play.
+  useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
 
-  const byId = (id: string | null): PanelDef | undefined => panels.find((p) => p.id === id)
-  const phonePanel = byId(phoneTab)
-  const phoneMore = phoneTab === MORE_ID
-  // Last panel opened from the More list, so the list can mark it when reopened.
-  const [lastMore, setLastMore] = useState<string | null>(null)
-  useEffect(() => { if (phoneTab && phoneTabs.more.some((p) => p.id === phoneTab)) setLastMore(phoneTab) }, [phoneTab, phoneTabs])
-  const tabletTab = byId(tablet.tab) ? tablet.tab : (panels[0]?.id ?? 'chat')
+  const openPanel = useCallback((id: string) => useTableLayout.getState().open(id, isGm, phone), [isGm, phone])
 
-  // Open a panel wherever the current layout keeps it.
-  const openPanel = useCallback((id: string) => {
-    if (bp === 'phone') { setPhoneTab(id); setSheetSize('half') }
-    else if (bp === 'tablet') setTablet((t) => ({ ...t, tab: id, open: true }))
-    else {
-      const def = PANELS.find((p) => p.id === id)
-      setDesktop((d) => ({
-        ...d,
-        [def?.side ?? 'right']: { ...d[def?.side ?? 'right'], open: true },
-        collapsed: { ...d.collapsed, [id]: false },
-      }))
-    }
-  }, [bp, setTablet, setDesktop])
-
-  // Unread chat: messages appended while the chat panel is not on screen.
-  const chatOpen = bp === 'phone' ? phoneTab === 'chat'
-    : bp === 'tablet' ? tablet.open && tabletTab === 'chat'
-    : desktop.right.open && !desktop.collapsed.chat
+  const chatOpen = layout.scrollOpen
+  const journalOpen = panelShown(layout, 'journal', isGm, phone)
   const unread = useUnread(chat.length, chatOpen)
-  const journalUnread = useUnreadNotes(controller, bp === 'phone' ? phoneTab === 'journal' : bp === 'tablet' ? tablet.open && tabletTab === 'journal' : desktop.right.open && !desktop.collapsed.journal)
-  const journalOpen = bp === 'phone' ? phoneTab === 'journal' : bp === 'tablet' ? tablet.open && tabletTab === 'journal' : desktop.right.open && !desktop.collapsed.journal
+  const journalUnread = useUnreadNotes(controller, journalOpen)
   useGameAlerts(controller, { chat: chatOpen, journal: journalOpen }, openPanel)
-  const badges = useMemo(() => ({ chat: unread, journal: journalUnread }), [unread, journalUnread])
 
-  // Aiming a skill on a phone needs the whole table: drop the sheet, the table's own bar has Cancel.
-  useEffect(() => { if (bp === 'phone' && targeting) setPhoneTab(null) }, [bp, targeting])
+  // Aiming a skill on a phone needs the whole table: drop the sheets, the table's own bar has Cancel.
+  useEffect(() => { if (phone && targeting) useTableLayout.getState().set({ card: null, scrollOpen: false, phone: null }) }, [phone, targeting])
 
-  // Dice: animate the most recent roll once; clear the tray a few seconds after it settles.
+  // Dice: animate the most recent roll once, in the well; clear it a few seconds after it settles.
   const [shownRoll, setShownRoll] = useState<string | null>(null)
-  // Hidden rolls (GM only, blind) neither animate nor toast for those who may not read them.
+  // Hidden rolls (GM only, blind) neither animate nor read out for those who may not read them.
   const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length && canSeeRoll(m, controller.pubkey, controller.connection.gm)) ?? null, [chat, controller])
   useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
-  // Phones: the settled dice shrink into the roll toast, and leave at once when the keyboard or a full sheet needs the room.
-  const diceYieldNow = bp === 'phone' && (keyboard > 0 || (!!phoneTab && sheetSize === 'full'))
   const dice = shownRoll ? (
     <Suspense fallback={null}>
-      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)}
-        yieldTo={rollToastBox} yieldNow={diceYieldNow} />
+      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" zoom={phone ? PHONE_WELL_ZOOM : WELL_ZOOM} fill={0.86}
+        onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
+        onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)} />
     </Suspense>
   ) : null
 
   const resolveAsset = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
   const viewer = useMemo(() => ({ pubkey: controller.pubkey, isGm }), [controller.pubkey, isGm])
   const who = useCallback((pk: string) => presence[pk]?.name ?? (pk === controller.connection.gm ? 'GM' : pk.slice(0, 6)), [presence, controller])
+  const engine = useMemo(() => (isGm ? sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }) : null), [isGm, controller])
+  const playing = usePlaying(engine)
 
-  // Desktop shortcuts.
+  // Keyboard: [ puts the card away, ] rolls the scroll, 1–9 open the n-th panel, / writes in the scroll.
   const shortcuts = useMemo(() => ({
-    toggleLeft: () => setDesktop((d) => ({ ...d, left: { ...d.left, open: !d.left.open } })),
-    toggleRight: () => setDesktop((d) => ({ ...d, right: { ...d.right, open: !d.right.open } })),
+    toggleLeft: () => useTableLayout.getState().set({ card: null }),
+    toggleRight: () => useTableLayout.getState().set({ scrollOpen: !useTableLayout.getState().scrollOpen }),
     focusChat: () => { openPanel('chat'); requestAnimationFrame(() => focusChatInput()) },
     openPanel,
     togglePanel: (n: number) => {
       const def = panels[n - 1]
-      if (def) setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [def.id]: !d.collapsed[def.id] } }))
+      if (!def) return
+      const s = useTableLayout.getState()
+      if (s.card === def.id) s.set({ card: null })
+      else openPanel(def.id)
     },
-  }), [panels, openPanel, setDesktop])
-  useShortcuts(bp === 'desktop', shortcuts)
+  }), [panels, openPanel])
+  useShortcuts(!phone, shortcuts)
 
-  const style = {
-    '--kb': `${keyboard}px`,
-    '--left-w': `${desktop.left.open ? desktop.left.width : RAIL_W}px`,
-    '--right-w': `${desktop.right.open ? desktop.right.width : RAIL_W}px`,
-    '--drawer-w': `${tablet.open && tablet.pinned ? DRAWER_W : 0}px`,
-  } as CSSProperties
-  const exportFile = async () => {
+  const exportFile = useCallback(async () => {
     pushToast({ key: 'export', text: 'Exporting the game…', ttl: 0 })
     try {
       const { blob, name, missing } = await exportGame(controller.connection.doc, controller.assets)
@@ -166,32 +157,44 @@ export function GameShell({ controller }: { controller: GameController }) {
     } catch (e) {
       pushToast({ key: 'export', text: `Export failed: ${e instanceof Error ? e.message : String(e)}` })
     }
-  }
-  const pickPreset = (id: LayoutPresetId) => {
-    const next = presetLayouts(id)
-    if (next.desktop) setDesktop(next.desktop)
-    if (next.tablet) setTablet(next.tablet)
-    setView({ preset: id })
-  }
-  const cls = ['game', `game--${bp}`, zen ? 'game--zen' : '', display ? 'game--display' : '', keyboard > 0 ? 'kb' : '', bp === 'phone' && (phonePanel || phoneMore) ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
+  }, [controller])
+  const leave = useCallback(() => { controller.dispose(); window.location.hash = '/' }, [controller])
+  const pickPreset = useCallback((id: LayoutPresetId) => setView({ preset: id }), [setView])
+  const actions = useMemo<PaletteActions>(() => ({
+    openPanel,
+    zen: () => setZen(true),
+    display: () => pickPreset('display'),
+    compact: (on) => pickPreset(on ? 'compact' : 'auto'),
+    exportGame: isGm ? () => void exportFile() : undefined,
+    leave,
+  }), [openPanel, pickPreset, isGm, exportFile, leave])
 
-  const drawerToggle = bp === 'tablet' ? (
-    <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
-      <Icon name="menu" />{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
-    </button>
-  ) : null
+  const liveLine = [
+    playing.size ? `${playing.size} ${playing.size === 1 ? 'sound' : 'sounds'} playing` : '',
+    combat ? `round ${combat.round}` : '',
+  ].filter(Boolean).join(' · ')
+
+  const style = { '--kb': `${keyboard}px` } as CSSProperties
+  const cls = ['game', 'game--table', `game--${bp}`, `game--mode-${mode}`, isGm ? 'game--gm' : '', zen ? 'game--zen' : '', display ? 'game--display' : '', keyboard > 0 ? 'kb' : ''].filter(Boolean).join(' ')
+  const chrome = !zen && !display
+
+  const trailing = (
+    <>
+      {!phone && <PresenceRow me={controller.pubkey} onOpen={() => openPanel('players')} />}
+      <Bell compact={phone} />
+      <button type="button" className="t-search" onClick={() => layout.set({ palette: true })} aria-label="Search everything" title="Search everything (Ctrl/⌘-K)">
+        <Icon name="search" />
+        {!phone && <><span className="t-search-word">Search</span><kbd className="key-hint">⌘K</kbd></>}
+      </button>
+      <ViewMenu preset={preset} onPreset={pickPreset} onZen={() => setZen(true)} onExport={isGm ? () => void exportFile() : undefined}
+        onInvite={phone && isGm ? requestInvite : undefined} onLeave={leave} />
+    </>
+  )
 
   return (
     <div className={cls} style={style}>
-      <TopBar controller={controller} compact={bp === 'phone'} trailing={<><ViewMenu isGm={isGm} preset={preset} onPreset={pickPreset} onZen={() => setZen(true)} onExport={isGm ? () => void exportFile() : undefined} />{drawerToggle}</>} />
-
-      {bp === 'desktop' ? (
-        <SideColumn side="left" panels={panels.filter((p) => p.side === 'left')} width={desktop.left.width} open={desktop.left.open}
-          collapsed={desktop.collapsed} controller={controller}
-          onWidth={(w) => setDesktop((d) => ({ ...d, left: { ...d.left, width: w } }))}
-          onOpen={(open) => setDesktop((d) => ({ ...d, left: { ...d.left, open } }))}
-          onToggleSection={(id) => setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [id]: !d.collapsed[id] } }))} />
-      ) : null}
+      <TopBar controller={controller} compact={phone} center={<CombatControl controller={controller} />} trailing={trailing}
+        onScene={() => layout.set({ card: 'scenes' })} />
 
       <section className="table">
         {meta?.activeScene ? (
@@ -202,21 +205,29 @@ export function GameShell({ controller }: { controller: GameController }) {
           <div className="empty">
             <div>
               <p>No active scene.</p>
-              <p className="muted small">{isGm ? 'Add one from the Scenes panel.' : 'Waiting for the GM.'}</p>
+              <p className="muted small">{isGm ? 'Raise the GM screen (Prep) and add one.' : 'Waiting for the GM.'}</p>
               {isGm && <button type="button" onClick={() => openPanel('scenes')}>Open Scenes</button>}
             </div>
           </div>
         )}
         <div className="hud">
-          {bp !== 'desktop' && <SelectedTokenChip pubkey={controller.pubkey} onOpen={() => openPanel('character')} />}
-          <CameraPill />
-          <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
+          <div className="t-standees"><InitiativeChip /></div>
+          {!phone && (
+            <div className="t-rail" role="group" aria-label="Table tools">
+              <CameraPill />
+              <JournalBook unread={journalUnread} onOpen={() => openPanel('journal')} />
+            </div>
+          )}
+          <HudLayers />
         </div>
         {meta?.activeScene && <Dock controller={controller} />}
+        {!phone && <CardHost controller={controller} panels={panels} />}
+        {!phone && <Scroll controller={controller} chat={panels.find((p) => p.id === 'chat')} unread={unread} />}
+        {!phone && isGm && <GmScreen controller={controller} panels={panels} live={liveLine} onLive={() => openPanel('sound')} />}
+        <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
         {meta?.activeScene && <OnboardingTips controller={controller} />}
-        {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />
         <Cues controller={controller} />
@@ -224,38 +235,9 @@ export function GameShell({ controller }: { controller: GameController }) {
           : display ? <RestoreChrome label="Exit display" onRestore={() => pickPreset('auto')} /> : null}
       </section>
 
-      {bp === 'desktop' ? (
-        <SideColumn side="right" panels={panels.filter((p) => p.side === 'right')} width={desktop.right.width} open={desktop.right.open}
-          collapsed={desktop.collapsed} controller={controller}
-          onWidth={(w) => setDesktop((d) => ({ ...d, right: { ...d.right, width: w } }))}
-          onOpen={(open) => setDesktop((d) => ({ ...d, right: { ...d.right, open } }))}
-          onToggleSection={(id) => setDesktop((d) => ({ ...d, collapsed: { ...d.collapsed, [id]: !d.collapsed[id] } }))} />
-      ) : null}
-
-      {bp === 'tablet' && tablet.open ? (
-        <Drawer panels={panels} active={tabletTab} badges={badges} pinned={tablet.pinned} controller={controller}
-          onSelect={(id) => setTablet((t) => ({ ...t, tab: id }))}
-          onPin={(pinned) => setTablet((t) => ({ ...t, pinned }))}
-          onClose={() => setTablet((t) => ({ ...t, open: false }))} />
-      ) : null}
-
-      {bp === 'phone' ? (
-        <TabBar tabs={phoneTabs} active={phoneTab} badges={badges}
-          onSelect={(id) => { if (id === phoneTab) setPhoneTab(null); else { setPhoneTab(id); setSheetSize('half') } }}
-          // More: closes when its list is showing; otherwise shows the list (also from a More panel, to switch).
-          onMore={() => { if (phoneMore) setPhoneTab(null); else { setPhoneTab(MORE_ID); setSheetSize('half') } }} />
-      ) : null}
-
-      {bp === 'phone' && (phonePanel || phoneMore) ? (
-        <BottomSheet key={phoneTab} def={phonePanel} title={phoneMore ? 'More' : undefined} controller={controller} size={sheetSize} keyboard={keyboard}
-          onSize={setSheetSize}
-          onClose={() => setPhoneTab(null)}
-          onSwipeTab={(dir) => setPhoneTab(nextPhoneTab(phoneTab ?? MORE_ID, dir, phoneTabs))}>
-          {phoneMore && <MoreList panels={phoneTabs.more} current={lastMore} badges={badges} onSelect={setPhoneTab} />}
-        </BottomSheet>
-      ) : null}
-
-      {bp === 'phone' && dice ? <div className="dice-layer">{dice}</div> : null}
+      {phone && chrome && <PhoneSheets controller={controller} panels={panels} keyboard={keyboard} />}
+      {phone && chrome && <PhoneBar isGm={isGm} unread={unread} journalUnread={journalUnread} />}
+      {chrome && <CommandPalette controller={controller} panels={panels} actions={actions} />}
       <ShortcutsOverlay />
     </div>
   )

@@ -58,6 +58,8 @@ const ICONS = {
   pin: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></>,
   /** Pin the drawer: a thumbtack. */
   tack: <path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8" />,
+  bell: <><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></>,
+  search: <><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.4-4.4" /></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   /** View and layout presets: a framed panel. */
   layout: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9h17M9.5 9v10.5" /></>,

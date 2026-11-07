@@ -1,15 +1,23 @@
 /**
- * View menu in the top bar: Zen mode (hide all chrome over the table; Z, Esc or the corner
- * button brings it back) and the layout presets (see layoutPresets.ts). Also the corner
- * restore button shown while Zen or the Display preset is on.
+ * The table's ⋯ menu in the top bar: Zen (hide everything over the table; Z, Esc or the corner
+ * button brings it back), the layout presets (layoutPresets.ts), the game file, the shortcuts and
+ * Leave. On phones it also holds Invite. Also the corner restore button shown while Zen or the
+ * Display preset is on.
  */
 import { useEffect, useRef, useState } from 'react'
-import { presetsFor, type LayoutPresetId } from './layoutPresets'
-import { isTypingTarget } from './useShortcuts'
+import { LAYOUT_PRESETS, type LayoutPresetId } from './layoutPresets'
+import { isTypingTarget, toggleShortcutsOverlay } from './useShortcuts'
 import './ViewMenu.css'
 import { Icon } from '@/ui/icons'
 
-export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: boolean; preset: LayoutPresetId; onPreset(id: LayoutPresetId): void; onZen(): void; onExport?(): void }) {
+export function ViewMenu({ preset, onPreset, onZen, onExport, onInvite, onLeave }: {
+  preset: LayoutPresetId
+  onPreset(id: LayoutPresetId): void
+  onZen(): void
+  onExport?(): void
+  onInvite?(): void
+  onLeave(): void
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -20,31 +28,32 @@ export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: bo
     window.addEventListener('keydown', esc)
     return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', esc) }
   }, [open])
+  const pick = (run: () => void) => () => { setOpen(false); run() }
   return (
     <div className="menu view-menu" ref={ref}>
-      <button type="button" className="icon" aria-haspopup="menu" aria-expanded={open} aria-label="View and layout" title="View and layout" onClick={() => setOpen((o) => !o)}><Icon name="layout" /></button>
+      <button type="button" className="icon t-menu-btn" aria-haspopup="menu" aria-expanded={open} aria-label="Menu" title="View, game file, leave" onClick={() => setOpen((o) => !o)}><Icon name="menu" /></button>
       {open && (
-        <div className="menu-list" role="menu">
-          <button type="button" role="menuitem" onClick={() => { setOpen(false); onZen() }}>
+        <div className="menu-list skin-paper" role="menu">
+          {onInvite && <button type="button" role="menuitem" onClick={pick(onInvite)}>Invite players</button>}
+          <button type="button" role="menuitem" onClick={pick(onZen)}>
             Zen mode <span className="key-hint">Z</span>
           </button>
           <div className="menu-info muted small">Layout</div>
-          {presetsFor(isGm).map((p) => (
-            <button key={p.id} type="button" role="menuitemradio" aria-checked={preset === p.id} title={p.hint}
-              onClick={() => { setOpen(false); onPreset(p.id) }}>
+          {LAYOUT_PRESETS.map((p) => (
+            <button key={p.id} type="button" role="menuitemradio" aria-checked={preset === p.id} title={p.hint} onClick={pick(() => onPreset(p.id))}>
               <span aria-hidden className="view-check">{preset === p.id ? <Icon name="check" size={16} /> : null}</span>
               <span className="view-item"><span>{p.label}</span><span className="muted small">{p.hint}</span></span>
             </button>
           ))}
+          <div className="menu-info muted small">Game</div>
           {onExport && (
-            <>
-              <div className="menu-info muted small">Game file</div>
-              <button type="button" role="menuitem" onClick={() => { setOpen(false); onExport() }}>
-                <span aria-hidden className="view-check" />
-                <span className="view-item"><span>Export game file</span><span className="muted small">Everything, with maps and models, to keep or import elsewhere</span></span>
-              </button>
-            </>
+            <button type="button" role="menuitem" onClick={pick(onExport)}>
+              <span aria-hidden className="view-check" />
+              <span className="view-item"><span>Export game file</span><span className="muted small">Everything, with maps and models, to keep or import elsewhere</span></span>
+            </button>
           )}
+          <button type="button" role="menuitem" onClick={pick(() => toggleShortcutsOverlay(true))}>Keyboard shortcuts <span className="key-hint">?</span></button>
+          <button type="button" role="menuitem" className="danger" onClick={pick(onLeave)}>Leave game</button>
         </div>
       )}
     </div>

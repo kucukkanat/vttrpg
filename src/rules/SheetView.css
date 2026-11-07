@@ -1,5 +1,5 @@
 .sheet {
-  --sheet-bg: var(--panel, #17171b);
+  --sheet-bg: var(--panel, #2a1b10);
   --sheet-fg: var(--fg, #e8e6e3);
   --sheet-muted: var(--muted, #9a9892);
   --sheet-border: var(--border, #2a2a31);

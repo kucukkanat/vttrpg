@@ -10,7 +10,9 @@ import { useTableUi } from '@/table/tableState'
 import { pushToast } from '../toasts'
 
 export interface ShortcutHandlers {
+  /** `[`: put the card away. */
   toggleLeft(): void
+  /** `]`: unroll or roll up the scroll. */
   toggleRight(): void
   focusChat(): void
   /** 1-based index into the visible panel list. */
@@ -34,21 +36,27 @@ export interface Shortcut {
  * Keep in step with docs/UX.md.
  */
 export const SHORTCUTS: readonly Shortcut[] = [
+  { keys: 'Cmd/Ctrl+K', what: 'Search everything: actions, panels, tokens, scenes', group: 'Table' },
   { keys: 'G', what: 'Toggle the grid overlay', group: 'Table' },
   { keys: 'F', what: 'Eyes: first-person view from the selected token', group: 'Table' },
   { keys: 'T', what: 'Tactical view: top-down camera (or keep zooming out)', group: 'Table' },
   { keys: 'Q / E', what: 'Turn the tactical view 45° left / right', group: 'Table' },
+  { keys: 'M', what: 'Measure with the ruler (again to put it away)', group: 'Table' },
+  { keys: 'Enter', what: 'While aiming a skill: cast at the chosen spot', group: 'Table' },
+  { keys: 'Alt', what: 'Held while dragging or drawing: move freely, off the grid', group: 'Table' },
+  { keys: 'R', what: 'While stamping a captured prefab: turn it', group: 'Table' },
   { keys: 'Double-click', what: 'Edit a token or prop (move, turn, scale); again or elsewhere to stop', group: 'Table' },
-  { keys: 'Delete', what: 'Remove the selected prop (GM)', group: 'Table' },
-  { keys: 'Esc', what: 'Deselect; cancel skill targeting', group: 'Table' },
+  { keys: 'Delete / Backspace', what: 'Remove the selected prop (GM)', group: 'Table' },
+  { keys: 'Esc', what: 'Close a tip, card or menu; cancel aiming; deselect', group: 'Table' },
   { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores)', group: 'Table' },
   { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
   { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
-  { keys: 'Arrows', what: 'Move through the token menu; Home / End jump to the ends', group: 'Table' },
-  { keys: '[ / ]', what: 'Show or hide the left / right column', group: 'Panels' },
-  { keys: '1 – 9', what: 'Expand or fold the n-th panel section', group: 'Panels' },
+  { keys: 'Arrows', what: 'Move through the token menu or the search results', group: 'Table' },
+  { keys: '[', what: 'Put the card away', group: 'Panels' },
+  { keys: ']', what: 'Unroll or roll up the scroll (chat)', group: 'Panels' },
+  { keys: '1 – 9', what: 'Open the n-th panel as the card (again to put it away)', group: 'Panels' },
   { keys: '?', what: 'This list', group: 'Panels' },
-  { keys: '/', what: 'Focus the chat input (opens Chat if folded)', group: 'Chat' },
+  { keys: '/', what: 'Write in the scroll (unrolls it)', group: 'Chat' },
   { keys: 'Enter', what: 'Send; /r 2d6+1 rolls, /w name whispers, /help lists commands', group: 'Chat' },
   { keys: 'Esc', what: 'Leave the chat input', group: 'Chat' },
 ]

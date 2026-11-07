@@ -1,18 +1,34 @@
 /* ---------------------------------------------------------------------------------------------
    Tokens. See docs/UX.md for the scales and where they apply.
    --------------------------------------------------------------------------------------------- */
-/* Display face: Alegreya Bold (SIL OFL 1.1, see theme/fonts/OFL.txt), latin subset, 24 kB, bundled so
-   the app still needs no server. Headings, names and numbers only; body text stays on the system stack. */
+/* Display face: Alegreya Bold; body face: Alegreya Sans Medium and Bold (SIL OFL 1.1, see
+   theme/fonts/OFL.txt), latin subsets, bundled so the app still needs no font server. */
 @font-face {
   font-family: "Alegreya"; font-style: normal; font-weight: 600 800; font-display: swap;
   src: url("./theme/fonts/alegreya-latin-700.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Alegreya Sans"; font-style: normal; font-weight: 400 600; font-display: swap;
+  src: url("./theme/fonts/alegreya-sans-latin-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Alegreya Sans"; font-style: normal; font-weight: 650 900; font-display: swap;
+  src: url("./theme/fonts/alegreya-sans-latin-700.woff2") format("woff2");
+}
 :root {
   color-scheme: dark;
-  /* colour: neutrals */
-  --bg: #0e0e10; --panel: #17171b; --panel-2: #1f1f25; --field: #0b0b0d; --border: #2a2a31;
-  --fg: #e8e6e3; --muted: #9a9892;
-  --btn: #26262d; --hover: #22222a; --row-on: #2b2b35; --well: #101014;
+  /* colour: neutrals. Lamplight: dark stained wood and leather under brass (docs/UX.md "Table") */
+  --bg: #1b120b; --panel: #2a1b10; --panel-2: #36241a; --field: #140d07; --border: #5a3d24;
+  --fg: #f3e6c8; --muted: #c2aa84;
+  --btn: #3a2617; --hover: #432c1b; --row-on: #4b321f; --well: #140d07;
+  /* materials of the table chrome; they do not change with the theme */
+  --wood: #4b2e1a; --wood-dk: #2c1a0e; --leather: #3a2216;
+  --brass: #c99a44; --brass-hi: #f1d58e; --brass-lo: #8b6424;
+  --paper: #f5ead0; --paper-2: #eadbb6; --ink: #2a1c10; --ink-2: #5d4732;
+  --felt: #2c5a3f; --felt-dk: #173524;
+  --mode-play: #c99a44; --mode-prep: #5f9a5a; --mode-build: #3b86b0;
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.004 .12' numOctaves='4' seed='11'/><feColorMatrix values='0 0 0 0 .10  0 0 0 0 .05  0 0 0 0 .02  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
+  --paper-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .25  0 0 0 0 .12  0 0 0 .08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   /* colour roles: one meaning each (docs/UX.md "Colour roles"; table colours in src/ui/theme/palette.ts) */
   --accent: #e0a458; --accent-fg: #1a1612;   /* brand and primary actions only */
   --now: #ffc53d; --now-fg: #1a1408;         /* whose turn it is */
@@ -28,11 +44,11 @@
   --st-buff: #43d39e; --st-harm: #e5484d; --st-control: #ffb347; --st-magic: #4c8dff; --st-affliction: #c77ddd;
   --st-fill: #16161a; --st-glyph: #f3ead8;
   /* glass over the table: one recipe per weight, and the text that sits on it */
-  --glass: rgba(18, 18, 22, .9);              /* dock, chips, pills, bars */
-  --glass-strong: rgba(18, 18, 22, .95);      /* menus and popovers that hold controls */
+  --glass: rgba(42, 27, 16, .92);             /* dock, chips, pills, bars: leather */
+  --glass-strong: rgba(42, 27, 16, .97);      /* menus and popovers that hold controls */
   --scrim: rgba(0, 0, 0, .72);                /* toasts, preview bar, overlay labels */
   --glass-blur: blur(6px);
-  --glass-btn: rgba(40, 40, 48, .92); --glass-edge: rgba(255, 255, 255, .18);
+  --glass-btn: rgba(74, 48, 28, .92); --glass-edge: rgba(241, 213, 142, .3);
   --on-glass: #f3ead8;
   --parchment: #f3ead8;                       /* text over the black scene cover, both themes */
   --error-glass: rgba(120, 30, 30, .9); --on-error: #f3ead8;
@@ -47,7 +63,7 @@
   /* spacing */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
   /* type: sizes scale with the text-size preset (data-text-scale on <html>) */
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Alegreya Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Alegreya", Georgia, "Times New Roman", serif;
   --text-scale: 1;
   --fs-xs: calc(11px * var(--text-scale)); --fs-sm: calc(12px * var(--text-scale)); --fs-md: calc(14px * var(--text-scale));
@@ -76,12 +92,12 @@
    setting or by hand (src/ui/theme/theme.ts sets data-theme); the 3D table itself stays dark. */
 :root[data-theme="daylight"] {
   color-scheme: light;
-  --bg: #f4f1ea; --panel: #fbfaf6; --panel-2: #ece8de; --field: #ffffff; --border: #b9b1a1;
-  --fg: #17150f; --muted: #5a5549;
-  --btn: #f1ede4; --hover: #e7e2d6; --row-on: #ddd6c6; --well: #ece8de;
+  --bg: #eadbb6; --panel: #f8efd9; --panel-2: #efe2c2; --field: #fffaf0; --border: #b59a6c;
+  --fg: #1f150b; --muted: #55402c;
+  --btn: #efe2c2; --hover: #e6d5ae; --row-on: #dcc897; --well: #efe2c2;
   --accent: #8f4c00; --accent-fg: #ffffff;
   --now: #7a5600; --now-fg: #ffffff;
-  --select: #17150f; --mine: #0b63c4; --hostile: #b8360a; --help: #0b6b3d; --measure: #5a5549;
+  --select: #17150f; --mine: #0a55a8; --hostile: #9e2e08; --help: #0b6b3d; --measure: #55402c;
   --ok: #186b26; --bad: #b3261e; --danger: #b3261e; --whisper: #7b2fbf;
   --danger-fg: #9c2a1a; --danger-border: #d9a39b; --warn-fg: #9c2a1a;
   --st-fill: #fbfaf6; --st-glyph: #17150f;
@@ -91,6 +107,27 @@
   --error-glass: rgba(179, 38, 30, .96); --on-error: #ffffff;
   --shadow: 0 6px 20px rgba(0, 0, 0, .18); --shadow-lg: 0 12px 32px rgba(0, 0, 0, .22);
   --track: rgba(23, 21, 15, .16);
+}
+
+/* Paper: the cards, the scroll and the GM screen's leaves are paper in every theme. The same token
+   names, so any panel mounted on paper reads as ink on parchment without changes of its own. */
+.skin-paper {
+  color-scheme: light;
+  --bg: #f5ead0; --panel: #f5ead0; --panel-2: #eadbb6; --field: #fffaf0; --border: #b59a6c;
+  --fg: #2a1c10; --muted: #5d4732;
+  --btn: #efe2c2; --hover: #e6d5ae; --row-on: #dcc897; --well: #eadbb6;
+  --accent: #8f4c00; --accent-fg: #ffffff;
+  --now: #7a5600; --now-fg: #ffffff;
+  --select: #2a1c10; --mine: #0b5bb5; --hostile: #a8320a; --help: #0b6b3d; --measure: #5d4732;
+  --ok: #186b26; --bad: #a8261e; --danger: #a8261e; --whisper: #6f2aad;
+  --danger-fg: #9c2a1a; --danger-border: #c99a8f; --warn-fg: #9c2a1a;
+  --st-fill: #fbf4e2; --st-glyph: #2a1c10;
+  --glass: rgba(245, 234, 208, .97); --glass-strong: rgba(245, 234, 208, .99); --scrim: rgba(245, 234, 208, .95);
+  --glass-btn: rgba(234, 219, 182, .96); --glass-edge: rgba(70, 45, 20, .3);
+  --on-glass: #2a1c10;
+  --shadow: 0 6px 20px rgba(30, 15, 5, .22); --shadow-lg: 0 14px 34px rgba(30, 15, 5, .32);
+  --track: rgba(42, 28, 16, .18);
+  color: var(--fg);
 }
 
 /* ---------------------------------------------------------------------------------------------

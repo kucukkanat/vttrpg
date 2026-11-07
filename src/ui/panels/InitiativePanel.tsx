@@ -38,6 +38,53 @@ import { DeclareForm, FrameLine, frameData } from './EncounterFrame'
 import './initiative.css'
 import { Icon } from '@/ui/icons'
 
+/** The tracker's own preferences (persisted by the panel; read here for starts from elsewhere). */
+export const INITIATIVE_PREFS_KEY = 'vtt.initiative'
+
+function readGroupPref(): boolean {
+  try {
+    const v = JSON.parse(localStorage.getItem(INITIATIVE_PREFS_KEY) ?? 'null') as { group?: unknown } | null
+    return typeof v?.group === 'boolean' ? v.group : true
+  } catch { return true }
+}
+
+/**
+ * GM: roll initiative for every sheet-bearing token of the live scene and start combat. The same
+ * start from the tracker, the top bar, the token hand and the command palette, so all of them
+ * honour "copies of a creature share one roll" and initiative players already rolled from a sheet.
+ * Resolves false when nobody can fight.
+ */
+export async function startCombat(controller: GameController, opts: { group?: boolean; include?: TokenId } = {}): Promise<boolean> {
+  const s = useGame.getState()
+  const scene = s.meta?.activeScene ?? null
+  const eligible = combatants(s.tokens, scene)
+  const extra = opts.include ? s.tokens[opts.include] : undefined
+  if (extra && !eligible.some((t) => t.id === extra.id)) eligible.push(extra)
+  if (!eligible.length) {
+    pushToast({ text: 'No tokens with a sheet in this scene', key: 'initiative' })
+    return false
+  }
+  const seed = newSeed()
+  const known = recentSheetInitiative(s.chat, s.tokens, scene, Date.now())
+  const rolled = await rollInitiative(eligible, s.characters, controller.rules, seed, { group: opts.group ?? readGroupPref(), known })
+  await controller.dispatch({ type: 'initiative.start', order: rolled, seed })
+  return true
+}
+
+/** GM: end combat, posting the encounter summary when something happened. */
+export function endCombat(controller: GameController): void {
+  const s = useGame.getState()
+  const rules = controller.rules
+  const primary = rules?.pack.resources[0]
+  const isDown = (id: TokenId) => {
+    const t = s.tokens[id]
+    const c = t?.character ? s.characters[t.character] : undefined
+    return frameData(t, c, rules).vital === 'dead'
+  }
+  const summary = encounterSummary(s.initiative, s.tokens, primary?.id, isDown)
+  void controller.dispatch(summary && summaryHasNews(summary) ? { type: 'initiative.end', summary } : { type: 'initiative.end' })
+}
+
 /** Light the token up on the table while its row is pointed at (the range preview with no reach). */
 function highlight(token: TokenId | null): void {
   const ui = useTableUi.getState()
@@ -81,32 +128,13 @@ export function InitiativePanel({ controller }: { controller: GameController }) 
   const dispatchOrder = (next: InitiativeEntry[]) => void controller.dispatch({ type: 'initiative.set', order: next })
 
   const start = async () => {
-    if (!eligible.length) {
-      pushToast({ text: 'No tokens with a sheet in this scene', key: 'initiative' })
-      return
-    }
     setBusy(true)
-    try {
-      const seed = newSeed()
-      // Initiative players just rolled from their sheets counts instead of a fresh roll.
-      const known = recentSheetInitiative(useGame.getState().chat, tokens, scene, Date.now())
-      const rolled = await rollInitiative(eligible, characters, rules, seed, { group: prefs.group, known })
-      await controller.dispatch({ type: 'initiative.start', order: rolled, seed })
-    } finally {
-      setBusy(false)
-    }
+    try { await startCombat(controller, { group: prefs.group }) } finally { setBusy(false) }
   }
   const next = () => void controller.dispatch({ type: 'initiative.next' })
   const end = () => {
     setEditing(null)
-    const primary = rules?.pack.resources[0]
-    const isDown = (id: TokenId) => {
-      const t = tokens[id]
-      const c = t?.character ? characters[t.character] : undefined
-      return frameData(t, c, rules).vital === 'dead'
-    }
-    const summary = encounterSummary(init, tokens, primary?.id, isDown)
-    void controller.dispatch(summary && summaryHasNews(summary) ? { type: 'initiative.end', summary } : { type: 'initiative.end' })
+    endCombat(controller)
   }
   /** Late join: the token rolls the way Start rolls it and lands in its slot (or its group's). */
   const addTokens = async (ids: TokenId[]) => {

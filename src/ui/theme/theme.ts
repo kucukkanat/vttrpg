@@ -23,9 +23,9 @@ export const TEXT_SCALE_KEY = 'vtt.textScale'
 const EVENT = 'vtt:appearance'
 const LIGHT_QUERY = '(prefers-color-scheme: light)'
 /** Page background per theme, for the browser's own chrome (`<meta name="theme-color">`). */
-const THEME_COLOR: Record<ResolvedTheme, string> = { dark: '#0e0e10', daylight: '#f4f1ea' }
+const THEME_COLOR: Record<ResolvedTheme, string> = { dark: '#1b120b', daylight: '#eadbb6' }
 /** Panel colour per theme, which a pack accent must stay readable on. */
-const PANEL: Record<ResolvedTheme, string> = { dark: '#17171b', daylight: '#fbfaf6' }
+const PANEL: Record<ResolvedTheme, string> = { dark: '#2a1b10', daylight: '#f8efd9' }
 
 const THEMES: readonly ThemePref[] = ['system', 'dark', 'daylight']
 const SCALES: readonly TextScale[] = ['default', 'large', 'larger']
