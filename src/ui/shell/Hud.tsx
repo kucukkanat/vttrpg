@@ -1,76 +1,31 @@
 /**
- * Things that stay visible over the table while panels are hidden: the selected token (tap to open
- * its sheet, "Find me" to frame the player's own token), the camera mode pill with the grid toggle,
- * and the latest dice result. All ignore pointer events except on their own controls.
+ * Things over the table: the camera and table tools (the tool rail), the dice well's readout and
+ * pad, and the shared overlay layers. All ignore pointer events except on their own controls.
  */
 import { useEffect, useState } from 'react'
-import { firstOwnedToken, useGame } from '@/state/store'
+import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
-import type { ChatMessage, Token } from '@/core/doc'
-import type { PlayerPubkey } from '@/core/ids'
+import type { ChatMessage, RollAdvantage, RollVisibility } from '@/core/doc'
 import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
 import { Icon } from '../icons'
-import { InitiativeChip } from '../panels/InitiativePanel'
 import { TurnCue } from '../feedback/TurnCue'
 import { TipLayer } from '../tips/TipLayer'
 import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
 import { useSession } from '../session'
 import { newSeed } from '@/dice'
 import { DICE_SETTLED_EVENT } from '@/dice/choreography'
-import { RollModeBar } from '../panels/RollCards'
 import { useRollMode } from '../rollMode'
 import './Hud.css'
 
-const TOAST_MS = 6000
+const READOUT_MS = 8000
 
 /**
- * Selected token with a "Find me" control. With nothing selected it offers the player's first owned
- * token instead, so "where am I?" is always one tap away on a phone (`pubkey` is the local player).
- */
-export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?: PlayerPubkey }) {
-  const selected = useGame((s) => s.selectedToken)
-  const token = useGame((s) => (selected ? s.tokens[selected] : undefined))
-  const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
-  const mine = useGame((s) => firstOwnedToken(s, pubkey))
-  const setSelectedToken = useGame((s) => s.setSelectedToken)
-  const focusToken = useTableUi((s) => s.focusToken)
-  const find = (t: Token) => { setSelectedToken(t.id); focusToken(t.id) }
-
-  if (!token) {
-    if (!mine) return null
-    return (
-      <div className="chip chip--find">
-        <button type="button" className="chip-main" onClick={() => find(mine)} aria-label={`Find my token ${mine.name}`}>
-          <span className="dot" style={{ background: mine.color }} />
-          <span className="chip-name">{mine.name}</span>
-          <span className="chip-hint"><Icon name="crosshair" size={16} /> Find me</span>
-        </button>
-      </div>
-    )
-  }
-  // Prefer the player's own token; the GM (owning nothing) centres on the selection instead.
-  const target = mine ?? token
-  const findLabel = target.id === token.id ? `Centre the camera on ${token.name}` : `Find my token ${target.name}`
-  return (
-    <div className="chip">
-      <button type="button" className="chip-main" onClick={onOpen} aria-label={`Selected: ${token.name}. Open character sheet`}>
-        <span className="dot" style={{ background: token.color }} />
-        <span className="chip-name">{token.name}</span>
-        {character && character.name !== token.name && <span className="muted small">{character.name}</span>}
-        <span className="chip-hint">Sheet ›</span>
-      </button>
-      <button type="button" className="chip-find" onClick={() => find(target)} aria-label={findLabel} title={findLabel}><Icon name="crosshair" /></button>
-    </div>
-  )
-}
-
-/**
- * Camera and table tools over the top-right of the table: Eyes (first person from your token; off
- * means the free orbit camera), the grid toggle, touch Select, ruler and ping. Key hints show on
- * desktop; phones and tablets get a vertical rail of 44px buttons under the chip row (Hud.css).
- * Hidden while no table is mounted.
+ * Camera and table tools: Eyes (first person from your token; off means the free orbit camera),
+ * Top, the grid toggle, touch Select, ruler and ping. The tool rail on the board's left edge on wide
+ * screens, the Tools sheet on phones (Table.css). Key hints show with a keyboard. Hidden while no
+ * table is mounted.
  */
 export function CameraPill() {
   const active = useTableUi((s) => s.cameraActive)
@@ -94,7 +49,6 @@ export function CameraPill() {
         </button>
       </div>
       <TacticalButtons orbit={active.mode === 'orbit'} />
-      <DicePad />
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}
           title={`${showGrid ? 'Hide' : 'Show'} grid (G)`} onClick={() => set({ showGrid: !showGrid })}>
@@ -158,15 +112,33 @@ function TacticalButtons({ orbit }: { orbit: boolean }) {
   )
 }
 
-export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null; who(pubkey: string): string; onOpenChat(): void }) {
+/**
+ * The table's shared overlays, mounted once by the shell: the toast line, the turn cue, the token
+ * context menu and the tip layer.
+ */
+export function HudLayers() {
+  return (
+    <>
+      <Toasts />
+      <TurnCue />
+      <ContextMenu />
+      <TipLayer />
+    </>
+  )
+}
+
+/**
+ * The latest roll, read out on the rim of the dice well: who rolled, the formula, the total (it pops
+ * when the dice come to rest) and the outcome. Tap to read it in the scroll. Fades after a while.
+ */
+export function WellReadout({ roll, who, onOpenChat }: { roll: ChatMessage | null; who(pubkey: string): string; onOpenChat(): void }) {
   const [shown, setShown] = useState<ChatMessage | null>(null)
   useEffect(() => {
-    if (!roll?.roll || roll.at < Date.now() - TOAST_MS) return
+    if (!roll?.roll || roll.at < Date.now() - READOUT_MS) return
     setShown(roll)
-    const t = setTimeout(() => setShown(null), TOAST_MS)
+    const t = setTimeout(() => setShown(null), READOUT_MS)
     return () => clearTimeout(t)
   }, [roll])
-  // Attention cue: the total pops when the dice come to rest (or at once when 3D dice are skipped).
   const [pop, setPop] = useState(0)
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined
@@ -180,81 +152,63 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
     return () => { window.removeEventListener(DICE_SETTLED_EVENT, on); clearTimeout(t) }
   }, [roll])
   const r = shown?.roll
-  const success = r?.outcome && 'success' in r.outcome ? !!r.outcome.success : null
-  const critical = !!r?.outcome?.critical
-  // The general toast stack (ui/toasts.ts), the initiative chip and the token context menu ride
-  // along here so the shell mounts them in the HUD; the chip takes the next chip row under the camera pill.
+  if (!shown || !r) return null
+  const success = r.outcome && 'success' in r.outcome ? !!r.outcome.success : null
+  const critical = !!r.outcome?.critical
   return (
-    <>
-      <Toasts />
-      <InitiativeChip />
-      <TurnCue />
-      <ContextMenu />
-      <TipLayer />
-      {shown && r && (
-        <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
-          <span className="muted small">{who(shown.author)}</span>
-          <span className="toast-formula">{shown.text}</span>
-          <span key={pop} className={`toast-total${pop ? ' pop' : ''}`}>{r.total}</span>
-          <DiceValues className="muted small" formula={r.formula} dice={r.dice} />
-          {success !== null && (
-            <span className={`roll-toast-outcome ${success ? 'ok' : 'bad'}`}>
-              {critical && <Icon name={success ? 'crit' : 'fumble'} size={14} />}{critical ? (success ? 'critical success' : 'critical fail') : success ? 'success' : 'fail'}
-            </span>
-          )}
-        </button>
+    <button type="button" className="well-readout roll-toast" onClick={onOpenChat} aria-live="polite" title="Read it in the scroll">
+      <span className="well-who">{who(shown.author)} · <span className="toast-formula">{shown.text}</span></span>
+      <span key={pop} className={`toast-total${pop ? ' pop' : ''}`}>{r.total}</span>
+      <DiceValues className="well-dice" formula={r.formula} dice={r.dice} />
+      {success !== null && (
+        <span className={`roll-toast-outcome ${success ? 'ok' : 'bad'}`}>
+          {critical && <Icon name={success ? 'crit' : 'fumble'} size={14} />}{critical ? (success ? 'critical success' : 'critical fail') : success ? 'success' : 'fail'}
+        </span>
       )}
-    </>
+    </button>
   )
 }
 
 /**
- * Dice on the table: a die button on the camera rail opens a pad with the quick dice, "Last" and a
- * formula field. Rolls go to chat and show the 3D dice like `/r`. Esc or a tap outside closes it.
+ * The dice well's pad: the quick dice, "Last" and a formula field. Rolls go to chat and tumble in
+ * the well like `/r`. Who sees the result and advantage are set once, in the scroll; the pad shows
+ * that setting and links to it.
  */
-function DicePad() {
+export function DicePad({ onRolled, onRollMode }: { onRolled?(): void; onRollMode?(): void }) {
   const { controller } = useSession()
   const pack = useGame((s) => s.meta?.pack)
-  const [open, setOpen] = useState(false)
   const [formula, setFormula] = useState('')
   const [last, setLast] = useState(lastRollFormula)
   const armed = useRollMode((s) => s.advantage)
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    const onDown = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.('.dice-pad, .cam-dice')) setOpen(false) }
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('pointerdown', onDown, true)
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown, true) }
-  }, [open])
+  const visibility = useRollMode((s) => s.visibility)
   if (!controller) return null
   const roll = (f: string) => {
     const t = f.trim()
     if (!t) return
     rememberRollFormula(t)
     setLast(t)
-    setOpen(false)
+    onRolled?.()
     void controller.dispatch({ type: 'roll', formula: t, seed: newSeed() })
   }
   return (
-    <div className="cam-group cam-dice-group">
-      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label={armed ? `Roll dice (next d20 with ${armed})` : 'Roll dice'} title={armed ? `Next d20 roll with ${armed}` : 'Roll dice'} onClick={() => setOpen(!open)}>
-        <Icon name="dice" className="cam-icon" />
-        {armed && <kbd aria-hidden>{armed === 'advantage' ? 'ADV' : 'DIS'}</kbd>}
+    <div className="dice-pad" role="group" aria-label="Roll dice">
+      <div className="dice-pad-row">
+        {quickDice(pack).map((f) => <button key={f} type="button" className="die-chip" onClick={() => roll(f)} aria-label={`Roll ${f}`}>{f}</button>)}
+        <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) roll(last) }} title={last ? `Roll ${last} again` : 'Nothing rolled yet'}>Last</button>
+      </div>
+      <form className="dice-pad-form" onSubmit={(e) => { e.preventDefault(); roll(formula); setFormula('') }}>
+        <input value={formula} onChange={(e) => setFormula(e.target.value)} placeholder="2d6+1" aria-label="Dice formula" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+        <button type="submit" className="primary" disabled={!formula.trim()}>Roll</button>
+      </form>
+      <button type="button" className="dice-pad-mode" onClick={onRollMode} title="Set who sees rolls and advantage in the scroll">
+        {rollModeLabel(visibility, armed)} <Icon name="chevron-right" size={14} />
       </button>
-      {open && (
-        <div className="dice-pad" role="dialog" aria-label="Roll dice">
-          <div className="dice-pad-row">
-            {quickDice(pack).map((f) => <button key={f} type="button" className="die-chip" onClick={() => roll(f)} aria-label={`Roll ${f}`}>{f}</button>)}
-            <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) roll(last) }} title={last ? `Roll ${last} again` : 'Nothing rolled yet'}>Last</button>
-          </div>
-          <RollModeBar />
-          <form className="dice-pad-form" onSubmit={(e) => { e.preventDefault(); roll(formula); setFormula('') }}>
-            <input value={formula} onChange={(e) => setFormula(e.target.value)} placeholder="2d6+1" aria-label="Dice formula" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
-            <button type="submit" className="primary" disabled={!formula.trim()}>Roll</button>
-          </form>
-        </div>
-      )}
     </div>
   )
+}
+
+/** "Everyone sees · next d20 with advantage": the roll mode in words, for read-only tags. */
+export function rollModeLabel(visibility: RollVisibility, advantage: RollAdvantage | null): string {
+  const who = visibility === 'public' ? 'Everyone sees' : visibility === 'gm' ? 'GM only' : 'Blind roll'
+  return advantage ? `${who} · next d20 with ${advantage}` : who
 }

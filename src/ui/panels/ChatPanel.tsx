@@ -12,7 +12,7 @@ import { DiceRow } from '../dice/DiceFace'
 import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
 import { Icon } from '../icons'
-import { canSeeRoll, hiddenRollText } from '../rollMode'
+import { canSeeRoll, hiddenRollText, useRollMode, VISIBILITY_LABELS } from '../rollMode'
 import { ConcentrationPrompt, DamageCardView, RollExtras, RollModeBar } from './RollCards'
 import './ChatPanel.css'
 
@@ -145,15 +145,11 @@ export function ChatPanel({ controller }: { controller: GameController }) {
     <div className="panel chat">
       <h3>
         Chat
+        <select className="chat-filter" value={channel} onChange={(e) => setChannel(e.target.value as ChatChannel)} aria-label="Show in the log">
+          {CHAT_CHANNELS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
         <button type="button" className="icon chat-help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => toggleShortcutsOverlay(true)}>?</button>
       </h3>
-      <div className="chat-channels" role="tablist" aria-label="Show">
-        {CHAT_CHANNELS.map((c) => (
-          <button key={c.id} type="button" role="tab" aria-selected={channel === c.id} className={`chat-channel${channel === c.id ? ' on' : ''}`} onClick={() => setChannel(c.id)}>
-            {c.label}
-          </button>
-        ))}
-      </div>
       <div className="log" ref={log}>
         {blocks.map((b) => {
           if (b.kind === 'date') return <div key={b.key} className="day" role="separator"><span>{formatDay(b.at)}</span></div>
@@ -190,12 +186,8 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           </div>
         )}
       </div>
-      <RollModeBar compact />
       <form className="chatform" onSubmit={(e) => { e.preventDefault(); void send() }}>
-        <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Whisper to">
-          <option value="">All</option>
-          {people().map((p) => <option key={p.pubkey} value={p.pubkey}>{p.name}</option>)}
-        </select>
+        <Seal to={to} setTo={setTo} people={people()} />
         <input ref={input} placeholder={to ? 'Whisper…' : 'Say something, /r 2d6+1, or /help'} value={text} onChange={(e) => setText(e.target.value)} enterKeyHint="send" />
       </form>
     </div>
@@ -212,4 +204,53 @@ export function interleave(chat: readonly ChatMessage[], notices: readonly Local
     if (c && (!n || c.at <= n.at)) { out.push(c); i++ } else if (n) { out.push(n); j++ }
   }
   return out
+}
+
+/**
+ * The seal on the scroll: who this message and the next roll are for, in one control. Shows the
+ * current choice ("All · Everyone", "Mira · Adv"); opens a small card with the whisper target, the
+ * advantage toggles and who sees roll results. The one home of the roll mode.
+ */
+function Seal({ to, setTo, people }: { to: string; setTo(v: string): void; people: { pubkey: string; name: string }[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const advantage = useRollMode((s) => s.advantage)
+  const visibility = useRollMode((s) => s.visibility)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }
+    window.addEventListener('pointerdown', close)
+    window.addEventListener('keydown', esc, true)
+    return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', esc, true) }
+  }, [open])
+  const target = to ? people.find((p) => p.pubkey === to)?.name ?? 'Whisper' : 'All'
+  const vis = visibility === 'public' ? null : visibility === 'gm' ? 'GM only' : 'Blind'
+  const adv = advantage === 'advantage' ? 'Adv' : advantage === 'disadvantage' ? 'Dis' : null
+  const parts = [target, vis, adv].filter(Boolean).join(' · ')
+  return (
+    <div className="seal" ref={ref}>
+      <button type="button" className={`seal-btn${to || vis || adv ? ' on' : ''}`} aria-haspopup="dialog" aria-expanded={open}
+        aria-label={`Message to ${target}; rolls: ${VISIBILITY_LABELS[visibility]}${adv ? `, next d20 ${advantage}` : ''}. Change`}
+        title="Who this is for, and how the next roll is made" onClick={() => setOpen((o) => !o)}>
+        <span className="seal-wax" aria-hidden />
+        <span className="seal-text">{parts}</span>
+      </button>
+      {open && (
+        <div className="seal-pop" role="dialog" aria-label="Message and roll mode">
+          <label className="seal-row">
+            <span className="muted small">Say it to</span>
+            <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Whisper to">
+              <option value="">All</option>
+              {people.map((p) => <option key={p.pubkey} value={p.pubkey}>{p.name}</option>)}
+            </select>
+          </label>
+          <div className="seal-row">
+            <span className="muted small">Next roll</span>
+            <RollModeBar compact />
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

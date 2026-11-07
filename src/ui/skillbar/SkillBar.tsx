@@ -7,8 +7,8 @@
  * over the token for everyone), "Your turn" and End turn while it is up in combat, the sheet's
  * saves and the token's skills as icon chips with cost badges (hovering, focusing or holding a
  * skill chip rings its reach on the table), and ⋯ for the
- * token menu. The GM also gets the token's skill list editor, conditions, Hide/Show, initiative,
- * Assign and Remove. The bar hides while a skill is being aimed (the targeting bar takes over).
+ * token menu. The GM also gets the token's skill list editor, conditions and initiative here; Hide,
+ * Assign and Remove are in the token menu (⋯, right-click or long-press), one home each. The bar hides while a skill is being aimed (the targeting bar takes over).
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent } from 'react'
 import type { GameController } from '../controller'
@@ -26,7 +26,8 @@ import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { requestSkillEditor } from '../skilleditor/requests'
 import { pushToast } from '../toasts'
-import { combatants, lateJoin, rollInitiative, rollLateJoin } from '../panels/initiative'
+import { lateJoin, rollLateJoin } from '../panels/initiative'
+import { startCombat } from '../panels/InitiativePanel'
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
 import { saveChipLabel, sheetSaves } from './tokenBar'
@@ -37,7 +38,7 @@ import { SkillIcon } from './skillIcons'
 import { StatusBadge } from '../StatusBadge'
 import { Icon } from '@/ui/icons'
 
-type Card = 'skills' | 'conditions' | 'assign' | null
+type Card = 'skills' | 'conditions' | null
 
 export function SkillBar({ controller }: { controller: GameController }) {
   const isGm = controller.connection.isGm
@@ -95,11 +96,13 @@ export function SkillBar({ controller }: { controller: GameController }) {
     <div className="skill-dock">
       {isGm && open === 'skills' && <TokenSkillsEditor controller={controller} token={token} onClose={() => setCard(null)} />}
       {isGm && open === 'conditions' && <ConditionsCard controller={controller} token={token} onClose={() => setCard(null)} />}
-      {isGm && open === 'assign' && <AssignCard controller={controller} token={token} onClose={() => setCard(null)} />}
       <div className={`dock-bar token-bar${up ? ' up' : ''}`} role="toolbar" aria-label={`${token.name}`}>
         <div className="token-bar-head">
-          <span className="dot" style={{ background: token.color }} />
-          <strong className="token-bar-name">{token.name}</strong>
+          <button type="button" className="token-bar-card" onClick={() => requestOpenPanel('character')} aria-label={`${token.name}: open the character card`} title="Character card">
+            <span className="dot" style={{ background: token.color }} />
+            <strong className="token-bar-name">{token.name}</strong>
+          </button>
+          <button type="button" className="icon token-bar-find" onClick={() => useTableUi.getState().focusToken(token.id)} aria-label={`Centre the camera on ${token.name}`} title="Find on the table"><Icon name="crosshair" size={18} /></button>
           {up && <span className="token-bar-turn">{isGm || token.owner !== me ? 'Up now' : 'Your turn'}</span>}
           {hp && (
             <span className="token-bar-hp" title={`${primary?.name ?? 'HP'} ${hp.current}/${hp.max}`}>
@@ -163,12 +166,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
             <button type="button" className={`tiny${open === 'conditions' ? ' on' : ''}`} aria-expanded={open === 'conditions'} onClick={() => toggle('conditions')}>
               Conditions{token.conditions.length ? ` (${token.conditions.length})` : ''}
             </button>
-            <button type="button" className="tiny gm-secondary" onClick={() => void controller.dispatch({ type: 'token.update', token: token.id, patch: { hidden: !token.hidden } })}>
-              {token.hidden ? 'Show' : 'Hide'}
-            </button>
             <InitiativeButton controller={controller} token={token} active={active} inOrder={inOrder} />
-            <button type="button" className={`tiny gm-secondary${open === 'assign' ? ' on' : ''}`} aria-expanded={open === 'assign'} onClick={() => toggle('assign')}>Assign</button>
-            <button type="button" className="tiny danger gm-secondary" onClick={() => { void controller.dispatch({ type: 'token.remove', token: token.id }); useGame.getState().clearSelection() }}>Remove</button>
           </div>
         )}
       </div>
@@ -213,14 +211,7 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
     setBusy(true)
     try {
       const s = useGame.getState()
-      if (!active) {
-        const eligible = combatants(s.tokens, s.meta?.activeScene ?? null)
-        if (!eligible.some((t) => t.id === token.id)) eligible.push(token)
-        const seed = newSeed()
-        const order = await rollInitiative(eligible, s.characters, controller.rules, seed)
-        await controller.dispatch({ type: 'initiative.start', order, seed })
-        return
-      }
+      if (!active) { await startCombat(controller, { include: token.id }); return }
       if (inOrder) { await controller.dispatch({ type: 'initiative.remove', token: token.id }); return }
       // Late join: rolled like Start rolls it, and slotted in by score (or into its group).
       const order = s.initiative?.order ?? []
@@ -281,25 +272,6 @@ function ConditionsCard({ controller, token, onClose }: { controller: GameContro
           )
         })}
       </div>
-    </div>
-  )
-}
-
-/** GM: hand the token to someone at the table, or take it back. */
-function AssignCard({ controller, token, onClose }: { controller: GameController; token: Token; onClose(): void }) {
-  const presence = useGame((s) => s.presence)
-  const players = Object.values(presence).filter((p) => p.pubkey !== controller.pubkey)
-  const assign = (owner: PlayerPubkey) => { void controller.dispatch({ type: 'token.claim', token: token.id, owner }); onClose() }
-  return (
-    <div className="dock-card" role="dialog" aria-label={`Assign ${token.name}`}>
-      <div className="token-skills-head"><strong>Who plays {token.name}?</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}><Icon name="close" /></button></div>
-      <div className="condition-chips">
-        <button type="button" className={`tiny${!token.owner || token.owner === controller.pubkey ? ' on' : ''}`} onClick={() => assign(controller.pubkey as PlayerPubkey)}>GM (you)</button>
-        {players.map((p) => (
-          <button key={p.pubkey} type="button" className={`tiny${token.owner === p.pubkey ? ' on' : ''}`} onClick={() => assign(p.pubkey)}>{p.name}</button>
-        ))}
-      </div>
-      {players.length === 0 && <p className="muted small">Nobody else is connected right now.</p>}
     </div>
   )
 }

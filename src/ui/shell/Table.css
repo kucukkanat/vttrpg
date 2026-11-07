@@ -1,0 +1,439 @@
+/* =============================================================================================
+   The table layout (shell/GameShell.tsx, TableChrome.tsx, PhoneBar.tsx; docs/UX.md "Table layout").
+   The board fills the screen; the chrome is made of materials: a wooden top rail, a leather GM
+   screen, brass fittings, paper cards and the scroll, a felt dice well. Positions are relative to
+   .table. Order over the board: canvas < dock (3) < HUD (4) < cards, scroll, screen, well (5) <
+   raised leaves (6) < palette (60).
+   ============================================================================================= */
+
+.game.game--table {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  grid-template-areas: "top" "table";
+  --well-size: 168px;
+  --edge: var(--sp-3);
+  --rail-w: 64px;
+  --plaque-w: 244px;
+  --plaque-h: 0px;
+  --scroll-w: 340px;
+  --card-w: 380px;
+  background: var(--wood-dk);
+}
+.game.game--table.game--gm { --plaque-h: 132px; }
+.game.game--table.game--phone {
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
+  grid-template-areas: "top" "table" "tabs";
+  --well-size: 104px;
+  --edge: var(--sp-2);
+}
+@media (max-width: 1099px) { .game.game--table:not(.game--phone) { --scroll-w: 320px; --card-w: 340px; --well-size: 144px; } }
+
+/* The board: wood around it, a thin frame in the mode's colour (brass Play, green Prep, blue Build). */
+.game--table .table { background: var(--wood-dk) var(--grain); }
+.game--table .table::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mode-play) 55%, transparent), inset 0 0 60px rgba(0, 0, 0, .45);
+}
+.game--table.game--mode-prep .table::after { box-shadow: inset 0 0 0 3px var(--mode-prep), inset 0 0 60px rgba(0, 0, 0, .45); }
+.game--table.game--mode-build .table::after { box-shadow: inset 0 0 0 3px var(--mode-build), inset 0 0 60px rgba(0, 0, 0, .45); }
+
+/* ---------------------------------------------------------------------------------------------
+   Top rail: wood with a brass edge
+   --------------------------------------------------------------------------------------------- */
+.game--table .topbar {
+  gap: var(--sp-3);
+  background: linear-gradient(180deg, #5a3820, var(--wood) 55%, #3d2514) , var(--grain);
+  background-blend-mode: multiply;
+  border-bottom: 2px solid var(--brass-lo);
+  box-shadow: 0 1px 0 rgba(241, 213, 142, .25) inset, 0 3px 10px rgba(0, 0, 0, .45);
+  color: var(--paper);
+  z-index: 10;
+}
+.game--table .topbar.compact { gap: var(--sp-1); }
+.t-plaque-name {
+  display: flex; align-items: center; gap: var(--sp-2); min-width: 0; flex: 0 1 auto;
+  padding: 3px var(--sp-3) 3px var(--sp-2); border-radius: var(--r-sm);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .18), rgba(0, 0, 0, .32));
+  box-shadow: inset 0 0 0 1px rgba(241, 213, 142, .28);
+}
+.t-crest {
+  width: 28px; height: 28px; flex: none; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 50%, var(--brass-lo));
+  box-shadow: inset 0 0 0 2px rgba(60, 35, 10, .35), 0 1px 2px rgba(0, 0, 0, .4);
+}
+.t-plaque-text { display: grid; min-width: 0; line-height: 1.1; }
+.game--table .topbar .game-name { font-family: var(--font-display); color: var(--paper); font-size: var(--fs-lg); }
+.game--table .topbar.compact .game-name { font-size: var(--fs-md); }
+.t-plaque-sub { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.game--table .topbar .status { min-height: 0; padding: 0; background: none; border: 0; color: #d9c49b; font-size: var(--fs-xs); }
+.game--table .topbar .role { padding: 0 5px; font-size: 10px; border-color: rgba(241, 213, 142, .45); color: var(--brass-hi); }
+.t-scene {
+  display: inline-grid; justify-items: start; gap: 0; min-width: 0; max-width: 28vw; padding: 2px var(--sp-2);
+  background: transparent; border: 0; color: var(--paper); line-height: 1.1;
+}
+button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
+.t-scene-label { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #d9c49b; }
+.t-scene-name { font-family: var(--font-display); font-style: italic; font-size: var(--fs-lg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-center { flex: none; display: flex; align-items: center; }
+
+/* Brass buttons on the rail. */
+.t-combat, .t-invite, .t-search, .t-bell-btn, .t-presence, .t-menu-btn, .t-combat-end {
+  min-height: 38px; border-radius: 999px; color: var(--paper);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .3)); border: 1px solid rgba(241, 213, 142, .35);
+}
+.t-combat {
+  padding: 0 var(--sp-4); gap: var(--sp-2); font-weight: 700; color: #2a1c10;
+  background: linear-gradient(180deg, var(--brass-hi), var(--brass) 55%, var(--brass-lo)); border-color: #6b4a1a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+.t-combat-group { display: inline-flex; gap: var(--sp-1); }
+.t-combat-end { padding: 0 var(--sp-3); }
+.t-search { gap: var(--sp-2); padding: 0 var(--sp-3); min-width: 38px; }
+.t-search .key-hint { color: #d9c49b; border-color: rgba(241, 213, 142, .35); }
+.t-search-word { color: #e8d7b0; }
+.t-presence { gap: 0; padding: 0 var(--sp-2) 0 4px; }
+.t-face {
+  width: 26px; height: 26px; margin-right: -6px; border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 12px; font-weight: 800; color: #1a120a; border: 2px solid var(--wood); flex: none;
+}
+.t-face--more { background: var(--paper-2); }
+.t-presence .t-face:last-child { margin-right: 0; }
+.t-bell { position: relative; }
+.t-bell-btn { position: relative; gap: var(--sp-1); padding: 0 var(--sp-3); }
+.t-bell-btn.has { border-color: var(--brass-hi); }
+.t-bell-btn .badge, .t-scroll-rod .badge, .t-phonebar-btn .badge {
+  position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: #b03a2e; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center;
+  box-shadow: 0 0 0 2px var(--wood);
+}
+.t-menu-btn { min-width: 38px; }
+.topbar.compact :is(.t-search, .t-bell-btn) { padding: 0; min-width: 40px; }
+
+/* Popovers from the rail are paper. */
+.game--table .menu-list { background: var(--panel); }
+.t-bell-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: min(360px, calc(100vw - 24px));
+  border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-lg); background: var(--panel) var(--paper-tex);
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+.t-bell-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); max-height: 50vh; overflow: auto; }
+.t-bell-list li { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) 0; border-top: 1px dashed var(--border); }
+.t-bell-text { flex: 1; min-width: 0; font-size: var(--fs-sm); }
+.t-bell-empty { margin: var(--sp-2) 0 0; }
+
+/* ---------------------------------------------------------------------------------------------
+   Paper: cards, leaves, the tray, the scroll
+   --------------------------------------------------------------------------------------------- */
+.paper-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--head-h); padding: 0 var(--sp-1) 0 var(--sp-3); flex: none; }
+.paper-title { flex: 1 1 auto; min-width: 0; font-family: var(--font-display); font-size: var(--fs-lg); text-transform: none; letter-spacing: 0; color: var(--fg); }
+.paper-glyph { color: var(--accent); flex: none; }
+.paper-close { flex: none; }
+.skin-paper .hosted { --actions-right: calc(var(--control) + var(--sp-2)); }
+.skin-paper .hosted > .paper-head + .panel { border-top: 1px solid var(--border); }
+.skin-paper .hosted .host-title { margin-right: calc(var(--actions-w, 0px) + var(--sp-2)); }
+
+.t-card, .t-scroll, .t-tray, .t-leaf {
+  position: absolute; z-index: 5; display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel) var(--paper-tex); border: 1px solid #b59a6c; border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 14px 34px rgba(20, 10, 2, .5), 0 2px 4px rgba(20, 10, 2, .35);
+}
+.t-card > .hosted, .t-scroll > .hosted, .t-tray > .hosted, .t-leaf > .hosted { flex: 1; min-height: 0; }
+.t-card .hosted > .panel, .t-tray .hosted > .panel, .t-leaf .hosted > .panel { overflow: auto; }
+.t-scroll .hosted > .panel { overflow: hidden; display: flex; flex-direction: column; }
+.t-scroll .chat .log { flex: 1; min-height: 0; }
+
+/* The one card: beside the tool rail, clear of the GM screen. */
+.t-card {
+  left: calc(var(--edge) + var(--rail-w) + var(--sp-3)); top: var(--edge);
+  width: min(var(--card-w), calc(100% - var(--rail-w) - 3 * var(--edge)));
+  max-height: calc(100% - 2 * var(--edge) - var(--plaque-h));
+  animation: t-deal .18s ease-out;
+}
+@keyframes t-deal { from { transform: translateY(8px) rotate(-.6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* The scroll: parchment with wooden rollers top and bottom. */
+.t-scroll {
+  right: var(--edge); top: var(--edge); bottom: calc(var(--edge) + var(--well-size) + var(--sp-3));
+  width: min(var(--scroll-w), 40%); border-radius: 2px; border-color: #a58a5c;
+}
+.t-scroll::before, .t-scroll::after {
+  content: ''; position: absolute; left: -6px; right: -6px; height: 12px; border-radius: 6px; z-index: 1;
+  background: linear-gradient(180deg, #7a4f2a, var(--wood) 50%, #2c1a0e); box-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+}
+.t-scroll::before { top: -6px; } .t-scroll::after { bottom: -6px; }
+.t-scroll .hosted { padding: 6px 0; }
+.t-scroll-rod {
+  position: absolute; z-index: 5; right: var(--edge); top: 50%; transform: translateY(-50%);
+  width: 46px; height: 220px; padding: 0; flex-direction: column; justify-content: space-between; gap: 0;
+  background: linear-gradient(90deg, #d8c391, var(--paper) 40%, #e3cf9f); border: 1px solid #a58a5c; border-radius: 4px;
+  color: var(--ink); box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
+}
+.t-rod-cap { width: calc(100% + 10px); height: 12px; border-radius: 6px; background: linear-gradient(180deg, #8a5a30, var(--wood) 50%, #2c1a0e); }
+.t-rod-word { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-flex; align-items: center; gap: var(--sp-1); font-family: var(--font-display); font-size: var(--fs-md); }
+.t-rod-word .icon-svg { transform: rotate(90deg); }
+
+/* ---------------------------------------------------------------------------------------------
+   Tool rail (left edge) and the journal
+   --------------------------------------------------------------------------------------------- */
+.game--table .hud { padding: 0; display: block; }
+.game--table .hud > * { pointer-events: auto; }
+.t-rail {
+  position: absolute; left: var(--edge); top: 50%; transform: translateY(-50%); z-index: 1;
+  width: var(--rail-w); display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-2);
+}
+.game--gm .t-rail { top: calc(50% - var(--plaque-h) / 2); }
+.t-rail .cam-pill { position: static; display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; }
+.t-rail .cam-group, .t-tools-sheet .cam-group {
+  flex-direction: column; border-radius: 10px; padding: 3px;
+  background: linear-gradient(180deg, #4e301b, var(--leather)); border: 1px solid rgba(241, 213, 142, .35);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .45);
+}
+.t-rail .cam-btn { width: 100%; flex-direction: column; gap: 2px; padding: 6px 2px; border-radius: 8px; color: var(--paper); }
+.t-rail .cam-label { font-size: var(--fs-xs); }
+.t-rail .cam-btn kbd { position: absolute; top: 2px; right: 3px; padding: 0 2px; font-size: 9px; line-height: 12px; border-color: rgba(241, 213, 142, .3); color: #cdb488; }
+.t-rail .cam-btn { position: relative; }
+.t-rail .cam-btn.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; box-shadow: none; }
+.t-rail .cam-btn.on kbd { color: #2a1c10; border-color: rgba(42, 28, 16, .4); }
+.t-book {
+  position: relative; flex-direction: column; gap: 2px; min-height: 64px; padding: 6px 2px;
+  background: linear-gradient(90deg, #6b1f17 0 10%, #8e2c20 10% 100%); border: 1px solid #4a140e; border-radius: 4px 8px 8px 4px;
+  color: #f5e2c0; box-shadow: 0 6px 14px rgba(0, 0, 0, .45);
+}
+.t-book-word { font-size: var(--fs-xs); font-family: var(--font-display); }
+.t-ribbon {
+  position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); padding: 1px 6px; white-space: nowrap;
+  font-size: 10px; font-weight: 800; color: #fff; background: #b03a2e; border-radius: 2px; box-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Standees: turn order along the top edge, only in combat
+   --------------------------------------------------------------------------------------------- */
+.t-standees { position: absolute; top: var(--edge); left: 50%; transform: translateX(-50%); z-index: 2; display: flex; justify-content: center; width: min(560px, 60%); }
+.t-standees:empty { display: none; }
+.t-standees .init-strip-wrap { max-width: 100%; display: flex; justify-content: center; }
+.t-standees .init-chip {
+  background: linear-gradient(180deg, #4e301b, var(--leather)); border: 1px solid rgba(241, 213, 142, .45); border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .45); color: var(--paper); padding: 4px 8px;
+}
+.t-standees .init-disc { box-shadow: 0 3px 0 #2c1a0e, 0 4px 6px rgba(0, 0, 0, .4); }
+.t-standees .init-round { color: var(--brass-hi); }
+
+/* ---------------------------------------------------------------------------------------------
+   The hand: the selected token's bar, between the GM screen and the dice well
+   --------------------------------------------------------------------------------------------- */
+.game--table .dock {
+  left: 0; right: 0;
+  padding-left: calc(var(--edge) + var(--sal)); padding-right: calc(var(--edge) + var(--well-size) + var(--sp-4) + var(--sar));
+  padding-bottom: calc(var(--edge) + var(--sab));
+}
+.game--table.game--gm:not(.game--phone) .dock { padding-left: calc(var(--edge) + var(--plaque-w) + var(--sp-4)); }
+.game--table .dock-bar, .game--table .dock-card {
+  background: linear-gradient(180deg, rgba(78, 48, 27, .97), rgba(58, 34, 22, .97)); border: 1px solid rgba(241, 213, 142, .4);
+  border-radius: 12px; color: var(--paper); box-shadow: 0 10px 26px rgba(0, 0, 0, .5);
+}
+.game--table .token-bar.up { border-color: var(--now); box-shadow: 0 0 0 2px color-mix(in srgb, var(--now) 45%, transparent), 0 10px 26px rgba(0, 0, 0, .5); }
+.game--table .skill-chip {
+  min-height: 56px; padding: 6px 10px; flex-direction: column; gap: 2px; border-radius: 8px; text-align: center;
+  background: linear-gradient(180deg, var(--paper), var(--paper-2)); color: var(--ink); border: 1px solid #b59a6c;
+  box-shadow: 0 2px 0 #8b6424, 0 4px 8px rgba(0, 0, 0, .35);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.game--table .skill-chip .skill-chip-text { align-items: center; }
+.game--table .skill-chip .skill-icon { color: #8f4c00; }
+.game--table .skill-chip .skill-chip-cost, .game--table .skill-chip .cost-free { color: var(--ink-2); }
+.game--table .skill-chip .cost-badge { border-color: #b59a6c; color: var(--ink); }
+@media (hover: hover) { .game--table .skill-chip:not([aria-disabled="true"]):hover { transform: translateY(-4px); box-shadow: 0 2px 0 #8b6424, 0 10px 16px rgba(0, 0, 0, .4); border-color: #8b6424; } }
+.game--table .skill-chip--edit { background: transparent; color: var(--paper); border: 1px dashed rgba(241, 213, 142, .5); box-shadow: none; }
+.game--table .skill-chip--edit .skill-chip-cost { color: #cdb488; }
+.game--table .save-chip { background: linear-gradient(180deg, #efe3c6, #dccaa0); }
+.game--table .token-bar-name { color: var(--paper); }
+
+/* ---------------------------------------------------------------------------------------------
+   The dice well: felt in a brass ring, bottom right; dice roll inside it
+   --------------------------------------------------------------------------------------------- */
+.t-well-wrap { position: absolute; z-index: 5; right: calc(var(--edge) + var(--sar)); bottom: calc(var(--edge) + var(--sab)); width: var(--well-size); height: var(--well-size); }
+.t-well {
+  position: absolute; inset: 0; border-radius: 50%; overflow: visible;
+  background: radial-gradient(circle at 50% 42%, #3b7553, var(--felt) 55%, var(--felt-dk));
+  box-shadow: 0 0 0 6px var(--brass), 0 0 0 8px var(--brass-lo), inset 0 8px 22px rgba(0, 0, 0, .6), 0 12px 28px rgba(0, 0, 0, .55);
+}
+.t-well::after {
+  content: 'DICE WELL'; position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; pointer-events: none;
+  font-size: 10px; letter-spacing: .2em; font-weight: 800; color: rgba(255, 255, 255, .35);
+}
+.t-well-felt { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+.t-well-btn {
+  position: absolute; left: -10px; top: -10px; z-index: 2; width: 58px; height: 58px; min-height: 0; padding: 0; border-radius: 50%;
+  flex-direction: column; gap: 0; color: #2a1c10; font-weight: 800;
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 55%, var(--brass-lo)); border: 2px solid #6b4a1a;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.t-well-btn-word { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.t-well-btn.on { box-shadow: 0 0 0 3px var(--paper), 0 4px 10px rgba(0, 0, 0, .5); }
+.t-well-pad {
+  position: absolute; right: 0; bottom: calc(100% + var(--sp-4)); width: min(300px, calc(100vw - 24px));
+  border: 1px solid #b59a6c; border-radius: 8px; box-shadow: var(--shadow-lg); background: var(--panel) var(--paper-tex); padding-bottom: var(--sp-2);
+}
+.t-well-pad .dice-pad { position: static; width: auto; padding: 0 var(--sp-3); background: none; border: 0; box-shadow: none; }
+.dice-pad { display: grid; gap: var(--sp-2); }
+.dice-pad-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.dice-pad .die-chip {
+  flex: 1 1 0; min-width: 0; min-height: var(--control); padding: 0 var(--sp-1); border-radius: 999px;
+  background: var(--panel-2); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.dice-pad-form { display: flex; gap: var(--sp-1); }
+.dice-pad-form input { flex: 1; min-width: 0; }
+.dice-pad-mode { justify-content: space-between; background: transparent; border-style: dashed; font-size: var(--fs-sm); color: var(--muted); }
+/* The read-out: a paper slip beside the well. */
+.well-readout {
+  position: absolute; right: calc(100% + var(--sp-3)); bottom: 12%; z-index: 2;
+  display: grid; justify-items: start; gap: 0; min-width: 140px; max-width: 220px; padding: var(--sp-2) var(--sp-3); text-align: left;
+  background: var(--paper) var(--paper-tex); color: var(--ink); border: 1px solid #b59a6c; border-radius: 4px; box-shadow: 0 8px 18px rgba(0, 0, 0, .45);
+  animation: t-deal .18s ease-out;
+}
+.well-readout .well-who { font-size: var(--fs-xs); color: var(--ink-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.well-readout .toast-total { font-family: var(--font-display); font-size: 30px; line-height: 1.05; color: var(--ink); }
+.well-readout .toast-total.pop { animation: t-pop .5s ease; }
+.well-readout .well-dice { font-size: var(--fs-xs); color: var(--ink-2); }
+.well-readout .roll-toast-outcome { font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; display: inline-flex; align-items: center; gap: 3px; }
+.well-readout .roll-toast-outcome.ok { color: #186b26; }
+.well-readout .roll-toast-outcome.bad { color: #a8261e; }
+@keyframes t-pop { 40% { transform: scale(1.25); } }
+
+/* ---------------------------------------------------------------------------------------------
+   The GM screen: a leather plaque folded at the bottom left; Prep raises three leaves, Build a tray
+   --------------------------------------------------------------------------------------------- */
+.t-plaque {
+  position: absolute; z-index: 5; left: calc(var(--edge) + var(--sal)); bottom: calc(var(--edge) + var(--sab)); width: var(--plaque-w);
+  display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  background: linear-gradient(180deg, #5a2f1f, #3a1e14); border: 1px solid #22100a; border-radius: 10px 10px 6px 6px;
+  box-shadow: inset 0 0 0 2px rgba(201, 154, 68, .35), 0 12px 28px rgba(0, 0, 0, .55); color: var(--paper);
+}
+.t-plaque--prep { box-shadow: inset 0 0 0 2px var(--mode-prep), 0 12px 28px rgba(0, 0, 0, .55); }
+.t-plaque--build { box-shadow: inset 0 0 0 2px var(--mode-build), 0 12px 28px rgba(0, 0, 0, .55); }
+.t-plaque-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
+.t-plaque-head strong { font-family: var(--font-display); font-size: var(--fs-lg); }
+.t-plaque-state { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #d9c49b; }
+.t-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 8px; background: rgba(0, 0, 0, .35); }
+.t-mode { min-height: 34px; border: 0; border-radius: 6px; background: transparent; color: #e8d7b0; font-weight: 700; }
+.t-mode.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; }
+.game--mode-prep .t-mode.on { background: linear-gradient(180deg, #a7d39f, var(--mode-prep)); }
+.game--mode-build .t-mode.on { background: linear-gradient(180deg, #9fd0ea, var(--mode-build)); }
+.t-plaque-live {
+  justify-content: flex-start; min-height: 30px; gap: var(--sp-1); padding: 0 var(--sp-2); font-size: var(--fs-xs);
+  background: transparent; color: #e8d7b0; border: 1px dashed rgba(241, 213, 142, .4); border-radius: 6px;
+}
+.t-screen-sheet .t-modes { background: var(--panel-2); }
+.t-screen-sheet .t-mode { color: var(--fg); }
+
+/* Build: the tool tray, the board stays live beside it. */
+.t-tray {
+  left: calc(var(--edge) + var(--sal)); bottom: calc(var(--edge) + var(--plaque-h) + var(--sp-2)); width: min(360px, 40%);
+  max-height: calc(100% - 2 * var(--edge) - var(--plaque-h) - var(--sp-2)); border-top: 4px solid var(--mode-build);
+}
+.game--gm.game--mode-build:not(.game--phone) .t-rail { left: calc(var(--edge) + min(360px, 40%) + var(--sp-3)); }
+.game--gm.game--mode-build:not(.game--phone) .t-card { left: calc(var(--edge) + min(360px, 40%) + var(--rail-w) + 2 * var(--sp-3)); }
+
+/* Prep: three leaves raised over the board, angled like a standing screen. */
+.t-leaves {
+  position: absolute; z-index: 6; left: var(--edge); right: var(--edge); bottom: calc(var(--edge) + var(--plaque-h) + var(--sp-2)); top: calc(var(--edge) + 56px);
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); perspective: 1600px; pointer-events: none;
+  animation: t-raise .22s ease-out;
+}
+.t-leaves .t-leaf { position: relative; pointer-events: auto; border-top: 4px solid var(--mode-prep); }
+.t-leaf--0 { transform: rotateY(5deg); transform-origin: right center; }
+.t-leaf--2 { transform: rotateY(-5deg); transform-origin: left center; }
+@keyframes t-raise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.t-leaf-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.t-leaf-tab { min-height: 28px; padding: 0 var(--sp-2); font-size: var(--fs-sm); border-radius: 999px; background: transparent; }
+.t-leaf-tab.on { background: var(--row-on); border-color: var(--accent); font-weight: 700; }
+.t-leaf .paper-head, .t-tray .paper-head { flex-wrap: wrap; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
+.t-leaf .paper-title { font-size: var(--fs-md); }
+
+/* ---------------------------------------------------------------------------------------------
+   Command palette
+   --------------------------------------------------------------------------------------------- */
+.t-palette-scrim {
+  position: fixed; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start;
+  padding: max(8vh, calc(var(--sat) + 48px)) var(--sp-3) var(--sp-3); background: rgba(20, 10, 4, .45);
+}
+.t-palette {
+  width: min(640px, 100%); max-height: min(70vh, 640px); display: flex; flex-direction: column;
+  background: var(--panel) var(--paper-tex); border: 1px solid #b59a6c; border-radius: 10px; box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  animation: t-deal .14s ease-out;
+}
+.t-palette-field { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); color: var(--muted); }
+.t-palette-field input { border: 0; background: transparent; font-size: var(--fs-lg); min-height: 44px; padding: 0; }
+.t-palette-field input:focus-visible { outline: none; }
+.t-palette-list { list-style: none; margin: 0; padding: var(--sp-1); overflow: auto; }
+.t-palette-group { padding: var(--sp-2) var(--sp-2) 2px; font-size: var(--fs-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.t-palette-item {
+  width: 100%; justify-content: flex-start; gap: var(--sp-2); min-height: 40px; border: 0; background: transparent; border-radius: 6px; text-align: left;
+}
+.t-palette-item.on { background: var(--row-on); box-shadow: inset 3px 0 0 var(--accent); }
+.t-palette-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-palette-where { flex: none; font-size: var(--fs-xs); color: var(--muted); font-style: italic; }
+.t-palette-empty { padding: var(--sp-3); }
+
+/* ---------------------------------------------------------------------------------------------
+   Phones: a five-target bar, one sheet, the hand above the bar; the well only while dice roll
+   --------------------------------------------------------------------------------------------- */
+.t-phonebar {
+  grid-area: tabs; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; z-index: 10;
+  padding: 4px calc(4px + var(--sar)) calc(4px + var(--sab)) calc(4px + var(--sal));
+  background: linear-gradient(180deg, #4e301b, var(--wood-dk)); border-top: 2px solid var(--brass-lo);
+}
+.game--phone.kb .t-phonebar { display: none; }
+.t-phonebar-btn {
+  position: relative; flex-direction: column; gap: 2px; min-height: 52px; padding: 2px 0; border: 0; border-radius: 10px;
+  background: transparent; color: #e8d7b0; font-size: var(--fs-xs);
+}
+.t-phonebar-btn.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; font-weight: 800; }
+.t-phonebar--prep .t-phonebar-btn[aria-label^="Prep"] { box-shadow: inset 0 0 0 2px var(--mode-prep); }
+.t-phonebar--build .t-phonebar-btn[aria-label^="Build"] { box-shadow: inset 0 0 0 2px var(--mode-build); }
+.t-phonebar-btn .badge { top: 2px; right: calc(50% - 22px); }
+.game--phone .bsheet { background: var(--panel) var(--paper-tex); }
+.game--phone .t-standees { position: absolute; top: calc(var(--edge) + var(--control) + var(--sp-2)); width: calc(100% - 2 * var(--edge)); }
+.game--phone .hud > .chip { position: absolute; top: var(--edge); left: var(--edge); max-width: calc(100% - 2 * var(--edge)); }
+.t-well-wrap.compact .t-well-btn { display: none; }
+.t-well-wrap.compact:not(:has(canvas, .well-readout)) { display: none; }
+.t-well-wrap.compact { bottom: calc(var(--edge) + var(--dock-h, 0px)); }
+.t-well-wrap.compact .t-well::after { display: none; }
+.t-well-wrap.compact .well-readout { right: calc(100% + var(--sp-2)); min-width: 120px; }
+.t-tools-sheet { display: grid; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4) var(--sp-4); }
+.t-tools-sheet .cam-pill { position: static; display: flex; flex-wrap: wrap; gap: var(--sp-2); width: auto; }
+.t-tools-sheet .cam-group { flex-direction: row; }
+.t-tools-sheet .cam-btn { color: var(--paper); flex-direction: column; min-width: 56px; }
+.t-tools-search { justify-content: flex-start; gap: var(--sp-2); }
+.t-screen-sheet { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+.t-screen-sheet .hosted { min-height: 0; }
+.t-screen-sheet .hosted > .panel { padding: 0; border: 0; }
+.game--phone .bsheet > .dice-pad { padding: var(--sp-2) var(--sp-4) var(--sp-4); }
+
+/* ---------------------------------------------------------------------------------------------
+   Zen and Display: the board alone (Display keeps the standees and the dice)
+   --------------------------------------------------------------------------------------------- */
+.game--zen :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-tray, .t-leaves, .t-well-wrap, .t-standees, .t-phonebar),
+.game--display :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-tray, .t-leaves, .t-well-btn, .t-phonebar) { display: none !important; }
+.game--display .hud { display: block !important; }
+
+/* Panels on leaves, the tray and the phone screen keep their own action buttons in a row of their
+   own (the hosted header trick needs a header row, and leaves carry tabs there instead). */
+:is(.t-leaf, .t-tray, .t-screen-sheet) .hosted > .panel > h3 {
+  position: static; height: auto; min-height: 0; margin: 0 0 var(--sp-2); justify-content: flex-end; flex-wrap: wrap;
+}
+:is(.t-leaf, .t-tray, .t-screen-sheet) .hosted > .panel > h3:not(:has(> *)) { display: none; }
+
+/* Phones: the combat control is a brass coin, the name keeps the room. */
+.topbar.compact .t-combat-word { display: none; }
+.topbar.compact .t-combat { padding: 0 var(--sp-3); }
+.topbar.compact .t-combat-end { padding: 0 var(--sp-2); }
+
+/* The hand's head: the token's name opens its character card; the crosshair finds it on the table. */
+.token-bar-card { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--sp-2); background: transparent; border: 0; color: inherit; }
+@media (hover: hover) { .token-bar-card:hover { background: rgba(0, 0, 0, .2); } }
+.token-bar-card .token-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: underline dotted rgba(241, 213, 142, .5); text-underline-offset: 3px; }
+.token-bar-find { color: var(--mine); }
+.game--table .token-bar-more { color: var(--paper); }
+/* Phones: the well only shows while dice roll, so the hand takes the full width. */
+.game--table.game--phone .dock { padding-right: calc(var(--edge) + var(--sar)); padding-left: calc(var(--edge) + var(--sal)); }

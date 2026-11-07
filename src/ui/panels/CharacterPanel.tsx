@@ -8,7 +8,6 @@ import type { CharacterId } from '@/core/ids'
 import { CharacterCard } from './CharacterCard'
 import { loadSheetMode, saveSheetMode, type SheetMode } from './sheetCard'
 import { setDataPath } from '../sheetEdit'
-import { RollModeBar } from './RollCards'
 
 export function CharacterPanel({ controller }: { controller: GameController }) {
   // The selected token, else the player's own: the sheet stays available when nothing is selected.
@@ -57,7 +56,6 @@ export function CharacterPanel({ controller }: { controller: GameController }) {
           <button type="button" className="tiny" aria-pressed onClick={() => setMode('card')}>Done</button>
         )}
       </h3>
-      <RollModeBar />
       {token.concentrating && (isGm || mine) && (
         <p className="small">
           Concentrating on {token.concentrating.name}{' '}

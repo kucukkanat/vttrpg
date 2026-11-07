@@ -2,106 +2,61 @@
 
 How the game screen uses the space on phones, tablets and desktops. The table is the product;
 everything else is chrome that must earn its pixels. One React tree (`src/ui/shell/GameShell.tsx`)
-renders all three layouts, so the 3D canvas never remounts when the viewport crosses a breakpoint.
+renders every layout, so the 3D canvas never remounts when the viewport crosses a breakpoint.
+
+## Table layout
+
+The board fills the screen. Everything else sits on or around it like objects on a real table, and
+each thing has exactly one home (research and audit: `research_notes/UI redesign/`).
+
+| Piece | Where | What it holds |
+|---|---|---|
+| Top rail | wood, along the top | the game's plaque (name, connection, role), the live scene (GM: opens the scene list), the combat control (GM: Roll initiative; in combat Next turn and End), who is here (opens Players), Invite (GM), the bell, Search (Ctrl/⌘-K), the ⋯ menu |
+| Standees | top edge of the board | turn order, only in combat; tap for the tracker card |
+| Tool rail | left edge | Eyes, Top (with Q/E turns), grid, ruler, ping, Select (touch), and the Journal book with a "new" ribbon |
+| The hand | bottom centre | the selected token (a player's own when nothing is selected): name (opens the character card), find-on-table, HP, saves and skills as cards, End turn; GM adds −/+, Conditions, the skill list and combat join/leave. Hide, Assign and Remove live in the token menu (⋯, right-click, long-press) |
+| The scroll | right edge | chat. Rolled up it is a rod with the unread count; `]` or a tap unrolls it. The composer has one seal control for the whisper target and the roll mode (advantage, who sees rolls) and a log filter |
+| Dice well | bottom right | dice roll inside the well, never over the board; the result reads out on a paper slip beside it; the brass Roll coin opens the dice pad |
+| GM screen | bottom left, GM only | a leather plaque with **Play / Prep / Build** and a live line (sounds playing, the round). **Prep** raises three leaves over the board: Scenes & encounters (Scenes, Prep), Cast (Tokens, Skill editor), Reference (Sound, Players, Journal). **Build** folds into a tool tray (Tools, Scene settings) beside a live board. The board's frame takes the mode's colour: brass, green, blue |
+| One card | over the board's left side | any other panel (Character, Skills, Initiative, Journal, Players, Sound, Scenes for players): one at a time, Esc or ✕ puts it away |
+| Command palette | Ctrl/⌘-K or Search | every action, panel, token and scene, with where it lives and its key |
+| The bell | top rail | whispers, handouts and anything else with an action, kept until handled (toasts still flash; `ui/attention.ts`) |
+
+`shell/tableLayout.ts` holds this state (mode, card, scroll, leaf tabs, palette, bell, phone sheet)
+and `routePanel(id)` decides where any registry panel opens, so `openPanel(id)` from shortcuts,
+toasts and panels needs no knowledge of the layout.
 
 ## Breakpoints
 
 | Name | Width | Pointer assumed | Layout |
 |---|---|---|---|
-| phone | < 700 px | coarse | table full-screen, bottom tab bar, bottom sheet |
-| tablet | 700–1099 px | coarse | table full-screen, one right drawer with tabs |
-| desktop | ≥ 1100 px | fine | three columns, side columns resizable and collapsible |
+| phone | < 700 px | coarse | board full-screen, five-target bottom bar, one bottom sheet |
+| tablet | 700–1099 px | coarse | the table layout, narrower card and scroll, smaller well |
+| desktop | ≥ 1100 px | fine | the table layout |
 
-Width decides the layout; `@media (pointer: coarse)` decides control sizes independently (a touch
-laptop at 1400 px gets desktop columns with 44 px controls; a mouse on a narrow window gets the
-sheet with compact controls). Orientation changes on tablets stay inside the tablet range. A phone
-in landscape (812 × 375) is treated as a tablet: a 360 px drawer beside the table beats a 55 %
-sheet on a 375 px tall screen.
-
-## Layout per breakpoint
+Width decides the layout; `@media (pointer: coarse)` decides control sizes independently. A phone
+in landscape (812 × 375) is treated as a tablet.
 
 ### Phone
 
 ```
-┌──────────────────────┐  top bar 44 px + safe-area top: name · status dot · role · ⋯ menu
-│ ● Token name   Sheet ›│  selected-token chip (tap → Character sheet)
-│                      │
-│        TABLE         │  fills everything between the bars; always interactive
-│                      │
-│     ╭──── roll ────╮  │  roll toast: "2d6+1 → 9" for 6 s; 3D dice land over everything
+┌──────────────────────┐  top rail: plaque · combat coin · bell · search · ⋯
+│  standees (combat)   │
+│        BOARD         │  the dice well appears bottom-right only while dice roll
+│ ┌ the hand ────────┐ │  the selected (or own) token's cards
 ├──────────────────────┤
-│ ═════ Tokens  [+] ✕  │  bottom sheet: handle, title, panel's own action buttons, close
-│  panel content …     │  half = 55 % of the shell height; full = up to the top bar
+│ ═══ one sheet ═══    │  the scroll, the card, the dice pad, the GM screen or Tools
 ├──────────────────────┤
-│ 🗺  ♟  ✎  👥 📜 ✦ 💬(3)│  tab bar 56 px + safe-area bottom; one tab per panel in `PANELS`
+│ Dice Scroll Sheet Screen|Journal Tools │  56 px + safe area
 └──────────────────────┘
 ```
 
-- Tabs come from `PANELS`, in registry order, `scope: 'gm'` entries only for the GM.
-- Tap a tab → that panel opens as a half sheet. Tap the active tab → the sheet closes.
-- Drag the handle: up past 70 % of the way to full snaps to full, down past 40 % below half closes.
-  Swipe left/right on the header switches to the neighbouring tab (wraps at the ends).
-- Half sheet: the table above it stays interactive (no backdrop). Full sheet: the table is hidden
-  behind content; the top bar stays.
-- Chat tab shows a badge with the number of messages appended since the chat sheet was last open.
-- The on-screen keyboard: the sheet bottom follows `visualViewport` (the shell writes
-  `--kb` = keyboard height), so the chat input stays above the keyboard. While the keyboard is open
-  the sheet goes full so the log stays readable.
-- `env(safe-area-inset-bottom)` pads the tab bar; the sheet sits above the tab bar, so the home
-  indicator never covers content.
-
-### Tablet
-
-```
-┌───────────────────────────────┬──────────┐
-│ top bar: name · ● · role · invite · ☰    │
-├───────────────────────────────┬──────────┤
-│ ● chip                        │ tabs ⟷   │  drawer 360 px: horizontally scrolling tab strip,
-│                               │──────────│  one panel at a time, panel body scrolls
-│            TABLE              │ panel    │
-│                               │          │  pinned: docked, table shrinks (grid column)
-│                               │ 📌  ✕    │  unpinned: floats over the table's right edge
-└───────────────────────────────┴──────────┘
-```
-
-- `☰` in the top bar (and a slim edge tab on the right when hidden) toggles the drawer.
-- Pin state and the active tab persist in `localStorage` (`vtt.shell.tablet`).
-- Left-column panels (`side: 'left'`) are simply the first tabs; there is one tab strip.
-
-### Desktop
-
-```
-┌──────────────────────────────────────────────────────┐
-│ top bar                                               │
-├────────┬─┬───────────────────────────────┬─┬─────────┤
-│ ▾Scenes│‖│                               │‖│▾Character│  side columns: 200–480 px, default 260 / 340
-│ ▾Tokens│ │           TABLE               │ │▾Skills   │  drag the 8 px handle to resize
-│ ▸Edit  │ │                               │ │▾Chat     │  double-click the handle to collapse
-│ ▾Players│ │                              │ │  …input  │  collapsed column = 28 px rail with ▸
-└────────┴─┴───────────────────────────────┴─┴─────────┘
-```
-
-- Panels are collapsible sections; each section's open state, the column widths and collapsed
-  state persist in `localStorage` (`vtt.shell.desktop`).
-- `.table` keeps `position: relative` with `minmax(0, 1fr)` in the grid; the canvas is
-  `display: block; width/height 100%` and can never push the grid wider.
-- Chat is the last right-hand section and takes the remaining height (`flex: 1`), its log scrolls.
-
-## Navigation model
-
-One source of truth per breakpoint, all three fed from `PANELS`:
-
-- phone: `activeTab: string | null` + `sheet: 'half' | 'full'`
-- tablet: `activeTab: string`, `open: boolean`, `pinned: boolean`
-- desktop: `collapsed: Record<panelId, boolean>`, `left/right: { width, open }`
-
-Panels receive only `{ controller }` and know nothing about where they are mounted. The shell
-hosts a panel in a `.hosted` wrapper that promotes the panel's own `<h3>` action buttons
-(Tokens "+", Skills "Cancel") into the host's header row and hides the duplicate title text, so
-the sheet/drawer/section header is the only title.
-
-Opening the Character sheet from the selected-token chip, and the chat tab from the roll toast,
-are the two cross-links; both go through the same `openPanel(id)` function.
+- Five targets: Dice (the pad), Scroll (badge), Sheet (character card), Screen for the GM (Play /
+  Prep / Build, then the leaf and tab) or Journal for players (badge), Tools (camera and table
+  tools, Search, every other panel).
+- One sheet at a time: opening any place closes the others (`open(id, isGm, phone)`).
+- Sheets keep the half/full drag, Esc and the keyboard inset as before (`BottomSheet.tsx`).
+- Aiming a skill closes the sheet; the table's own aim bar has Cancel.
 
 ## Touch targets
 
@@ -254,15 +209,18 @@ Conditions on tokens, in the token bar's GM toggles and on the character card sh
 
 ## Themes
 
-- **Dark** is the default. **Daylight** is a high-contrast light set for bright rooms and outdoor
-  phones. "Match the device" (the default preference) follows `prefers-color-scheme`; the Players
-  panel switches by hand (`vtt.theme` in localStorage, `data-theme` on `<html>`). The 3D table and
-  the labels over it stay dark in both.
-- **Pack theme hook** (`pack.json` → `"theme"`): `accent` and `accentFg` (`#rrggbb`), `frameTint`
-  (washed over the top bar, columns, drawer, sheet, tab bar and the glass over the table at
-  8–10 %), `displayFont: { family, src, weight }` (a woff2 in the pack folder). The accent is only
-  used while it keeps AA contrast on the current theme's panels. Applied while a game of the pack
-  is open (`usePackTheme` in `GameShell`).
+- **Lamplight** (dark) is the default: stained wood and leather neutrals under brass. **Parchment**
+  (`daylight`) is the light set for bright rooms. "Match the device" follows
+  `prefers-color-scheme`; the Players panel or the palette switches by hand (`vtt.theme`).
+- The table's materials do not change with the theme: the wooden rail, the leather GM screen,
+  brass fittings and the felt well (`--wood`, `--leather`, `--brass*`, `--felt` in global.css).
+  Cards, the scroll, leaves, the tray and the palette are paper in every theme: `.skin-paper`
+  re-declares the colour tokens locally, so any panel mounted on paper reads as ink on parchment
+  without changes of its own. `palette.test.ts` checks AA contrast for dark, daylight and paper.
+- Body text is Alegreya Sans, names and numbers Alegreya (both bundled, SIL OFL).
+- **Pack theme hook** (`pack.json` → `"theme"`): `accent` and `accentFg` (`#rrggbb`), `frameTint`,
+  `displayFont: { family, src, weight }`. The accent is only used while it keeps AA contrast on the
+  current theme's panels. Applied while a game of the pack is open (`usePackTheme`).
 
 ## Spacing scale
 
@@ -272,7 +230,7 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 
 ## Safe areas
 
-- `viewport-fit=cover` is set; the top bar adds `env(safe-area-inset-top)`, the tab bar and
+- `viewport-fit=cover` is set; the top bar adds `env(safe-area-inset-top)`, the bottom bar and
   floating controls add `env(safe-area-inset-bottom)`, side gutters add the left/right insets in
   landscape.
 - The table canvas itself ignores the insets (the scene may render edge to edge); HUD elements
@@ -280,35 +238,40 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 
 ## What stays visible during play
 
-| Element | phone | tablet | desktop |
-|---|---|---|---|
-| table | always (half sheet leaves ≥ 45 %) | always | always |
-| selected-token summary | chip on the table | chip on the table | Character section |
-| dice results | 3D dice over everything + roll toast | same | same, over the table |
-| unread chat | badge on the Chat tab | badge on the Chat tab + ☰ | always visible |
-| targeting bar | table's own bar, above the sheet's half line | table | table |
+| Element | phone | tablet / desktop |
+|---|---|---|
+| board | always (a half sheet leaves ≥ 45 %) | always, edge to edge |
+| the selected token | the hand above the bar | the hand, bottom centre |
+| turn order | standees (combat only) | standees (combat only) |
+| dice | in the well, shown while rolling | in the well, with the read-out slip |
+| unread chat | badge on Scroll | badge on the scroll's rod |
+| things waiting | the bell's count | the bell's count |
+| targeting bar | the table's own bar | the table's own bar |
 
 ## GM-only controls
 
-- `PanelDef.scope: 'gm'` panels are filtered out for players in every shell.
-- Inside panels the GM checks `controller.connection.isGm` (unchanged): add token, scene
-  controls, owner select, remove.
-- Top bar: "GM" role chip and the invite-copy button for the GM only; on phones both live in
-  the ⋯ menu. Players see "Player" and only Leave.
+- `PanelDef.scope: 'gm'` panels are filtered out for players everywhere, the palette included.
+- The GM screen (plaque, leaves, tray), the combat control and Invite exist only for the GM;
+  players only ever have Play. A GM demoted mid-session drops back to Play.
+- Inside panels the GM checks `controller.connection.isGm` (unchanged).
 
 ## Keyboard shortcuts (desktop, ignored while typing in a field)
 
+`SHORTCUTS` in `shell/useShortcuts.ts` is the list the `?` overlay shows; the main ones:
+
 | Key | Action |
 |---|---|
-| `[` / `]` | toggle left / right column |
-| `/` | focus the chat input (opens Chat if collapsed) |
-| `1`–`9` | toggle the n-th panel section (registry order) |
-| `Esc` | blur the focused field; cancel skill targeting / deselect (table) |
-| `G` / `F` / `C` | grid overlay / first person / camera mode (table, existing) |
-| `T` / `Q` / `E` | tactical top-down view / turn it 45° left / right (table) |
-| `Delete` | remove the selected token (GM, existing) |
-| `i` | on a focused skill chip: pin its tooltip (focus moves in; `Esc` closes and returns) |
-| arrows, `Home` / `End` | walk the token menu (list or radial); focus returns to the opener on close |
+| `Cmd/Ctrl+K` | search everything (the command palette) |
+| `[` / `]` | put the card away / unroll or roll up the scroll |
+| `/` | write in the scroll (unrolls it) |
+| `1`–`9` | open the n-th panel as the card (again to put it away) |
+| `Esc` | close a tip, card, menu or the raised screen; cancel aiming; deselect |
+| `G` / `F` / `T` / `M` | grid / first person / top-down / ruler (table) |
+| `Q` / `E` | turn the top-down view 45° |
+| `Enter` | cast the staged aim |
+| `Delete` / `Backspace` | remove the selected prop (GM) |
+| `Z` | Zen |
+| `i` | on a focused skill chip: pin its tooltip |
 
 The shell never binds a key the table uses.
 
@@ -336,46 +299,36 @@ keyboards still reach the table's own keys.
 
 ## Checklist
 
-- [x] `docs/UX.md` written
-- [x] global CSS tokens (spacing, type, colour, radii), coarse-pointer 44 px rule, 16 px inputs, momentum scroll
+- [x] global CSS tokens (spacing, type, colour, radii, materials), coarse-pointer 44 px rule, 16 px inputs
 - [x] `GameShell` picks the layout from `useBreakpoint`, single tree, canvas does not remount
-- [x] Phone: top bar, table, tab bar from `PANELS`, GM filter, safe-area padding
-- [x] Phone: bottom sheet half/full/closed, drag, swipe down to close, swipe between tabs
-- [x] Phone: table interactive behind the half sheet
-- [x] Phone: unread chat badge
-- [x] Phone: dice overlay above the sheet
-- [x] Phone: chat input above the iOS keyboard (`visualViewport`), home indicator respected
-      (logic unit-tested; the desktop browser cannot emulate an on-screen keyboard, so this
-      still needs a pass on a real iPhone/iPad)
-- [x] Tablet: right drawer 360 px with tabs, pin / hide, persisted
-- [x] Desktop: resizable columns, drag handle, double-click collapse, persisted
-- [x] Desktop: collapsible sections, persisted
-- [x] Top bar: name, status dot, role, invite (GM), leave, phone overflow menu
-- [x] Selected-token chip and roll toast
-- [x] Keyboard shortcuts on desktop
-- [x] Panel layout tweaks (touch rows, scroll areas), no behaviour change (CSS only; no panel TSX edited)
-- [x] `npm run typecheck`, `npx vitest run`, `npm run build` green
-- [x] Colour roles, telegraphs, status icons, display face, text-size preset, daylight theme and pack theme hook (sections above)
-- [x] Verified in the browser at 375 × 812, 768 × 1024 and 1400 × 900 with screenshots
+- [x] Table layout: top rail, standees, tool rail, the hand, the scroll, dice well, GM screen, one card
+- [x] Every panel has one home (`routePanel`, tested) and is reachable from the command palette
+- [x] Dice roll inside the well only
+- [x] GM screen: Play / Prep (three leaves) / Build (tool tray), mode-coloured board frame
+- [x] One home each for the roll mode (the scroll's seal), Hide / Assign / Remove (token menu), turn order (standees)
+- [x] The bell keeps actionable notices until handled
+- [x] Phone: five-target bar, one sheet at a time, the hand above the bar, safe areas, keyboard inset
+- [x] Keyboard shortcuts, Ctrl/⌘-K, the `?` overlay lists them all
+- [x] `npm run typecheck`, `npx vitest run`, `npm run build:check` green
+- [x] Verified in the browser at 390 × 844 and 1440 × 900 as GM and player, with screenshots
 
-Known follow-ups outside this shell's files: `BuildTag` (fixed bottom-right) overlaps the Chat
-tab label on phones; it should sit above the tab bar or move into the overflow menu.
+Visible controls in idle play, counted in the browser (buttons, fields and tabs on screen, not
+covered): GM desktop 19 (76 before), player desktop 22–24 with the own token's hand up (35 before),
+GM phone 10 (17 before).
 
 ## Layout presets, Zen and Display
 
-The top bar's ▣ menu holds Zen mode and a few layout presets (`src/ui/shell/layoutPresets.ts`),
-chosen per device, never a free-form editor:
+The ⋯ menu holds Zen mode and three presets (`src/ui/shell/layoutPresets.ts`), per device:
 
 | Preset | For | What it does |
 |---|---|---|
-| Standard | everyone | Fits the screen size; your own widths and folds (picking it resets them) |
-| GM desk | GM, co-GMs | Scenes, tokens, turns and sound open on the left; chat and sheet on the right |
-| Player desk | players | Left column folded to its rail; sheet, skills and chat on the right |
-| Compact | any | Phone arrangement (tab bar and sheets) at any width |
-| Display | TV or shared screen | Table, turn order and roll toasts only; a corner button exits |
+| Standard | everyone | the table layout, fitted to the screen |
+| Compact | any | the phone arrangement (bottom bar and sheets) at any width |
+| Display | TV or shared screen | the board, the standees and the dice well only; a corner button exits |
 
 Zen (Z, or the menu) hides every bit of chrome over the table for the session; Z, Esc or the
-corner "Show UI" button restores it. Both only change grid areas, so the canvas stays mounted.
+corner "Show UI" button restores it. Both only hide chrome with CSS, so the canvas stays mounted.
+Stored column presets from before the table layout ("GM desk", "Player desk") read as Standard.
 
 ## Sound and cues
 

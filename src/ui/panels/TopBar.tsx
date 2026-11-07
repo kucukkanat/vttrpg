@@ -1,14 +1,14 @@
 /**
- * Game name, connection status, role, invite (GM), leave. On phones the actions fold into an
- * overflow menu so the bar stays one slim row. The invite opens a popover with the link in a
- * read-only field and a Copy button; on phones it is a full-width panel under the bar.
+ * The top rail of the table: the game's plaque (name, connection, role), the live scene, a centre
+ * slot for the combat control, then `trailing` (presence, bell, search, menu from the shell). The
+ * GM's Invite sits with the presence row; on phones it moves into the shell's menu, which asks for
+ * the popover with `requestInvite()`. Offline and role-change banners hang under the bar.
  */
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useConnectionStatus, type ConnectionStatus } from '../shell/useConnectionStatus'
 import { buildInviteUrl, RELAY_HEALTH_HINT, relayHealth, relayStatusLine, selectAll, useCopy } from '../invite'
-import { Icon } from '../icons'
 import { reopenInRole, roleLabel, useAuthority } from '../authority'
 import { RelayPopover } from './RelayStatus'
 import './invite.css'
@@ -27,33 +27,41 @@ const css = `
 .offline-banner button { min-height: 44px; min-width: 44px; flex: none; }
 `
 
-export function TopBar({ controller, compact = false, trailing }: { controller: GameController; compact?: boolean; trailing?: ReactNode }) {
+const INVITE_EVENT = 'vtt:invite'
+
+/** Open the GM's invite popover from elsewhere (the phone menu, the command palette). */
+export function requestInvite() {
+  window.dispatchEvent(new Event(INVITE_EVENT))
+}
+
+export function TopBar({ controller, compact = false, center, trailing, onScene }: {
+  controller: GameController
+  compact?: boolean
+  center?: ReactNode
+  trailing?: ReactNode
+  /** GM: the scene title opens the scene list. */
+  onScene?(): void
+}) {
   const meta = useGame((s) => s.meta)
+  const sceneName = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene]?.name : undefined))
   const { status, gmAway, relaysOpen, relaysTotal } = useConnectionStatus(controller)
   const isGm = controller.connection.isGm
   const { role, needsReopen } = useAuthority(controller)
   // The role this connection runs in (a grant or revocation shows the reopen banner instead).
   const shownRole = isGm ? (controller.connection.gm === controller.pubkey ? 'gm' : 'co-gm') : 'player'
-  const [menu, setMenu] = useState(false)
   const [invite, setInvite] = useState(false)
   const [relaysOpenList, setRelaysOpenList] = useState(false)
   const relayRef = useRef<HTMLDivElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
   const inviteRef = useRef<HTMLDivElement>(null)
   const inviteButtonRef = useRef<HTMLButtonElement>(null)
 
-  const leave = () => { controller.dispose(); window.location.hash = '/' }
-
   useEffect(() => {
-    if (!menu) return
-    const close = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(false) }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false) }
-    window.addEventListener('pointerdown', close)
-    window.addEventListener('keydown', esc)
-    return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', esc) }
-  }, [menu])
+    if (!isGm) return
+    const on = () => setInvite(true)
+    window.addEventListener(INVITE_EVENT, on)
+    return () => window.removeEventListener(INVITE_EVENT, on)
+  }, [isGm])
 
-  const openInvite = () => { setMenu(false); setInvite(true) }
   const closeInvite = () => { setInvite(false); inviteButtonRef.current?.focus() }
 
   // A player with relays but no GM beacon for a while sees amber "GM away"; the GM never does.
@@ -68,35 +76,43 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
   return (
     <header className={`topbar ${compact ? 'compact' : ''}`}>
       <style>{css}</style>
-      <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
-      <div className="relay-anchor" ref={relayRef}>
-        <button type="button" className={`status ${status}${showAway ? ' gm-away' : ''}${degraded ? ' degraded' : ''}`} aria-label={`${statusLabel}. Show relays`} title={statusLabel}
-          aria-haspopup="dialog" aria-expanded={relaysOpenList} onClick={() => setRelaysOpenList((o) => !o)}>
-          <span className="dot" />
-          <span className="small word" role="status">{statusLabel}</span>
-        </button>
-        {relaysOpenList && <RelayPopover controller={controller} onClose={() => setRelaysOpenList(false)} containerRef={relayRef} />}
+      <div className="t-plaque-name">
+        <span className="t-crest" aria-hidden />
+        <span className="t-plaque-text">
+          <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
+          <span className="t-plaque-sub">
+            <span className="relay-anchor" ref={relayRef}>
+              <button type="button" className={`status ${status}${showAway ? ' gm-away' : ''}${degraded ? ' degraded' : ''}`} aria-label={`${statusLabel}. Show relays`} title={statusLabel}
+                aria-haspopup="dialog" aria-expanded={relaysOpenList} onClick={() => setRelaysOpenList((o) => !o)}>
+                <span className="dot" />
+                <span className="small word" role="status">{statusLabel}</span>
+              </button>
+              {relaysOpenList && <RelayPopover controller={controller} onClose={() => setRelaysOpenList(false)} containerRef={relayRef} />}
+            </span>
+            <span className={`role ${isGm ? 'gm' : ''}`}>{roleLabel(shownRole)}</span>
+          </span>
+        </span>
       </div>
-      <span className={`role ${isGm ? 'gm' : ''}`}>{roleLabel(shownRole)}</span>
-      <span className="spacer" />
-      {trailing}
-      {compact ? (
-        <div className="menu" ref={menuRef}>
-          <button type="button" className="icon" aria-haspopup="menu" aria-expanded={menu} aria-label="More" onClick={() => setMenu((m) => !m)}><Icon name="more" /></button>
-          {menu && (
-            <div className="menu-list" role="menu">
-              <div className="menu-info muted small">{statusLabel} · {roleLabel(shownRole)}</div>
-              {isGm && <button type="button" role="menuitem" ref={inviteButtonRef} onClick={openInvite}>Invite players</button>}
-              <button type="button" role="menuitem" className="danger" onClick={leave}>Leave game</button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {isGm && <button type="button" ref={inviteButtonRef} aria-haspopup="dialog" aria-expanded={invite} onClick={() => (invite ? closeInvite() : openInvite())}>Invite</button>}
-          <button type="button" onClick={leave}>Leave</button>
-        </>
+      {!compact && sceneName && (
+        isGm && onScene ? (
+          <button type="button" className="t-scene" onClick={onScene} title="Scenes: switch, add, settings">
+            <span className="t-scene-label">Scene</span>
+            <span className="t-scene-name">{sceneName}</span>
+          </button>
+        ) : (
+          <span className="t-scene">
+            <span className="t-scene-label">Scene</span>
+            <span className="t-scene-name">{sceneName}</span>
+          </span>
+        )
       )}
+      <span className="spacer" />
+      {center && <div className="t-center">{center}</div>}
+      <span className="spacer" />
+      {isGm && !compact && (
+        <button type="button" className="t-invite" ref={inviteButtonRef} aria-haspopup="dialog" aria-expanded={invite} onClick={() => (invite ? closeInvite() : setInvite(true))}>Invite</button>
+      )}
+      {trailing}
       {isGm && (
         <div className="invite-anchor" ref={inviteRef}>
           {invite && <InvitePopover controller={controller} status={status} open={relaysOpen} onClose={closeInvite} containerRef={inviteRef} />}

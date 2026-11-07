@@ -4,13 +4,15 @@
  *   pushToast({ text: 'Removed Rat Guard', action: { label: 'Undo', run: () => void undoLast() }, ttl: 5000 })
  *
  * - `text` is the message; keep it to one line.
- * - `action` adds a single button; `run` is called once and the toast closes.
+ * - `action` adds a single button; `run` is called once and the toast closes. The toast also waits
+ *   in the bell (ui/attention.ts) until the action runs or the item is dismissed there.
  * - `ttl` in ms (default 5000). Pass 0 to keep the toast until dismissed.
  * - `key` replaces an earlier toast with the same key instead of stacking (status-style updates).
  * `pushToast` returns the toast id; `dismissToast(id)` closes it early. Any module may push;
  * the store is UI-only and never reaches the game document.
  */
 import { create } from 'zustand'
+import { useAttention } from './attention'
 
 export interface ToastAction {
   label: string
@@ -54,7 +56,15 @@ export const useToasts = create<ToastState>((set, get) => ({
   toasts: [],
   push(input) {
     const id = `toast-${++seq}`
-    const toast: Toast = { ...input, id, at: Date.now() }
+    // A toast with an action also waits in the bell until handled (ui/attention.ts); running it
+    // from either place clears both.
+    const attentionKey = input.key ?? id
+    const action = input.action && {
+      label: input.action.label,
+      run: () => { useAttention.getState().remove(attentionKey); input.action!.run() },
+    }
+    if (action) useAttention.getState().add({ key: attentionKey, text: input.text, action })
+    const toast: Toast = { ...input, action, id, at: Date.now() }
     set((s) => {
       const next = s.toasts.filter((t) => {
         const replaced = !!input.key && t.key === input.key

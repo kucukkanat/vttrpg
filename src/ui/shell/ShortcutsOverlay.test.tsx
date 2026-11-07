@@ -6,7 +6,7 @@ import { SHORTCUT_GROUPS, SHORTCUTS } from './useShortcuts'
 describe('SHORTCUTS', () => {
   it('covers every key the shell and the table bind, in a known group', () => {
     const keys = SHORTCUTS.map((s) => s.keys)
-    for (const k of ['[ / ]', '/', '1 – 9', 'G', 'F', 'Double-click', 'Delete', 'Esc', 'Cmd/Ctrl+Z', '?']) expect(keys).toContain(k)
+    for (const k of ['[', ']', '/', '1 – 9', 'Cmd/Ctrl+K', 'G', 'F', 'T', 'M', 'Double-click', 'Delete / Backspace', 'Esc', 'Cmd/Ctrl+Z', '?']) expect(keys).toContain(k)
     for (const s of SHORTCUTS) expect(SHORTCUT_GROUPS).toContain(s.group)
     for (const g of SHORTCUT_GROUPS) expect(SHORTCUTS.some((s) => s.group === g)).toBe(true)
   })

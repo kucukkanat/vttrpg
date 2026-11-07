@@ -17,6 +17,7 @@ function tokens(selector: string): Record<string, string> {
 }
 const dark = tokens(':root')
 const daylight = { ...dark, ...tokens(':root[data-theme="daylight"]') }
+const paper = { ...dark, ...tokens('.skin-paper') }
 const KINDS: Deficiency[] = ['protan', 'deutan', 'tritan']
 
 describe('colour roles', () => {
@@ -40,6 +41,7 @@ describe('colour roles', () => {
   it.each([
     ['dark', dark],
     ['daylight', daylight],
+    ['paper', paper],
   ])('meet WCAG AA for text in the %s theme', (_, t) => {
     const text = ['fg', 'muted', 'accent', 'now', 'mine', 'hostile', 'help', 'ok', 'bad', 'danger', 'whisper']
     for (const bg of ['bg', 'panel', 'panel-2']) {
