@@ -13,6 +13,7 @@ import type { TargetingProps } from '@/table'
 import { isPlayerCharacter, useTargeting } from '../targeting'
 import { costLabel, useSkillCasting } from '../skillbar/useSkillCasting'
 import { pushToast } from '../toasts'
+import { skillIntent } from '@/table/telegraph'
 
 const TOAST_MS = 8000
 /** Longest outcome toast; beyond this only the first line is shown. */
@@ -182,10 +183,12 @@ export function useSkillTargeting(controller: GameController | null): TargetingP
   }, [])
   return useMemo<TargetingProps | undefined>(() => {
     if (!pending || !controller) return undefined
+    const skill = controller.rules?.allSkills().find((s) => s.id === pending.skillId)
     return {
       name: pending.name,
       shape: pending.shape,
       source: pending.source,
+      intent: skill ? skillIntent(skill.effects, controller.rules?.pack.conditions ?? []) : undefined,
       isPlayerCharacter: (id) => {
         const s = useGame.getState()
         const t = s.tokens[id]

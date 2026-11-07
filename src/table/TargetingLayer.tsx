@@ -8,10 +8,15 @@
  * spell. A staged pick holds the preview until the next press re-aims. A tap on the source
  * token, the Cancel button, right click or Esc cancels. Tokens do not take pointer events while
  * targeting is active. The pure staging rules live in `stageTargeting`.
+ *
+ * The preview speaks the telegraph language (telegraph.ts): colour by who owns the effect and what
+ * it does, a dashed rim while aiming and a solid one once staged, sawtooth teeth and a hatch for
+ * hostile effects, a "+" pattern for heals, a centre badge, a dimmed template when it is not the
+ * caster's turn, and a warning marker over each ally caught in a harmful template.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, Shape, ShapeGeometry, Vector3 } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, Shape, ShapeGeometry, Vector3, type Texture } from 'three'
 import type { Token } from '@/core/doc'
 import type { TargetShape, Vec2, Vec3 } from '@/core/geometry'
 import type { TokenId } from '@/core/ids'
@@ -20,6 +25,9 @@ import { useTable } from './context'
 import type { Bounds2 } from './grid'
 import { useTableUi } from './tableState'
 import { resolveShape, shapeOutline, stageTargeting, tokenAt, tokensInRange, tokensInShape, type ResolvedShape } from './targeting'
+import { dashSegments, sawtooth, sides, telegraphKind, telegraphStyle, type SkillIntent } from './telegraph'
+import { badgeMaterial, friendlyFireMaterial, patternTexture } from './telegraphTextures'
+import { MEASURE } from '@/ui/theme/palette'
 
 export interface TargetingProps {
   /** Skill name for the bar ("Fireball → Bramble, Nettle"). */
@@ -31,10 +39,11 @@ export interface TargetingProps {
   onCancel(): void
   /** Marks tokens the bar should warn about before casting (another player's character). */
   isPlayerCharacter?(id: TokenId): boolean
+  /** What the skill does (telegraph.ts `skillIntent`): picks the template look and the bar's verb. */
+  intent?: SkillIntent
 }
 
 const DRAG_THRESHOLD_PX = 8
-const FILL = '#ff9a3c'
 const noRaycast = () => undefined
 
 type CaptureTarget = { setPointerCapture(id: number): void; releasePointerCapture(id: number): void }
@@ -69,6 +78,22 @@ function loopGeometry(points: Vec2[], y: number): BufferGeometry {
   return g
 }
 
+/** Separate line segments (for `lineSegments`), e.g. the dashes of a rim. */
+function segmentsGeometry(segments: [Vec2, Vec2][], y: number): BufferGeometry {
+  const arr: number[] = []
+  for (const [a, b] of segments) arr.push(a.x, y, a.y, b.x, y, b.y)
+  const g = new BufferGeometry()
+  g.setAttribute('position', new Float32BufferAttribute(arr, 3))
+  return g
+}
+
+function centroid(points: Vec2[]): Vec2 {
+  let x = 0
+  let y = 0
+  for (const p of points) { x += p.x; y += p.y }
+  return points.length ? { x: x / points.length, y: y / points.length } : { x: 0, y: 0 }
+}
+
 function circlePoints(c: Vec2, r: number, n = 64): Vec2[] {
   const pts: Vec2[] = []
   for (let i = 0; i < n; i++) {
@@ -79,13 +104,18 @@ function circlePoints(c: Vec2, r: number, n = 64): Vec2[] {
 }
 
 export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProps; bounds: Bounds2 }) {
-  const { shape, source, onCancel } = targeting
+  const { shape, source, onCancel, intent, isPlayerCharacter } = targeting
   const { grid, floorY, sceneId, viewer } = useTable()
   const tokens = useGame((s) => s.tokens)
   const uiSet = useTableUi((s) => s.set)
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const sourceToken = tokens[source]
   const gmView = !viewer || viewer.isGm
+  const staged = useTableUi((s) => s.targeting?.candidate != null)
+  // Combat is on and someone else has the turn: this caster's template steps back.
+  const dimmed = useGame((s) => !!s.initiative?.active && !!s.initiative.order.length && s.initiative.order[s.initiative.turn]?.token !== source)
+  const isPlayer = (id: TokenId) => isPlayerCharacter?.(id) ?? true
+  const style = telegraphStyle(telegraphKind(intent, isPlayer(source)), { staged, dimmed })
 
   const candidates = useMemo(
     () => Object.values(tokens).filter((t) => t.scene === sceneId && (gmView || !t.hidden)).map((t) => ({ id: t.id as string, x: t.position.x, z: t.position.z, scale: t.scale })),
@@ -138,8 +168,8 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
 
   // Publish highlights for TokenMesh; keep the touch candidate across pointer updates.
   useEffect(() => {
-    uiSet({ targeting: { source, inside, inRange, hovered, candidate: useTableUi.getState().targeting?.candidate ?? null } })
-  }, [source, inside, inRange, hovered, uiSet])
+    uiSet({ targeting: { source, inside, inRange, hovered, color: style.color, candidate: useTableUi.getState().targeting?.candidate ?? null } })
+  }, [source, inside, inRange, hovered, uiSet, style.color])
   useEffect(() => {
     uiSet({ targeting: { source, inside: new Set(), inRange: new Set(), hovered: null, candidate: null }, hovered: null, grab: null, drag: null })
     return () => { uiSet({ targeting: null }); if (controls) controls.enabled = true }
@@ -206,14 +236,30 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
 
   // --- preview geometry -------------------------------------------------------------------
   const y = floorY + 0.02
-  const fillGeo = useMemo(() => (resolved.kind === 'self' || resolved.kind === 'single' ? null : polygonGeometry(shapeOutline(resolved))), [resolved])
+  const cell = grid.cellSize
+  const outline = useMemo(() => (resolved.kind === 'self' || resolved.kind === 'single' ? null : shapeOutline(resolved)), [resolved])
+  const fillGeo = useMemo(() => (outline ? polygonGeometry(outline) : null), [outline])
   useEffect(() => () => fillGeo?.dispose(), [fillGeo])
-  const outlineGeo = useMemo(() => (resolved.kind === 'self' || resolved.kind === 'single' ? null : loopGeometry(shapeOutline(resolved), 0)), [resolved])
+  const outlineGeo = useMemo(() => (outline ? loopGeometry(outline, 0) : null), [outline])
   useEffect(() => () => outlineGeo?.dispose(), [outlineGeo])
-  const rangeWorld = shape.kind === 'self' ? 0 : shape.range * grid.cellSize
-  const rangeGeo = useMemo(() => (rangeWorld > 0 ? loopGeometry(circlePoints(srcPos, rangeWorld), 0) : null), [srcPos, rangeWorld])
+  const dashGeo = useMemo(() => (outline ? segmentsGeometry(dashSegments(outline, 0.32 * cell, 0.2 * cell), 0) : null), [outline, cell])
+  useEffect(() => () => dashGeo?.dispose(), [dashGeo])
+  const teethGeo = useMemo(() => (outline && style.teeth ? loopGeometry(sawtooth(outline, 0.4 * cell, 0.14 * cell), 0) : null), [outline, style.teeth, cell])
+  useEffect(() => () => teethGeo?.dispose(), [teethGeo])
+  const rangeWorld = shape.kind === 'self' ? 0 : shape.range * cell
+  // Range is a measurement: neutral cream, dashed and thin.
+  const rangeGeo = useMemo(() => (rangeWorld > 0 ? segmentsGeometry(dashSegments(circlePoints(srcPos, rangeWorld, 96), 0.25 * cell, 0.25 * cell), 0) : null), [srcPos, rangeWorld, cell])
   useEffect(() => () => rangeGeo?.dispose(), [rangeGeo])
   const hoveredToken = hovered ? tokens[hovered] : undefined
+  const fillMap: Texture = patternTexture(style.fill)
+  fillMap.repeat.set(1 / (0.5 * cell), 1 / (0.5 * cell))
+  const badgeAt = outline ? (resolved.kind === 'radius' ? resolved.center : centroid(outline)) : null
+  // Allies caught in a harmful template: a warning over each (the bar counts them too).
+  const friendlyFire = useMemo(() => {
+    if (intent === 'help' || intent === 'neutral' || shape.kind === 'self') return []
+    return sides([...inside], source, isPlayer).allies.map((id) => tokens[id]).filter((t): t is Token => !!t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inside, source, intent, shape.kind, tokens, isPlayerCharacter])
 
   const w = bounds.maxX - bounds.minX + 40 * grid.cellSize
   const h = bounds.maxZ - bounds.minZ + 40 * grid.cellSize
@@ -236,33 +282,51 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
       </mesh>
       {/* range circle around the caster */}
       {rangeGeo && (
-        <lineLoop geometry={rangeGeo} position-y={y} raycast={noRaycast} renderOrder={4}>
-          <lineBasicMaterial color="#ffd166" transparent opacity={0.45} depthWrite={false} />
-        </lineLoop>
+        <lineSegments geometry={rangeGeo} position-y={y} raycast={noRaycast} renderOrder={4}>
+          <lineBasicMaterial color={MEASURE} transparent opacity={0.55 * (dimmed ? 0.6 : 1)} depthWrite={false} />
+        </lineSegments>
       )}
-      {/* the shape */}
+      {/* the shape: patterned fill, then a dashed (aiming) or solid (staged) rim, then hostile teeth */}
       {fillGeo && (
         <mesh geometry={fillGeo} rotation-x={-Math.PI / 2} position-y={y} raycast={noRaycast} renderOrder={4}>
-          <meshBasicMaterial color={FILL} transparent opacity={0.28} depthWrite={false} side={DoubleSide} />
+          <meshBasicMaterial key={style.fill} color={style.color} map={fillMap} transparent opacity={style.fillOpacity} depthWrite={false} side={DoubleSide} toneMapped={false} />
         </mesh>
       )}
-      {outlineGeo && (
+      {outlineGeo && !style.dashed && (
         <lineLoop geometry={outlineGeo} position-y={y + 0.005} raycast={noRaycast} renderOrder={5}>
-          <lineBasicMaterial color={FILL} transparent opacity={0.9} depthWrite={false} />
+          <lineBasicMaterial color={style.color} transparent opacity={style.rimOpacity} depthWrite={false} toneMapped={false} />
         </lineLoop>
       )}
+      {dashGeo && style.dashed && (
+        <lineSegments geometry={dashGeo} position-y={y + 0.005} raycast={noRaycast} renderOrder={5}>
+          <lineBasicMaterial color={style.color} transparent opacity={style.rimOpacity} depthWrite={false} toneMapped={false} />
+        </lineSegments>
+      )}
+      {teethGeo && (
+        <lineLoop geometry={teethGeo} position-y={y + 0.006} raycast={noRaycast} renderOrder={5}>
+          <lineBasicMaterial color={style.color} transparent opacity={style.rimOpacity} depthWrite={false} toneMapped={false} />
+        </lineLoop>
+      )}
+      {badgeAt && style.badge && (
+        <sprite material={badgeMaterial(style.badge)} position={[badgeAt.x, y + 0.35 * cell, badgeAt.y]} scale={[0.4 * cell, 0.4 * cell, 1]}
+          renderOrder={8} raycast={noRaycast} />
+      )}
+      {friendlyFire.map((t) => (
+        <sprite key={t.id} material={friendlyFireMaterial()} position={[t.position.x, y + (0.75 + (t.elevation ?? 0) / cell) * cell * Math.max(1, t.scale), t.position.z]}
+          scale={[0.42 * cell, 0.42 * cell, 1]} renderOrder={9} raycast={noRaycast} />
+      ))}
       {/* caster marker */}
       {sourceToken && (
         <mesh rotation-x={-Math.PI / 2} position={[srcPos.x, y, srcPos.y]} raycast={noRaycast} renderOrder={4}>
-          <ringGeometry args={[0.44 * grid.cellSize * sourceToken.scale, 0.5 * grid.cellSize * sourceToken.scale, 48]} />
-          <meshBasicMaterial color="#ffd166" transparent opacity={0.8} depthWrite={false} />
+          <ringGeometry args={[0.44 * cell * sourceToken.scale, 0.5 * cell * sourceToken.scale, 48]} />
+          <meshBasicMaterial color={style.color} transparent opacity={0.8 * (dimmed ? 0.5 : 1)} depthWrite={false} toneMapped={false} />
         </mesh>
       )}
       {/* hovered single target */}
       {hoveredToken && (
         <mesh rotation-x={-Math.PI / 2} position={[hoveredToken.position.x, y + 0.01, hoveredToken.position.z]} raycast={noRaycast} renderOrder={5}>
-          <ringGeometry args={[0.5 * grid.cellSize * hoveredToken.scale, 0.6 * grid.cellSize * hoveredToken.scale, 48]} />
-          <meshBasicMaterial color={FILL} transparent opacity={0.95} depthWrite={false} />
+          <ringGeometry args={[0.5 * cell * hoveredToken.scale, 0.6 * cell * hoveredToken.scale, 48]} />
+          <meshBasicMaterial color={style.color} transparent opacity={style.rimOpacity} depthWrite={false} toneMapped={false} />
         </mesh>
       )}
       {/* pointer dot for area shapes */}

@@ -284,6 +284,7 @@ export function TokenMesh({ token }: { token: Token }) {
   const pending = useTableUi((s) => s.pending[token.id] ?? null)
   const targeting = useTableUi((s) => s.targeting !== null)
   const targetInside = useTableUi((s) => s.targeting?.inside.has(token.id) ?? false)
+  const targetColor = useTableUi((s) => s.targeting?.color)
   const targetOutOfRange = useTableUi((s) => (s.targeting ? !s.targeting.inRange.has(token.id) : false))
   const uiSet = useTableUi((s) => s.set)
   // Live transform while the edit gizmo drags this token.
@@ -531,7 +532,7 @@ export function TokenMesh({ token }: { token: Token }) {
             <meshBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </mesh>
         )}
-        {targetInside && <TargetRing radius={radius} />}
+        {targetInside && <TargetRing radius={radius} color={targetColor} />}
         {token.light > 0 && (
           <pointLight
             ref={light}

@@ -28,14 +28,18 @@
 
 .targeting-bar__text {
   padding: 0 4px;
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+/* "hits 2 enemies, 1 ally": the outcome in plain words, emphasised when it includes friendly fire. */
+.targeting-bar__outcome { font-weight: 600; }
+.targeting-bar__outcome--ff { color: var(--warn-fg); }
+
 .targeting-bar__warn {
   padding: 0 4px;
-  font-size: 13px;
+  font-size: calc(var(--fs-sm) + 1px);
   line-height: 1.35;
   color: var(--warn-fg);
   overflow-wrap: anywhere;
@@ -68,7 +72,7 @@
   border-radius: 10px;
   background: var(--glass-btn);
   color: var(--on-glass);
-  font-size: 15px;
+  font-size: calc(var(--fs-md) + 1px);
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
@@ -94,6 +98,6 @@
 
   .targeting-bar__text { grid-row: 1; grid-column: 1; }
   .targeting-bar__actions { grid-row: 1; grid-column: 2; }
-  .targeting-bar__warn { grid-row: 2; grid-column: 1 / -1; }
+  .targeting-bar__warn { grid-column: 1 / -1; }
   .targeting-bar__btn { flex: 0 0 auto; min-width: 96px; }
 }

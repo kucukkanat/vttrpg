@@ -54,16 +54,19 @@ export function TurnRing({ radius }: { radius: number }) {
 }
 
 let targetGeometry: { ring: RingGeometry; tick: PlaneGeometry } | null = null
-let targetMaterial: MeshBasicMaterial | null = null
+const targetMaterials = new Map<string, MeshBasicMaterial>()
 /**
- * A token inside the aimed shape: a red-orange ring plus four crosshair ticks crossing it, so the
- * mark reads without its colour. Unit radius, scaled to the token.
+ * A token inside the aimed shape: a ring in the template colour (red-orange unless the skill helps)
+ * plus four crosshair ticks crossing it, so the mark reads without its colour. Scaled to the token.
  */
-export function TargetRing({ radius }: { radius: number }) {
+export function TargetRing({ radius, color = HOSTILE }: { radius: number; color?: string }) {
   targetGeometry ??= { ring: new RingGeometry(1.1, 1.38, 48), tick: new PlaneGeometry(0.1, 0.5) }
-  targetMaterial ??= new MeshBasicMaterial({ color: HOSTILE, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false })
+  let m = targetMaterials.get(color)
+  if (!m) {
+    m = new MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false })
+    targetMaterials.set(color, m)
+  }
   const g = targetGeometry
-  const m = targetMaterial
   return (
     <group rotation-x={-Math.PI / 2} position-y={0.012} scale={[radius, radius, 1]} raycast={noRaycast}>
       <mesh geometry={g.ring} material={m} renderOrder={6} raycast={noRaycast} />
