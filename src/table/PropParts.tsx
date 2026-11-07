@@ -27,6 +27,7 @@ import { usePropPointer } from './propPointer'
 import { flickerNoise } from './SceneModel'
 import { useTableUi } from './tableState'
 import { registerPropObject } from './build/editRuntime'
+import { useDoorClicks } from './doorClick'
 import type { GraphicsTier } from './graphics'
 
 const noRaycast = () => undefined
@@ -50,6 +51,8 @@ function usePartProps(sceneId: SceneId): { lights: Prop[]; invisible: Prop[]; le
 
 export function PropParts({ sceneId }: { sceneId: SceneId }) {
   const { lights, invisible, leaves } = usePartProps(sceneId)
+  const { onIntent, viewer } = useTable()
+  useDoorClicks(onIntent, !viewer?.display)
   return (
     <>
       <PropLights lights={lights} />

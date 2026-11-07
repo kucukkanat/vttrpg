@@ -1,35 +1,23 @@
 /**
- * Clicking a door prop opens or closes it; that is play, not editing, so it has its own path
- * through the prop pointer handlers and works whether or not props can be edited.
+ * Clicking a door prop opens or closes it: play, not editing, so it answers through the prop
+ * click registry (propClick.ts) and works whatever the GM's Edit toggle says.
  *
+ * - GM: a click works any door, locked or not. Locking is in the Inspector (`toggleLockIntent`).
  * - Players: a click works an unlocked door where the scene allows it (`playersOpenDoors`) while
- *   one side of it is in sight. They never select a door.
- * - GM, props not editable: a click opens or closes, a right-click locks or unlocks.
- * - GM, props editable: the door is a prop like any other (select, drag, the prop menu); the
- *   Inspector opens and locks it.
+ *   one side of it is in sight; other doors do not answer them.
  *
- * `doorGate.propsEditable` says whether the GM is editing props. It follows Build and edit mode
- * here; the one-mode shell points it at its Edit toggle.
+ * `useDoorClicks` registers the handler while a table is mounted (it needs the table's intents).
  */
+import { useEffect } from 'react'
 import type { Prop } from '@/core/doc'
 import type { GridSpec } from '@/core/geometry'
 import type { Intent } from '@/core/intents'
-import { propSegment, type Segment } from '@/core/propParts'
+import { propDoorGap, type Segment } from '@/core/propParts'
+import { useGame } from '@/state/store'
 import { cellKey, worldToCell } from './grid'
 import { modelBoundsOf } from './modelBounds'
+import { registerPropClick } from './propClick'
 import { useTableUi } from './tableState'
-
-export const doorGate: { propsEditable: () => boolean } = {
-  propsEditable: () => {
-    const ui = useTableUi.getState()
-    return ui.buildMode || ui.editMode
-  },
-}
-
-/** Whether a click on a door prop works the door (true) or treats it as a prop to edit (false). */
-export function doorClickWorks(prop: Pick<Prop, 'door'>, gm: boolean): boolean {
-  return !!prop.door && (!gm || !doorGate.propsEditable())
-}
 
 export function toggleDoorIntent(prop: Prop): Intent | null {
   return prop.door ? { type: 'prop.door', prop: prop.id, open: !prop.door.open } : null
@@ -52,11 +40,35 @@ export function doorSides(seg: Segment, grid: GridSpec): string[] {
   return [cellKey(worldToCell(grid, mx + nx, mz + nz)), cellKey(worldToCell(grid, mx - nx, mz - nz))]
 }
 
-/** A player may work this door now: the scene allows it, it is unlocked, and a side is in sight. */
-export function playerCanWork(prop: Prop, scene: { playersOpenDoors?: boolean }, grid: GridSpec): boolean {
-  if (!prop.door || prop.door.locked || !scene.playersOpenDoors) return false
-  const visible = useTableUi.getState().visible
+/**
+ * A player may work this door now: the scene allows it, it is unlocked, and a side is in sight
+ * (`visible` null: fog is off, everything is in sight).
+ */
+export function playerCanWork(prop: Prop, scene: { playersOpenDoors?: boolean; grid: GridSpec } | undefined, visible: ReadonlySet<string> | null): boolean {
+  if (!prop.door || prop.door.locked || !scene?.playersOpenDoors) return false
   if (!visible) return true
-  const seg = propSegment(prop, modelBoundsOf(prop), grid.cellSize)
-  return !seg || doorSides(seg, grid).some((k) => visible.has(k))
+  const seg = propDoorGap(prop, modelBoundsOf(prop), scene.grid.cellSize)
+  return !seg || doorSides(seg, scene.grid).some((k) => visible.has(k))
+}
+
+/** Whether a click on `prop` works it as a door for this viewer. */
+export function doorAnswers(prop: Prop, gm: boolean): boolean {
+  if (!prop.door) return false
+  if (gm) return true
+  return playerCanWork(prop, useGame.getState().scenes[prop.scene], useTableUi.getState().visible)
+}
+
+/** Registers the door click handler while the table is mounted (not for a table display). */
+export function useDoorClicks(onIntent: (intent: Intent) => void, enabled: boolean): void {
+  useEffect(() => {
+    if (!enabled) return
+    return registerPropClick({
+      wants: (prop, gm) => doorAnswers(prop, gm),
+      click: (prop, gm) => {
+        if (!doorAnswers(prop, gm)) return
+        const i = toggleDoorIntent(prop)
+        if (i) onIntent(i)
+      },
+    })
+  }, [onIntent, enabled])
 }
