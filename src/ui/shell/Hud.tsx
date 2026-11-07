@@ -18,6 +18,7 @@ import { TipLayer } from '../tips/TipLayer'
 import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
 import { useSession } from '../session'
 import { newSeed } from '@/dice'
+import { DICE_SETTLED_EVENT } from '@/dice/choreography'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -129,6 +130,19 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
     const t = setTimeout(() => setShown(null), TOAST_MS)
     return () => clearTimeout(t)
   }, [roll])
+  // Attention cue: the total pops when the dice come to rest (or at once when 3D dice are skipped).
+  const [pop, setPop] = useState(0)
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined
+    const on = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== roll?.roll?.seed) return
+      setPop((n) => n + 1)
+      clearTimeout(t)
+      t = setTimeout(() => setPop(0), 900)
+    }
+    window.addEventListener(DICE_SETTLED_EVENT, on)
+    return () => { window.removeEventListener(DICE_SETTLED_EVENT, on); clearTimeout(t) }
+  }, [roll])
   const r = shown?.roll
   const success = r?.outcome && 'success' in r.outcome ? !!r.outcome.success : null
   const critical = !!r?.outcome?.critical
@@ -145,7 +159,7 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
         <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
           <span className="muted small">{who(shown.author)}</span>
           <span className="toast-formula">{shown.text}</span>
-          <span className="toast-total">{r.total}</span>
+          <span key={pop} className={`toast-total${pop ? ' pop' : ''}`}>{r.total}</span>
           <DiceValues className="muted small" formula={r.formula} dice={r.dice} />
           {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
         </button>

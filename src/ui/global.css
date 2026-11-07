@@ -402,6 +402,10 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .toast-formula { font-style: italic; }
 .toast-total { font-weight: 700; font-size: var(--fs-xl); color: var(--accent); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }
+/* The dice came to rest: the total pops so the eye lands on it before the dice fly into it. */
+.toast-total.pop { display: inline-block; animation: total-pop .6s cubic-bezier(.2, 1.4, .4, 1); text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent); }
+@keyframes total-pop { 0% { transform: scale(1); } 30% { transform: scale(1.55); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .toast-total.pop { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .bsheet, .handle::after, .toast { transition: none; animation: none; }
