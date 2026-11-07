@@ -7,6 +7,7 @@ import type { AssetRef } from '@/core/assets'
 import type { Prop } from '@/core/doc'
 import type { GridSpec, Vec3 } from '@/core/geometry'
 import type { PlayerPubkey, PropId, SceneId } from '@/core/ids'
+import { partsOf, type PropParts } from '@/core/catalogueParts'
 
 /** R or one wheel notch: 15°. Shift: 90°. */
 export const TURN_STEP = Math.PI / 12
@@ -34,6 +35,8 @@ export interface HeldPart {
   tags?: string[]
   solid?: boolean
   locked?: boolean
+  /** Light, wall and door parts the piece keeps. */
+  fixtures?: PropParts
 }
 
 /** What a click places: a model, its catalogue id when known, and the tilt / scale it keeps. */
@@ -54,6 +57,8 @@ export interface HeldModel {
    * upright pieces, which is nearly every prop).
    */
   parts?: HeldPart[]
+  /** Light, wall and door parts every stamp carries (a lit model's light, a door model's door). */
+  fixtures?: PropParts
 }
 
 /** One scatter roll: the extra yaw and the uniform scale factor of the next stamp. */
@@ -206,6 +211,7 @@ export function placedProps(args: {
     if (part.tags) p.tags = [...part.tags]
     if (part.solid) p.solid = true
     if (part.locked) p.locked = true
+    if (part.fixtures) Object.assign(p, partsOf(part.fixtures))
     if (createdBy) p.createdBy = createdBy
     return p
   })
@@ -238,6 +244,7 @@ export function placedProp(args: {
     scale: { x: held.scale.x * k, y: held.scale.y * k, z: held.scale.z * k },
   }
   if (held.catalogue) prop.catalogue = held.catalogue
+  if (held.fixtures) Object.assign(prop, partsOf(held.fixtures))
   if (createdBy) prop.createdBy = createdBy
   return prop
 }

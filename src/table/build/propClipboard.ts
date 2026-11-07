@@ -18,6 +18,8 @@ import type { Prop } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import { newId, type PropId, type SceneId } from '@/core/ids'
 import { propScale } from '@/core/props'
+import { partsOf, type PropParts } from '@/core/catalogueParts'
+import { badParts, hasModel } from '@/core/propParts'
 import { selectionCentre, poseOf } from './groupTransform'
 
 export const CLIPBOARD_PREFIX = 'vttprops:'
@@ -36,6 +38,8 @@ export interface ClipItem {
   tags?: string[]
   solid?: boolean
   locked?: boolean
+  /** Light, wall and door parts (validated like a prop's when read back). */
+  fixtures?: PropParts
 }
 
 export interface PropClip {
@@ -68,6 +72,8 @@ export function clipFromProps(props: readonly Prop[], cell?: number, fit: (id: P
     if (p.tags?.length) item.tags = [...p.tags]
     if (p.solid) item.solid = true
     if (p.locked) item.locked = true
+    const parts = partsOf(p)
+    if (parts) item.fixtures = parts
     return item
   })
   return cell ? { v: CLIPBOARD_VERSION, cell, items } : { v: CLIPBOARD_VERSION, items }
@@ -109,6 +115,8 @@ function readItem(raw: unknown): ClipItem | null {
   if (Array.isArray(it.tags) && it.tags.every((t) => typeof t === 'string')) out.tags = it.tags.slice(0, 64)
   if (it.solid === true) out.solid = true
   if (it.locked === true) out.locked = true
+  if (it.fixtures && typeof it.fixtures === 'object' && !badParts(it.fixtures, false)) { const f = partsOf(it.fixtures); if (f) out.fixtures = f }
+  if (!hasModel(out) && !out.fixtures) return null
   return out
 }
 
@@ -143,6 +151,7 @@ export function propsFromClip(clip: PropClip, scene: SceneId, at: Vec3, makeId: 
     if (it.tags) p.tags = [...it.tags]
     if (it.solid) p.solid = true
     if (it.locked) p.locked = true
+    if (it.fixtures) Object.assign(p, partsOf(it.fixtures))
     return p
   })
 }

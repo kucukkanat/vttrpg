@@ -7,6 +7,7 @@ import type { Character, GameDocShape, RollAdvantage, RollResult } from '@/core/
 import type { Intent } from '@/core/intents'
 import type { CharacterId } from '@/core/ids'
 import { validatePropsIntent } from '@/core/props'
+import { doorRefusal } from '@/core/propParts'
 import { validateTilesIntent } from '@/core/tiles'
 import { badCatalogueEntry } from '@/core/catalogue'
 import type { ChargenStep, ConditionDuration, Effect, RollResolution, SkillDef } from '@/core/pack'
@@ -270,6 +271,11 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         if (!wall?.door) return 'that is not a door'
         if (!doc.scenes?.[wall.scene]?.playersOpenDoors) return 'only the GM opens doors here'
         return wall.door.locked ? 'that door is locked' : null
+      }
+      case 'prop.door': {
+        // Door props: the same rule as drawn doors.
+        const prop = doc.props?.[intent.prop]
+        return doorRefusal(prop, prop ? doc.scenes?.[prop.scene] : undefined, actor)
       }
       case 'tiles.door':
         // Kit doors follow the scene's door rule; they have no lock.

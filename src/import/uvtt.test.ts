@@ -14,14 +14,14 @@ describe('parseUvtt', () => {
     expect(map.name).toBe('tiny.dd2vtt')
   })
 
-  it('turns polylines, object walls and closed portals into segments and skips open portals', () => {
+  it('turns polylines and object walls into segments and portals into doors, open or closed', () => {
     expect(map.walls).toEqual([
       { a: { x: 0, y: 1 }, b: { x: 1, y: 1 } },
       { a: { x: 1, y: 1 }, b: { x: 1, y: 2 } },
       { a: { x: 2, y: 0 }, b: { x: 2, y: 2 } },
-      { a: { x: 1, y: 1 }, b: { x: 2, y: 1 } },
+      { a: { x: 1, y: 1 }, b: { x: 2, y: 1 }, door: { open: false } },
+      { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, door: { open: true } },
     ])
-    expect(map.notes).toContain('1 open portal left as gaps')
   })
 
   it('ignores lights but says so', () => {

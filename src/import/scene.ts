@@ -4,9 +4,10 @@
  * the table (see src/table/imageScene.ts for the frame maths).
  */
 import type { AssetRef } from '@/core/assets'
-import type { Scene } from '@/core/doc'
+import type { Prop, Scene } from '@/core/doc'
 import type { GridType } from '@/core/geometry'
-import { newId, type SceneId } from '@/core/ids'
+import { newId, type PropId, type SceneId } from '@/core/ids'
+import { segmentProp } from '@/core/partsMigration'
 // Pure geometry only: the table's index also exports React components, which tests must not load.
 import { imageFrame, imageSceneGrid, imageWallsToWorld, layoutForCells } from '@/table/imageScene'
 import type { MapWall, ParsedMap } from './types'
@@ -21,8 +22,6 @@ export interface ImageSceneOptions {
   /** World units per cell (meters), normally the pack's grid cell size. */
   cellSize: number
   gridType?: GridType
-  /** Line-of-sight blockers in map grid units from the image's top-left corner. */
-  walls?: readonly MapWall[]
   darkness?: number
   id?: SceneId
 }
@@ -39,12 +38,31 @@ export function buildImageScene(o: ImageSceneOptions): Scene {
     cameraMode: 'orbit',
     darkness: o.darkness ?? DEFAULT_DARKNESS,
   }
-  if (o.walls && o.walls.length) {
-    const frame = imageFrame(grid, image)
-    scene.walls = imageWallsToWorld(frame, o.walls.map((w) => ({ a: { x: w.a.x, z: w.a.y }, b: { x: w.b.x, z: w.b.y } })))
-      .map((w) => ({ a: { x: round(w.a.x), z: round(w.a.z) }, b: { x: round(w.b.x), z: round(w.b.z) } }))
-  }
   return scene
+}
+
+/**
+ * The walls and doors of a map export as invisible wall and door props on `scene`'s map image
+ * (`walls` in map grid units from the image's top-left corner), standing on the floor at `y`.
+ */
+export function imageWallProps(scene: Pick<Scene, 'id' | 'grid' | 'image'>, walls: readonly MapWall[], opts: { y?: number; tags?: string[]; makeId?: () => PropId } = {}): Prop[] {
+  if (!scene.image || !walls.length) return []
+  const frame = imageFrame(scene.grid, scene.image)
+  const world = imageWallsToWorld(frame, walls.map((w) => ({ a: { x: w.a.x, z: w.a.y }, b: { x: w.b.x, z: w.b.y } })))
+  const makeId = opts.makeId ?? (() => newId<'PropId'>() as PropId)
+  return world.map((w, i) => segmentProp({
+    id: makeId(), scene: scene.id, y: opts.y ?? 0,
+    a: { x: round(w.a.x), z: round(w.a.z) }, b: { x: round(w.b.x), z: round(w.b.z) },
+    ...(walls[i]!.door ? { door: walls[i]!.door! } : {}),
+    ...(opts.tags ? { tags: opts.tags } : {}),
+  }))
+}
+
+/** Invisible wall props for world segments already on the table (detected walls), one batch. */
+export function segmentWallProps(scene: Pick<Scene, 'id'>, segments: readonly { a: { x: number; z: number }; b: { x: number; z: number } }[], opts: { y?: number; tags?: string[]; makeId?: () => PropId } = {}): Prop[] {
+  const makeId = opts.makeId ?? (() => newId<'PropId'>() as PropId)
+  return segments.filter((s) => Math.hypot(s.b.x - s.a.x, s.b.z - s.a.z) > 1e-6)
+    .map((s) => segmentProp({ id: makeId(), scene: scene.id, a: s.a, b: s.b, y: opts.y ?? 0, ...(opts.tags ? { tags: opts.tags } : {}) }))
 }
 
 /** Scene for a parsed map export whose image has been imported as `asset`. */
@@ -56,7 +74,6 @@ export function sceneFromParsedMap(parsed: ParsedMap, asset: AssetRef, opts: { c
     heightCells: parsed.heightCells,
     cellSize: opts.cellSize,
     gridType: opts.gridType,
-    walls: parsed.walls,
     darkness: opts.darkness ?? parsed.darkness,
     id: opts.id,
   })

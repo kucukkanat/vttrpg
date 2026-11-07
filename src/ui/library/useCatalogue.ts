@@ -2,6 +2,7 @@
  * The catalogue as React state: the built-in list (fetched once, on first use) and the game's
  * own models from the document ("My models"), plus picking an entry up for placement.
  */
+import { catalogueParts } from '@/core/catalogueParts'
 import { useEffect, useMemo, useState } from 'react'
 import type { AssetRef } from '@/core/assets'
 import type { CatalogueEntry } from '@/core/catalogue'
@@ -42,7 +43,8 @@ export function useCatalogueIndex(): Map<string, CatalogueEntry> {
 
 /** What a click on a card puts in hand: the model at real size, unturned. */
 export function heldFromEntry(e: CatalogueEntry): HeldModel {
-  return { catalogue: e.id, title: e.title, model: e.model, size: e.size, scale: { x: 1, y: 1, z: 1 } }
+  const fixtures = catalogueParts(e)
+  return { catalogue: e.id, title: e.title, model: e.model, size: e.size, scale: { x: 1, y: 1, z: 1 }, ...(fixtures ? { fixtures } : {}) }
 }
 
 export function pickUpEntry(e: CatalogueEntry): void {

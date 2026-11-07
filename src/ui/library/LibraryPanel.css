@@ -179,3 +179,7 @@
 /* Wherever the Library is hosted (dock, card, phone sheet) it takes the host's height, so the
    grid or list inside scrolls rather than the whole panel growing past the host. */
 .hosted > .panel.library-panel, .bsheet .panel.library-panel { flex: 1 1 auto; min-height: 0; }
+
+/* Lights shelf: a light source card shows its colour as a glow. */
+.lib-swatch { display: block; width: 70%; height: 70%; border-radius: 50%; }
+.lib-parts .lib-thumb { display: grid; place-items: center; color: var(--text-muted, currentColor); }

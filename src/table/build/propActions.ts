@@ -127,7 +127,7 @@ export function heldFromClip(clip: PropClip): { held: HeldModel; yaw: number } |
   if (items.length === 1) {
     const it = items[0]!
     return {
-      held: { ...(it.catalogue ? { catalogue: it.catalogue } : {}), title: it.name, model: it.model, tilt: { x: it.rotation.x, z: it.rotation.z }, scale: { ...it.scale } },
+      held: { ...(it.catalogue ? { catalogue: it.catalogue } : {}), title: it.name, model: it.model, tilt: { x: it.rotation.x, z: it.rotation.z }, scale: { ...it.scale }, ...(it.fixtures ? { fixtures: it.fixtures } : {}) },
       yaw: it.rotation.y,
     }
   }
@@ -135,6 +135,7 @@ export function heldFromClip(clip: PropClip): { held: HeldModel; yaw: number } |
     title: it.name, model: it.model, offset: { ...it.position }, rotation: { ...it.rotation }, scale: { ...it.scale },
     ...(it.catalogue ? { catalogue: it.catalogue } : {}), ...(it.tags ? { tags: [...it.tags] } : {}),
     ...(it.solid ? { solid: true } : {}), ...(it.locked ? { locked: true } : {}),
+    ...(it.fixtures ? { fixtures: it.fixtures } : {}),
   }))
   return { held: { title: `${items.length} pasted props`, model: items[0]!.model, scale: { x: 1, y: 1, z: 1 }, parts }, yaw: 0 }
 }

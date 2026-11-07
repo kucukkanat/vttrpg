@@ -37,6 +37,8 @@ const HoverPreview = lazy(() => import('./HoverPreview'))
 const KitShelf = lazy(() => import('./KitShelf'))
 const CreatureShelf = lazy(() => import('./CreatureShelf'))
 const SavedShelf = lazy(() => import('./SavedShelf'))
+const LightsShelf = lazy(() => import('./PartShelves').then((m) => ({ default: m.LightsShelf })))
+const WallsShelf = lazy(() => import('./PartShelves').then((m) => ({ default: m.WallsShelf })))
 const Outliner = lazy(() => import('./Outliner'))
 
 /** Hover this long before the 3D preview appears. */
@@ -49,6 +51,8 @@ const snapLabel = (c: number) => (c === 0 ? 'Free' : c === 0.25 ? '¼ cell' : c 
 
 const SEARCH_HINT: Record<LibraryShelf, string> = {
   models: 'Search models and tags',
+  lights: 'Search lights (torch, candle…)',
+  walls: 'Search walls, doors and gates',
   kit: 'Search kit pieces',
   creatures: 'Search creatures (goblin, undead…)',
   saved: 'Search groups and encounters',
@@ -59,7 +63,7 @@ export function filtersFor(shelf: LibraryShelf): { id: LibraryFilter; label: str
   const base: { id: LibraryFilter; label: string }[] = [
     { id: 'all', label: 'All' }, { id: 'recent', label: 'Recent' }, { id: 'favourites', label: 'Favourites' }, { id: 'in-scene', label: 'In this scene' },
   ]
-  if (shelf === 'models') base.push({ id: 'mine', label: 'My models' })
+  if (shelf === 'models' || shelf === 'lights' || shelf === 'walls') base.push({ id: 'mine', label: 'My models' })
   if (shelf === 'creatures') base.push({ id: 'mine', label: 'This game' })
   return base
 }
@@ -123,6 +127,8 @@ export function LibraryPanel({ controller, bare = false }: {
         {activeFilter === 'in-scene'
           ? <Outliner controller={controller} query={query} />
           : shelf === 'models' ? <ModelsShelf controller={controller} filter={activeFilter} query={query} phone={phone} firstPick={firstPick} />
+            : shelf === 'lights' ? <LightsShelf controller={controller} filter={activeFilter} query={query} phone={phone} />
+            : shelf === 'walls' ? <WallsShelf controller={controller} filter={activeFilter} query={query} phone={phone} />
             : shelf === 'kit' ? <KitShelf filter={activeFilter} query={query} phone={phone} />
               : shelf === 'creatures' ? <CreatureShelf controller={controller} filter={activeFilter} query={query} phone={phone} />
                 : <SavedShelf controller={controller} filter={activeFilter} query={query} phone={phone} />}

@@ -11,6 +11,7 @@
  * The readout is also on `window.__propsBench` for scripted runs (scripts or headless Chrome).
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { patchedProp } from '@/core/props'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import type { CatalogueEntry } from '@/core/catalogue'
@@ -92,7 +93,7 @@ function applyLocally(intent: Intent) {
   if (intent.type !== 'props.update') return
   const s = useGame.getState()
   const next = { ...s.props }
-  for (const u of intent.updates) { const p = next[u.id]; if (p) next[u.id] = { ...p, ...u.patch, id: p.id } }
+  for (const u of intent.updates) { const p = next[u.id]; if (p) next[u.id] = patchedProp(p, u.patch) }
   s._replaceFromDoc({ props: next })
 }
 
