@@ -68,10 +68,36 @@ moving a spawn in a script means updating the template too.
 (`src/audio`); scenes that set it leave `ambient_audio` unset.
 
 The small models in `../props` (barrel, crate, table, chair, chest, torch stand, bed, bookshelf,
-campfire, rock) and `../minis` (mouse adventurer, rat, knight) come from `scripts/make-props/index.mjs`
-(`npm run props`), reuse the same helpers, and each fits one 1.5 m cell standing on y = 0. The
+campfire, rock, cauldron, weapon rack, well) and `../minis` (mouse adventurer, rat, knight, goblin,
+skeleton, wizard) come from `scripts/make-props/index.mjs` (`npm run props`), reuse the same
+helpers, and each fits one 1.5 m cell standing on y = 0. Minis face +Z and have heroic
+proportions (big heads, hands and weapons) so they read at one cell from the orbit camera. The
 index builder tags every model with a `category` (`scene`, `prop` or `mini`) from its folder; the
 token and prop pickers only list props and minis, and the Scenes panel owns `scenes/`.
+
+### Baked diorama look
+
+Every generated file (scenes, props, minis) is flat-coloured with its shading baked into vertex
+colours, aiming at a candle-lit miniature diorama. Colours come from one `palette` in
+`scripts/make-scenes/lib.mjs`: muted mid values for scenery, a few saturated accents for minis.
+Right before export, `bakeDiorama` does this for every visible mesh that is neither a `COL_`/`FOG_`
+helper nor emissive:
+
+- `COLOR_0` = base colour (linear) x height gradient (0.8 at the floor to 1.05 at 2.5 m in scenes,
+  or at the model's top for props and minis) x contact shadow (0.55 at y = 0 easing to 1 over the
+  first 0.3 m; not on floors) x neighbour occlusion (0.78 inside another mesh's bounding box,
+  easing out over a few cm), clamped, stored as **normalized unsigned-byte RGBA** (alpha 255).
+- The mesh's material becomes the one shared `MeshStandardMaterial` named **`diorama`** (white,
+  `vertexColors`, roughness 0.9, metalness 0).
+- `uv` is dropped (nothing is textured); visible floors are subdivided (0.6 to 0.8 m squares) so the
+  contact shadows under walls and furniture have vertices to land on.
+- The root (glTF scene extras) gets **`style: 'diorama'`**, next to `ambient_preset` / `kind`.
+
+Emissive meshes (flames, embers, the rat's eyes, the wizard's orb, the cauldron's brew) keep their
+own material and get no vertex colours. In props and minis the baked parts are then merged into
+one mesh (`<model>_model`); in scenes the named meshes stay separate, only pure dressing (table sets,
+beams, floor strips, pillars, the forest path) is merged per group. Tree geometry in the forest is
+shared between trees and baked once from the first tree that uses it.
 
 ## License
 
