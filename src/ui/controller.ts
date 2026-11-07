@@ -7,12 +7,13 @@ import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import { vfxBus } from '@/table/vfx/bus'
+import { numbersEvent } from '@/table/vfx/numbers'
 import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
-import type { Character, GameDocShape, RollResult } from '@/core/doc'
-import type { PlayerPubkey } from '@/core/ids'
+import type { Character, GameDocShape, GameEvent, ResourceDelta, RollResult } from '@/core/doc'
+import type { PlayerPubkey, SceneId } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
 import { bindUndoDispatcher, recordUndo, undoLast } from '@/state/undo'
@@ -28,6 +29,11 @@ export interface GameController {
   displayName?: string
   dispatch(intent: Intent): Promise<void>
   presence(partial: Partial<Presence>): void
+  /**
+   * GM only (a no-op for players): float damage/heal numbers over tokens on every table, as a
+   * cue-less vfx event, for resource changes made by hand. Optional so test fakes can omit it.
+   */
+  floatNumbers?(scene: SceneId, numbers: ResourceDelta[]): void
   dispose(): void
 }
 
@@ -203,6 +209,11 @@ export function createController(opts: {
       Object.assign(me, partial, { lastSeen: Date.now() })
       connection.publishPresence(me)
       rememberName(me.pubkey, me.name)
+    },
+    floatNumbers(scene, numbers) {
+      if (!connection.isGm) return
+      const ev = numbersEvent(crypto.randomUUID(), Date.now(), scene, numbers)
+      if (ev) connection.doc.getArray<GameEvent>('events').push([ev])
     },
     dispose() {
       offIntent()

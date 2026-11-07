@@ -36,6 +36,7 @@ import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
 import { Props } from './PropMesh'
+import { RangePreview } from './RangePreview'
 import { RulerLayer } from './RulerLayer'
 import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
@@ -316,6 +317,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
           {!targeting && <RulerLayer bounds={bounds2} />}
+          {!targeting && <RangePreview />}
           <PingLayer bounds={bounds2} />
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />

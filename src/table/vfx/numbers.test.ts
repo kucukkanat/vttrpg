@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Token } from '@/core/doc'
 import type { SceneId, TokenId } from '@/core/ids'
-import { DAMAGE_COLOR, formatDelta, HEAL_COLOR, NUMBER_DELAY_MS, NUMBER_STAGGER_MS, planNumbers, resourceTag } from './numbers'
+import { DAMAGE_COLOR, formatDelta, HEAL_COLOR, NUMBER_DELAY_MS, NUMBER_STAGGER_MS, numbersEvent, planNumbers, resourceTag } from './numbers'
 import { CHEST_HEIGHT_CELLS, type VfxEvent } from './schedule'
 
 const scene = 's1' as SceneId
@@ -49,5 +49,18 @@ describe('planNumbers', () => {
   it('skips zero deltas, missing tokens and events without numbers', () => {
     expect(planNumbers(event([{ token: B, delta: 0, resource: 'hp' }, { token: 'ghost' as TokenId, delta: -2, resource: 'hp' }]), tokens, 1, 0)).toEqual([])
     expect(planNumbers(event(undefined), tokens, 1, 0)).toEqual([])
+  })
+})
+
+describe('numbersEvent', () => {
+  it('builds a cue-less vfx event that plans the same numbers as a skill', () => {
+    const ev = numbersEvent('m1', 5, scene, [{ token: A, delta: -1, resource: 'hp' }, { token: A, delta: 0, resource: 'hp' }])!
+    expect(ev).toEqual({ id: 'm1', at: 5, kind: 'vfx', cues: [], scene, targets: [A], numbers: [{ token: A, delta: -1, resource: 'hp' }] })
+    const specs = planNumbers(ev, tokens, 1, 0)
+    expect(specs).toHaveLength(1)
+    expect(specs[0]).toMatchObject({ delta: -1, resource: 'hp', color: DAMAGE_COLOR })
+  })
+  it('is null when nothing changed', () => {
+    expect(numbersEvent('m2', 0, scene, [{ token: A, delta: 0.2, resource: 'hp' }])).toBeNull()
   })
 })

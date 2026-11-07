@@ -147,6 +147,11 @@ export interface TableUiState {
    * at a scene before switching everyone to it. Cleared when it goes live or is removed.
    */
   previewScene: SceneId | null
+  /**
+   * Reach of a skill chip the pointer is on (hover, focus, or a finger held on it): a ring of
+   * `cells` around `source` on the floor (`RangePreview`); 0 highlights just the token. Null otherwise.
+   */
+  previewRange: { source: TokenId; cells: number } | null
   set(partial: Partial<Omit<TableUiState, 'set' | 'focusToken'>>): void
 }
 
@@ -174,6 +179,7 @@ export const useTableUi = create<TableUiState>((set) => ({
   sceneErrors: {} as Record<SceneId, string>,
   transition: null,
   previewScene: null,
+  previewRange: null,
   set: (partial) => set(partial),
 }))
 

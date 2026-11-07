@@ -3,14 +3,17 @@
  * place, and what the GM does with any token.
  *
  * Which token: the selected one; a player who selected nothing (or someone else's token) sees
- * their own. The bar shows its name, HP (the GM adjusts it with −/+), "Your turn" and End turn
- * while it is up in combat, the sheet's saves and the token's skills as chips, and ⋯ for the
+ * their own. The bar shows its name, an HP meter (the GM adjusts it with −/+, and the change floats
+ * over the token for everyone), "Your turn" and End turn while it is up in combat, the sheet's
+ * saves and the token's skills as icon chips with cost badges (hovering, focusing or holding a
+ * skill chip rings its reach on the table), and ⋯ for the
  * token menu. The GM also gets the token's skill list editor, conditions, Hide/Show, initiative,
  * Assign and Remove. The bar hides while a skill is being aimed (the targeting bar takes over).
  */
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent } from 'react'
 import type { GameController } from '../controller'
 import type { Token } from '@/core/doc'
+import type { SkillDef } from '@/core/pack'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { firstOwnedToken, useGame } from '@/state/store'
 import { newSeed, rollFromSeed } from '@/dice/fair'
@@ -24,6 +27,9 @@ import { currentEntry, DEFAULT_INITIATIVE_FORMULA, combatants, rollInitiative, s
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
 import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
+import { conditionStyle, rangePreviewFor, type RangePreview } from './barVisuals'
+import { CostBadges, HpMeter } from './BarParts'
+import { SkillIcon } from './skillIcons'
 
 type Card = 'skills' | 'conditions' | 'assign' | null
 
@@ -42,6 +48,10 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const rules = controller.rules
   const saves = useMemo(() => sheetSaves(rules?.pack.sheet), [rules])
   const menuBtn = useRef<HTMLButtonElement>(null)
+
+  // The range preview belongs to the chips: drop it when they go away (aiming, other token, unmount).
+  const tokenId = token?.id
+  useEffect(() => { setPreview(null); return () => setPreview(null) }, [tokenId, aimingAny])
 
   if (!token || aimingAny) return null
   const { skills, canUse, labelOf, shortfall, use, character } = casting
@@ -62,7 +72,12 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const changeHp = (delta: number) => {
     if (!character || !primary) return
     const data = adjustResource(character.data, primary.id, delta, hp?.max)
-    if (data) void controller.dispatch({ type: 'character.upsert', character: { ...character, data } })
+    if (!data) return
+    void controller.dispatch({ type: 'character.upsert', character: { ...character, data } })
+    // Everyone sees the change float over the token, like a skill's damage or healing.
+    const after = readResource(data, primary, (e) => rules!.evaluateNow(e, character))
+    const moved = after && hp ? after.current - hp.current : 0
+    if (moved) controller.floatNumbers?.(token.scene, [{ token: token.id, delta: moved, resource: primary.id }])
   }
   const endTurn = () => void controller.dispatch(isGm ? { type: 'initiative.next' } : { type: 'initiative.next', token: token.id })
   const openMenu = () => {
@@ -81,9 +96,9 @@ export function SkillBar({ controller }: { controller: GameController }) {
           <strong className="token-bar-name">{token.name}</strong>
           {up && <span className="token-bar-turn">{isGm || token.owner !== me ? 'Up now' : 'Your turn'}</span>}
           {hp && (
-            <span className="token-bar-hp" title={primary?.name}>
+            <span className="token-bar-hp" title={`${primary?.name ?? 'HP'} ${hp.current}/${hp.max}`}>
               {isGm && <button type="button" className="icon" aria-label={`${primary?.name} minus 1`} onClick={() => changeHp(-1)}>−</button>}
-              <span className="token-bar-hp-value"><span className="muted small">{primary?.name ? abbr(primary.name) : 'HP'}</span> {hp.current}/{hp.max}</span>
+              <HpMeter current={hp.current} max={hp.max} label={primary?.name ?? 'HP'} />
               {isGm && <button type="button" className="icon" aria-label={`${primary?.name} plus 1`} onClick={() => changeHp(1)}>+</button>}
             </span>
           )}
@@ -94,17 +109,25 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {!character && <span className="muted small skill-bar-note">{isGm ? 'No sheet: skills and saves need one.' : 'No character sheet.'}</span>}
           {character && canUse && saves.map((s) => (
             <button key={s.label} type="button" className="skill-chip save-chip" title={`Roll ${s.label} (${s.formula})`} onClick={() => roll(s.label, s.formula)}>
-              <span className="skill-chip-name">{saveChipLabel(s.label)}</span>
-              <span className="skill-chip-cost">save</span>
+              <SkillIcon icon="d20" kind="self" />
+              <span className="skill-chip-text">
+                <span className="skill-chip-name">{saveChipLabel(s.label)}</span>
+                <span className="skill-chip-cost">save</span>
+              </span>
             </button>
           ))}
           {character && skills.map((skill) => {
             const reason = canUse ? shortfall(skill) : 'not yours'
             return (
               <button key={skill.id} type="button" className="skill-chip" disabled={reason !== null}
-                title={reason ? `${skill.name}: ${reason}` : skill.description} onClick={() => use(skill)}>
-                <span className="skill-chip-name">{skill.name}</span>
-                <span className="skill-chip-cost">{reason ?? costLabel(skill, labelOf)}</span>
+                title={reason ? `${skill.name}: ${reason}` : skill.description} onClick={() => use(skill)}
+                aria-label={`${skill.name}, ${reason ?? costLabel(skill, labelOf)}`}
+                {...previewHandlers(skill, token.id)}>
+                <SkillIcon icon={skill.icon} kind={skill.target.kind} />
+                <span className="skill-chip-text">
+                  <span className="skill-chip-name">{skill.name}</span>
+                  <span className={`skill-chip-cost${reason ? ' skill-chip-reason' : ''}`}>{reason ?? <CostBadges skill={skill} labelOf={labelOf} />}</span>
+                </span>
               </button>
             )
           })}
@@ -135,10 +158,34 @@ export function SkillBar({ controller }: { controller: GameController }) {
   )
 }
 
-/** "Hit Protection" -> "HP", "HP" stays. */
-function abbr(name: string): string {
-  const words = name.trim().split(/\s+/)
-  return words.length > 1 ? words.map((w) => w[0]!.toUpperCase()).join('') : name
+/** Show (or with null, clear) the reach ring on the table; skips writes that change nothing. */
+function setPreview(p: RangePreview | null) {
+  const ui = useTableUi.getState()
+  const cur = ui.previewRange
+  if (p === null ? cur === null : cur !== null && cur.source === p.source && cur.cells === p.cells) return
+  ui.set({ previewRange: p })
+}
+
+function focusVisible(el: Element): boolean {
+  try { return el.matches(':focus-visible') } catch { return true }
+}
+
+/**
+ * Chip handlers for the range preview: a mouse or pen hovering, keyboard focus, or a finger held
+ * on the chip (until it lifts or slides off) show the skill's reach around the token.
+ */
+function previewHandlers(skill: SkillDef, source: TokenId) {
+  const show = () => setPreview(rangePreviewFor(skill, source))
+  const hide = () => setPreview(null)
+  return {
+    onPointerEnter: (e: PointerEvent) => { if (e.pointerType !== 'touch') show() },
+    onPointerLeave: hide,
+    onPointerDown: (e: PointerEvent) => { if (e.pointerType === 'touch') show() },
+    onPointerUp: (e: PointerEvent) => { if (e.pointerType === 'touch') hide() },
+    onPointerCancel: hide,
+    onFocus: (e: FocusEvent<HTMLElement>) => { if (focusVisible(e.currentTarget)) show() },
+    onBlur: hide,
+  }
 }
 
 /** GM: start combat (everyone with a sheet in the scene), add this token to it, or take it out. */
@@ -183,10 +230,13 @@ function ConditionsCard({ controller, token, onClose }: { controller: GameContro
       <div className="condition-chips">
         {defs.map((c) => {
           const on = token.conditions.includes(c.id)
+          const { color, label } = conditionStyle(defs, c.id)
           return (
-            <button key={c.id} type="button" className={`tiny${on ? ' on' : ''}`} aria-pressed={on} title={c.description}
+            <button key={c.id} type="button" className={`tiny condition-chip${on ? ' on' : ''}`} aria-pressed={on} title={c.description}
+              style={{ '--cond': color } as CSSProperties}
               onClick={() => set(on ? token.conditions.filter((x) => x !== c.id) : [...token.conditions, c.id])}>
-              {on ? '✓ ' : ''}{c.name}
+              <span className="condition-chip-badge" aria-hidden="true">{label}</span>
+              <span className="condition-chip-name">{c.name}</span>
             </button>
           )
         })}
