@@ -2,8 +2,8 @@
    The table layout (shell/GameShell.tsx, TableChrome.tsx, PhoneBar.tsx; docs/UX.md "Table layout").
    The board fills the screen; the chrome is made of materials: a wooden top rail, a leather GM
    screen, brass fittings, paper cards and the scroll, a felt dice well. Positions are relative to
-   .table. Order over the board: canvas < dock (3) < HUD (4) < cards, scroll, screen, well (5) <
-   raised leaves (6) < palette (60).
+   .table. Order over the board: canvas < dock (3) < HUD (4) < cards, scroll, screen, well and the
+   Build workspace (5) < palette (60).
    ============================================================================================= */
 
 .game.game--table {
@@ -28,13 +28,12 @@
 }
 @media (max-width: 1099px) { .game.game--table:not(.game--phone) { --scroll-w: 320px; --card-w: 340px; --well-size: 144px; } }
 
-/* The board: wood around it, a thin frame in the mode's colour (brass Play, green Prep, blue Build). */
+/* The board: wood around it, a thin frame in the mode's colour (brass Play, blue Build). */
 .game--table .table { background: var(--wood-dk) var(--grain); }
 .game--table .table::after {
   content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mode-play) 55%, transparent), inset 0 0 60px rgba(0, 0, 0, .45);
 }
-.game--table.game--mode-prep .table::after { box-shadow: inset 0 0 0 3px var(--mode-prep), inset 0 0 60px rgba(0, 0, 0, .45); }
 .game--table.game--mode-build .table::after { box-shadow: inset 0 0 0 3px var(--mode-build), inset 0 0 60px rgba(0, 0, 0, .45); }
 
 /* ---------------------------------------------------------------------------------------------
@@ -122,7 +121,7 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 .t-bell-empty { margin: var(--sp-2) 0 0; }
 
 /* ---------------------------------------------------------------------------------------------
-   Paper: cards, leaves, the tray, the scroll
+   Paper: cards and the scroll
    --------------------------------------------------------------------------------------------- */
 .paper-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--head-h); padding: 0 var(--sp-1) 0 var(--sp-3); flex: none; }
 .paper-title { flex: 1 1 auto; min-width: 0; font-family: var(--font-display); font-size: var(--fs-lg); text-transform: none; letter-spacing: 0; color: var(--fg); }
@@ -132,13 +131,13 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 .skin-paper .hosted > .paper-head + .panel { border-top: 1px solid var(--border); }
 .skin-paper .hosted .host-title { margin-right: calc(var(--actions-w, 0px) + var(--sp-2)); }
 
-.t-card, .t-scroll, .t-tray, .t-leaf {
+.t-card, .t-scroll {
   position: absolute; z-index: 5; display: flex; flex-direction: column; min-height: 0;
   background: var(--panel) var(--paper-tex); border: 1px solid #b59a6c; border-radius: 6px;
   box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 14px 34px rgba(20, 10, 2, .5), 0 2px 4px rgba(20, 10, 2, .35);
 }
-.t-card > .hosted, .t-scroll > .hosted, .t-tray > .hosted, .t-leaf > .hosted { flex: 1; min-height: 0; }
-.t-card .hosted > .panel, .t-tray .hosted > .panel, .t-leaf .hosted > .panel { overflow: auto; }
+.t-card > .hosted, .t-scroll > .hosted { flex: 1; min-height: 0; }
+.t-card .hosted > .panel { overflow: auto; }
 .t-scroll .hosted > .panel { overflow: hidden; display: flex; flex-direction: column; }
 .t-scroll .chat .log { flex: 1; min-height: 0; }
 
@@ -301,7 +300,7 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 @keyframes t-pop { 40% { transform: scale(1.25); } }
 
 /* ---------------------------------------------------------------------------------------------
-   The GM screen: a leather plaque folded at the bottom left; Prep raises three leaves, Build a tray
+   The GM screen: a leather plaque at the bottom left with Play / Build (src/ui/build/ is Build)
    --------------------------------------------------------------------------------------------- */
 .t-plaque {
   position: absolute; z-index: 5; left: calc(var(--edge) + var(--sal)); bottom: calc(var(--edge) + var(--sab)); width: var(--plaque-w);
@@ -309,15 +308,13 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
   background: linear-gradient(180deg, #5a2f1f, #3a1e14); border: 1px solid #22100a; border-radius: 10px 10px 6px 6px;
   box-shadow: inset 0 0 0 2px rgba(201, 154, 68, .35), 0 12px 28px rgba(0, 0, 0, .55); color: var(--paper);
 }
-.t-plaque--prep { box-shadow: inset 0 0 0 2px var(--mode-prep), 0 12px 28px rgba(0, 0, 0, .55); }
 .t-plaque--build { box-shadow: inset 0 0 0 2px var(--mode-build), 0 12px 28px rgba(0, 0, 0, .55); }
 .t-plaque-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
 .t-plaque-head strong { font-family: var(--font-display); font-size: var(--fs-lg); }
 .t-plaque-state { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #d9c49b; }
-.t-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 8px; background: rgba(0, 0, 0, .35); }
+.t-modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; border-radius: 8px; background: rgba(0, 0, 0, .35); }
 .t-mode { min-height: 34px; border: 0; border-radius: 6px; background: transparent; color: #e8d7b0; font-weight: 700; }
 .t-mode.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; }
-.game--mode-prep .t-mode.on { background: linear-gradient(180deg, #a7d39f, var(--mode-prep)); }
 .game--mode-build .t-mode.on { background: linear-gradient(180deg, #9fd0ea, var(--mode-build)); }
 .t-plaque-live {
   justify-content: flex-start; min-height: 30px; gap: var(--sp-1); padding: 0 var(--sp-2); font-size: var(--fs-xs);
@@ -325,30 +322,6 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 }
 .t-screen-sheet .t-modes { background: var(--panel-2); }
 .t-screen-sheet .t-mode { color: var(--fg); }
-
-/* Build: the tool tray, the board stays live beside it. */
-.t-tray {
-  left: calc(var(--edge) + var(--sal)); bottom: calc(var(--edge) + var(--plaque-h) + var(--sp-2)); width: min(360px, 40%);
-  max-height: calc(100% - 2 * var(--edge) - var(--plaque-h) - var(--sp-2)); border-top: 4px solid var(--mode-build);
-}
-.game--gm.game--mode-build:not(.game--phone) .t-rail { left: calc(var(--edge) + min(360px, 40%) + var(--sp-3)); }
-.game--gm.game--mode-build:not(.game--phone) .t-card { left: calc(var(--edge) + min(360px, 40%) + var(--rail-w) + 2 * var(--sp-3)); }
-
-/* Prep: three leaves raised over the board, angled like a standing screen. */
-.t-leaves {
-  position: absolute; z-index: 6; left: var(--edge); right: var(--edge); bottom: calc(var(--edge) + var(--plaque-h) + var(--sp-2)); top: calc(var(--edge) + 56px);
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); perspective: 1600px; pointer-events: none;
-  animation: t-raise .22s ease-out;
-}
-.t-leaves .t-leaf { position: relative; pointer-events: auto; border-top: 4px solid var(--mode-prep); }
-.t-leaf--0 { transform: rotateY(5deg); transform-origin: right center; }
-.t-leaf--2 { transform: rotateY(-5deg); transform-origin: left center; }
-@keyframes t-raise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-.t-leaf-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
-.t-leaf-tab { min-height: 28px; padding: 0 var(--sp-2); font-size: var(--fs-sm); border-radius: 999px; background: transparent; }
-.t-leaf-tab.on { background: var(--row-on); border-color: var(--accent); font-weight: 700; }
-.t-leaf .paper-head, .t-tray .paper-head { flex-wrap: wrap; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
-.t-leaf .paper-title { font-size: var(--fs-md); }
 
 /* ---------------------------------------------------------------------------------------------
    Command palette
@@ -389,8 +362,7 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
   background: transparent; color: #e8d7b0; font-size: var(--fs-xs);
 }
 .t-phonebar-btn.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; font-weight: 800; }
-.t-phonebar--prep .t-phonebar-btn[aria-label^="Prep"] { box-shadow: inset 0 0 0 2px var(--mode-prep); }
-.t-phonebar--build .t-phonebar-btn[aria-label^="Build"] { box-shadow: inset 0 0 0 2px var(--mode-build); }
+.t-phonebar--build { border-top-color: var(--mode-build); }
 .t-phonebar-btn .badge { top: 2px; right: calc(50% - 22px); }
 .game--phone .bsheet { background: var(--panel) var(--paper-tex); }
 .game--phone .t-standees { position: absolute; top: calc(var(--edge) + var(--control) + var(--sp-2)); width: calc(100% - 2 * var(--edge)); }
@@ -406,23 +378,20 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 .t-tools-sheet .cam-btn { color: var(--paper); flex-direction: column; min-width: 56px; }
 .t-tools-search { justify-content: flex-start; gap: var(--sp-2); }
 .t-screen-sheet { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
-.t-screen-sheet .hosted { min-height: 0; }
-.t-screen-sheet .hosted > .panel { padding: 0; border: 0; }
 .game--phone .bsheet > .dice-pad { padding: var(--sp-2) var(--sp-4) var(--sp-4); }
 
 /* ---------------------------------------------------------------------------------------------
    Zen and Display: the board alone (Display keeps the standees and the dice)
    --------------------------------------------------------------------------------------------- */
-.game--zen :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-tray, .t-leaves, .t-well-wrap, .t-standees, .t-phonebar),
-.game--display :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-tray, .t-leaves, .t-well-btn, .t-phonebar) { display: none !important; }
+.game--zen :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-well-wrap, .t-standees, .t-phonebar),
+.game--display :is(.t-rail, .t-card, .t-scroll, .t-scroll-rod, .t-plaque, .t-well-btn, .t-phonebar) { display: none !important; }
 .game--display .hud { display: block !important; }
 
-/* Panels on leaves, the tray and the phone screen keep their own action buttons in a row of their
-   own (the hosted header trick needs a header row, and leaves carry tabs there instead). */
-:is(.t-leaf, .t-tray, .t-screen-sheet) .hosted > .panel > h3 {
+/* Panels hosted without a paper head (the Build scene switcher, the phone Build sheets) keep their
+   own action buttons in a row of their own. */
+:is(.bw-pop, .bw-phone-scene) > .panel > h3 {
   position: static; height: auto; min-height: 0; margin: 0 0 var(--sp-2); justify-content: flex-end; flex-wrap: wrap;
 }
-:is(.t-leaf, .t-tray, .t-screen-sheet) .hosted > .panel > h3:not(:has(> *)) { display: none; }
 
 /* Phones: the combat control is a brass coin, the name keeps the room. */
 .topbar.compact .t-combat-word { display: none; }

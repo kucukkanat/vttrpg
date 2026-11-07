@@ -1,109 +1,162 @@
 /**
  * The table layout's own state (docs/UX.md "Table layout"). The board fills the screen; around it:
  *
- *   - the GM screen (bottom left, GM only): Play / Prep / Build. Prep raises the screen's three
- *     leaves over the board, Build folds it into a tool tray so the board stays usable.
+ *   - the GM screen (bottom left, GM only): Play / Build. Build opens the Build workspace (the
+ *     scene bar, the Library dock, the Inspector dock and the tool strip; `src/ui/build/`).
  *   - one paper card at a time (character, journal, players, initiative, sound, skills…)
  *   - the scroll (chat) on the right edge, rolled up or open
  *   - the command palette (Ctrl/⌘-K) and the bell (things waiting for you)
  *
  * `routePanel` decides where a registry panel opens, so `openPanel(id)` (shortcuts, toasts,
- * panels asking for each other) needs no knowledge of the layout. UI-only; never synced.
+ * panels asking for each other) needs no knowledge of the layout. UI-only; never synced, except
+ * the Build docks' fold state, which is remembered per device.
  */
 import { create } from 'zustand'
+import { useGame } from '@/state/store'
+import { useBuildUi } from '@/table/build/buildState'
+import { useKitUi } from '@/table/kits/kitState'
+import { useLibraryView, type LibraryFilter, type LibraryShelf } from '../library/libraryView'
 
-export type TableMode = 'play' | 'prep' | 'build'
+/** Play is running the table; Build is making the world. */
+export type TableMode = 'play' | 'build'
 
-/** The GM screen's three leaves in Prep, each a few registry panels shown as tabs. */
-export const LEAVES = [
-  { id: 'world', title: 'Scenes & encounters', panels: ['scenes', 'prep'] },
-  { id: 'cast', title: 'Cast', panels: ['tokens', 'skills-editor'] },
-  { id: 'reference', title: 'Reference', panels: ['sound', 'players', 'journal', 'credits'] },
-] as const
-
-export type LeafId = (typeof LEAVES)[number]['id']
-
-/** Reference-leaf panels that open as a card when asked for directly (the leaf still shows them in Prep). */
-const PLAY_CARDS = new Set(['journal', 'players', 'sound'])
-
-/** Panels the Build tray shows as tabs: the model library, the tools, the grid kits, and the scene's own settings. */
-export const BUILD_TABS = ['library', 'build', 'kit', 'scenes'] as const
-
-/** Tab labels in the tray where the panel title would read oddly. */
-export const BUILD_TAB_LABELS: Record<string, string> = { library: 'Library', build: 'Tools', kit: 'Kit', scenes: 'Scene' }
+/**
+ * Any mode value, old or new, as a mode. Prep is gone: its scenes, creatures and encounters moved
+ * into Build, so a stored or in-memory 'prep' opens Build.
+ */
+export function normalizeMode(mode: unknown): TableMode {
+  return mode === 'build' || mode === 'prep' ? 'build' : 'play'
+}
 
 export type PanelRoute =
   | { kind: 'scroll' }
   | { kind: 'card'; id: string }
-  | { kind: 'build'; tab: (typeof BUILD_TABS)[number] }
-  | { kind: 'prep'; leaf: LeafId; tab: string }
+  /** The Build workspace: the Library on a shelf (and filter), or the Inspector on the scene. */
+  | { kind: 'build'; shelf?: LibraryShelf; filter?: LibraryFilter; inspector?: 'scene' }
 
 /**
- * Where a panel opens. Chat is the scroll; Build is the tray; the authoring panels open their
- * Prep leaf for the GM; everything else is the one card. Players have no Prep or Build, so their
- * Scenes and Tokens open as cards (read-only lists, claiming).
+ * Where a panel opens. Chat is the scroll for everyone. For the GM, the things that add to the
+ * world open the Build Library on their shelf (models, kit, creatures for the old Prep, the
+ * scene's tokens as the in-scene outliner), and 'build' opens the Inspector on the scene;
+ * everything else is the one card. Players have no Build, so every panel is a card for them.
  */
 export function routePanel(id: string, isGm: boolean): PanelRoute {
   if (id === 'chat') return { kind: 'scroll' }
   if (!isGm) return { kind: 'card', id }
-  if (id === 'build' || id === 'library' || id === 'kit') return { kind: 'build', tab: id }
-  // Sound, Players and the Journal are used at the table as much as in prep: a card, in any mode.
-  if (PLAY_CARDS.has(id)) return { kind: 'card', id }
-  const leaf = LEAVES.find((l) => (l.panels as readonly string[]).includes(id))
-  return leaf ? { kind: 'prep', leaf: leaf.id, tab: id } : { kind: 'card', id }
+  switch (id) {
+    case 'library': return { kind: 'build', shelf: 'models' }
+    case 'kit': return { kind: 'build', shelf: 'kit' }
+    case 'prep': return { kind: 'build', shelf: 'creatures' }
+    case 'tokens': return { kind: 'build', filter: 'in-scene' }
+    case 'build': return { kind: 'build', inspector: 'scene' }
+    default: return { kind: 'card', id }
+  }
 }
 
-interface TableLayoutState {
+/** The Build docks' fold state, per device. */
+export interface BuildFolds {
+  buildLibraryOpen: boolean
+  buildInspectorOpen: boolean
+}
+
+export const BUILD_FOLDS_KEY = 'vtt.build.docks'
+const DEFAULT_FOLDS: BuildFolds = { buildLibraryOpen: true, buildInspectorOpen: true }
+
+/** The stored fold state (both docks open when nothing, or something unreadable, is stored). */
+export function readBuildFolds(raw: string | null): BuildFolds {
+  if (!raw) return { ...DEFAULT_FOLDS }
+  try {
+    const v = JSON.parse(raw) as Partial<Record<keyof BuildFolds, unknown>>
+    return {
+      buildLibraryOpen: typeof v.buildLibraryOpen === 'boolean' ? v.buildLibraryOpen : DEFAULT_FOLDS.buildLibraryOpen,
+      buildInspectorOpen: typeof v.buildInspectorOpen === 'boolean' ? v.buildInspectorOpen : DEFAULT_FOLDS.buildInspectorOpen,
+    }
+  } catch {
+    return { ...DEFAULT_FOLDS }
+  }
+}
+
+function loadFolds(): BuildFolds {
+  try { return readBuildFolds(localStorage.getItem(BUILD_FOLDS_KEY)) } catch { return { ...DEFAULT_FOLDS } }
+}
+function saveFolds(f: BuildFolds) {
+  try { localStorage.setItem(BUILD_FOLDS_KEY, JSON.stringify(f)) } catch { /* private mode, quota */ }
+}
+
+/**
+ * Phones: the bottom bar's own sheets; one sheet at a time. Play: the dice pad, Tools, the GM
+ * screen. Build: the Library, the build tools, the Inspector and the scene bar.
+ */
+export type PhoneSheet = 'dice' | 'tools' | 'screen' | 'library' | 'inspector' | 'scene'
+
+interface TableLayoutState extends BuildFolds {
   mode: TableMode
   /** The panel shown as the floating card, or null. */
   card: string | null
-  /** Tab per Prep leaf. */
-  leafTabs: Record<LeafId, string>
-  /** On phones the leaves are one sheet with the active leaf on top. */
-  leaf: LeafId
-  buildTab: (typeof BUILD_TABS)[number]
   scrollOpen: boolean
   palette: boolean
   bell: boolean
-  /** Phones: the bottom bar's own sheets (dice pad, tools, the GM screen); one sheet at a time. */
   phone: PhoneSheet | null
   set(partial: Partial<Omit<TableLayoutState, 'set' | 'open'>>): void
   /** Open a registry panel wherever this layout keeps it; on phones every place is one sheet, so the others close. */
   open(id: string, isGm: boolean, phone?: boolean): void
 }
 
-export type PhoneSheet = 'dice' | 'tools' | 'screen'
-
-export const DEFAULT_LEAF_TABS: Record<LeafId, string> = { world: 'scenes', cast: 'tokens', reference: 'sound' }
-
-export const useTableLayout = create<TableLayoutState>((set) => ({
+export const useTableLayout = create<TableLayoutState>((set, get) => ({
   mode: 'play',
   card: null,
-  leafTabs: { ...DEFAULT_LEAF_TABS },
-  leaf: 'world',
-  buildTab: 'library',
   scrollOpen: false,
   palette: false,
   bell: false,
   phone: null,
-  set: (partial) => set(partial),
+  ...loadFolds(),
+  set: (partial) => {
+    const next = 'mode' in partial ? { ...partial, mode: normalizeMode(partial.mode) } : partial
+    set(next)
+    if ('buildLibraryOpen' in partial || 'buildInspectorOpen' in partial) {
+      const s = get()
+      saveFolds({ buildLibraryOpen: s.buildLibraryOpen, buildInspectorOpen: s.buildInspectorOpen })
+    }
+  },
   open: (id, isGm, phone = false) => {
     const r = routePanel(id, isGm)
-    // On a phone the scroll, the card and the screen are all the one bottom sheet.
+    const s = get()
+    // On a phone the scroll, the card and the bar's sheets are all the one bottom sheet.
     const solo = phone ? { scrollOpen: false, card: null, phone: null } : {}
-    if (r.kind === 'scroll') set({ ...solo, scrollOpen: true })
-    else if (r.kind === 'card') set({ ...solo, card: id })
-    else if (r.kind === 'build') set({ ...solo, mode: 'build', buildTab: r.tab, card: null, ...(phone ? { phone: 'screen' as const } : {}) })
-    else set((s) => ({ ...solo, mode: 'prep', leaf: r.leaf, leafTabs: { ...s.leafTabs, [r.leaf]: r.tab }, card: null, ...(phone ? { phone: 'screen' as const } : {}) }))
+    if (r.kind === 'scroll') s.set({ ...solo, scrollOpen: true })
+    else if (r.kind === 'card') s.set({ ...solo, card: id })
+    else if (r.inspector) {
+      showSceneInInspector()
+      s.set({ ...solo, mode: 'build', card: null, buildInspectorOpen: true, ...(phone ? { phone: 'inspector' as const } : {}) })
+    } else {
+      useLibraryView.getState().set({ ...(r.shelf ? { shelf: r.shelf } : {}), filter: r.filter ?? 'all' })
+      s.set({ ...solo, mode: 'build', card: null, buildLibraryOpen: true, ...(phone ? { phone: 'library' as const } : {}) })
+    }
   },
 }))
 
+/** Put the build tool away and let go of the selection, so the Inspector shows the scene. */
+export function showSceneInInspector(): void {
+  useKitUi.getState().set({ tool: null })
+  useBuildUi.getState().set({ tool: null })
+  useGame.getState().setSelection(null)
+}
+
 /** True when the panel is on screen in the current layout state (for unread counters). */
-export function panelShown(s: Pick<TableLayoutState, 'mode' | 'card' | 'leafTabs' | 'leaf' | 'buildTab' | 'scrollOpen'>, id: string, isGm: boolean, phone: boolean): boolean {
+export function panelShown(s: Pick<TableLayoutState, 'card' | 'scrollOpen'>, id: string, isGm: boolean): boolean {
   const r = routePanel(id, isGm)
   if (r.kind === 'scroll') return s.scrollOpen
-  if (s.card === id) return true
-  if (r.kind === 'build') return s.mode === 'build' && s.buildTab === r.tab
-  if (r.kind === 'prep') return s.mode === 'prep' && s.leafTabs[r.leaf] === r.tab && (!phone || s.leaf === r.leaf)
-  return false
+  return s.card === id
+}
+
+/** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
+export function setTableMode(mode: TableMode | 'prep') {
+  const s = useTableLayout.getState()
+  const next = normalizeMode(mode)
+  if (s.mode === next) return
+  if (s.mode === 'build') {
+    useKitUi.getState().set({ tool: null })
+    useBuildUi.getState().set({ tool: null })
+  }
+  s.set({ mode: next, phone: null })
 }

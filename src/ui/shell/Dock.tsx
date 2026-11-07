@@ -1,5 +1,6 @@
 /**
- * Bottom of the table: the edit bar while edit mode is on (or props are selected in Build), otherwise the selected token's skill bar.
+ * Bottom of the table: the edit bar while edit mode is on (or props are selected in Build), otherwise
+ * the selected token's skill bar (not in Build: the Inspector edits the token there).
  * Its height is published as `--dock-h` on the table so the toast stack sits above it.
  */
 import { useLayoutEffect, useRef } from 'react'
@@ -29,7 +30,7 @@ export function Dock({ controller }: { controller: GameController }) {
   }, [])
   return (
     <div className="dock" ref={ref}>
-      {editMode ? <EditBar controller={controller} /> : <SkillBar controller={controller} />}
+      {editMode ? <EditBar controller={controller} /> : building ? null : <SkillBar controller={controller} />}
     </div>
   )
 }
