@@ -14,7 +14,7 @@
  */
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useCursor, useGLTF } from '@react-three/drei'
+import { useCursor } from '@react-three/drei'
 import {
   CanvasTexture, CircleGeometry, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
   PointLight, RingGeometry, Shape, ShapeGeometry, SRGBColorSpace, Vector3,
@@ -41,6 +41,7 @@ import { blobShadowLook } from './atmosphere'
 import { labelYaw } from './labelFacing'
 import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
 import { MissingModel } from './MissingAsset'
+import { useModel } from './useModel'
 
 /** Colour of the high-tier selection outline: the palette's selection role, like the ring under the token. */
 export const SELECTION_OUTLINE_COLOR = SELECT
@@ -117,33 +118,45 @@ export class ModelBoundary extends Component<{ fallback: ReactNode; children: Re
 }
 
 /**
+ * A table-ready copy of a loaded model: shadows on, scene helpers (`COL_*`, `FOG_*`) hidden, lights
+ * casting no shadow, materials stylised (stylize.ts; converted materials are cached per source, so
+ * every copy of a model shares them).
+ */
+export function prepareModel(scene: Object3D, mode: ReturnType<typeof materialModeFor>, rim = false): Group {
+  const o = scene.clone(true) as Group
+  o.traverse((m) => {
+    if (m instanceof Mesh) {
+      if (/^(COL|FOG)_/.test(m.name)) { m.visible = false; return }
+      m.castShadow = true
+      m.receiveShadow = true
+    }
+    if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
+  })
+  stylizeObject(o, mode, { rim })
+  return o
+}
+
+/**
  * A GLB instance with shadows on. Scene-convention helpers (`COL_*`, `FOG_*`) inside the file
  * are hidden so a scene model can double as a prop. `onObject` reports the clone once it exists.
  * With `fitCell` the model's footprint is fitted to the grid (see fitScale.ts) before `scale` applies.
  */
-export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject, mini = false, selected = false }: {
-  url: string; scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
+export function GlbMini({ url, sha256, name, scale, fitCell, fitRange = TOKEN_FIT, onObject, mini = false, selected = false }: {
+  url: string
+  /** The asset's hash: shares one parse between URLs of the same file and keys its stats. */
+  sha256?: string | undefined
+  /** File name for the over-budget warning. */
+  name?: string | undefined
+  scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
   /** A token's miniature: rim light and ink outline (props get neither). */
   mini?: boolean
   /** Selected token: a thick outline in the selection colour on the high tier. */
   selected?: boolean
 }) {
-  const gltf = useGLTF(url)
+  const gltf = useModel(url, sha256, name)
   const { graphics, grid } = useTable()
   const mode = materialModeFor(gltf.scene, graphics.pbr)
-  const object = useMemo(() => {
-    const o = gltf.scene.clone(true) as Group
-    o.traverse((m) => {
-      if (m instanceof Mesh) {
-        if (/^(COL|FOG)_/.test(m.name)) { m.visible = false; return }
-        m.castShadow = true
-        m.receiveShadow = true
-      }
-      if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
-    })
-    stylizeObject(o, mode, { rim: mini })
-    return o
-  }, [gltf, mode, mini])
+  const object = useMemo(() => prepareModel(gltf.scene, mode, mini), [gltf, mode, mini])
   const fit = useMemo(() => (fitCell ? fitObjectToCell(object, fitCell, fitRange) : 1), [object, fitCell, fitRange])
   useEffect(() => {
     onObject?.(object)
@@ -368,18 +381,28 @@ function OwnerRing({ radius, color, mine, shape }: { radius: number; color: stri
 /** Pauses before resolving a missing model again; the last one repeats. Its upload may still be running. */
 const MISSING_RETRY_MS = [3_000, 10_000, 30_000, 60_000]
 
+/** Last URL each asset hash resolved to on this client (the resolver keeps object URLs alive). */
+const resolvedUrls = new Map<string, string>()
+
 /** Resolves a model ref; `missing` once no source had it (retried in the background until it loads). */
 export function useAssetLoad(ref: Token['model']): { url: string | null; missing: boolean } {
   const { resolveAsset } = useTable()
-  const [state, setState] = useState<{ url: string | null; missing: boolean }>({ url: null, missing: false })
+  // A model already resolved on this client starts with its URL, so a prop switching between the
+  // instanced and the standalone renderer (PropBatch.tsx) shows no loading crate in between.
+  const known = ref ? resolvedUrls.get(ref.sha256) ?? null : null
+  const [state, setState] = useState<{ url: string | null; missing: boolean }>({ url: known, missing: false })
   useEffect(() => {
     let live = true
     let timer: ReturnType<typeof setTimeout> | undefined
-    setState({ url: null, missing: false })
+    const cached = ref ? resolvedUrls.get(ref.sha256) ?? null : null
+    setState((s) => (s.url === cached && !s.missing ? s : { url: cached, missing: false }))
     if (!ref) return
     const attempt = (n: number) => {
       resolveAsset(ref).then(
-        (u) => { if (live) setState({ url: u, missing: false }) },
+        (u) => {
+          resolvedUrls.set(ref.sha256, u)
+          if (live) setState((s) => (s.url === u && !s.missing ? s : { url: u, missing: false }))
+        },
         () => {
           if (!live) return
           setState({ url: null, missing: true })
@@ -651,7 +674,7 @@ export function TokenMesh({ token }: { token: Token }) {
         {modelUrl ? (
           <ModelBoundary fallback={disc}>
             <Suspense fallback={disc}>
-              <GlbMini url={modelUrl} scale={scale} fitCell={cell} mini selected={selected} />
+              <GlbMini url={modelUrl} sha256={token.model?.sha256} name={token.model?.name} scale={scale} fitCell={cell} mini selected={selected} />
             </Suspense>
           </ModelBoundary>
         ) : modelMissing ? <>{disc}<MissingModel size={0.45 * cell * scale} y={radius * 0.22} /></> : disc}

@@ -1,0 +1,229 @@
+{
+ "ArmChair_01": {
+  "date_published": 1585605600,
+  "name": "Arm Chair 01",
+  "categories": [
+   "furniture",
+   "seating"
+  ],
+  "type": 2,
+  "tags": [
+   "gothic",
+   "vintage",
+   "chair",
+   "furniture",
+   "victorian",
+   "couch",
+   "wood",
+   "varnished",
+   "classic"
+  ],
+  "authors": {
+   "Kirill Sannikov": "All"
+  },
+  "sponsors": [
+   "66627515",
+   "4047949"
+  ],
+  "max_resolution": [
+   4096,
+   4096
+  ],
+  "polycount": 5626,
+  "texel_density": 1972.3631956341671,
+  "dimensions": [
+   848.4309017658234,
+   765.7602727413177,
+   1065.087635157397
+  ],
+  "files_hash": "8a04a102d4a1e1a480bc4288384d4a2dfd649608",
+  "description": "Free (CC0) vintage Victorian armchair 3D model - varnished carved wood frame, upholstered seat; gothic/classic styling ideal for interiors, period scenes, and renders.",
+  "category_id": "11261ec6-df2b-5150-9904-684d2558070d",
+  "category": "Furniture/Seating/Chairs",
+  "attributes": {
+   "condition": [
+    "worn"
+   ],
+   "material": [
+    "wood",
+    "fabric"
+   ]
+  },
+  "img_version": "abbc4732",
+  "download_count": 32804,
+  "thumbnail_url": "https://cdn.polyhaven.com/asset_img/thumbs/ArmChair_01.png?width=256&height=256&format=webp&v=abbc4732"
+ },
+ "wooden_table_02": {
+  "donated": true,
+  "type": 2,
+  "tags": [
+   "wooden",
+   "worn",
+   "village",
+   "rural",
+   "natural",
+   "simple"
+  ],
+  "name": "Wooden Table 02",
+  "categories": [
+   "furniture",
+   "table"
+  ],
+  "authors": {
+   "Serhii Khromov": "All"
+  },
+  "date_published": 1630540800,
+  "sponsors": [
+   "3267566"
+  ],
+  "max_resolution": [
+   4096,
+   4096
+  ],
+  "polycount": 196,
+  "texel_density": 2299.708768124882,
+  "dimensions": [
+   1134.41663980484,
+   706.0248255729675,
+   799.5428870490286
+  ],
+  "files_hash": "5d6fb15377acb8e23175454e33d2d38bd3a340d2",
+  "description": "Free 4K model. Simple wooden table with warm brown grain, worn edges, light scuffs and varnished sheen - rectangular top on four straight legs.",
+  "category_id": "dfe0e21f-ebb5-57e6-b76e-1b2c58bae1a3",
+  "category": "Furniture/Tables/Dining Tables",
+  "attributes": {
+   "condition": [
+    "worn"
+   ],
+   "material": [
+    "wood"
+   ]
+  },
+  "img_version": "005eb841",
+  "download_count": 62879,
+  "thumbnail_url": "https://cdn.polyhaven.com/asset_img/thumbs/wooden_table_02.png?width=256&height=256&format=webp&v=005eb841"
+ },
+ "dead_tree_trunk": {
+  "date_published": 1685664000,
+  "name": "Dead Tree Trunk",
+  "type": 2,
+  "authors": {
+   "Rob Tuytel": "All"
+  },
+  "info": null,
+  "tags": [
+   "log",
+   "dead tree",
+   "tree",
+   "trunk",
+   "bark",
+   "natural",
+   "foliage",
+   "nature",
+   "forest",
+   "plant",
+   "dead",
+   "dry",
+   "woodland",
+   "decayed",
+   "rough texture",
+   "forest floor"
+  ],
+  "categories": [
+   "nature",
+   "plants",
+   "ground cover",
+   "collection: pine_forest",
+   "collection: verdant_trail"
+  ],
+  "max_resolution": [
+   8192,
+   8192
+  ],
+  "polycount": 101802,
+  "texel_density": 5227.11070900053,
+  "dimensions": [
+   3051.015019416809,
+   277.52751111984253,
+   290.43155536055565
+  ],
+  "sponsors": [
+   "95481047"
+  ],
+  "files_hash": "1e56e4393417d157e43e26bd8b7b019189d313ed",
+  "description": "Free 8K dead tree trunk model, a long weathered log with cracked, decayed bark, pronounced wood grain, broken ends and subtle mossy-green patches.",
+  "category_id": "a690b075-9aa9-5ad2-a35e-3e247d1fce4b",
+  "category": "Nature/Logs, Branches & Roots/Fallen Logs & Stumps",
+  "collections": [
+   "pine_forest",
+   "verdant_trail"
+  ],
+  "attributes": {
+   "condition": [
+    "weathered"
+   ],
+   "material": [
+    "wood"
+   ]
+  },
+  "img_version": "ed7326b9",
+  "download_count": 18170,
+  "thumbnail_url": "https://cdn.polyhaven.com/asset_img/thumbs/dead_tree_trunk.png?width=256&height=256&format=webp&v=ed7326b9"
+ },
+ "Barrel_01": {
+  "type": 2,
+  "date_published": 1585605600,
+  "name": "Barrel_01",
+  "categories": [
+   "industrial",
+   "containers"
+  ],
+  "authors": {
+   "Jorge Camacho": "All"
+  },
+  "sponsors": [
+   "3267566",
+   "11167855",
+   "11109006"
+  ],
+  "max_resolution": [
+   8192,
+   8192
+  ],
+  "polycount": 2682,
+  "texel_density": 4804.410195602988,
+  "dimensions": [
+   563.0351305007935,
+   563.0352199077606,
+   880.0000050105155
+  ],
+  "files_hash": "45ce352c4416845813a00e478950b500796b0a60",
+  "tags": [
+   "barrel",
+   "oil",
+   "explosive",
+   "radioactive",
+   "metal",
+   "red barrel",
+   "oil barrel",
+   "drums",
+   "fuel barrel",
+   "explosive barrel",
+   "industrial"
+  ],
+  "description": "Free worn red metal oil drum with explosive hazard marking - realistic, scratched, rusty industrial barrel ideal for games, VFX, and environment scenes.",
+  "category_id": "0348a0e9-773f-5146-9dd0-0d34cbdfee62",
+  "category": "Containers & Storage/Barrels & Drums/Metal Drums",
+  "attributes": {
+   "condition": [
+    "rusted"
+   ],
+   "material": [
+    "metal"
+   ]
+  },
+  "img_version": "29e315a9",
+  "download_count": 60611,
+  "thumbnail_url": "https://cdn.polyhaven.com/asset_img/thumbs/Barrel_01.png?width=256&height=256&format=webp&v=29e315a9"
+ }
+}

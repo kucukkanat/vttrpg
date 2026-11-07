@@ -5,11 +5,10 @@
  */
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCursor } from '@react-three/drei'
-import { Box3, EdgesGeometry, Group, Mesh, PlaneGeometry } from 'three'
+import { Box3, EdgesGeometry, Group, Mesh, PlaneGeometry, type Object3D } from 'three'
 import type { Prop } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import { isLegacyScale, propScale } from '@/core/props'
-import type { SceneId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
 import { footprintWalls } from './editing'
@@ -18,20 +17,14 @@ import { noteLegacyFit, queuePropMigration } from './propMigration'
 import { useTableUi } from './tableState'
 import { HOVER, SELECT } from '@/ui/theme/palette'
 import { GlbMini, ModelBoundary, useAssetLoad } from './TokenMesh'
-import { usePropPointer } from './build/usePropPointer'
-import { registerPropObject } from './build/editRuntime'
 import { MissingModel } from './MissingAsset'
+import { usePropPointer } from './propPointer'
+import { registerPropObject } from './build/editRuntime'
 
 const noRaycast = () => undefined
 
-export function Props({ sceneId }: { sceneId: SceneId }) {
-  const props = useGame((s) => s.props)
-  const list = useMemo(() => Object.values(props).filter((p) => p.scene === sceneId), [props, sceneId])
-  return <>{list.map((p) => <MemoPropMesh key={p.id} prop={p} />)}</>
-}
-
 /** Placeholder while the model loads or when it fails: a crate the size of one cell. */
-function Crate({ cell, tone }: { cell: number; tone: 'loading' | 'error' }) {
+export function Crate({ cell, tone }: { cell: number; tone: 'loading' | 'error' }) {
   const s = 0.6 * cell
   return (
     <mesh position-y={s / 2} castShadow receiveShadow>
@@ -42,7 +35,7 @@ function Crate({ cell, tone }: { cell: number; tone: 'loading' | 'error' }) {
 }
 
 /** Bounding box of a model in its own frame (children's local transforms applied, the root's not). */
-function localBounds(object: Group): Box3 {
+export function localBounds(object: Object3D): Box3 {
   object.updateWorldMatrix(true, true)
   const inv = object.matrixWorld.clone().invert()
   const out = new Box3()
@@ -59,12 +52,10 @@ function localBounds(object: Group): Box3 {
 }
 
 export function PropMesh({ prop }: { prop: Prop }) {
-  const { grid, floorY, viewer, onIntent } = useTable()
-  // Selection, drags, Shift-click, Alt-drag duplicate, long-press menu: build/usePropPointer.ts.
-  const gm = !viewer || viewer.isGm
-  const { selected, draggable, handlers } = usePropPointer({ prop, gm, grid, floorY, onIntent })
+  const { grid, viewer, onIntent } = useTable()
+  const selected = useGame((s) => s.propSelection.includes(prop.id))
+  // Group transforms (drags, the gizmo, gestures) preview every selected prop: build/PropGizmo.tsx.
   const preview = useTableUi((s) => s.propPreview?.[prop.id] ?? null)
-  const targeting = useTableUi((s) => s.targeting !== null)
   const uiSet = useTableUi((s) => s.set)
   const { url, missing } = useAssetLoad(prop.model)
   const [hovered, setHovered] = useState(false)
@@ -72,6 +63,8 @@ export function PropMesh({ prop }: { prop: Prop }) {
   const group = useRef<Group>(null)
   useEffect(() => registerPropObject(prop.id, group.current), [prop.id])
 
+  const gm = !viewer || viewer.isGm
+  const draggable = gm && !prop.locked
   useCursor(hovered && draggable, 'grab')
 
   const position = preview?.position ?? prop.position
@@ -118,20 +111,21 @@ export function PropMesh({ prop }: { prop: Prop }) {
   }, [object, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, scale.x, scale.y, scale.z, prop.solid, prop.id, uiSet, removeWalls])
   useEffect(() => removeWalls, [removeWalls])
 
+  // Taps, the context menu and the floor drag (GM, unlocked): shared with the instanced batches.
+  const handlers = usePropPointer(() => prop.id, (id) => setHovered(id !== null))
+
   return (
     <group
       ref={group}
       position={[position.x, position.y, position.z]}
       rotation={[rotation.x, rotation.y, rotation.z]}
       {...handlers}
-      onPointerOver={(e) => { if (targeting) return; e.stopPropagation(); setHovered(true) }}
-      onPointerOut={() => setHovered(false)}
     >
       <group scale={[scale.x, scale.y, scale.z]}>
         {url ? (
           <ModelBoundary fallback={<Crate cell={cell} tone="error" />}>
             <Suspense fallback={<Crate cell={cell} tone="loading" />}>
-              <GlbMini url={url} scale={1} onObject={setObject} />
+              <GlbMini url={url} sha256={prop.model.sha256} name={prop.model.name} scale={1} onObject={setObject} />
             </Suspense>
           </ModelBoundary>
         ) : missing ? (
@@ -156,4 +150,4 @@ export function PropMesh({ prop }: { prop: Prop }) {
 }
 
 /** Props whose document object did not change skip re-rendering (the store keeps their identity). */
-const MemoPropMesh = memo(PropMesh)
+export const MemoPropMesh = memo(PropMesh)
