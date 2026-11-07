@@ -24,7 +24,9 @@ import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { doubleTapEdit, tapTwice } from './editTap'
-import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
+import { chipAngle, conditionChips, defenseAbbr, defenseAttribute, HP_BAND_COLORS, hpBand, MAX_PIPS, readDefense, readResource, vitalState, type ConditionChip, type HpBand } from './tokenHud'
+import { CombatBadges } from './CombatBadges'
+import { inCurrentSlot } from '@/state/initiative'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
 import { MoveTrail, Nameplate, TurnRing } from './TokenOverlays'
 
@@ -310,7 +312,7 @@ export function TokenMesh({ token }: { token: Token }) {
   const gmPubkey = useGame((s) => s.meta?.gm)
   const pack = useGame((s) => s.meta?.pack ?? null)
   // Whose turn it is: a boolean per token, so a turn change re-renders two tokens, not all of them.
-  const isTurn = useGame((s) => !!s.initiative?.active && s.initiative.order[s.initiative.turn]?.token === token.id)
+  const isTurn = useGame((s) => inCurrentSlot(s.initiative, token.id))
   // The pack (resources, conditions) comes from the session's rules engine; the Canvas bridges the context.
   const rules = useSession().controller?.rules ?? null
 
@@ -342,6 +344,13 @@ export function TokenMesh({ token }: { token: Token }) {
     if (!showState || !character || !rules || !primary) return null
     return readResource(character.data, primary, (expr) => rules.evaluateNow(expr, character))
   }, [showState, character, rules, primary])
+  const vital = vitalState(hp)
+  const defense = useMemo(() => {
+    const attr = showState ? defenseAttribute(rules?.pack.attributes) : undefined
+    if (!attr || !character || !rules) return null
+    const v = readDefense(character.data, attr, (expr) => rules.evaluateNow(expr, character))
+    return v === null ? null : `${defenseAbbr(attr)} ${v}`
+  }, [showState, character, rules])
   const chips = useMemo(
     () => (showState ? conditionChips(token, character, rules?.pack.conditions ?? []) : []),
     [showState, token, character, rules],
@@ -569,6 +578,7 @@ export function TokenMesh({ token }: { token: Token }) {
         {showName && <Nameplate name={token.name} y={nameY} accent={ringColor} mine={mine && !gmView} current={isTurn} />}
         {hp && <HpBar current={hp.current} max={hp.max} radius={radius} />}
         {chips.length > 0 && <ConditionGlyphs chips={chips} radius={radius} />}
+        {(vital || defense) && <CombatBadges vital={vital} defense={defense} radius={radius} />}
       </group>
       {elevation > 0.01 && <ElevationMarker elevation={elevation} radius={radius} cell={cell} />}
     </group>

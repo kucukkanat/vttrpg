@@ -16,14 +16,15 @@ import type { Token } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { firstOwnedToken, useGame } from '@/state/store'
-import { newSeed, rollFromSeed } from '@/dice/fair'
+import { newSeed } from '@/dice/fair'
+import { inCurrentSlot } from '@/state/initiative'
 import { useTableUi } from '@/table/tableState'
-import { readResource } from '@/table/tokenHud'
+import { defenseAbbr, defenseAttribute, readDefense, readResource } from '@/table/tokenHud'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { requestSkillEditor } from '../skilleditor/requests'
 import { pushToast } from '../toasts'
-import { currentEntry, DEFAULT_INITIATIVE_FORMULA, combatants, rollInitiative, seedFor, withScore } from '../panels/initiative'
+import { combatants, lateJoin, rollInitiative, rollLateJoin } from '../panels/initiative'
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
 import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
@@ -61,7 +62,10 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const primary = rules?.pack.resources[0]
   const hp = character && rules && primary ? readResource(character.data, primary, (e) => rules.evaluateNow(e, character)) : null
   const active = !!init?.active
-  const up = active && currentEntry(init)?.token === token.id
+  const up = active && inCurrentSlot(init, token.id)
+  // The pack's defense value (D&D 5e's AC), shown beside HP when the pack has one.
+  const defAttr = defenseAttribute(rules?.pack.attributes)
+  const defense = character && rules && defAttr ? readDefense(character.data, defAttr, (e) => rules.evaluateNow(e, character)) : null
   const mayEnd = up && (isGm || token.owner === me)
   const inOrder = !!init?.order.some((e) => e.token === token.id)
 
@@ -102,6 +106,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
               {isGm && <button type="button" className="icon" aria-label={`${primary?.name} plus 1`} onClick={() => changeHp(1)}>+</button>}
             </span>
           )}
+          {defAttr && defense !== null && <span className="token-bar-def" title={`${defAttr.name} ${defense}`}>{defenseAbbr(defAttr)} {defense}</span>}
           {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
           <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}>⋯</button>
         </div>
@@ -204,10 +209,11 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
         return
       }
       if (inOrder) { await controller.dispatch({ type: 'initiative.remove', token: token.id }); return }
+      // Late join: rolled like Start rolls it, and slotted in by score (or into its group).
       const order = s.initiative?.order ?? []
-      const r = await rollFromSeed(DEFAULT_INITIATIVE_FORMULA, seedFor(newSeed(), token.id))
-      await controller.dispatch({ type: 'initiative.set', order: withScore([...order, { token: token.id, score: r.total }], token.id, r.total) })
-      pushToast({ text: `${token.name} joins initiative (${r.total})`, key: 'initiative-add', ttl: 3000 })
+      const score = await rollLateJoin(token, s.characters, controller.rules, newSeed())
+      await controller.dispatch({ type: 'initiative.set', order: lateJoin(order, token, score) })
+      pushToast({ text: `${token.name} joins initiative (${score})`, key: 'initiative-add', ttl: 3000 })
     } finally {
       setBusy(false)
     }

@@ -75,6 +75,43 @@ describe('InitiativePanel', () => {
   })
 })
 
+describe('InitiativePanel encounter frames', () => {
+  beforeEach(() => {
+    useGame.getState()._replaceFromDoc({ meta, tokens, characters: {}, initiative: null })
+  })
+
+  it('keeps scores out of the rows until tapped and shows declared actions with their targets', () => {
+    useGame.getState()._replaceFromDoc({
+      initiative: {
+        active: true, round: 1, turn: 0, order: [{ token: rat.id, score: 15 }, { token: pip.id, score: 9 }],
+        declared: { [rat.id]: { token: rat.id, label: 'Bite', targets: [pip.id], at: 1 } },
+      },
+    })
+    const html = render(false)
+    expect(html).not.toContain('class="init-score"')
+    expect(html).toContain('Bite')
+    expect(html).toContain('→ Pip')
+    expect(html).toContain('Tap a row to see its initiative')
+  })
+
+  it('brackets a group and marks every member as up', () => {
+    useGame.getState()._replaceFromDoc({
+      initiative: { active: true, round: 1, turn: 0, order: [{ token: rat.id, score: 15, group: 'g' }, { token: ghost.id, score: 15, group: 'g' }, { token: pip.id, score: 9 }] },
+    })
+    const html = render(true)
+    expect(html).toMatch(/init-row current grouped group-start/)
+    expect(html).toMatch(/init-row current grouped group-end/)
+    expect(html).toContain('Rat ×2&#x27;s turn')
+  })
+
+  it('offers group rolls before and "add all" during an encounter', () => {
+    expect(render(true)).toContain('Copies of a creature share one roll')
+    const extra = { ...tokens, Bat: token('Bat'), Owl: token('Owl') } as Record<TokenId, Token>
+    useGame.getState()._replaceFromDoc({ tokens: extra, initiative: { active: true, round: 1, turn: 0, order: [{ token: pip.id, score: 9 }] } })
+    expect(render(true)).toContain(">All 3<")
+  })
+})
+
 describe('InitiativeChip', () => {
   beforeEach(() => {
     useGame.getState()._replaceFromDoc({ meta, tokens, characters: {}, initiative: null })
