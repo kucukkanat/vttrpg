@@ -5,7 +5,9 @@ import type { ChatMessage } from '@/core/doc'
 import { newSeed } from '@/dice'
 import type { PlayerPubkey } from '@/core/ids'
 import { findWhisperTarget, type Person } from './chatNames'
-import { formatDay, formatTime, groupMessages, isChatMessage } from './chatGroups'
+import { CHAT_CHANNELS, filterChannel, formatDay, formatTime, groupMessages, isChatMessage, type ChatChannel } from './chatGroups'
+import { EncounterSummaryCard } from './EncounterSummaryCard'
+import { usePersisted } from '../shell/usePersisted'
 import { DiceRow } from '../dice/DiceFace'
 import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
@@ -36,6 +38,9 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   const [text, setText] = useState('')
   const [to, setTo] = useState<string>('')
   const [notice, setNotice] = useState<string[] | null>(null)
+  // Log filter (chat, rolls, combat, system); remembered on this device.
+  const [stored, setChannel] = usePersisted<ChatChannel>('vtt.chat.channel', 'all')
+  const channel = CHAT_CHANNELS.some((c) => c.id === stored) ? stored : 'all'
   const log = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const me = controller.pubkey
@@ -59,7 +64,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
     return [...seen.values()]
   }
 
-  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notices.length, notice])
+  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notices.length, notice, channel])
 
   /** The `/r` command; the formula is remembered for the dice pad's "Last". */
   const roll = async (formula: string) => {
@@ -104,7 +109,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   }
 
   const mineOrPublic = chat.filter((m) => !m.to || m.author === me || m.to.includes(me as PlayerPubkey) || controller.connection.isGm)
-  const blocks = groupMessages(interleave(mineOrPublic, notices))
+  const blocks = groupMessages(filterChannel(interleave(mineOrPublic, notices), channel))
 
   const body = (m: ChatMessage) => {
     if (m.kind !== 'roll' || !m.roll) return m.text
@@ -134,13 +139,23 @@ export function ChatPanel({ controller }: { controller: GameController }) {
         Chat
         <button type="button" className="icon chat-help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => toggleShortcutsOverlay(true)}>?</button>
       </h3>
+      <div className="chat-channels" role="tablist" aria-label="Show">
+        {CHAT_CHANNELS.map((c) => (
+          <button key={c.id} type="button" role="tab" aria-selected={channel === c.id} className={`chat-channel${channel === c.id ? ' on' : ''}`} onClick={() => setChannel(c.id)}>
+            {c.label}
+          </button>
+        ))}
+      </div>
       <div className="log" ref={log}>
         {blocks.map((b) => {
           if (b.kind === 'date') return <div key={b.key} className="day" role="separator"><span>{formatDay(b.at)}</span></div>
           if (b.kind === 'line') {
             // System lines (skill messages) and local notices keep their plain single-line form.
+            if (isChatMessage(b.line) && b.line.summary) {
+              return <div key={b.key} className="msg system combat"><EncounterSummaryCard summary={b.line.summary} isGm={controller.connection.isGm} /></div>
+            }
             return isChatMessage(b.line) ? (
-              <div key={b.key} className={`msg ${b.line.kind}`}><span className="who">{name(b.line.author)}</span> {b.line.text}</div>
+              <div key={b.key} className={`msg ${b.line.kind}${b.line.channel ? ` ${b.line.channel}` : ''}`}><span className="who">{name(b.line.author)}</span> {b.line.text}</div>
             ) : (
               <div key={b.key} className="msg system notice">{b.line.text}</div>
             )

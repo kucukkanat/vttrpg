@@ -207,3 +207,66 @@ describe('initiative', () => {
     expect(withOrder({ active: true, round: 2, turn: 1, order: [entry('a', 1), entry('b', 2)] }, [entry('a', 1)])).toMatchObject({ turn: 0 })
   })
 })
+
+describe('encounter intents', () => {
+  const t = (id: string) => id as TokenId
+  const read = (doc: Y.Doc) => doc.getMap('initiative').toJSON() as InitiativeState
+  const pip: Token = { ...token, id: t('pip'), character: 'c1' as CharacterId }
+  const rat: Token = { ...token, id: t('rat'), name: 'Rat', character: 'c2' as CharacterId }
+  const sheet = (id: string, hp: number): Character => ({ id: id as CharacterId, name: id, data: { hp: { current: hp, max: 6 } } })
+  const setup = () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'token.add', token: pip }))
+    applyIntent(doc, env({ type: 'token.add', token: rat }))
+    applyIntent(doc, env({ type: 'character.upsert', character: sheet('c1', 6) }))
+    applyIntent(doc, env({ type: 'character.upsert', character: sheet('c2', 3) }))
+    applyIntent(doc, env({ type: 'initiative.start', order: [{ token: pip.id, score: 10 }, { token: rat.id, score: 5 }] }))
+    return doc
+  }
+
+  it('declares and resolves an action', () => {
+    const doc = setup()
+    applyIntent(doc, env({ type: 'initiative.declare', action: { token: rat.id, label: 'Bite', targets: [pip.id] } }))
+    expect(read(doc).declared).toEqual({ rat: { token: 'rat', label: 'Bite', targets: ['pip'], at: 1 } })
+    applyIntent(doc, env({ type: 'initiative.resolve', token: rat.id }))
+    expect(read(doc).declared).toBeUndefined()
+    // Not in the order: ignored.
+    applyIntent(doc, env({ type: 'initiative.declare', action: { token: t('nobody'), label: 'X', targets: [] } }))
+    expect(read(doc).declared).toBeUndefined()
+  })
+  it('a skill logs damage with a knockout and resolves the caster\'s declared action', () => {
+    const doc = setup()
+    applyIntent(doc, env({ type: 'initiative.declare', action: { token: pip.id, label: 'Attack', targets: [rat.id] } }))
+    applyIntent(doc, env({ type: 'skill.use', skill: 'attack' as SkillId, source: pip.id, targets: [rat.id], seed: 'x' }), {
+      skill: { patches: [{ character: 'c2', data: { hp: { current: 0, max: 6 } } }], messages: ['Rat falls.'], vfx: [] },
+    })
+    const s = read(doc)
+    expect(s.log).toEqual([{ source: 'pip', target: 'rat', resource: 'hp', delta: -3, ko: true, round: 1 }])
+    expect(s.declared).toBeUndefined()
+    expect(doc.getArray('chat').toJSON().at(-1)).toMatchObject({ kind: 'system', channel: 'combat', text: 'Rat falls.' })
+  })
+  it('logs hand edits on the sheet during combat', () => {
+    const doc = setup()
+    applyIntent(doc, env({ type: 'character.upsert', character: sheet('c1', 4) }))
+    expect(read(doc).log).toEqual([{ target: 'pip', resource: 'hp', delta: -2, round: 1 }])
+  })
+  it('end posts the summary to chat and clears the log', () => {
+    const doc = setup()
+    applyIntent(doc, env({ type: 'character.upsert', character: sheet('c1', 4) }))
+    const summary = { rounds: 2, rows: [{ token: pip.id, name: 'Pip', dealt: 0, taken: 2, healed: 0, kos: 0 }] }
+    applyIntent(doc, env({ type: 'initiative.end', summary }))
+    expect(read(doc)).toEqual({ active: false, round: 0, turn: 0, order: [] })
+    expect(doc.getArray('chat').toJSON().at(-1)).toMatchObject({ kind: 'system', channel: 'combat', text: 'Encounter over after 2 rounds.', summary })
+  })
+  it('records the sheet a roll came from', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'roll', formula: 'd20', seed: 'x', label: 'Pip · Initiative', character: 'c1' as CharacterId }))
+    expect(doc.getArray('chat').toJSON()[0]).toMatchObject({ kind: 'roll', character: 'c1' })
+  })
+  it('a group member may end the shared turn', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: [{ token: t('g1'), score: 9, group: 'g' }, { token: t('g2'), score: 9, group: 'g' }, { token: t('pip'), score: 3 }] }))
+    applyIntent(doc, env({ type: 'initiative.next', token: t('g2') }))
+    expect(read(doc)).toMatchObject({ turn: 2, round: 1 })
+  })
+})
