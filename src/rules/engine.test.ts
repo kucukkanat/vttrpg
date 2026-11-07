@@ -3,7 +3,7 @@ import type { GameDocShape, Token } from '@/core/doc'
 import type { Intent } from '@/core/intents'
 import type { PlayerPubkey, SceneId, TokenId } from '@/core/ids'
 import { diceFromSeed, parseFormula } from '@/dice/fair'
-import { createRulesEngine } from './engine'
+import { bestNatural, createRulesEngine, rolledByCaster } from './engine'
 import type { LoadedPack, RulesEngine } from './index'
 import { SEED_A, SEED_B, loadMausritter, mouse } from './test-helpers'
 
@@ -15,6 +15,21 @@ beforeAll(async () => {
 })
 
 const seeds = Array.from({ length: 40 }, (_, i) => i.toString(16).padStart(2, '0').repeat(32))
+
+describe('bestNatural / rolledByCaster', () => {
+  it('reads the best face per resolution: 20 for d20-vs-dc, 1 for roll-under', () => {
+    expect(bestNatural({ kind: 'd20-vs-dc' }, [{ sides: 20, value: 20 }, { sides: 8, value: 3 }])).toBe(true)
+    expect(bestNatural(undefined, [{ sides: 20, value: 20 }])).toBe(true)
+    expect(bestNatural({ kind: 'd20-vs-dc' }, [{ sides: 20, value: 1 }])).toBe(false)
+    expect(bestNatural({ kind: 'roll-under', die: 'd20' }, [{ sides: 20, value: 1 }])).toBe(true)
+    expect(bestNatural({ kind: 'roll-under', die: 'd20' }, [{ sides: 20, value: 20 }])).toBe(false)
+    expect(bestNatural({ kind: 'd20-vs-dc' }, [{ sides: 6, value: 6 }])).toBe(false)
+  })
+  it('tells an attack (the caster rolls) from a save (the target rolls)', () => {
+    expect(rolledByCaster('d20 + melee_mod + pb')).toBe(true)
+    expect(rolledByCaster('d20 + target.dex_mod')).toBe(false)
+  })
+})
 
 describe('roll', () => {
   it('matches fair.ts and is deterministic', async () => {

@@ -3,7 +3,7 @@
  * (resource deltas per token, see `ResourceDelta`); `planNumbers` turns them into timed, placed
  * specs the layer renders with `FloatingNumber`. No three.js here so it stays testable.
  */
-import type { Token } from '@/core/doc'
+import type { ResourceDelta, Token } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import { CHEST_HEIGHT_CELLS, type VfxEvent } from './schedule'
 
@@ -15,16 +15,40 @@ export interface FloatingNumberSpec {
   /** Where the number starts: just above the token's head. */
   position: Vec3
   delta: number
-  /** Short resource tag drawn after the number (`hp`). */
+  /** Short resource tag drawn after the number (`hp`, or `crit!` / `down`). */
   resource: string
   color: string
   duration: number
   cellSize: number
+  /** How loud the number is: ordinary hits stay restrained; crits and knock-downs are bigger. */
+  tier: NumberTier
+  /** Size relative to an ordinary number. */
+  scale: number
 }
+
+/**
+ * Feedback hierarchy for numbers: `normal` for every hit and heal, `down` when the hit took the
+ * resource to zero, `crit` for a critical hit (the layer adds a hit-stop and a shake for these
+ * alone, so the shake keeps meaning something). A crit that also downs reads as a crit.
+ */
+export type NumberTier = 'normal' | 'crit' | 'down'
 
 export const DAMAGE_COLOR = '#ff5f52'
 export const HEAL_COLOR = '#5fd36b'
+/** Gold for criticals, a deep crimson for knock-downs; both carry a word tag too, so colour is never the only cue. */
+export const CRIT_COLOR = '#ffc93c'
+export const DOWN_COLOR = '#ff2e4d'
 export const NUMBER_DURATION_MS = 1100
+/** Crits and knock-downs linger a little longer. */
+export const LOUD_NUMBER_DURATION_MS = 1500
+export const TIER_SCALE: Record<NumberTier, number> = { normal: 1, down: 1.35, crit: 1.6 }
+
+export function numberTier(n: Pick<ResourceDelta, 'delta' | 'crit' | 'down'>): NumberTier {
+  if (n.delta >= 0) return 'normal'
+  if (n.crit) return 'crit'
+  if (n.down) return 'down'
+  return 'normal'
+}
 /** Delay after the event so the number follows the hit flash instead of preceding it. */
 export const NUMBER_DELAY_MS = 120
 /** Spacing between several numbers on the same token. */
@@ -57,16 +81,19 @@ export function planNumbers(event: VfxEvent, tokens: Readonly<Record<string, Tok
     const k = perToken.get(n.token) ?? 0
     perToken.set(n.token, k + 1)
     const head = (CHEST_HEIGHT_CELLS * 2 + 0.1) * cellSize * (t.scale || 1) + (t.elevation ?? 0)
+    const tier = numberTier(n)
     out.push({
       key: `${event.id}:n:${index}`,
       eventId: event.id,
       fireAt: now + NUMBER_DELAY_MS + k * NUMBER_STAGGER_MS,
       position: { x: t.position.x, y: t.position.y + head, z: t.position.z },
       delta: n.delta,
-      resource: resourceTag(n.resource),
-      color: n.delta < 0 ? DAMAGE_COLOR : HEAL_COLOR,
-      duration: NUMBER_DURATION_MS,
+      resource: tier === 'crit' ? 'crit!' : tier === 'down' ? 'down' : resourceTag(n.resource),
+      color: tier === 'crit' ? CRIT_COLOR : tier === 'down' ? DOWN_COLOR : n.delta < 0 ? DAMAGE_COLOR : HEAL_COLOR,
+      duration: tier === 'normal' ? NUMBER_DURATION_MS : LOUD_NUMBER_DURATION_MS,
       cellSize,
+      tier,
+      scale: TIER_SCALE[tier],
     })
   })
   return out.sort((a, b) => a.fireAt - b.fireAt)

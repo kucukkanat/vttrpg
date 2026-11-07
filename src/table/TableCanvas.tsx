@@ -394,8 +394,8 @@ function TargetingBar({ targeting }: { targeting: TargetingProps }) {
 
 type ShakeEvent = { intensity?: number; duration?: number } | undefined
 type ShakeBus = {
-  on?(event: string, handler: (e: ShakeEvent) => void): unknown
-  off?(event: string, handler: (e: ShakeEvent) => void): unknown
+  on?(event: string, handler: (...args: unknown[]) => void): unknown
+  off?(event: string, handler: (...args: unknown[]) => void): unknown
   addEventListener?(event: string, handler: (e: Event) => void): void
   removeEventListener?(event: string, handler: (e: Event) => void): void
 }
@@ -408,8 +408,10 @@ function subscribeShake(handler: (e: ShakeEvent) => void): () => void {
   const bus = (vfx as Record<string, unknown>).vfxBus as ShakeBus | undefined
   if (!bus) return () => {}
   if (typeof bus.on === 'function') {
-    const off = bus.on('shake', handler)
-    return () => { if (typeof off === 'function') off(); else bus.off?.('shake', handler) }
+    // `vfxBus` emits (strength 0..1, durationMs); an object payload is still accepted.
+    const h = (a?: unknown, b?: unknown) => handler(typeof a === 'number' ? { intensity: a, duration: typeof b === 'number' ? b : undefined } : (a as ShakeEvent))
+    const off = bus.on('shake', h)
+    return () => { if (typeof off === 'function') off(); else bus.off?.('shake', h) }
   }
   if (typeof bus.addEventListener === 'function') {
     const h = (e: Event) => handler((e as CustomEvent<ShakeEvent>).detail)

@@ -324,6 +324,15 @@ describe('attacks', () => {
     expect(fumble.patches).toEqual([])
   })
 
+  it('reports a natural-20 hit as a crit on the target for the table, and nothing else', async () => {
+    const critSeed = await seedWhere((n) => n === 20)
+    expect((await engine.resolveSkill('attack-melee', fighter(), [goblin('tough', 30)], critSeed)).crits).toEqual(['tough'])
+    const hitSeed = await seedWhere((n) => n >= 10 && n < 20)
+    expect((await engine.resolveSkill('attack-melee', fighter(), [goblin()], hitSeed)).crits).toBeUndefined()
+    const fumbleSeed = await seedWhere((n) => n === 1)
+    expect((await engine.resolveSkill('attack-melee', fighter(), [goblin('weak', 2)], fumbleSeed)).crits).toBeUndefined()
+  })
+
   it('ranged: uses DEX and the readied ranged weapon', async () => {
     // +4 (DEX 14, proficiency +2) against AC 12: a natural 8 or more hits.
     const hitSeed = await seedWhere((n) => n >= 8 && n < 20)

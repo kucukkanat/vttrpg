@@ -13,7 +13,7 @@ export interface ApplyContext {
   /** Resolved roll for 'roll' intents (the GM computes it from the seed). */
   roll?: RollResult
   /** Character patches + messages produced by the rules engine for 'skill.use'. */
-  skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[] }
+  skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[]; crits?: string[] }
 }
 
 /** A sheet value the engine tracks as a resource: a bare number or `{ current }`. */
@@ -29,12 +29,15 @@ function resourceValue(v: unknown): number | undefined {
 /**
  * Resource deltas per token from the engine's sheet patches, for floating numbers on the table.
  * Only keys that were and remain resource-shaped count; `tokensOf` maps a character to the
- * tokens that show it (the skill's source and targets first). Zero deltas are dropped.
+ * tokens that show it (the skill's source and targets first). Zero deltas are dropped. A loss on
+ * a character in `crits` is marked `crit`; a resource that drops from above zero to zero or less
+ * is marked `down` (the table draws both larger).
  */
 export function skillNumbers(
   patches: { character: string; data: Record<string, unknown> }[],
   before: (character: string) => Record<string, unknown> | undefined,
   tokensOf: (character: string) => TokenId[],
+  crits: readonly string[] = [],
 ): ResourceDelta[] {
   const out: ResourceDelta[] = []
   for (const p of patches) {
@@ -46,7 +49,9 @@ export function skillNumbers(
       const a = resourceValue(prev[key])
       const b = resourceValue(next)
       if (a === undefined || b === undefined || a === b) continue
-      for (const token of tokens) out.push({ token, delta: b - a, resource: key })
+      const crit = b < a && crits.includes(p.character)
+      const down = a > 0 && b <= 0
+      for (const token of tokens) out.push({ token, delta: b - a, resource: key, ...(crit ? { crit } : {}), ...(down ? { down } : {}) })
     }
   }
   return out
@@ -211,6 +216,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
           ctx.skill?.patches ?? [],
           (id) => (characters.get(id)?.data as Record<string, unknown> | undefined),
           tokensOf,
+          ctx.skill?.crits,
         )
         for (const p of ctx.skill?.patches ?? []) {
           const c = characters.get(p.character)

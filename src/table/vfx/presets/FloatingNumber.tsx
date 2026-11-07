@@ -1,11 +1,13 @@
 /**
- * A damage or heal number that pops above a token, rises and fades. One camera-facing sprite
+ * A damage or heal number that pops above a token, rises and fades. Crits and knock-downs
+ * (`spec.tier`) are drawn larger, in their own colour with a word tag, and pop harder. One camera-facing sprite
  * with a canvas texture drawn once at spawn; the per-frame work is a position and an opacity.
  * The sprite ignores size attenuation so the number stays legible at any zoom, phones included.
  */
 import { useEffect, useMemo } from 'react'
 import { CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial } from 'three'
 import { easeOutCubic, easeOutQuad, useLifetime } from './common'
+import { prefersReducedMotion } from '@/ui/feedback/prefs'
 import { formatDelta, type FloatingNumberSpec } from '../numbers'
 
 const TEX_W = 256
@@ -62,11 +64,15 @@ export function FloatingNumber({ spec, onDone }: { spec: FloatingNumberSpec; onD
   }, [spec])
   useEffect(() => () => { material.map?.dispose(); material.dispose() }, [material])
 
-  const rise = spec.cellSize * 0.9
+  // Reduced motion: the number appears in place, at size, and fades; no rise and no pop.
+  const still = useMemo(() => prefersReducedMotion(), [])
+  const rise = still ? 0 : spec.cellSize * (spec.tier === 'normal' ? 0.9 : 0.6)
+  const popAmount = still ? 0 : spec.tier === 'crit' ? 0.7 : spec.tier === 'down' ? 0.5 : 0.35
+  const height = SCREEN_HEIGHT * spec.scale
   useLifetime(spec.duration, (t) => {
     sprite.position.y = spec.position.y + rise * easeOutCubic(t)
-    const pop = 1 + 0.35 * (1 - easeOutQuad(Math.min(1, t / 0.25)))
-    sprite.scale.set(SCREEN_HEIGHT * (TEX_W / TEX_H) * pop, SCREEN_HEIGHT * pop, 1)
+    const pop = 1 + popAmount * (1 - easeOutQuad(Math.min(1, t / 0.25)))
+    sprite.scale.set(height * (TEX_W / TEX_H) * pop, height * pop, 1)
     material.opacity = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4
   }, onDone)
 

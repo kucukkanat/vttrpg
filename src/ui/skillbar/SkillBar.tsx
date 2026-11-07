@@ -77,7 +77,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
     // Everyone sees the change float over the token, like a skill's damage or healing.
     const after = readResource(data, primary, (e) => rules!.evaluateNow(e, character))
     const moved = after && hp ? after.current - hp.current : 0
-    if (moved) controller.floatNumbers?.(token.scene, [{ token: token.id, delta: moved, resource: primary.id }])
+    const down = !!after && !!hp && hp.current > 0 && after.current <= 0
+    if (moved) controller.floatNumbers?.(token.scene, [{ token: token.id, delta: moved, resource: primary.id, ...(down ? { down } : {}) }])
   }
   const endTurn = () => void controller.dispatch(isGm ? { type: 'initiative.next' } : { type: 'initiative.next', token: token.id })
   const openMenu = () => {

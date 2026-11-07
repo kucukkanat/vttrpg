@@ -37,6 +37,8 @@ export interface RulesEngine {
     patches: { character: string; data: Record<string, unknown> }[]
     messages: string[]
     vfx: VfxCue[]
+    /** Characters a `vs` roll of the caster's showed its best natural face against (a critical hit); drives the bigger crit numbers. */
+    crits?: string[]
   }>
   /**
    * Skills created or overridden in this game (`GameDocShape.customSkills`). They are merged over

@@ -104,7 +104,7 @@ export function createController(opts: {
         .map((t) => (t.character && s.characters[t.character]) || rules.blankCharacter(t.id, t.name))
       if (source) {
         const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed)
-        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx }
+        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx, crits: r.crits }
       }
     }
     return ctx

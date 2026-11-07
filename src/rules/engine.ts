@@ -61,6 +61,22 @@ export function outcomeFor(
   return out
 }
 
+/**
+ * Whether the roll's deciding die shows its best face for the roller: a natural 20 for
+ * `d20-vs-dc`, a natural 1 for `roll-under`. Used to mark critical hits for the table's numbers.
+ */
+export function bestNatural(resolution: RollResolution | undefined, dice: readonly Die[]): boolean {
+  const r = resolution ?? DEFAULT_RESOLUTION
+  const sides = r.kind === 'roll-under' ? parseFormula(r.die).terms[0].sides : 20
+  const natural = dice.find((d) => d.sides === sides)?.value
+  return natural !== undefined && natural === (r.kind === 'roll-under' ? 1 : sides)
+}
+
+/** A `vs` roll the caster makes (an attack), not one the target makes (a save): its formula reads nothing of the target. */
+export function rolledByCaster(formula: string): boolean {
+  return !/\btarget\./.test(formula)
+}
+
 export function createRulesEngine(pack: LoadedPack): RulesEngine {
   const grid = inventoryField(pack)
   const skillById = new Map<string, SkillDef>()
@@ -333,6 +349,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const rolls: Record<string, RollInfo> = {}
     let last: RollInfo | undefined
     const saves = new Map<string, RollInfo>()
+    const crits = new Set<string>()
+    let lastBest = false
 
     const scopeFor = (target?: Character): Scope =>
       composeScope(
@@ -353,6 +371,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       const dice = stream.dice.slice(before)
       const total = toNumber(value)
       const outcome = outcomeFor(resolution ?? DEFAULT_RESOLUTION, dice, total, target, typeof value === 'boolean' ? value : undefined)
+      lastBest = bestNatural(resolution, dice)
       return {
         total,
         dice: dice.map((d) => d.value),
@@ -394,6 +413,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
           for (const t of tgts.length ? tgts : [src]) {
             const tv = await evalNumber(e.vs, scopeFor(t), stream, `${label} target`)
             const r = await rollInfo(e.formula, scopeFor(t), tv)
+            // The caster's natural best face is a critical hit whatever the total (a natural 20 always hits).
+            if (lastBest && rolledByCaster(e.formula) && t !== src) crits.add(t.id)
             saves.set(t.id, r)
             rolls[label] = r
             last = r
@@ -454,7 +475,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     }
     for (const e of skill.effects) await applyEffect(e)
 
-    return { patches: patchesFor(), messages, vfx: skill.vfx }
+    return { patches: patchesFor(), messages, vfx: skill.vfx, ...(crits.size ? { crits: [...crits] } : {}) }
 
     /** Changed top-level sheet keys per touched character. */
     function patchesFor(): { character: string; data: Data }[] {

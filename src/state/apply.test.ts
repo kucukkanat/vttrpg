@@ -79,6 +79,15 @@ describe('skillNumbers', () => {
     expect(skillNumbers([{ character: 'zz', data: { hp: 1 } }], before, tokensOf)).toEqual([])
     expect(skillNumbers([{ character: 'c1', data: { hp: 1 } }], before, () => [])).toEqual([])
   })
+  it('marks losses on critically hit characters and resources that reach zero', () => {
+    const out = skillNumbers([{ character: 'c1', data: { hp: { current: 0, max: 6 }, wil: 5 } }], before, tokensOf, ['c1'])
+    expect(out).toEqual([
+      { token: 't1', delta: -6, resource: 'hp', crit: true, down: true },
+      // A gain is never a crit, even on a crit target.
+      { token: 't1', delta: 1, resource: 'wil' },
+    ])
+    expect(skillNumbers([{ character: 'c1', data: { hp: { current: 0, max: 6 } } }], before, tokensOf)).toEqual([{ token: 't1', delta: -6, resource: 'hp', down: true }])
+  })
 })
 
 describe('skill.use events', () => {

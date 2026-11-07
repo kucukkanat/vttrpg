@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, type RootState } from '@react-three/fiber'
 import { CanvasTexture, Color, PerspectiveCamera, SRGBColorSpace } from 'three'
+import { advanceClock } from '../hitStop'
 
 let glow: CanvasTexture | null = null
 let puff: CanvasTexture | null = null
@@ -80,19 +81,20 @@ export function hash(i: number, salt = 0): number {
 
 /**
  * Drives an effect's lifetime. `onFrame(t, elapsedSeconds)` runs every frame with `t` in 0..1;
- * `onDone` fires once after `durationMs` (+ `tailMs`). Returns a ref to the elapsed seconds.
+ * `onDone` fires once after `durationMs` (+ `tailMs`). The clock holds still during a hit-stop
+ * (../hitStop.ts). Returns a ref to the elapsed seconds.
  */
 export function useLifetime(durationMs: number, onFrame: (t: number, elapsed: number, state: RootState) => void, onDone: () => void, tailMs = 0) {
-  const start = useRef<number | null>(null)
+  const clock = useRef<number | null>(null)
   const done = useRef(false)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
   const onFrameRef = useRef(onFrame)
   onFrameRef.current = onFrame
-  useFrame((state) => {
-    const now = state.clock.elapsedTime
-    if (start.current === null) start.current = now
-    const elapsed = now - start.current
+  useFrame((state, dt) => {
+    // The first frame starts the clock at zero; later frames add what the hit-stop lets through.
+    clock.current = clock.current === null ? 0 : advanceClock(clock.current, dt, performance.now())
+    const elapsed = clock.current
     const t = clamp01((elapsed * 1000) / Math.max(1, durationMs))
     onFrameRef.current(t, elapsed, state)
     if (!done.current && elapsed * 1000 >= durationMs + tailMs) {
@@ -100,7 +102,7 @@ export function useLifetime(durationMs: number, onFrame: (t: number, elapsed: nu
       onDoneRef.current()
     }
   })
-  return start
+  return clock
 }
 
 /** Dispose three resources made in a `useMemo` when the component unmounts. */
