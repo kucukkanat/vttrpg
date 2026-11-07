@@ -6,6 +6,7 @@
 import { create } from 'zustand'
 import type { PrefabId, SceneId } from '@/core/ids'
 import type { WallSegment } from '../walls'
+import type { HeldCreatures } from './creaturePickup'
 import { DEFAULT_SCATTER_RANGE, DEFAULT_SNAP_CELLS, NO_SCATTER, rollScatter, type HeldModel, type ScatterRoll } from './placement'
 
 export type BuildTool =
@@ -30,6 +31,8 @@ export type BuildTool =
   | 'eyedropper'
   /** A grid kit tool (kits/kitState.ts says which). */
   | 'kit'
+  /** Holding creatures from the Library (`creatures`): a ghost of their tokens follows the cursor, a click places them. */
+  | 'creature'
 
 /** Walls proposed by detection, waiting for the GM to accept or discard them. */
 export interface WallProposal {
@@ -63,6 +66,10 @@ export interface BuildUiState {
   roll: ScatterRoll
   /** A library card being dragged over the board (HTML drag and drop). */
   dragging: HeldModel | null
+  /** The creatures in hand while `tool` is 'creature'. */
+  creatures: HeldCreatures | null
+  /** Creatures placed from the Library show to players at once (off: hidden until revealed). */
+  placeVisible: boolean
   set(partial: Partial<Omit<BuildUiState, 'set'>>): void
 }
 
@@ -82,6 +89,8 @@ export const useBuildUi = create<BuildUiState>((set) => ({
   scatterRange: DEFAULT_SCATTER_RANGE,
   roll: NO_SCATTER,
   dragging: null,
+  creatures: null,
+  placeVisible: false,
   set: (partial) => set(partial),
 }))
 
@@ -108,5 +117,5 @@ export function pickUpModel(held: HeldModel, yaw = 0): void {
 /** Put the held model down (Esc, right-click). */
 export function putDownModel(): void {
   const s = useBuildUi.getState()
-  if (s.tool === 'place' || s.tool === 'eyedropper') s.set({ tool: null })
+  if (s.tool === 'place' || s.tool === 'eyedropper' || s.tool === 'creature') s.set({ tool: null })
 }

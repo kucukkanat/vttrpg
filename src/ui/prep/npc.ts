@@ -4,7 +4,7 @@
  * generator and the encounter builder.
  */
 import type { Character, Token } from '@/core/doc'
-import type { CharacterId, TokenId } from '@/core/ids'
+import type { CharacterId, SceneId, TokenId } from '@/core/ids'
 import { newId } from '@/core/ids'
 import type { GridSpec, Vec3 } from '@/core/geometry'
 import { newSeed } from '@/dice'
@@ -30,15 +30,58 @@ export interface Spawned {
 
 const FALLBACK_GRID: GridSpec = { type: 'square', cellSize: 1.5, origin: { x: 0, y: 0, z: 0 } }
 
+export interface SpawnOptions {
+  /** Hidden until revealed (the default). */
+  hidden?: boolean
+  /** Where the cluster centres: the clicked point of a pickup; default where the GM is looking. */
+  at?: Vec3
+}
+
+/**
+ * The token one spawn creates: the spec's name and colour on a free cell, with its sheet and skills,
+ * hidden unless `hidden` is false. Pure, so the creature pickup and its tests share it.
+ */
+export function creatureToken(args: {
+  id: TokenId
+  scene: SceneId
+  spec: Pick<SpawnSpec, 'name' | 'color' | 'skills'>
+  position: Vec3
+  grid: GridSpec
+  character?: CharacterId | undefined
+  hidden?: boolean | undefined
+}): Token {
+  const { spec, grid, position } = args
+  return {
+    id: args.id,
+    scene: args.scene,
+    name: spec.name,
+    character: args.character,
+    color: spec.color,
+    position,
+    cell: grid.type === 'none' ? undefined : cellOf(grid, position),
+    rotationY: 0,
+    scale: 1,
+    vision: 4,
+    light: 0,
+    hidden: args.hidden ?? true,
+    conditions: [],
+    ...(spec.skills ? { skills: spec.skills } : {}),
+  }
+}
+
+/** Free cells for `count` new tokens around `at` in `scene`, skipping cells that hold a token. */
+export function spawnSpots(grid: GridSpec, at: Vec3, tokens: readonly Pick<Token, 'scene' | 'position'>[], scene: SceneId, count: number): Vec3[] {
+  return freeCellsNear(grid, at, tokens.filter((t) => t.scene === scene).map((t) => t.position), count)
+}
+
 /** Create the characters and tokens for `specs` in the active scene. Resolves once every intent is dispatched. */
-export async function spawnNpcs(controller: GameController, specs: SpawnSpec[], opts: { hidden?: boolean } = {}): Promise<Spawned[]> {
+export async function spawnNpcs(controller: GameController, specs: SpawnSpec[], opts: SpawnOptions = {}): Promise<Spawned[]> {
   const s = useGame.getState()
   const sceneId = s.meta?.activeScene
   if (!sceneId) throw new Error('no active scene')
   const scene = s.scenes[sceneId]
   const grid = scene?.grid ?? FALLBACK_GRID
-  const occupied: Vec3[] = Object.values(s.tokens).filter((t) => t.scene === sceneId).map((t) => t.position)
-  const spots = freeCellsNear(grid, placementPoint(), occupied, specs.length)
+  const spots = spawnSpots(grid, opts.at ?? placementPoint(), Object.values(s.tokens), sceneId, specs.length)
   const rules = controller.rules
   const out: Spawned[] = []
 
@@ -54,22 +97,7 @@ export async function spawnNpcs(controller: GameController, specs: SpawnSpec[], 
       character = { ...c, id: newId<'CharacterId'>(), owner: undefined }
       await controller.dispatch({ type: 'character.upsert', character })
     }
-    const token: Token = {
-      id: newId<'TokenId'>(),
-      scene: sceneId,
-      name: spec.name,
-      character: character?.id as CharacterId | undefined,
-      color: spec.color,
-      position,
-      cell: grid.type === 'none' ? undefined : cellOf(grid, position),
-      rotationY: 0,
-      scale: 1,
-      vision: 4,
-      light: 0,
-      hidden: opts.hidden ?? true,
-      conditions: [],
-      ...(spec.skills ? { skills: spec.skills } : {}),
-    }
+    const token = creatureToken({ id: newId<'TokenId'>(), scene: sceneId, spec, position, grid, character: character?.id as CharacterId | undefined, hidden: opts.hidden })
     await controller.dispatch({ type: 'token.add', token })
     out.push({ token, character })
   }
