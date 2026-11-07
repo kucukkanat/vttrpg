@@ -4,10 +4,8 @@
  * touch placement cheap on phones. Built per chunk and cached by the chunk record's identity, so
  * an edit re-indexes only the chunks it touched. Pure.
  */
-import {
-  CHUNK, cellsOfAreaPiece, chunkOf, edgesOfArms, edgesOfEdgePiece, isAreaSlot, isEdgeSlot, parseCellKey, parseTile,
-  type CellSlot, type EdgeAddr, type KitManifest, type KitPiece, type SceneTiles, type TileValue,
-} from '@/core/kits'
+import { CHUNK, chunkOf, parseCellKey, parseTile, type CellSlot, type KitManifest, type KitPiece, type SceneTiles, type TileValue } from '@/core/kits'
+import { cellsOfAreaPiece, edgesOfArms, edgesOfEdgePiece, isAreaSlot, isEdgeSlot, type EdgeAddr } from '@/core/kitGeometry'
 import type { PieceLookup } from './manifests'
 
 export interface Occupant {

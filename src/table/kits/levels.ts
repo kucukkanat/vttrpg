@@ -7,7 +7,8 @@
  * them: fog keys, walls and sight stay as they were.
  */
 import type { GridSpec } from '@/core/geometry'
-import { LEVEL_CELLS, dirVec, levelBase, levelOfHeight, pieceCentre, turnDir, turnedFootprint } from '@/core/kits'
+import { LEVEL_CELLS, levelOfHeight } from '@/core/kits'
+import { dirVec, levelBase, pieceCentre, turnDir, turnedFootprint } from '@/core/kitGeometry'
 import type { Occupancy } from './occupancy'
 
 /** How far above a kit floor's base a token stands (the tiles' own thickness, roughly). */

@@ -5,7 +5,8 @@
  * on the same level. Pure.
  */
 import type { GridSpec } from '@/core/geometry'
-import { DOOR_OPEN, parseCellKey, parseTile, pieceCentre, turn, type SceneTiles } from '@/core/kits'
+import { DOOR_OPEN, parseCellKey, parseTile, type SceneTiles } from '@/core/kits'
+import { pieceCentre, turn } from '@/core/kitGeometry'
 import type { Pt2, WallSegment } from '../segments'
 import type { PieceLookup } from './manifests'
 

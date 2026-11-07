@@ -13,10 +13,8 @@
  * cleared and laid again. Every other edge piece (doors, windows, decor walls) stays where it is,
  * counts as a wall for the join shape, and is never covered by a join arm. Pure.
  */
-import {
-  DIRS, cellKey, edgeFrom, edgeKey, edgesOfArms, edgesOfEdgePiece, encodeTile, isEdgeSlot, isVertexSlot, parseEdgeKey, turnDir,
-  type Dir, type EdgeAddr, type KitManifest, type KitPiece,
-} from '@/core/kits'
+import { cellKey, encodeTile, type Dir, type KitManifest, type KitPiece } from '@/core/kits'
+import { DIRS, edgeFrom, edgeKey, edgesOfArms, edgesOfEdgePiece, isEdgeSlot, isVertexSlot, parseEdgeKey, turnDir, type EdgeAddr } from '@/core/kitGeometry'
 import { pieceIndex } from './manifests'
 import type { Occupancy, Occupant } from './occupancy'
 

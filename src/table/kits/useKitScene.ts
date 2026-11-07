@@ -14,6 +14,7 @@ import { useKitUi } from './kitState'
 import { effectiveCut, tokenLevel } from './levels'
 import { loadSceneKits, pieceLookup, useKitManifests, type PieceLookup } from './manifests'
 import { sceneOccupancy, type Occupancy } from './occupancy'
+import { kitRuntime } from './runtime'
 
 export interface KitScene {
   tiles: SceneTiles | undefined
@@ -65,6 +66,17 @@ export function useKitScene(sceneId: SceneId, grid: GridSpec, floorY: number): K
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tiles, lookup, gridKey])
+
+  // The controller blocks players' moves through kit walls with what this table knows.
+  useEffect(() => {
+    const fn = (scene: SceneId, level: number) => {
+      if (scene !== sceneId) return []
+      const w = wallsAt(level)
+      return w.move.length ? [...w.sight, ...w.move] : w.sight
+    }
+    kitRuntime.moveWalls = fn
+    return () => { if (kitRuntime.moveWalls === fn) delete kitRuntime.moveWalls }
+  }, [sceneId, wallsAt])
 
   const manual = useKitUi((s) => s.cutaway)
   const buildLevel = useKitUi((s) => s.level)

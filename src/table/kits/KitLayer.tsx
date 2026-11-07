@@ -19,10 +19,8 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import {
   BatchedMesh, BufferGeometry, Group, Matrix4, MeshBasicMaterial, MeshLambertMaterial, Plane, Quaternion, Vector3,
 } from 'three'
-import {
-  DOOR_OPEN, KIT_CELL, LEVEL_CELLS, cellsOfAreaPiece, isEdgeSlot, levelBase, parseCellKey, parseTile, pieceCentre, turnedFootprint,
-  type EdgeAddr, type KitManifest, type KitPiece,
-} from '@/core/kits'
+import { DOOR_OPEN, KIT_CELL, LEVEL_CELLS, parseCellKey, parseTile, type KitManifest, type KitPiece } from '@/core/kits'
+import { cellsOfAreaPiece, isEdgeSlot, levelBase, pieceCentre, turnedFootprint, type EdgeAddr } from '@/core/kitGeometry'
 import { BUILD } from '@/ui/theme/palette'
 import { useGame } from '@/state/store'
 import { useTable } from '../context'

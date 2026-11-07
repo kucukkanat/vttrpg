@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  anchorFor, cellKey, cellSlotFor, chunkOf, chunkOfKey, edgesOfArms, edgesOfEdgePiece, encodeTile, kitIndexFor, levelOfHeight, parseCellKey,
-  parseChunkId, parseTile, pieceCentre, turn, turnDir, turnedFootprint, type KitPiece,
-} from './kits'
+import { cellKey, chunkOf, chunkOfKey, encodeTile, kitIndexFor, levelOfHeight, parseCellKey, parseChunkId, parseTile, type KitPiece } from './kits'
+import { anchorFor, cellSlotFor, edgesOfArms, edgesOfEdgePiece, pieceCentre, turn, turnDir, turnedFootprint } from './kitGeometry'
 
 describe('cell keys', () => {
   it('round-trips x, level, z and slot', () => {

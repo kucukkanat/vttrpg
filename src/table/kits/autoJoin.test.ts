@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { edgeKey, edgesOfArms, edgesOfEdgePiece, isEdgeSlot, parseTile } from '@/core/kits'
+import { parseTile } from '@/core/kits'
+import { edgeKey, edgesOfArms, edgesOfEdgePiece, isEdgeSlot } from '@/core/kitGeometry'
 import { edgesAlong, edgesAround, isPlainWall, joinFor, planWalls } from './autoJoin'
 import { sceneOccupancy } from './occupancy'
 import { applyPlan, describeTiles, emptyTiles, KAYKIT, KENNEY, lookupFor } from './testKits'

@@ -4,10 +4,8 @@
  * windows go through `planWalls` (autoJoin.ts). Pure; the table layer turns a plan into an intent
  * and a ghost.
  */
-import {
-  cellKey, cellSlotFor, cellsOfAreaPiece, edgesOfEdgePiece, encodeTile, isAreaSlot, isEdgeSlot, isVertexSlot, turnDir, turnedFootprint,
-  type EdgeAddr, type KitManifest, type KitPiece,
-} from '@/core/kits'
+import { cellKey, encodeTile, type KitManifest, type KitPiece } from '@/core/kits'
+import { cellSlotFor, cellsOfAreaPiece, edgesOfEdgePiece, isAreaSlot, isEdgeSlot, isVertexSlot, turnDir, turnedFootprint, type EdgeAddr } from '@/core/kitGeometry'
 import { EMPTY_PLAN, planWalls, type TilePlan } from './autoJoin'
 import { pieceIndex } from './manifests'
 import type { Occupancy, Occupant } from './occupancy'
