@@ -39,6 +39,9 @@ function buildId(): string {
  */
 const VENDOR_CHUNKS: Array<[name: string, test: RegExp]> = [
   ['rapier', /\/node_modules\/(@dimforge\/rapier3d-compat|@react-three\/rapier)\//],
+  // three.js add-ons used only by the model import dialog (src/import/model, src/ui/import), kept out
+  // of the table's `three` chunk so the table does not download them.
+  ['three-import', /\/node_modules\/three\/examples\/jsm\/(exporters\/|loaders\/(FBX|OBJ|MTL|STL|TGA)Loader|environments\/RoomEnvironment|libs\/meshopt_decoder|controls\/OrbitControls)/],
   ['three', /\/node_modules\/(three|three-stdlib|three-mesh-bvh|@react-three\/(fiber|drei)|@monogrid\/gainmap-js|camera-controls|maath|meshline|troika-three-text|stats-gl|stats\.js|detect-gpu|hls\.js|glsl-noise|its-fine|react-use-measure|suspend-react|tunnel-rat|react-reconciler|@use-gesture\/react)\//],
   // zustand is the app's store and also fiber's; it has to be assigned here (see vendorChunk).
   ['react', /\/node_modules\/(react|react-dom|scheduler|use-sync-external-store|zustand)\//],
@@ -110,6 +113,9 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  // Module workers (both are started with `{ type: 'module' }`); the model import worker loads its
+  // format loaders on demand, which needs code splitting inside the worker.
+  worker: { format: 'es' },
   build: {
     target: 'es2022',
     sourcemap: true,
