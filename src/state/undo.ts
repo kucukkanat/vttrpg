@@ -13,6 +13,10 @@
  *   props.remove -> props.place    (full snapshots)
  *   a stamp's walls ride along as wall.remove / wall.add
  *
+ * Kit tiles (`tiles.place`, `tiles.erase`) keep every touched cell's value before and after, and
+ * undo writes the before values back in one `tiles.place` (an empty value clears the cell). A cell
+ * someone else has changed since holds a different value and is skipped, like a prop.
+ *
  * Undo only touches props that are still exactly as this user left them (apply stamps `editedBy`
  * on every write, so someone else's edit never matches). A prop changed by someone else since is
  * skipped and the outcome carries a note; the rest of the step still applies.
@@ -34,6 +38,8 @@ import type { Intent, PropPatch } from '@/core/intents'
 import type { CreatureTemplate, Encounter, FogState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { LightId, NoteId, PrefabId, PropId, SceneId, TokenId, WallId } from '@/core/ids'
 import { patchToward, samePropState } from '@/core/props'
+import { chunkOf, parseCellKey, type SceneTiles } from '@/core/kits'
+import { toIntentValues } from '@/core/tiles'
 import { useGame } from './store'
 
 export const MAX_UNDO = 100
@@ -53,6 +59,20 @@ export interface UndoSnapshot {
   meta?: { activeScene: SceneId | null } | null
   encounters?: Record<string, Encounter>
   creatures?: Record<string, CreatureTemplate>
+  tiles?: Record<SceneId, SceneTiles>
+}
+
+/** One kit cell in a tile edit: null = the cell was empty. Values use the scene's kit table. */
+export interface TileChange {
+  key: string
+  before: string | null
+  after: string | null
+}
+
+/** The kit cells of one tile edit. */
+export interface TileEdit {
+  scene: SceneId
+  changes: TileChange[]
 }
 
 /** One prop in a build edit: null `before` = it was placed, null `after` = it was removed. */
@@ -73,6 +93,8 @@ export interface UndoEntry {
   forward: Intent[]
   /** Build edits: every prop's state before and after, checked for conflicts on undo and redo. */
   props?: PropChange[]
+  /** Tile edits: every cell's value before and after, checked for conflicts like props. */
+  tiles?: TileEdit
   /** Something was destroyed: the controller offers an Undo toast. */
   destructive?: boolean
   at: number
@@ -82,6 +104,8 @@ export interface UndoEntry {
 export type UndoOutcome = UndoEntry & {
   /** Props skipped because someone else changed them since. */
   skipped: PropId[]
+  /** Kit cells skipped for the same reason. */
+  skippedTiles?: number
   /** Set when something was skipped: why, in words. */
   note?: string
 }
@@ -116,9 +140,30 @@ function propEntry(verb: string, changes: PropChange[], now: number, extra: Part
   }
 }
 
+/** The value a scene's tiles hold at a cell key, or null. */
+export function tileAt(tiles: Record<SceneId, SceneTiles> | undefined, scene: SceneId, key: string): string | null {
+  const c = parseCellKey(key)
+  if (!c) return null
+  return tiles?.[scene]?.chunks[chunkOf(c.x, c.z)]?.[key] ?? null
+}
+
+function tileEntry(verb: string, scene: SceneId, keys: readonly string[], s: UndoSnapshot, now: number, destructive: boolean): UndoEntry | null {
+  const changes = keys.map((key) => ({ key, before: tileAt(s.tiles, scene, key), after: null as string | null }))
+  if (!changes.length) return null
+  const subject = plural(changes.length, 'tile')
+  // `after` is provisional until `settleUndo` reads what the document holds.
+  return { label: `${verb} ${subject}`, subject, inverse: [], forward: [], tiles: { scene, changes }, ...(destructive ? { destructive: true } : {}), at: now }
+}
+
 /** Pure: the undo entry for `intent` against the state before it applies, or null if there is nothing to undo. */
 export function captureUndo(intent: Intent, s: UndoSnapshot, now = Date.now()): UndoEntry | null {
   switch (intent.type) {
+    case 'tiles.place': {
+      const placing = intent.values.some((v) => v !== '')
+      return tileEntry(placing ? 'Built' : 'Erased', intent.scene, intent.keys, s, now, false)
+    }
+    case 'tiles.erase':
+      return tileEntry('Erased', intent.scene, intent.keys, s, now, false)
     case 'props.place':
     case 'prop.add': {
       const placed = intent.type === 'prop.add' ? [intent.prop] : intent.props
@@ -247,7 +292,7 @@ export const useUndo = create<UndoState>((set, get) => ({
   clear: () => set({ stack: [], redo: [] }),
 }))
 
-type ReadProps = () => Pick<UndoSnapshot, 'props'>
+type ReadProps = () => Pick<UndoSnapshot, 'props' | 'tiles'>
 
 let dispatcher: UndoDispatch | null = null
 let readState: ReadProps = () => useGame.getState()
@@ -276,7 +321,14 @@ export function isReplaying(): boolean {
  * becomes what the document now holds (with the `editedBy` apply stamped). Props the intent did
  * not change (a refused intent, a no-op patch) drop out; null when nothing is left to undo.
  */
-export function settleUndo(entry: UndoEntry, s: Pick<UndoSnapshot, 'props'>): UndoEntry | null {
+export function settleUndo(entry: UndoEntry, s: Pick<UndoSnapshot, 'props' | 'tiles'>): UndoEntry | null {
+  if (entry.tiles) {
+    const { scene } = entry.tiles
+    const changes = entry.tiles.changes.map((c) => ({ ...c, after: tileAt(s.tiles, scene, c.key) })).filter((c) => c.after !== c.before)
+    if (!changes.length) return null
+    const subject = plural(changes.length, 'tile')
+    return { ...entry, subject, label: `${entry.label.split(' ')[0]} ${subject}`, tiles: { scene, changes } }
+  }
   if (!entry.props) return entry
   const props = entry.props
     .map((c) => ({ id: c.id, before: c.before, after: s.props[c.id] ?? null }))
@@ -286,7 +338,7 @@ export function settleUndo(entry: UndoEntry, s: Pick<UndoSnapshot, 'props'>): Un
 }
 
 /** Settle `entry` (see `settleUndo`) and push it as a new edit, unless an undo or redo is running. */
-export function commitUndo(entry: UndoEntry | null, s: Pick<UndoSnapshot, 'props'>): UndoEntry | null {
+export function commitUndo(entry: UndoEntry | null, s: Pick<UndoSnapshot, 'props' | 'tiles'>): UndoEntry | null {
   if (!entry || replaying) return null
   const settled = settleUndo(entry, s)
   if (settled) useUndo.getState().push(settled)
@@ -328,7 +380,46 @@ function propIntents(changes: PropChange[], current: Record<PropId, Prop>, targe
  * someone else changed are skipped. The step, reduced to what it did and refreshed with the
  * states the document now holds, goes onto the other stack.
  */
+/** The `tiles.place` that moves the cells of `changes` to their `target` side, given the current tiles. */
+function tileIntent(edit: TileEdit, changes: TileChange[], tiles: Record<SceneId, SceneTiles> | undefined, target: 'before' | 'after'): Intent | null {
+  if (!changes.length) return null
+  const table = tiles?.[edit.scene]?.kits ?? []
+  const { kits, values } = toIntentValues(changes.map((c) => c[target]), table)
+  return { type: 'tiles.place', scene: edit.scene, kits, keys: changes.map((c) => c.key), values }
+}
+
+async function replayTiles(entry: UndoEntry & { tiles: TileEdit }, dir: 'undo' | 'redo', fn: UndoDispatch): Promise<UndoOutcome> {
+  const expected = dir === 'undo' ? 'after' : 'before'
+  const target = dir === 'undo' ? 'before' : 'after'
+  const edit = entry.tiles
+  const s = readState()
+  const ok: TileChange[] = []
+  let skipped = 0
+  for (const c of edit.changes) {
+    if (tileAt(s.tiles, edit.scene, c.key) === c[expected]) ok.push(c)
+    else skipped++
+  }
+  const intent = tileIntent(edit, ok, s.tiles, target)
+  replaying = true
+  try {
+    if (intent) await fn(intent)
+  } finally {
+    replaying = false
+  }
+  const now = readState()
+  const changes = ok.map((c) => ({ ...c, [target]: tileAt(now.tiles, edit.scene, c.key) }))
+  const reduced: UndoEntry = { ...entry, tiles: { scene: edit.scene, changes } }
+  if (changes.length) {
+    if (dir === 'undo') useUndo.getState().pushRedo(reduced)
+    else useUndo.getState().pushUndo(reduced)
+  }
+  const outcome: UndoOutcome = { ...reduced, skipped: [], skippedTiles: skipped }
+  if (skipped) outcome.note = `${plural(skipped, 'tile')} changed by someone else since; left as ${skipped === 1 ? 'it is' : 'they are'}`
+  return outcome
+}
+
 async function replay(entry: UndoEntry, dir: 'undo' | 'redo', fn: UndoDispatch): Promise<UndoOutcome> {
+  if (entry.tiles) return replayTiles(entry as UndoEntry & { tiles: TileEdit }, dir, fn)
   const expected = dir === 'undo' ? 'after' : 'before'
   const target = dir === 'undo' ? 'before' : 'after'
   const s = readState()
@@ -377,7 +468,7 @@ export async function redoLast(): Promise<UndoOutcome | null> {
 
 /** Feedback line for an undo or redo: "Restored Crate", "Undid: Moved 3 props", plus any skip note. */
 export function describeOutcome(o: UndoOutcome, dir: 'undo' | 'redo'): string {
-  const did = !o.props || o.props.length > 0
+  const did = o.tiles ? o.tiles.changes.length > 0 : !o.props || o.props.length > 0
   if (!did) return o.note ? `Nothing to ${dir}: ${o.note}` : `Nothing to ${dir}`
   const head = dir === 'undo' ? (o.destructive ? `Restored ${o.subject}` : `Undid: ${o.label}`) : `Redid: ${o.label}`
   return o.note ? `${head}. ${o.note}` : head
