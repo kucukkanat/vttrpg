@@ -5,6 +5,8 @@ import { SheetView } from '@/rules'
 import { newSeed } from '@/dice'
 import type { Character } from '@/core/doc'
 import type { CharacterId } from '@/core/ids'
+import { CharacterCard } from './CharacterCard'
+import { loadSheetMode, saveSheetMode, type SheetMode } from './sheetCard'
 
 function setPath(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
   const [head, ...rest] = path.split('.')
@@ -17,6 +19,9 @@ export function CharacterPanel({ controller }: { controller: GameController }) {
   const token = useEffectiveToken(controller.pubkey)
   const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
   const [busy, setBusy] = useState(false)
+  // Card or full form, remembered per device.
+  const [mode, setModeState] = useState<SheetMode>(loadSheetMode)
+  const setMode = (m: SheetMode) => { setModeState(m); saveSheetMode(m) }
   const rules = controller.rules
   const isGm = controller.connection.isGm
   const mine = token?.owner === controller.pubkey
@@ -45,20 +50,32 @@ export function CharacterPanel({ controller }: { controller: GameController }) {
   }
 
   const canEdit = isGm || character.owner === controller.pubkey
+  const roll = (formula: string, label: string) => void controller.dispatch({ type: 'roll', formula, seed: newSeed(), label, character: character.id })
   return (
     <div className="panel sheet">
-      <h3>Character</h3>
-      <SheetView
-        schema={rules.pack.sheet}
-        character={character}
-        readOnly={!canEdit}
-        compute={(expr) => rules.evaluateNow(expr, character)}
-        onChange={(path, value) => {
-          const next: Character = path === 'name' ? { ...character, name: String(value) } : { ...character, data: setPath(character.data, path, value) }
-          void controller.dispatch({ type: 'character.upsert', character: next })
-        }}
-        onRoll={(formula, label) => void controller.dispatch({ type: 'roll', formula, seed: newSeed(), label, character: character.id })}
-      />
+      <h3>
+        Character
+        {mode === 'card' ? (
+          <button type="button" className="tiny" aria-pressed={false} onClick={() => setMode('edit')}>{canEdit ? 'Edit sheet' : 'Full sheet'}</button>
+        ) : (
+          <button type="button" className="tiny" aria-pressed onClick={() => setMode('card')}>Done</button>
+        )}
+      </h3>
+      {mode === 'card' ? (
+        <CharacterCard rules={rules} character={character} token={token} assets={controller.assets} onRoll={roll} />
+      ) : (
+        <SheetView
+          schema={rules.pack.sheet}
+          character={character}
+          readOnly={!canEdit}
+          compute={(expr) => rules.evaluateNow(expr, character)}
+          onChange={(path, value) => {
+            const next: Character = path === 'name' ? { ...character, name: String(value) } : { ...character, data: setPath(character.data, path, value) }
+            void controller.dispatch({ type: 'character.upsert', character: next })
+          }}
+          onRoll={roll}
+        />
+      )}
     </div>
   )
 }
