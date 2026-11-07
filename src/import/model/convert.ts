@@ -205,19 +205,13 @@ async function loadFbx(set: ModelSet, mm: ReturnType<typeof memoryManager>): Pro
 }
 
 async function loadDracoGltf(set: ModelSet, mm: ReturnType<typeof memoryManager>): Promise<Object3D> {
-  const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
-  const { DRACOLoader } = await import('three/examples/jsm/loaders/DRACOLoader.js')
-  const loader = new GLTFLoader(mm.manager)
-  const draco = new DRACOLoader()
-  loader.setDRACOLoader(draco)
-  try {
-    const data = set.format === 'glb' ? toArrayBuffer(set.main.bytes) : new TextDecoder().decode(set.main.bytes)
-    const gltf = await loader.parseAsync(data, 'memory:///')
-    gltf.scene.animations = gltf.animations
-    return gltf.scene
-  } finally {
-    draco.dispose()
-  }
+  // The table's shared loader: bundled Draco and meshopt decoders (src/table/gltf.ts).
+  const { createGltfLoader } = await import('@/table/gltf')
+  const loader = createGltfLoader({ manager: mm.manager })
+  const data = set.format === 'glb' ? toArrayBuffer(set.main.bytes) : new TextDecoder().decode(set.main.bytes)
+  const gltf = await loader.parseAsync(data, 'memory:///')
+  gltf.scene.animations = gltf.animations
+  return gltf.scene
 }
 
 /**
