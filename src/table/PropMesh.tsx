@@ -16,7 +16,8 @@ import { fitObjectToCell, PROP_FIT } from './fitScale'
 import { useTableUi } from './tableState'
 import { HOVER, SELECT } from '@/ui/theme/palette'
 import { doubleTapEdit, tapTwice } from './editTap'
-import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetUrl } from './TokenMesh'
+import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetLoad } from './TokenMesh'
+import { MissingModel } from './MissingAsset'
 
 const noRaycast = () => undefined
 
@@ -63,7 +64,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
   const snap = useTableUi((s) => s.snap)
   const uiSet = useTableUi((s) => s.set)
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
-  const url = useAssetUrl(prop.model)
+  const { url, missing } = useAssetLoad(prop.model)
   const [hovered, setHovered] = useState(false)
   const [object, setObject] = useState<Group | null>(null)
   const group = useRef<Group>(null)
@@ -203,6 +204,8 @@ export function PropMesh({ prop }: { prop: Prop }) {
               <GlbMini url={url} scale={1} fitCell={cell} fitRange={PROP_FIT} onObject={setObject} />
             </Suspense>
           </ModelBoundary>
+        ) : missing ? (
+          <MissingModel size={0.6 * cell} />
         ) : (
           <Crate cell={cell} tone="loading" />
         )}

@@ -40,6 +40,7 @@ import { ownerShapeIn, shapePoints, type OwnerShape } from './ownerShape'
 import { blobShadowLook } from './atmosphere'
 import { labelYaw } from './labelFacing'
 import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
+import { MissingModel } from './MissingAsset'
 
 /** Colour of the high-tier selection outline: the palette's selection role, like the ring under the token. */
 export const SELECTION_OUTLINE_COLOR = SELECT
@@ -364,17 +365,36 @@ function OwnerRing({ radius, color, mine, shape }: { radius: number; color: stri
   )
 }
 
-export function useAssetUrl(ref: Token['model']): string | null {
+/** Pauses before resolving a missing model again; the last one repeats. Its upload may still be running. */
+const MISSING_RETRY_MS = [3_000, 10_000, 30_000, 60_000]
+
+/** Resolves a model ref; `missing` once no source had it (retried in the background until it loads). */
+export function useAssetLoad(ref: Token['model']): { url: string | null; missing: boolean } {
   const { resolveAsset } = useTable()
-  const [url, setUrl] = useState<string | null>(null)
+  const [state, setState] = useState<{ url: string | null; missing: boolean }>({ url: null, missing: false })
   useEffect(() => {
     let live = true
-    setUrl(null)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    setState({ url: null, missing: false })
     if (!ref) return
-    resolveAsset(ref).then((u) => { if (live) setUrl(u) }, () => { if (live) setUrl(null) })
-    return () => { live = false }
+    const attempt = (n: number) => {
+      resolveAsset(ref).then(
+        (u) => { if (live) setState({ url: u, missing: false }) },
+        () => {
+          if (!live) return
+          setState({ url: null, missing: true })
+          timer = setTimeout(() => attempt(n + 1), MISSING_RETRY_MS[Math.min(n, MISSING_RETRY_MS.length - 1)])
+        },
+      )
+    }
+    attempt(0)
+    return () => { live = false; clearTimeout(timer) }
   }, [ref, resolveAsset])
-  return url
+  return state
+}
+
+export function useAssetUrl(ref: Token['model']): string | null {
+  return useAssetLoad(ref).url
 }
 
 export function TokenMesh({ token }: { token: Token }) {
@@ -397,7 +417,7 @@ export function TokenMesh({ token }: { token: Token }) {
   // Live transform while the edit gizmo drags this token.
   const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'token' && s.editPreview.target.id === token.id ? s.editPreview : null))
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
-  const modelUrl = useAssetUrl(token.model)
+  const { url: modelUrl, missing: modelMissing } = useAssetLoad(token.model)
   const character = useGame((s) => (token.character ? s.characters[token.character] : undefined))
   const showHpToPlayers = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const ownerPresence = useGame((s) => (token.owner ? s.presence[token.owner]?.color : undefined))
@@ -634,7 +654,7 @@ export function TokenMesh({ token }: { token: Token }) {
               <GlbMini url={modelUrl} scale={scale} fitCell={cell} mini selected={selected} />
             </Suspense>
           </ModelBoundary>
-        ) : disc}
+        ) : modelMissing ? <>{disc}<MissingModel size={0.45 * cell * scale} y={radius * 0.22} /></> : disc}
         {ghost && (
           // Muted "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
           <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>
