@@ -20,6 +20,7 @@ import { snapToCell } from './grid'
 import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
+import { doubleTapEdit, tapTwice } from './editTap'
 import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
 
 /** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
@@ -419,7 +420,12 @@ export function TokenMesh({ token }: { token: Token }) {
     e.stopPropagation()
     if (e.button === 2) return // the contextmenu event that follows selects and opens the menu
     if (e.button !== 0) return
-    if (!controllable) { select(e.nativeEvent); return }
+    if (!controllable) {
+      // Not ours to edit; a double tap here still ends edit mode.
+      if (tapTwice(`token:${token.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY)) doubleTapEdit(null)
+      select(e.nativeEvent)
+      return
+    }
     capture(e).setPointerCapture(e.pointerId)
     uiSet({ grab: token.id })
     drag.current = {
@@ -468,7 +474,10 @@ export function TokenMesh({ token }: { token: Token }) {
     capture(e).releasePointerCapture(e.pointerId)
     const wasClick = !d.moved
     endDrag(true)
-    if (wasClick) select(e.nativeEvent)
+    if (!wasClick) return
+    // Double tap: edit this token (gizmo), or leave edit mode when already editing.
+    if (tapTwice(`token:${token.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY) && doubleTapEdit({ kind: 'token', id: token.id })) return
+    select(e.nativeEvent)
   }
 
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps

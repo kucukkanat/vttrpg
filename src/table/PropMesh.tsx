@@ -14,6 +14,7 @@ import { useTable } from './context'
 import { footprintWalls, snapTranslation } from './editing'
 import { fitObjectToCell, PROP_FIT } from './fitScale'
 import { useTableUi } from './tableState'
+import { doubleTapEdit, tapTwice } from './editTap'
 import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetUrl } from './TokenMesh'
 
 const noRaycast = () => undefined
@@ -131,7 +132,12 @@ export function PropMesh({ prop }: { prop: Prop }) {
     e.stopPropagation()
     if (e.button === 2) { setSelection({ kind: 'prop', id: prop.id }); return }
     if (e.button !== 0) return
-    if (!draggable) { setSelection({ kind: 'prop', id: prop.id }); return }
+    if (!draggable) {
+      const twice = tapTwice(`prop:${prop.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY)
+      if (twice && doubleTapEdit(gm ? { kind: 'prop', id: prop.id } : null)) return
+      setSelection({ kind: 'prop', id: prop.id })
+      return
+    }
     capture(e).setPointerCapture(e.pointerId)
     uiSet({ editDrag: true })
     const plane = new Plane(new Vector3(0, 1, 0), -Math.max(floorY, prop.position.y))
@@ -167,7 +173,11 @@ export function PropMesh({ prop }: { prop: Prop }) {
     capture(e).releasePointerCapture(e.pointerId)
     const wasClick = !d.moved
     endDrag(true)
-    if (wasClick) toggleSelect()
+    if (!wasClick) return
+    if (tapTwice(`prop:${prop.id}`, e.nativeEvent.clientX, e.nativeEvent.clientY) && doubleTapEdit({ kind: 'prop', id: prop.id })) return
+    // In edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
+    if (useTableUi.getState().editMode) setSelection({ kind: 'prop', id: prop.id })
+    else toggleSelect()
   }
   useEffect(() => () => { if (drag.current) endDrag(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

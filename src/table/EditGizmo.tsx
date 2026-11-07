@@ -1,7 +1,7 @@
 /**
- * Transform gizmo for the selected object while edit mode is on (GM only). One mode at a time
- * (translate / rotate around Y / uniform scale) keeps the handles big enough for a finger: the
- * gizmo is screen-sized (`fixed`), about 110 px per axis with 8 px lines.
+ * Transform gizmo for the selected object while edit mode is on (GM, or a player on their own
+ * token): move arrows, scale spheres and a turn ring together, screen-sized (`fixed`), about
+ * 110 px per axis with 8 px lines so a finger can hold them.
  *
  * The gizmo is "controlled": its matrix is derived from the document, the drag is previewed
  * through `tableState.editPreview` (renderers show the preview instead of the stored transform)
@@ -116,7 +116,9 @@ export function EditGizmo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, token, prop, override, transform, sceneId, loaded, floorY, scene.overrides])
 
-  if (!editMode || !gm || !target) return null
+  // The GM edits anything; a player only their own tokens.
+  const allowed = gm || (selection?.kind === 'token' && !!token && !!viewer && token.owner === viewer.pubkey)
+  if (!editMode || !allowed || !target) return null
   const key = `${target.selection.kind}:${target.selection.id}`
   return <Gizmo key={key} target={target} grid={grid} />
 }
@@ -138,7 +140,6 @@ function useAltKey() {
 
 function Gizmo({ target, grid }: { target: Target; grid: GridSpec }) {
   const { onIntent } = useTable()
-  const mode = useTableUi((s) => s.gizmoMode)
   const snap = useTableUi((s) => s.snap)
   const uiSet = useTableUi((s) => s.set)
   const alt = useAltKey()
@@ -191,28 +192,18 @@ function Gizmo({ target, grid }: { target: Target; grid: GridSpec }) {
     if (intent) onIntent(intent)
   }
 
-  const translate = mode === 'translate'
-  const rotate = mode === 'rotate'
-  const scaling = mode === 'scale'
+  // One gizmo with every handle: arrows move, the spheres at their tips scale, the ring turns
+  // around Y. Two PivotControls share the same matrix object, so dragging either moves both.
+  const common = {
+    matrix, autoTransform: false, fixed: true, scale: GIZMO_PX, lineWidth: GIZMO_LINE_PX, depthTest: false, disableSliders: true,
+    axisColors: ['#ff5a7a', '#8fd18f', '#5aa9ff'] as [string, string, string], hoveredColor: '#ffd166',
+    onDragStart, onDrag, onDragEnd,
+  }
   return (
-    <PivotControls
-      matrix={matrix}
-      autoTransform={false}
-      fixed
-      scale={GIZMO_PX}
-      lineWidth={GIZMO_LINE_PX}
-      depthTest={false}
-      disableSliders
-      disableAxes={!translate}
-      disableRotations={!rotate}
-      disableScaling={!scaling}
-      activeAxes={translate ? [true, true, true] : rotate ? [true, false, true] : [false, true, false]}
-      axisColors={['#ff5a7a', '#8fd18f', '#5aa9ff']}
-      hoveredColor="#ffd166"
-      onDragStart={onDragStart}
-      onDrag={onDrag}
-      onDragEnd={onDragEnd}
-    />
+    <>
+      <PivotControls {...common} disableRotations activeAxes={[true, true, true]} />
+      <PivotControls {...common} disableAxes disableScaling activeAxes={[true, false, true]} />
+    </>
   )
 }
 

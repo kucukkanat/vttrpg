@@ -34,10 +34,9 @@ export interface Shortcut {
  * Keep in step with docs/UX.md.
  */
 export const SHORTCUTS: readonly Shortcut[] = [
-  { keys: 'G', what: 'Toggle the grid overlay (gizmo: move, in edit mode)', group: 'Table' },
-  { keys: 'F', what: 'First-person view from the selected token', group: 'Table' },
-  { keys: 'C', what: 'Switch camera between orbit and follow', group: 'Table' },
-  { keys: 'R / S', what: 'Gizmo: rotate / scale (edit mode)', group: 'Table' },
+  { keys: 'G', what: 'Toggle the grid overlay', group: 'Table' },
+  { keys: 'F', what: 'Eyes: first-person view from the selected token', group: 'Table' },
+  { keys: 'Double-click', what: 'Edit a token or prop (move, turn, scale); again or elsewhere to stop', group: 'Table' },
   { keys: 'Delete', what: 'Remove the selected prop (GM)', group: 'Table' },
   { keys: 'Esc', what: 'Deselect; cancel skill targeting', group: 'Table' },
   { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
@@ -51,7 +50,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
 
 export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Panels', 'Chat']
 
-/** Window event panels use to ask the shell for another panel (Tokens row "Edit" opens the Edit panel). */
+/** Window event panels use to ask the shell for another panel (the skill bar opens the Skill editor). */
 export const OPEN_PANEL_EVENT = 'vtt:open-panel'
 
 /** Window event that shows or hides the shortcuts overlay (`?` key, the chat panel's "?" button). */

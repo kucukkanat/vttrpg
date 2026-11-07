@@ -3,7 +3,7 @@ import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newId, type SceneId } from '@/core/ids'
 import type { LibraryEntry } from '@/assets'
-import type { CameraMode, Scene } from '@/core/doc'
+import type { Scene } from '@/core/doc'
 import { createImageScene, importSceneFile, readImageSize, suggestColumns, type ImageSize, type ImportHooks } from '@/import'
 import { imageSceneLayout, pixelsPerCell, useTableUi } from '@/table'
 import { setPreviewScene } from '@/table/tableState'
@@ -31,10 +31,6 @@ type Status = { tone: 'info' | 'error'; text: string }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-const CAMERA_HINT: Record<CameraMode, string> = {
-  orbit: 'Camera: free orbit · tap to follow a token',
-  token: 'Camera: follows a token · tap for free orbit',
-}
 
 /**
  * Scenes: the list (Live badge on the active one, Switch and Preview on the others), ways to add a
@@ -147,10 +143,6 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
 
   const active = meta?.activeScene ? scenes[meta.activeScene] : undefined
   const update = (patch: Partial<Scene>) => active && void controller.dispatch({ type: 'scene.update', scene: active.id, patch })
-  const toggleCamera = (id: SceneId) => {
-    const s = scenes[id]
-    void controller.dispatch({ type: 'scene.update', scene: id, patch: { cameraMode: s.cameraMode === 'orbit' ? 'token' : 'orbit' } })
-  }
   const remove = (id: SceneId) => void controller.dispatch({ type: 'scene.remove', scene: id })
 
   // --- fog ------------------------------------------------------------------------------------
@@ -200,11 +192,6 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
                     </button>
                   </>
                 )}
-              {isGm && (
-                <button className="icon scene-camera" title={CAMERA_HINT[s.cameraMode]} aria-label={CAMERA_HINT[s.cameraMode]} onClick={() => toggleCamera(s.id)}>
-                  <CameraIcon mode={s.cameraMode} />
-                </button>
-              )}
               {isGm && (
                 <button className="icon scene-remove" disabled={live} onClick={() => remove(s.id)}
                   title={live ? 'Switch to another scene before removing the live one' : `Remove ${s.name}`} aria-label={`Remove ${s.name}`}>×</button>
@@ -319,24 +306,6 @@ function settingsSummary(scene: Scene, fogOn: boolean): string {
   return parts.join(' · ')
 }
 
-/** Orbit: a ring around a body. Follow: an eye. Both inherit the button colour. */
-function CameraIcon({ mode }: { mode: CameraMode }) {
-  if (mode === 'orbit') {
-    return (
-      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-        <circle cx="10" cy="10" r="3" fill="currentColor" />
-        <ellipse cx="10" cy="10" rx="8.5" ry="3.5" fill="none" stroke="currentColor" strokeWidth="1.4" transform="rotate(-25 10 10)" />
-        <circle cx="16.8" cy="5.6" r="1.7" fill="currentColor" />
-      </svg>
-    )
-  }
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-      <path d="M1.5 10s3-5.5 8.5-5.5S18.5 10 18.5 10s-3 5.5-8.5 5.5S1.5 10 1.5 10z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="10" cy="10" r="2.6" fill="currentColor" />
-    </svg>
-  )
-}
 
 /**
  * Grid size for a map image: columns across (rows follow from the aspect ratio), cell size from the

@@ -30,7 +30,7 @@ const css = `
   box-shadow: 0 8px 28px rgba(0, 0, 0, .45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   animation: gm-callout-in .25s ease;
 }
-.gm-callout--bottom { bottom: calc(var(--sp-4) + var(--sab)); }
+.gm-callout--bottom { bottom: calc(var(--sp-4) + var(--sab) + var(--dock-h, 0px)); }
 .gm-callout--top { top: var(--sp-2); left: calc(var(--sp-2) + var(--sal)); transform: none; max-width: calc(100% - 84px - var(--sal) - var(--sar)); }
 .gm-callout--top.gm-callout { animation-name: gm-callout-in-top; }
 @keyframes gm-callout-in-top { from { opacity: 0; transform: translateY(6px); } }

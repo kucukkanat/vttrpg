@@ -189,6 +189,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       case 'token.update': {
         const t = doc.tokens?.[intent.token]
         if (!t) return 'unknown token'
+        if (intent.type === 'token.update' && 'skills' in intent.patch) return 'only the GM changes what skills a token has'
         return t.owner === actor.pubkey ? null : 'you do not own this token'
       }
       case 'character.upsert': {
@@ -208,6 +209,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         const token = doc.tokens?.[intent.source]
         if (!token) return 'unknown source token'
         if (token.owner !== actor.pubkey) return 'you do not control the source token'
+        if (token.skills && !token.skills.includes(intent.skill)) return `${token.name} does not have ${skill.name}`
         const character = token.character ? doc.characters?.[token.character] : undefined
         if (!character) return 'the source token has no character sheet'
         if (skill.target.kind === 'single' && intent.targets.length > 1) return `${skill.name} targets a single token`

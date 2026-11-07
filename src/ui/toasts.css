@@ -1,13 +1,13 @@
 /* Toast stack over the table (shell/Toasts.tsx). Sits at the bottom of the table, above the tab bar
    on phones; the .hud container is position:absolute over the table so `bottom` is table-relative. */
 .hud > .toasts, .toasts {
-  position: absolute; left: 0; right: 0; bottom: calc(var(--sp-3) + var(--sab));
+  position: absolute; left: 0; right: 0; bottom: calc(var(--sp-3) + var(--sab) + var(--dock-h, 0px));
   display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
   padding: 0 calc(var(--sp-3) + var(--sar)) 0 calc(var(--sp-3) + var(--sal));
   pointer-events: none;
 }
 /* The tab bar already carries the bottom inset on phones. */
-.game--phone .toasts { bottom: var(--sp-3); }
+.game--phone .toasts { bottom: calc(var(--sp-3) + var(--dock-h, 0px)); }
 .toast-item {
   pointer-events: auto; display: inline-flex; align-items: center; gap: var(--sp-2);
   min-height: 44px; max-width: min(100%, 480px); padding: 0 var(--sp-1) 0 var(--sp-3);

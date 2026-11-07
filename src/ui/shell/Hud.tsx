@@ -12,7 +12,6 @@ import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
 import { InitiativeChip } from '../panels/InitiativePanel'
-import { useBreakpoint } from './useBreakpoint'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -58,24 +57,11 @@ export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?:
   )
 }
 
-type CameraView = 'orbit' | 'follow' | 'eyes'
-
-/** The camera view the rig is showing: Eyes is first person on the followed token. */
-export function cameraView(active: { mode: 'orbit' | 'token' } | null, firstPerson: boolean): CameraView {
-  if (!active || active.mode !== 'token') return 'orbit'
-  return firstPerson ? 'eyes' : 'follow'
-}
-
-const VIEWS: { id: CameraView; label: string; key: string; hint: string }[] = [
-  { id: 'orbit', label: 'Orbit', key: 'C', hint: 'Free camera over the table' },
-  { id: 'follow', label: 'Follow', key: 'C', hint: 'Shoulder camera behind your token' },
-  { id: 'eyes', label: 'Eyes', key: 'F', hint: 'First person from your token' },
-]
-
 /**
- * Camera modes and the grid toggle, over the top-right of the table. Key hints show on desktop;
- * phones and tablets get a vertical rail of 44px buttons under the chip row (Hud.css). Hidden
- * while no table is mounted.
+ * Camera and table tools over the top-right of the table: Eyes (first person from your token; off
+ * means the free orbit camera), the grid toggle, touch Select, ruler and ping. Key hints show on
+ * desktop; phones and tablets get a vertical rail of 44px buttons under the chip row (Hud.css).
+ * Hidden while no table is mounted.
  */
 export function CameraPill() {
   const active = useTableUi((s) => s.cameraActive)
@@ -84,31 +70,18 @@ export function CameraPill() {
   const multiSelect = useTableUi((s) => s.multiSelect)
   const tool = useTableUi((s) => s.tool)
   const set = useTableUi((s) => s.set)
-  // Phones and tablets show only the current mode on the rail; tapping it opens the other two.
-  const folds = useBreakpoint() !== 'desktop'
-  const [open, setOpen] = useState(false)
   if (!active) return null
-  const view = cameraView(active, firstPerson)
-  const pick = (v: CameraView) => {
-    if (folds && v === view) { setOpen(!open); return }
-    setOpen(false)
-    if (v === 'orbit') set({ cameraOverride: 'orbit' })
-    else set({ cameraOverride: 'token', firstPerson: v === 'eyes' })
-  }
+  const eyes = active.mode === 'token' && firstPerson
+  const noToken = !active.canFollow
   return (
     <div className="cam-pill" role="toolbar" aria-label="Camera">
-      <div className={`cam-group cam-modes${folds && !open ? ' folded' : ''}`} role="group" aria-label="Camera mode">
-        {VIEWS.map((v) => {
-          const disabled = v.id !== 'orbit' && !active.canFollow
-          return (
-            <button key={v.id} type="button" className={`cam-btn${view === v.id ? ' on' : ''}`} aria-pressed={view === v.id} disabled={disabled}
-              aria-expanded={folds && view === v.id ? open : undefined}
-              title={disabled ? 'No token to follow in this scene' : folds && view === v.id && !open ? 'Camera mode: tap to change' : `${v.hint} (${v.key})`} onClick={() => pick(v.id)}>
-              <span className="cam-label">{v.label}</span>
-              <kbd aria-hidden>{v.key}</kbd>
-            </button>
-          )
-        })}
+      <div className="cam-group">
+        <button type="button" className={`cam-btn cam-eyes${eyes ? ' on' : ''}`} aria-pressed={eyes} disabled={noToken && !eyes}
+          title={noToken ? 'Select a token to look through its eyes' : eyes ? 'Back to the table camera (F)' : 'Look through the token\'s eyes (F)'}
+          onClick={() => set({ firstPerson: !eyes })}>
+          <span className="cam-label">Eyes</span>
+          <kbd aria-hidden>F</kbd>
+        </button>
       </div>
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}

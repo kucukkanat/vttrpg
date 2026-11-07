@@ -103,6 +103,11 @@ export interface Token {
   light: number
   hidden: boolean
   conditions: string[]
+  /**
+   * Skill ids this token can use, in bar order (GM-edited). Absent: every skill of the pack and the
+   * game's custom skills, as before per-token skills existed.
+   */
+  skills?: string[]
 }
 
 /** Sheet data is pack-defined; the engine treats it as an opaque JSON object. */

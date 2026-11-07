@@ -1,7 +1,7 @@
 /**
- * The "Edit" panel: numeric editing of whatever is selected on the table (token, prop, scene
- * node or the whole scene), the GM's edit-mode / snap toggles for the table gizmo, and adding
- * props from the library or an uploaded GLB. Every change goes through `controller.dispatch`;
+ * Numeric editors for whatever is being edited on the table (token, prop, scene node or the whole
+ * scene), shown under "Details" in the edit bar (shell/EditBar.tsx), and adding props from the
+ * library or an uploaded GLB (Prep panel and the edit bar). Every change goes through `controller.dispatch`;
  * players only get controls for tokens they own and a read-only summary otherwise.
  * Built for thumbs: big +/- steppers, direct input, no hover-only affordances.
  */
@@ -15,7 +15,7 @@ import type { Vec3 } from '@/core/geometry'
 import type { LibraryEntry } from '@/assets'
 import {
   clamp, degToRad, displayDeg, effectiveNodeTransform, IDENTITY_TRANSFORM, mergeOverride, placementPoint, resetOverride, roundTo,
-  SCALE_LIMITS, TOKEN_SIZE_LIMITS, useTableUi, type GizmoMode,
+  SCALE_LIMITS, TOKEN_SIZE_LIMITS, useTableUi,
 } from '@/table'
 import { CATEGORY_LABEL, libraryModels, libraryRef, loadLibraryIndex, type LibraryCategory } from '../library'
 
@@ -28,7 +28,6 @@ const fieldStyle: CSSProperties = { minHeight: TOUCH, textAlign: 'center', fontS
 const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '6px 8px' }
 const labelRow: CSSProperties ={ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 13, color: 'var(--muted)' }
 const sectionTitle: CSSProperties = { margin: '10px 0 4px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--muted)' }
-const toggleBtn = (on: boolean): CSSProperties => ({ minHeight: 36, touchAction: 'manipulation', ...(on ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}) })
 
 /**
  * Number with big +/- buttons and a typed field. Typing is kept in a local draft until Enter or
@@ -99,50 +98,6 @@ function Summary({ rows }: { rows: [string, ReactNode][] }) {
 const fmt = (v: number) => roundTo(v, 0.01)
 const vec = (v: Vec3) => `${fmt(v.x)}, ${fmt(v.y)}, ${fmt(v.z)}`
 
-export function ObjectPanel({ controller }: { controller: GameController }) {
-  const isGm = controller.connection.isGm
-  const selection = useGame((s) => s.selection)
-  const setSelection = useGame((s) => s.setSelection)
-  const sceneId = useGame((s) => s.meta?.activeScene ?? null)
-  const scene = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene] : undefined))
-  const editMode = useTableUi((s) => s.editMode)
-  const snap = useTableUi((s) => s.snap)
-  const gizmoMode = useTableUi((s) => s.gizmoMode)
-  const uiSet = useTableUi((s) => s.set)
-
-  return (
-    <div className="panel">
-      <h3>
-        Edit
-        {isGm && (
-          <button type="button" className={editMode ? 'primary' : ''} style={{ touchAction: 'manipulation' }} onClick={() => uiSet({ editMode: !editMode })}>
-            {editMode ? 'Edit mode: on' : 'Edit mode: off'}
-          </button>
-        )}
-      </h3>
-      {isGm && editMode && (
-        <div className="row" style={{ marginTop: 0, marginBottom: 8 }}>
-          {(['translate', 'rotate', 'scale'] as GizmoMode[]).map((m) => (
-            <button key={m} type="button" style={toggleBtn(gizmoMode === m)} onClick={() => uiSet({ gizmoMode: m })}>
-              {m === 'translate' ? 'Move' : m === 'rotate' ? 'Rotate' : 'Scale'}
-              <kbd className="key-hint">{m === 'translate' ? 'G' : m === 'rotate' ? 'R' : 'S'}</kbd>
-            </button>
-          ))}
-          <button type="button" style={toggleBtn(snap)} onClick={() => uiSet({ snap: !snap })}>{snap ? 'Snap: on' : 'Snap: off'}</button>
-        </div>
-      )}
-      {!selection || !scene || !sceneId ? (
-        <p className="muted small">
-          {isGm ? 'Tap a token or prop on the table to edit it. With edit mode on, tapping the room selects its parts.' : 'Select one of your tokens to edit its size, rotation and elevation.'}
-        </p>
-      ) : (
-        <Selected key={`${selection.kind}:${selection.id}`} controller={controller} selection={selection} scene={scene} sceneId={sceneId} onDeselect={() => setSelection(null)} />
-      )}
-      {isGm && sceneId && <AddProp controller={controller} sceneId={sceneId} scene={scene} />}
-    </div>
-  )
-}
-
 function Header({ kind, name, onDeselect }: { kind: string; name: string; onDeselect(): void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -153,7 +108,7 @@ function Header({ kind, name, onDeselect }: { kind: string; name: string; onDese
   )
 }
 
-function Selected({ controller, selection, scene, sceneId, onDeselect }: { controller: GameController; selection: Selection; scene: Scene; sceneId: SceneId; onDeselect(): void }) {
+export function Selected({ controller, selection, scene, sceneId, onDeselect }: { controller: GameController; selection: Selection; scene: Scene; sceneId: SceneId; onDeselect(): void }) {
   const isGm = controller.connection.isGm
   const token = useGame((s) => (selection.kind === 'token' ? s.tokens[selection.id] : undefined))
   const prop = useGame((s) => (selection.kind === 'prop' ? s.props[selection.id] : undefined))
@@ -391,7 +346,7 @@ export function ModelPicker({ controller, title, actionLabel, kinds, hint, curre
   )
 }
 
-function AddProp({ controller, sceneId, scene }: { controller: GameController; sceneId: SceneId; scene: Scene | undefined }) {
+export function AddProp({ controller, sceneId, scene }: { controller: GameController; sceneId: SceneId; scene: Scene | undefined }) {
   const setSelection = useGame((s) => s.setSelection)
   const uiSet = useTableUi((s) => s.set)
   const add = (model: ReturnType<typeof libraryRef>, name: string) => {
@@ -403,7 +358,7 @@ function AddProp({ controller, sceneId, scene }: { controller: GameController; s
       : at
     void controller.dispatch({ type: 'prop.add', prop: { id, scene: sceneId, name, model, position, rotation: { x: 0, y: 0, z: 0 }, scale: 1 } })
     setSelection({ kind: 'prop', id })
-    uiSet({ editMode: true, gizmoMode: 'translate' })
+    uiSet({ editMode: true })
   }
   return (
     <ModelPicker
@@ -411,7 +366,7 @@ function AddProp({ controller, sceneId, scene }: { controller: GameController; s
       title="Add a prop"
       actionLabel="Add"
       kinds={PROP_KINDS}
-      hint="Props are scenery, not tokens. They land where the camera looks and are kept within one cell; turn on edit mode to move, turn and resize them."
+      hint="Props are scenery, not tokens. They land where the camera looks; double-tap one on the table to move, turn and resize it."
       onPick={add}
     />
   )

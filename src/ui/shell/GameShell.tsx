@@ -24,6 +24,7 @@ import { MORE_ID, nextPhoneTab, splitPhoneTabs } from './phoneTabs'
 import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
 import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
+import { Dock } from './Dock'
 import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
@@ -170,6 +171,7 @@ export function GameShell({ controller }: { controller: GameController }) {
           <CameraPill />
           <RollToast roll={lastRoll} who={who} onOpenChat={() => openPanel('chat')} />
         </div>
+        {meta?.activeScene && <Dock controller={controller} />}
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
         {bp !== 'phone' ? dice : null}

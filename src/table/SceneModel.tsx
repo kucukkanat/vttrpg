@@ -15,6 +15,7 @@ import {
 } from './editing'
 import type { LoadedScene } from './sceneLoader'
 import { useTableUi, type EditPreview } from './tableState'
+import { doubleTapEdit, tapTwice } from './editTap'
 
 export const MAX_SHADOW_CASTERS = 4
 const SHADOW_MAP = 1024
@@ -160,9 +161,11 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
     if (!hit || !isUnder(hit.object, loaded.root)) return
     e.stopPropagation()
     const node = nearestNamedNode(hit.object, loaded.root)
+    // Any double tap while editing ends edit mode (the room included).
+    if (tapTwice(`node:${node?.name ?? ''}`, e.nativeEvent.clientX, e.nativeEvent.clientY) && doubleTapEdit(null)) return
     if (!node) { setSelection(null); return }
-    const same = selection?.kind === 'node' && selection.id === node.name
-    setSelection(same ? null : { kind: 'node', id: node.name })
+    // A tap picks a part; tapping it again keeps it (the second tap of a double tap ends editing instead).
+    setSelection({ kind: 'node', id: node.name })
   }
   const picking = editMode && gm
 

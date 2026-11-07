@@ -9,9 +9,9 @@ import { useEffectiveToken, useGame } from '@/state/store'
 import { newSeed } from '@/dice'
 import type { Character } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
-import type { TokenId } from '@/core/ids'
 import type { TargetingProps } from '@/table'
 import { isPlayerCharacter, useTargeting } from '../targeting'
+import { costLabel, useSkillCasting } from '../skillbar/useSkillCasting'
 import { pushToast } from '../toasts'
 
 const TOAST_MS = 8000
@@ -64,10 +64,6 @@ export function skillShortfall(skill: SkillDef, character: Character, amounts: R
   return null
 }
 
-function costLabel(skill: SkillDef, labelOf: (id: string) => string): string {
-  if (!skill.cost?.length) return 'free'
-  return skill.cost.map((c) => `${c.amount} ${labelOf(c.resource)}`).join(', ')
-}
 
 function shapeLabel(skill: SkillDef): string {
   const t = skill.target
@@ -83,38 +79,14 @@ function shapeLabel(skill: SkillDef): string {
 export function SkillsPanel({ controller }: { controller: GameController }) {
   // The selected token, else the player's own: skills stay usable when nothing is selected.
   const token = useEffectiveToken(controller.pubkey)
-  const character = useGame((s) => (token?.character ? s.characters[token.character] : undefined))
   const chat = useGame((s) => s.chat)
-  const custom = useGame((s) => s.customSkills)
   const pending = useTargeting((s) => s.pending)
   const firedAt = useTargeting((s) => s.firedAt)
   const rules = controller.rules
   const isGm = controller.connection.isGm
   const mayUse = isGm || (token?.owner === controller.pubkey)
-
-  const labelOf = useMemo(() => (id: string) => rules?.pack.resources.find((r) => r.id === id)?.name ?? rules?.pack.attributes.find((a) => a.id === id)?.abbr ?? id, [rules])
-  // Pack skills with this game's custom skills merged over them (the controller feeds `custom` to the engine).
-  const skills = useMemo(() => rules?.allSkills() ?? [], [rules, custom])
-
-  // Evaluate non-numeric cost expressions against the sheet (most are literals).
-  const [amounts, setAmounts] = useState<Record<string, number>>({})
-  useEffect(() => {
-    if (!rules || !character) { setAmounts({}); return }
-    let live = true
-    const next: Record<string, number> = {}
-    const pendingEvals: Promise<void>[] = []
-    for (const skill of skills) {
-      for (const [i, cost] of (skill.cost ?? []).entries()) {
-        const key = `${skill.id}:${i}`
-        const n = Number(cost.amount)
-        if (cost.amount.trim() !== '' && Number.isFinite(n)) { next[key] = n; continue }
-        pendingEvals.push(rules.evaluate(cost.amount, character).then((v) => { if (typeof v === 'number') next[key] = v }, () => {}))
-      }
-    }
-    setAmounts({ ...next })
-    if (pendingEvals.length) void Promise.all(pendingEvals).then(() => { if (live) setAmounts({ ...next }) })
-    return () => { live = false }
-  }, [rules, character, skills])
+  const custom = useGame((s) => s.customSkills)
+  const { skills, character, labelOf, shortfall, use } = useSkillCasting(controller, token)
 
   // Outcome line: system messages the GM appended since the last skill fired.
   const [now, setNow] = useState(() => Date.now())
@@ -130,19 +102,6 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   }, [chat, firedAt, now])
 
   if (!rules) return null
-  if (skills.length === 0) return null
-
-  const use = (skill: SkillDef) => {
-    if (!token || !character) return
-    if (pending?.skillId === skill.id && pending.source === token.id) { useTargeting.getState().clear(); return }
-    if (skill.target.kind === 'self') {
-      useTargeting.getState().clear()
-      useTargeting.getState().markFired()
-      void controller.dispatch({ type: 'skill.use', skill: skill.id, source: token.id, targets: [token.id], seed: newSeed() })
-      return
-    }
-    useTargeting.getState().start({ skillId: skill.id, name: skill.name, source: token.id as TokenId, shape: skill.target })
-  }
 
   const list: CSSProperties = { display: 'grid', gap: 6 }
   const btn = (active: boolean, disabled: boolean): CSSProperties => ({
@@ -170,7 +129,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
       {token && character && mayUse && (
         <div style={list}>
           {skills.map((skill) => {
-            const reason = skillShortfall(skill, character, amounts, labelOf)
+            const reason = shortfall(skill)
             const disabled = reason !== null
             const active = pending?.skillId === skill.id && pending.source === token.id
             return (

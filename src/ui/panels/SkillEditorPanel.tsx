@@ -6,7 +6,7 @@
  * without touching the document. A JSON pane imports and exports skills so they can move between
  * games or into a pack folder.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newSeed } from '@/dice'
@@ -26,6 +26,9 @@ import {
   type SkillForm,
 } from '../skilleditor/model'
 import { SkillFormView } from '../skilleditor/SkillForm'
+import { takeSkillEditorRequest, useSkillEditorRequests, type SkillEditorRequest } from '../skilleditor/requests'
+import { withSkill } from '../skillbar/tokenSkills'
+import type { TokenId } from '@/core/ids'
 
 type View =
   | { kind: 'list' }
@@ -78,6 +81,17 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
   const [notice, setNotice] = useState<string | null>(null)
   const [importText, setImportText] = useState('')
   const [importError, setImportError] = useState<string | null>(null)
+  // Token the skill being created gets attached to on save (opened from the skill bar).
+  const [attachTo, setAttachTo] = useState<TokenId | null>(null)
+  const attachName = useGame((s) => (attachTo ? s.tokens[attachTo]?.name : undefined))
+  // Requests from the skill bar; handled by `onRequest`, set further down once the helpers exist.
+  const request = useSkillEditorRequests((s) => s.request)
+  const onRequest = useRef<(r: SkillEditorRequest) => void>(() => {})
+  useEffect(() => {
+    if (!request) return
+    const r = takeSkillEditorRequest()
+    if (r) onRequest.current(r)
+  }, [request])
 
   const pack = rules?.pack ?? null
   const packSkillIds = useMemo(() => new Set((pack?.skills ?? []).map((s) => s.id as string)), [pack])
@@ -132,6 +146,13 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
     const source = rules.allSkills().find((s) => s.id === id) ?? pack.skills.find((s) => s.id === id)
     if (source) open(overrideForm(source), null)
   }
+  onRequest.current = (r) => {
+    if (r.kind === 'new') { newSkill(); setAttachTo(r.attachTo ?? null); return }
+    setAttachTo(null)
+    const own = custom[r.skillId as SkillDef['id']]
+    if (own) edit(own)
+    else override(r.skillId)
+  }
   /** Pack skills offered by the "Override pack skill" picker, in pack order. */
   const packSkills = pack.skills
 
@@ -142,6 +163,14 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
     if (view.editingId && view.editingId !== skill.id) await controller.dispatch({ type: 'skill.remove', skill: view.editingId as SkillDef['id'] })
     await controller.dispatch({ type: 'skill.upsert', skill })
     setView({ kind: 'edit', form: view.form, saved: JSON.stringify(view.form), editingId: skill.id })
+    const token = attachTo ? useGame.getState().tokens[attachTo] : undefined
+    if (token) {
+      const all = [...rules.allSkills().filter((s) => s.id !== skill.id), skill]
+      await controller.dispatch({ type: 'token.update', token: token.id, patch: { skills: withSkill(token, all, skill.id) } })
+      setAttachTo(null)
+      setNotice(`Saved and added to ${token.name}'s skills`)
+      return
+    }
     setNotice(`Saved · find it in Skills${packSkillIds.has(skill.id) ? ` (replaces the pack's ${skill.name})` : ''}`)
   }
   const remove = async () => {
@@ -270,6 +299,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
         </div>
       )}
       {notice && <p className="small ok" style={{ margin: '0 0 8px' }}>{notice}</p>}
+      {attachName && !isCustom && <p className="small" style={{ margin: '0 0 8px', color: 'var(--accent)' }}>Saving adds it to {attachName}'s skills.</p>}
       <p className="muted small" style={{ margin: '0 0 8px' }}>
         {isCustom ? `Editing custom skill ${view.editingId}` : overridesPack ? `New skill · overrides the pack's ${view.form.id}` : 'New skill'}{dirty ? ' · unsaved' : ''}
         {errorsCount > 0 && <span className="error"> · {errorsCount} problem{errorsCount === 1 ? '' : 's'}</span>}

@@ -151,17 +151,14 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   }, [sceneId])
   const uiSet = useTableUi((s) => s.set)
   const gridOn = useTableUi((s) => s.showGrid)
-  const cameraOverride = useTableUi((s) => s.cameraOverride)
   const propWalls = useTableUi((s) => s.propWalls)
   const setSelection = useGame((s) => s.setSelection)
   const gm = !viewer || viewer.isGm
 
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
   useEffect(() => {
-    uiSet({ cameraOverride: null, firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
+    uiSet({ firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
   }, [sceneId, uiSet])
-  // Edit mode is a GM tool; a player view never shows it.
-  useEffect(() => { if (!gm) uiSet({ editMode: false }) }, [gm, uiSet])
 
   // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
   // recreates `scene` on every document sync and the model must not reload for a chat message.
@@ -204,16 +201,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       if (e.key === 'Escape' && cancelTargeting) { cancelTargeting(); return }
       if (e.metaKey || e.ctrlKey) return
       switch (e.key) {
-        // In edit mode G / R / S pick the gizmo mode (Blender habits); otherwise G toggles the grid.
-        case 'g': case 'G': if (ui.editMode) ui.set({ gizmoMode: 'translate' }); else ui.set({ showGrid: !ui.showGrid }); break
-        case 'r': case 'R': if (ui.editMode) ui.set({ gizmoMode: 'rotate' }); break
-        case 's': case 'S': if (ui.editMode) ui.set({ gizmoMode: 'scale' }); break
+        case 'g': case 'G': ui.set({ showGrid: !ui.showGrid }); break
         case 'f': case 'F': ui.set({ firstPerson: !ui.firstPerson }); break
-        case 'c': case 'C': {
-          const current = ui.cameraOverride ?? cameraMode ?? scene.cameraMode
-          ui.set({ cameraOverride: current === 'orbit' ? 'token' : 'orbit' })
-          break
-        }
         case 'Delete': case 'Backspace': {
           const sel = useGame.getState().selection
           if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'prop.remove', prop: sel.id }); setSelection(null) }
@@ -224,7 +213,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cameraMode, scene.cameraMode, setSelection, cancelTargeting, gm, onIntent])
+  }, [setSelection, cancelTargeting, gm, onIntent])
 
   // GM: Delete removes every selected token (one undoable intent each). Runs in the capture phase
   // so it clears the selection before the Tokens panel's own Delete handler sees the primary token.
@@ -300,7 +289,9 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
     [sceneId, scene, grid, floorY, loaded, viewer, onIntent, onPresence, resolve],
   )
 
-  const mode: CameraMode = cameraOverride ?? cameraMode ?? scene.cameraMode
+  // Orbit, or Eyes (first person from the followed token); a `cameraMode` prop pins it (dev stories).
+  const firstPerson = useTableUi((s) => s.firstPerson)
+  const mode: CameraMode = cameraMode ?? (firstPerson ? 'token' : 'orbit')
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background: '#0b0b10' }}>

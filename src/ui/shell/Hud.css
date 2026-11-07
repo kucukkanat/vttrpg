@@ -18,7 +18,7 @@
 .chip:has(.chip-find) { padding-right: var(--sp-1); }
 .chip--find .chip-hint { font-weight: 600; }
 
-/* Camera pill: Orbit · Follow · Eyes plus the grid toggle, top-right of the table. */
+/* Camera pill: Eyes plus the grid toggle and table tools, top-right of the table. */
 .cam-pill {
   position: absolute; top: var(--sp-2); right: calc(var(--sp-2) + var(--sar));
   display: flex; align-items: stretch; gap: var(--sp-1);
@@ -62,7 +62,3 @@
 .game--phone, .game--tablet { --rail-w: 60px; }
 .game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
 .game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }
-
-/* Folded mode group (phone, tablet): only the current mode, with a small caret saying it opens. */
-.cam-modes.folded .cam-btn:not(.on) { display: none; }
-.cam-modes.folded .cam-btn.on .cam-label::after { content: " ▾"; font-size: 9px; vertical-align: middle; }

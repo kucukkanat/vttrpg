@@ -1,6 +1,6 @@
 /**
  * GM prep: generate NPCs near the camera (hidden until revealed), build and place encounters, and
- * roll on the pack's random tables into chat. Encounters persist in localStorage per game.
+ * roll on the pack's random tables into chat, and add props to the scene. Encounters persist in localStorage per game.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { GameController } from '../controller'
@@ -11,10 +11,12 @@ import { randomName, randomNames } from '../prep/names'
 import { spawnNpcs, setHidden, removeTokens, statBlock, type Spawned } from '../prep/npc'
 import { ENCOUNTER_COLORS, encounterSize, loadEncounters, newEncounter, newRow, saveEncounters, type Encounter, type EncounterRow } from '../prep/encounters'
 import { formatTableRoll, rollTable, tableTitle } from '../prep/tables'
+import { AddProp } from './ObjectPanel'
 
 export function PrepPanel({ controller }: { controller: GameController }) {
   const meta = useGame((s) => s.meta)
   const noScene = !meta?.activeScene
+  const scene = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene] : undefined))
   return (
     <div className="panel">
       <h3>Prep</h3>
@@ -22,6 +24,7 @@ export function PrepPanel({ controller }: { controller: GameController }) {
       <Section title="NPC generator" open><NpcGenerator controller={controller} disabled={noScene} /></Section>
       <Section title="Encounters"><Encounters controller={controller} disabled={noScene} /></Section>
       <Section title="Random tables"><RandomTables controller={controller} /></Section>
+      {meta?.activeScene && <Section title="Props"><AddProp controller={controller} sceneId={meta.activeScene} scene={scene} /></Section>}
     </div>
   )
 }

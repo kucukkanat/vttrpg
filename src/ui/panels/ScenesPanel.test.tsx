@@ -52,11 +52,9 @@ describe('ScenesPanel', () => {
     expect(html).toMatch(/class="scene-preview primary" aria-pressed="true"[^>]*>Previewing</)
     useTableUi.getState().set({ previewScene: null })
   })
-  it('replaces the mode word with a camera icon that explains itself', () => {
+  it('has no per-scene camera control (the camera always orbits; Eyes is on the table)', () => {
     const html = render()
-    expect(html).not.toMatch(/>orbit</)
-    expect(html).toContain('title="Camera: free orbit · tap to follow a token"')
-    expect(html).toContain('title="Camera: follows a token · tap for free orbit"')
+    expect(html).not.toContain('scene-camera')
   })
   it('disables Remove on the live scene only', () => {
     const html = render()

@@ -25,6 +25,7 @@ import {
 } from './ping'
 import { FloorCatcher, FloorLabel, floorPoint } from './RulerLayer'
 import { useTableUi } from './tableState'
+import { doubleTapEdit } from './editTap'
 import { vfxBus } from './vfx/bus'
 import { RingEffect } from './vfx/presets/RingEffect'
 import type { ScheduledEffect } from './vfx/schedule'
@@ -102,6 +103,8 @@ export function PingLayer({ bounds }: { bounds: Bounds2 }) {
       const tap: Tap = { x: e.clientX, y: e.clientY, at: now }
       if (isDoubleTap(lastTap.current, tap)) {
         lastTap.current = null
+        // While editing, a double tap on empty table ends edit mode instead of pinging.
+        if (useTableUi.getState().editMode) { doubleTapEdit(null); return }
         const p = floorAt(e.clientX, e.clientY)
         if (p) send(p)
       } else {

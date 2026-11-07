@@ -1,0 +1,50 @@
+/* Bottom dock over the table (shell/Dock.tsx): edit bar or skill bar, with an optional card above it.
+   Centred, at most 640px wide, wrapping rather than scrolling sideways. */
+.dock {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
+  display: flex; justify-content: center;
+  padding: 0 calc(var(--sp-2) + var(--sar)) calc(var(--sp-2) + var(--sab)) calc(var(--sp-2) + var(--sal));
+}
+.game--phone .dock { padding-bottom: var(--sp-2); }
+.skill-dock, .edit-dock { display: flex; flex-direction: column; gap: var(--sp-2); width: min(100%, 640px); pointer-events: none; }
+.dock-bar, .dock-card {
+  pointer-events: auto; background: rgba(18, 18, 22, .9); border: 1px solid var(--border); border-radius: var(--r-md);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+}
+.dock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-1); padding: var(--sp-1); max-height: 40vh; overflow-y: auto; }
+.dock-card { padding: var(--sp-2) var(--sp-3); max-height: 40vh; overflow-y: auto; }
+
+/* Skill chips: name over cost, sized like a control, as many per row as fit. */
+.skill-chip {
+  flex: 0 1 auto; min-width: 0; max-width: 100%; min-height: var(--control); padding: 2px var(--sp-3);
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.15;
+  background: var(--panel-2); border-radius: var(--r-sm);
+}
+.skill-chip:disabled { opacity: .5; }
+.skill-chip.on { border-color: var(--accent); }
+.skill-chip-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-chip-cost { font-size: var(--fs-xs); color: var(--accent); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-chip:disabled .skill-chip-cost { color: var(--bad); }
+.skill-chip--edit { background: transparent; border-style: dashed; }
+.skill-chip--edit .skill-chip-cost { color: var(--muted); }
+.skill-bar-note { padding: 0 var(--sp-2); }
+
+/* GM token skills editor. */
+.token-skills-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+.token-skills-head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-skills-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.token-skills-list li { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--control); }
+.token-skills-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-skills-add { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.token-skills-add select { flex: 1 1 10em; width: auto; min-width: 0; }
+
+/* Edit bar. */
+.edit-bar { justify-content: flex-end; }
+.edit-bar-title { flex: 1 1 8em; min-width: 0; display: flex; align-items: baseline; gap: var(--sp-2); padding: 0 var(--sp-2); }
+.edit-bar-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-bar button.on { border-color: var(--accent); color: var(--accent); }
+.edit-details .props { margin-top: 0; padding-top: 0; border-top: 0; }
+.edit-details-extra { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--border); display: grid; gap: var(--sp-2); justify-items: start; }
+.edit-details-extra > :last-child { justify-self: stretch; }
+/* The editors' own "Done" (deselect) would sit next to the bar's Done; the bar's is the one. */
+.edit-details .props > :first-child > button { display: none; }

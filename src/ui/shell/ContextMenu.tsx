@@ -5,7 +5,7 @@
  *
  *   Sheet       open the Character panel for this token
  *   Attack      aim the pack's first attack-like skill from this token (no skill or no sheet: open Skills)
- *   Edit        open the Edit panel
+ *   Edit        edit mode on this token (gizmo and the edit bar), like a double tap
  *   Hide/Show   GM: toggle `token.hidden`
  *   Assign to…  GM: submenu of present players (and the GM) → `token.claim`
  *   Remove      GM: `token.remove` for this token, or the whole selection when it is a member (undo toasts come from the controller)
@@ -18,10 +18,12 @@ import type { PlayerPubkey } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import { useGame } from '@/state/store'
 import { useTableUi, type ContextMenuRequest } from '@/table/tableState'
+import { startEditing } from '@/table/editTap'
 import type { GameController } from '../controller'
 import { useSession } from '../session'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from './useShortcuts'
+import { tokenSkillList } from '../skillbar/tokenSkills'
 import './ContextMenu.css'
 
 /** The pack's first skill that reads as an attack: deals damage and is aimed at something. Falls back to the first aimed skill. */
@@ -72,7 +74,7 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
   const presence = useGame((s) => s.presence)
   const selectedCount = useGame((s) => (s.selectedTokens.includes(token.id) ? s.selectedTokens.length : 1))
   const isGm = controller.connection.isGm
-  const skill = firstAttackSkill(controller.rules?.allSkills() ?? [])
+  const skill = firstAttackSkill(tokenSkillList(token, controller.rules?.allSkills() ?? []))
 
   // Place at the pointer, inside the HUD (its padding carries the safe-area insets). Re-run when the list changes height.
   useLayoutEffect(() => {
@@ -101,7 +103,7 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
 
   const dispatch = (intent: Parameters<GameController['dispatch']>[0]) => void controller.dispatch(intent)
   const sheet = () => { requestOpenPanel('character'); onClose() }
-  const edit = () => { requestOpenPanel('object'); onClose() }
+  const edit = () => { onClose(); startEditing({ kind: 'token', id: token.id }) }
   const attack = () => {
     onClose()
     if (!skill || !token.character) { requestOpenPanel('skills'); return }

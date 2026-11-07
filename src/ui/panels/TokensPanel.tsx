@@ -9,7 +9,8 @@ import { useGame } from '@/state/store'
 import { newId } from '@/core/ids'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import type { Token } from '@/core/doc'
-import { isTypingTarget, requestOpenPanel } from '../shell/useShortcuts'
+import { isTypingTarget } from '../shell/useShortcuts'
+import { startEditing } from '@/table/editTap'
 import './tokens.css'
 
 const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
@@ -72,10 +73,7 @@ export function TokensPanel({ controller }: { controller: GameController }) {
     select(id)
   }
 
-  const edit = (id: TokenId) => {
-    select(id)
-    requestOpenPanel('object')
-  }
+  const edit = (id: TokenId) => startEditing({ kind: 'token', id })
 
   return (
     <div className="panel">

@@ -105,9 +105,8 @@ export interface TableUiState {
   multiSelect: boolean
   /** Moves queued behind an away GM, by token (see `PendingMove`). */
   pending: Record<TokenId, PendingMove>
+  /** Eyes: first person from the selected (or own) token; otherwise the camera orbits the table. */
   firstPerson: boolean
-  /** Local override of the scene's camera mode (C key); null follows the scene. */
-  cameraOverride: CameraMode | null
   showGrid: boolean
   /** Cells the local viewer can currently see; null when fog is off (everything visible). */
   visible: ReadonlySet<string> | null
@@ -159,7 +158,6 @@ export const useTableUi = create<TableUiState>((set) => ({
   multiSelect: false,
   pending: {} as Record<TokenId, PendingMove>,
   firstPerson: false,
-  cameraOverride: null,
   showGrid: true,
   visible: null,
   targeting: null,

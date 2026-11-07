@@ -10,7 +10,6 @@ import { PlayersPanel } from './PlayersPanel'
 import { CharacterPanel } from './CharacterPanel'
 import { SkillsPanel } from './SkillsPanel'
 import { ChatPanel } from './ChatPanel'
-import { ObjectPanel } from './ObjectPanel'
 import { SoundboardPanel } from './SoundboardPanel'
 import { JournalPanel } from './JournalPanel'
 import { InitiativePanel } from './InitiativePanel'
@@ -58,7 +57,6 @@ export interface PanelDef {
 export const PANELS: PanelDef[] = [
   { id: 'scenes', title: 'Scenes', short: 'Scenes', glyph: '🗺', component: ScenesPanel, scope: 'all', side: 'left', phoneSlot: 1 },
   { id: 'tokens', title: 'Tokens', short: 'Tokens', glyph: '♟', component: TokensPanel, scope: 'all', side: 'left', phoneSlot: 2 },
-  { id: 'object', title: 'Edit', short: 'Edit', glyph: '✎', component: ObjectPanel, scope: 'all', side: 'left' },
   { id: 'sound', title: 'Sound', short: 'Sound', glyph: '🔊', component: SoundboardPanel, scope: 'gm', side: 'left' },
   { id: 'players', title: 'Players', short: 'Players', glyph: '👥', component: PlayersPanel, scope: 'all', side: 'left' },
   { id: 'initiative', title: 'Initiative', short: 'Turns', glyph: '⚔', component: InitiativePanel, scope: 'all', side: 'left' },
