@@ -4,7 +4,7 @@
  * token of the live scene), Next, End, and a per-row editor for the score, the position and
  * removal; players read the list and see their own token's row marked.
  *
- * `InitiativeChip` is the HUD summary ("Round 2 · Pip's turn"); it also watches the store and,
+ * `InitiativeChip` is the HUD turn strip (round badge and token discs in turn order); it also watches the store and,
  * when the turn moves, toasts the new combatant and selects their token for its owner and the GM.
  */
 import { useEffect, useMemo, useState } from 'react'
@@ -18,6 +18,8 @@ import { ListRow } from '../components'
 import { pushToast } from '../toasts'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { focusToken } from '@/table/tableState'
+import { inkOn } from '@/table/tokenLabel'
+import { discSlots, turnStrip } from '@/table/turnStrip'
 import { combatantName, combatants, concernsViewer, currentEntry, DEFAULT_INITIATIVE_FORMULA, moveEntry, possessive, rollInitiative, seedFor, turnLabel, withScore } from './initiative'
 import './initiative.css'
 
@@ -222,21 +224,51 @@ export function useTurnNotices(controller: GameController | null): void {
   }, [controller])
 }
 
-/** HUD chip: "Round 2 · Pip's turn"; a tap opens the Initiative panel. Nothing between encounters. */
+/**
+ * HUD turn strip: the round, then a disc per combatant (token colour and initials, the way the
+ * table draws them) starting at the current one, which is larger and ringed; upcoming ones follow
+ * and what does not fit becomes "+N". Players never see hidden tokens. A tap opens the Initiative
+ * panel. Nothing between encounters. The wrapper spans the row so the strip knows how many discs fit.
+ */
 export function InitiativeChip() {
   const { controller } = useSession()
   const init = useGame((s) => s.initiative)
   const tokens = useGame((s) => s.tokens)
   useTurnNotices(controller)
+  const [width, setWidth] = useState<number | null>(null)
+  const [wrap, setWrap] = useState<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!wrap) return
+    setWidth(wrap.clientWidth)
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setWidth(wrap.clientWidth))
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [wrap])
   if (!controller) return null
-  const label = turnLabel(init, tokens, controller.connection.isGm)
-  if (!label) return null
+  const isGm = controller.connection.isGm
+  const label = turnLabel(init, tokens, isGm)
+  // Before the first measurement assume the narrowest phone row (320 px wide, rail on the right).
+  const strip = label ? turnStrip(init, tokens, isGm, controller.pubkey, discSlots(width ?? 236)) : null
+  if (!label || !strip) return null
   return (
-    <div className="chip init-chip">
-      <button type="button" className="chip-main" onClick={() => requestOpenPanel('initiative')} aria-label={`${label}. Open initiative`}>
-        <span className="init-chip-glyph" aria-hidden>⚔</span>
-        <span className="chip-name">{label}</span>
-        <span className="chip-hint">›</span>
+    <div className="init-strip-wrap" ref={setWrap}>
+      <button type="button" className="chip init-chip" onClick={() => requestOpenPanel('initiative')} aria-label={`${label}. Open initiative`}>
+        <span className="init-round" aria-hidden>
+          <small>R</small>{strip.round}
+        </span>
+        {strip.discs.map((d) => (
+          <span
+            key={d.token}
+            className={`init-disc${d.current ? ' current' : ''}${d.mine ? ' mine' : ''}${d.hidden ? ' hidden' : ''}`}
+            style={{ background: d.color, color: inkOn(d.color) }}
+            title={d.name}
+            aria-hidden
+          >
+            {d.initials}
+          </span>
+        ))}
+        {strip.overflow > 0 && <span className="init-disc more" aria-hidden>+{strip.overflow}</span>}
       </button>
     </div>
   )
