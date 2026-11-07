@@ -28,7 +28,7 @@ import { BOX_THRESHOLD_PX, boxHits, rectAround, rectFrom, type ScreenRect } from
 import { editRuntime, isPhoneLike, propObjects } from './editRuntime'
 import { applyGroupOp, snapFactor, updatesFrom, type Poses } from './groupTransform'
 import {
-  centreOf, commitGroupOp, copySelection, dropSelection, duplicateSelection, paste, removeSelection, selectionPoses, turnSelection,
+  centreOf, commitGroupOp, copySelection, dropSelection, duplicateSelection, pasteToHand, removeSelection, selectionPoses, turnSelection,
 } from './propActions'
 import { PropGizmo } from './PropGizmo'
 import { entryOp, propKeyAction } from './transformKeys'
@@ -113,8 +113,8 @@ function PropKeys() {
         pasteFallback = setTimeout(() => {
           pasteFallback = null
           const read = navigator.clipboard?.readText?.()
-          if (!read) { paste(onIntent); return }
-          read.then((text) => paste(onIntent, text), () => paste(onIntent))
+          if (!read) { pasteToHand(); return }
+          read.then((text) => pasteToHand(text), () => pasteToHand())
         }, 120)
         return
       }
@@ -151,7 +151,7 @@ function PropKeys() {
       if (isTyping(document.activeElement) || !keysLive()) return
       if (pasteFallback) { clearTimeout(pasteFallback); pasteFallback = null }
       const text = e.clipboardData?.getData('text/plain') ?? null
-      if (paste(onIntent, text)) e.preventDefault()
+      if (pasteToHand(text)) e.preventDefault()
     }
     window.addEventListener('keydown', onKey, true)
     document.addEventListener('copy', onCopy)

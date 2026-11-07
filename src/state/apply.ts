@@ -8,6 +8,7 @@ import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
+import type { CatalogueEntry } from '@/core/catalogue'
 import { migratedScale } from '@/core/props'
 import { applyTilesIntent } from './tilesDoc'
 import { combatEntries, EMPTY_INITIATIVE, inCurrentSlot, nextTurn, sheetDeltas, slotRange, sortInitiative, withOrder, withoutToken } from './initiative'
@@ -495,6 +496,12 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         break
       case 'prefab.remove':
         prefabs.delete(intent.prefab)
+        break
+      case 'catalogue.add':
+        doc.getMap<CatalogueEntry>('catalogue').set(intent.entry.id, stripUndefined(intent.entry))
+        break
+      case 'catalogue.remove':
+        doc.getMap<CatalogueEntry>('catalogue').delete(intent.id)
         break
       case 'initiative.start': {
         const order = sortInitiative(intent.order)

@@ -4,7 +4,8 @@ import type { PlayerPubkey, PropId, SceneId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import { useGame } from '@/state/store'
 import { tableRuntime } from '../tableState'
-import { copySelection, duplicateSelection, paste, removeSelection, restingHeight, turnSelection } from './propActions'
+import { copySelection, duplicateSelection, paste, pasteToHand, removeSelection, restingHeight, turnSelection } from './propActions'
+import { useBuildUi } from './buildState'
 import { decodeClip } from './propClipboard'
 
 const scene = 's1' as SceneId
@@ -54,6 +55,18 @@ describe('prop selection actions', () => {
     expect(paste(dispatch, 'not ours')).toBe(true)
     expect(sent).toHaveLength(2)
     tableRuntime.cursorFloor = null
+  })
+  it('pastes into the hand: the clip becomes the stamp ghost, nothing is placed yet', () => {
+    const text = copySelection()
+    expect(pasteToHand(text)).toBe(true)
+    expect(sent).toHaveLength(0)
+    const ui = useBuildUi.getState()
+    expect(ui.tool).toBe('place')
+    expect(ui.held?.parts?.map((p) => p.offset.x)).toEqual([-1, 1])
+    ui.set({ tool: null, held: null })
+    expect(pasteToHand('not ours')).toBe(true)
+    expect(useBuildUi.getState().held?.parts).toHaveLength(2)
+    useBuildUi.getState().set({ tool: null, held: null })
   })
   it('removes the selection in one intent', () => {
     removeSelection(dispatch)

@@ -1,0 +1,89 @@
+/* The Library tab: search, shelves and category chips, placement options, the windowed card grid. */
+
+/* The grid scrolls on its own; the controls above it stay put. */
+.t-tray .hosted > .panel.library-panel,
+.t-screen-sheet .hosted > .panel.library-panel,
+.panel.library-panel { display: flex; flex-direction: column; gap: var(--sp-2); overflow: hidden; min-height: 0; }
+.t-tray .hosted:has(> .library-panel) { display: flex; flex-direction: column; }
+.t-tray .hosted > .library-panel { flex: 1 1 auto; height: min(62vh, 640px); }
+/* The phone sheet is a grid: without this the chip rows' max-content width would widen it. */
+.t-screen-sheet > .hosted:has(> .library-panel) { min-width: 0; }
+.t-screen-sheet .hosted > .library-panel { flex: 1 1 auto; height: min(58vh, 560px); }
+
+.lib-top { display: flex; gap: var(--sp-2); align-items: center; }
+.lib-search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-1); margin: 0;
+  padding: 0 var(--sp-2); border: 1px solid var(--border); border-radius: 999px; background: var(--field);
+}
+.lib-search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 6px 0; min-height: 30px; outline: none; }
+.lib-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+.lib-chips.lib-shelves { flex-wrap: wrap; overflow: visible; }
+.lib-chips { display: flex; gap: var(--sp-1); overflow-x: auto; scrollbar-width: none; flex: none; padding-bottom: 1px; }
+.lib-chips::-webkit-scrollbar { display: none; }
+.lib-chip {
+  flex: none; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: var(--fs-sm);
+  background: transparent; border: 1px solid var(--border); white-space: nowrap;
+}
+.lib-chip.on { background: var(--row-on); border-color: var(--accent); font-weight: 700; }
+.lib-chip--cat { text-transform: capitalize; min-height: 24px; font-size: var(--fs-xs); }
+
+.lib-opts { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; flex: none; }
+.lib-opt { display: flex; align-items: center; gap: var(--sp-1); margin: 0; font-size: var(--fs-sm); }
+.lib-opt select { min-height: 26px; padding: 0 4px; font-size: var(--fs-sm); }
+.lib-range input { width: 80px; }
+.lib-dropper { margin-left: auto; }
+.lib-dropper.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+.lib-empty { margin: var(--sp-3) 0; }
+
+.lib-grid { position: relative; flex: 1; min-height: 120px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.lib-grid-inner { position: relative; }
+
+.lib-card { position: absolute; contain: layout paint; }
+.lib-card-pick {
+  width: 100%; height: 100%; padding: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
+  text-align: left; cursor: grab; min-height: 0;
+}
+.lib-card-pick:hover { border-color: var(--accent); }
+.lib-card.held .lib-card-pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.lib-thumb {
+  position: relative; display: grid; place-items: center; aspect-ratio: 1; width: 100%;
+  background: radial-gradient(circle at 50% 40%, #fffaf0, var(--paper-2) 75%); color: var(--muted);
+}
+.lib-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.lib-title {
+  padding: 2px 6px 0; font-size: var(--fs-sm); font-weight: 600; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lib-size { padding: 0 6px 4px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.lib-badge {
+  position: absolute; left: 4px; bottom: 4px; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  line-height: 1.4; letter-spacing: .02em;
+}
+.lib-badge--licence { background: #2a1c10; color: #f5ead0; }
+.lib-star {
+  position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; min-height: 26px; min-width: 26px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; border: 0; background: rgba(245, 234, 208, .8); color: var(--muted);
+  opacity: .75;
+}
+.lib-star:hover, .lib-star:focus-visible { opacity: 1; }
+.lib-star.on { color: #b07400; opacity: 1; }
+.lib-star.on svg { fill: currentColor; }
+
+/* Phones: one row of shelves, scrolled sideways, so the cards get the room. */
+@media (max-width: 699.98px) { .lib-chips.lib-shelves { flex-wrap: nowrap; overflow-x: auto; } }
+@media (pointer: coarse) {
+  .lib-chip { min-height: 36px; }
+  .lib-star { width: 32px; height: 32px; }
+}
+
+/* The hover preview, beside the tray. */
+.lib-preview {
+  position: fixed; z-index: 40; pointer-events: none; border: 1px solid #b59a6c; border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg); overflow: hidden; background: var(--panel) var(--paper-tex);
+}
+.lib-preview-canvas { background: radial-gradient(circle at 50% 45%, #fffaf0, #e5d3a8 80%); }
+.lib-preview-meta { display: flex; flex-direction: column; padding: 4px 8px 6px; font-size: var(--fs-sm); line-height: 1.25; }
+.lib-preview-meta strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

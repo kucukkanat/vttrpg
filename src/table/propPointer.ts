@@ -28,6 +28,7 @@ import { doubleTapEdit, tapTwice } from './editTap'
 import { useTableUi } from './tableState'
 import { capture, DRAG_THRESHOLD_PX, LONG_PRESS_MS } from './TokenMesh'
 import { editRuntime } from './build/editRuntime'
+import { eyedrop, wantsEyedrop } from './build/eyedrop'
 import { applyGroupOp, type Poses } from './build/groupTransform'
 import { commitGroupOp, placeCopiesAt, posesOf } from './build/propActions'
 
@@ -119,6 +120,8 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     // Shift-click: add to or drop from the selection (GM building with several props).
     if (gm && ne.shiftKey) { useGame.getState().togglePropSelected(id); return }
     if (!(gm && !prop.locked)) {
+      // Build: Alt-click is the eyedropper (pick this model up again); a locked prop cannot be dragged.
+      if (gm && wantsEyedrop(ne)) { eyedrop(prop); return }
       const twice = tapTwice(`prop:${id}`, ne.clientX, ne.clientY)
       if (twice && doubleTapEdit(gm ? { kind: 'prop', id } : null)) return
       select(id)
@@ -192,6 +195,9 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     endDrag(true)
     if (!wasClick) return
     const ne = e.nativeEvent
+    // Build: Alt-click without a drag is the eyedropper (Alt-drag duplicates).
+    const dropped = d.duplicate && gm && wantsEyedrop({ altKey: true, button: 0 }) ? useGame.getState().props[id] : undefined
+    if (dropped) { eyedrop(dropped); return }
     if (tapTwice(`prop:${id}`, ne.clientX, ne.clientY) && doubleTapEdit({ kind: 'prop', id })) return
     // In Build or edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
     const ui = useTableUi.getState()

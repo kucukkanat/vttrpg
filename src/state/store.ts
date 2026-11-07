@@ -6,6 +6,7 @@ import { create } from 'zustand'
 import type * as Y from 'yjs'
 import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
+import type { CatalogueEntry } from '@/core/catalogue'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 import type { SceneTiles } from '@/core/kits'
@@ -58,6 +59,8 @@ export interface GameState {
    * touched (and the scene record holding them), so chunk renderers rebuild only what changed.
    */
   tiles: Record<SceneId, SceneTiles>
+  /** The game's own models (imports and uploads), by catalogue id. */
+  catalogue: Record<string, CatalogueEntry>
   presence: Record<string, Presence>
   notices: LocalNotice[]
   pushNotice(text: string, at?: number): LocalNotice
@@ -88,7 +91,7 @@ export interface GameState {
   addPropsToSelection(ids: readonly PropId[]): void
   clearPropSelection(): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'tiles'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'tiles' | 'catalogue'>>): void
 }
 
 let noticeSeq = 0
@@ -111,6 +114,7 @@ export const useGame = create<GameState>((set) => ({
   prefabs: {} as Record<PrefabId, Prefab>,
   lights: {} as Record<LightId, PlacedLight>,
   tiles: {} as Record<SceneId, SceneTiles>,
+  catalogue: {},
   presence: {},
   notices: [],
   pushNotice: (text, at = Date.now()) => {
@@ -243,7 +247,7 @@ export function bindDoc(doc: Y.Doc): () => void {
     chat: doc.getArray('chat'), fog: doc.getMap('fog'), events: doc.getArray('events'), props: doc.getMap('props'),
     notes: doc.getMap('notes'), customSkills: doc.getMap('customSkills'), initiative: doc.getMap('initiative'),
     creatures: doc.getMap('creatures'), encounters: doc.getMap('encounters'), walls: doc.getMap('walls'),
-    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'), tiles: doc.getMap('tiles'),
+    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'), tiles: doc.getMap('tiles'), catalogue: doc.getMap('catalogue'),
   }
   const keys = Object.keys(types) as DocKey[]
   // An empty `meta` map mirrors as an empty object, as it always has.

@@ -8,6 +8,7 @@ import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, Scen
 import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility, CreatureTemplate, Encounter } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
+import type { CatalogueEntry } from './catalogue'
 
 export type Intent =
   | { type: 'token.move'; token: TokenId; position: Vec3; rotationY?: number }
@@ -135,6 +136,13 @@ export type Intent =
   /** Prefabs (GM only). Stamping one is a single `props.place` carrying the walls. */
   | { type: 'prefab.upsert'; prefab: Prefab }
   | { type: 'prefab.remove'; prefab: PrefabId }
+  /**
+   * The game's own models, "My models" (GM only). `catalogue.add` saves an imported or uploaded
+   * entry (validated by `badCatalogueEntry`: a shareable licence, never a built-in); adding an id
+   * that exists replaces it. Removing one leaves props placed from it on the table.
+   */
+  | { type: 'catalogue.add'; entry: CatalogueEntry }
+  | { type: 'catalogue.remove'; id: string }
 
 /** The fields of a prop `props.update` may change. Scale is always per-axis here. */
 export interface PropPatch {

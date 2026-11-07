@@ -8,7 +8,8 @@
  *   while a build tool is active, a proposal is under review or "Show walls" is on.
  * - The active build tool (`buildState.tool`): a floor catcher that owns the pointer, like the
  *   ruler, for drawing walls and doors, erasing, the fog brush, placing lights and capturing and
- *   stamping prefabs. Esc puts the tool away; R turns a stamp.
+ *   stamping prefabs. Esc puts the tool away; R turns a stamp. Holding a library model (and the
+ *   eyedropper, Alt-click, card drops) is `PlaceLayer`.
  * - Shared views: "pull everyone to my view", a display following the GM, the GM sharing their camera.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -26,6 +27,7 @@ import { CAMERA_SHARE_INTERVAL_MS, followedCamera, makeView, takePull, viewMoved
 import { exploredCells } from '../vision'
 import type { Pt2, WallSegment } from '../walls'
 import { useBuildUi, type BuildTool } from './buildState'
+import { CardDrop, PlaceLayer } from './PlaceLayer'
 import { capturePrefab, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
 import { blockingSegments, cleanPoint, endpointsOf, isDrawable, pointSegmentDistance, sceneWalls, segmentsNear, snapWallPoint, wallsNear } from './wallEdit'
 import { BUILD } from '@/ui/theme/palette'
@@ -90,8 +92,11 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
     <>
       <Doors />
       <Lights />
-      {gm && (active || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
-      {active && active !== 'kit' && <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />}
+      {gm && ((active && active !== 'place' && active !== 'eyedropper' && active !== 'kit') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
+      {active && active !== 'kit' && (active === 'place' || active === 'eyedropper'
+        ? <PlaceLayer tool={active} bounds={bounds} />
+        : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
+      {gm && !viewer?.display && <CardDrop />}
       <ViewSync />
     </>
   )

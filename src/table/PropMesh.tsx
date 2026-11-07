@@ -117,6 +117,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
   return (
     <group
       ref={group}
+      userData={{ propId: prop.id }}
       position={[position.x, position.y, position.z]}
       rotation={[rotation.x, rotation.y, rotation.z]}
       {...handlers}
