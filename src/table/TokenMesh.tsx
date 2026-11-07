@@ -384,11 +384,11 @@ export function TokenMesh({ token }: { token: Token }) {
     else setSelected(token.id)
   }
   /** Right-click / long-press: the token becomes the primary selection (the set is kept when it is a member) and the menu opens there. */
-  const openMenu = (x: number, y: number) => {
+  const openMenu = (x: number, y: number, radial = false) => {
     const s = useGame.getState()
     if (s.selectedTokens.includes(token.id)) s.selectMany(s.selectedTokens, token.id)
     else s.setSelectedToken(token.id)
-    uiSet({ contextMenu: { token: token.id, x, y } })
+    uiSet({ contextMenu: { token: token.id, x, y, ...(radial ? { radial } : {}) } })
   }
 
   const endDrag = (commit: boolean) => {
@@ -437,7 +437,7 @@ export function TokenMesh({ token }: { token: Token }) {
       longPress: e.pointerType === 'touch'
         ? setTimeout(() => {
           const held = drag.current
-          if (held && !held.moved) { endDrag(false); openMenu(held.startX, held.startY) }
+          if (held && !held.moved) { endDrag(false); openMenu(held.startX, held.startY, true) }
         }, LONG_PRESS_MS)
         : null,
       plane: new Plane(new Vector3(0, 1, 0), -floorY),

@@ -27,7 +27,8 @@ import { pushToast } from '../toasts'
 import { currentEntry, DEFAULT_INITIATIVE_FORMULA, combatants, rollInitiative, seedFor, withScore } from '../panels/initiative'
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
-import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
+import { saveChipLabel, sheetSaves } from './tokenBar'
+import { changeTokenHp } from './changeHp'
 import { conditionStyle, rangePreviewFor, type RangePreview } from './barVisuals'
 import { CostBadges, HpMeter } from './BarParts'
 import { SkillIcon } from './skillIcons'
@@ -72,17 +73,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
     if (!character) return
     void controller.dispatch({ type: 'roll', formula, seed: newSeed(), label: `${character.name}: ${label}`, character: character.id })
   }
-  const changeHp = (delta: number) => {
-    if (!character || !primary) return
-    const data = adjustResource(character.data, primary.id, delta, hp?.max)
-    if (!data) return
-    void controller.dispatch({ type: 'character.upsert', character: { ...character, data } })
-    // Everyone sees the change float over the token, like a skill's damage or healing.
-    const after = readResource(data, primary, (e) => rules!.evaluateNow(e, character))
-    const moved = after && hp ? after.current - hp.current : 0
-    const down = !!after && !!hp && hp.current > 0 && after.current <= 0
-    if (moved) controller.floatNumbers?.(token.scene, [{ token: token.id, delta: moved, resource: primary.id, ...(down ? { down } : {}) }])
-  }
+  // Everyone sees the change float over the token, like a skill's damage or healing.
+  const changeHp = (delta: number) => { changeTokenHp(controller, token, delta) }
   const endTurn = () => void controller.dispatch(isGm ? { type: 'initiative.next' } : { type: 'initiative.next', token: token.id })
   const openMenu = () => {
     const r = menuBtn.current?.getBoundingClientRect()

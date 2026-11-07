@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SkillDef } from '@/core/pack'
 import type { SkillId } from '@/core/ids'
-import { firstAttackSkill, placeMenu } from './ContextMenu'
+import { firstAttackSkill, menuKeyTarget, placeMenu, RADIAL_ITEM, RADIAL_RADIUS, radialLayout } from './ContextMenu'
 
 const skill = (id: string, target: SkillDef['target'], effects: SkillDef['effects']): SkillDef =>
   ({ id: id as SkillId, name: id, description: '', target, effects, vfx: [] })
@@ -37,5 +37,40 @@ describe('placeMenu', () => {
   })
   it('pins to the top-left padding when the menu is larger than the container', () => {
     expect(placeMenu({ x: 50, y: 50, ...box, width: 150, height: 200 })).toEqual({ left: 8, top: 8 })
+  })
+})
+
+describe('radialLayout', () => {
+  const pad = { left: 8, top: 8, right: 8, bottom: 8 }
+  const reach = RADIAL_RADIUS + RADIAL_ITEM / 2
+  it('rings the press point clockwise from the top', () => {
+    const r = radialLayout(4, { x: 200, y: 300, width: 400, height: 800, pad })
+    expect([r.cx, r.cy]).toEqual([200, 300])
+    expect(r.items).toEqual([{ x: 0, y: -RADIAL_RADIUS }, { x: RADIAL_RADIUS, y: 0 }, { x: 0, y: RADIAL_RADIUS }, { x: -RADIAL_RADIUS, y: 0 }])
+  })
+  it('pulls the centre in so every button stays inside the padded container', () => {
+    const r = radialLayout(6, { x: 10, y: 790, width: 400, height: 800, pad })
+    expect(r.cx).toBe(8 + reach)
+    expect(r.cy).toBe(800 - 8 - reach)
+  })
+  it('centres the ring when the container is smaller than it', () => {
+    const r = radialLayout(6, { x: 10, y: 10, width: 200, height: 150, pad })
+    expect([r.cx, r.cy]).toEqual([100, 75])
+  })
+})
+
+describe('menuKeyTarget', () => {
+  it('steps with the arrows, wrapping, and jumps with Home / End', () => {
+    expect(menuKeyTarget('ArrowDown', 0, 3)).toBe(1)
+    expect(menuKeyTarget('ArrowRight', 2, 3)).toBe(0)
+    expect(menuKeyTarget('ArrowUp', 0, 3)).toBe(2)
+    expect(menuKeyTarget('ArrowLeft', 1, 3)).toBe(0)
+    expect(menuKeyTarget('Home', 2, 3)).toBe(0)
+    expect(menuKeyTarget('End', 0, 3)).toBe(2)
+  })
+  it('starts from the first item when nothing inside is focused, and ignores other keys', () => {
+    expect(menuKeyTarget('ArrowDown', -1, 3)).toBe(0)
+    expect(menuKeyTarget('Enter', 0, 3)).toBeNull()
+    expect(menuKeyTarget('ArrowDown', 0, 0)).toBeNull()
   })
 })

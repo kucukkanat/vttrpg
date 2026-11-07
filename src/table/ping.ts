@@ -45,6 +45,22 @@ export function takePing(seen: Map<string, number>, p: Presence, now = Date.now(
   return { ...ping, color: ping.color || p.color, pubkey: p.pubkey, name: p.name }
 }
 
+type PingSender = (p: { x: number; z: number }) => void
+let pingSender: PingSender | null = null
+
+/** The mounted PingLayer registers how it sends; returns the unregister function. */
+export function setPingSender(send: PingSender): () => void {
+  pingSender = send
+  return () => { if (pingSender === send) pingSender = null }
+}
+
+/** Ping a floor spot for everyone from outside the canvas (the token menu's Ping). False when no table is mounted. */
+export function pingAt(x: number, z: number): boolean {
+  if (!pingSender) return false
+  pingSender({ x, z })
+  return true
+}
+
 /** A tap on screen: client pixels and a local clock in ms. */
 export interface Tap { x: number; y: number; at: number }
 

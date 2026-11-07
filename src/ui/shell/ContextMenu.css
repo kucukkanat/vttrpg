@@ -27,3 +27,36 @@
 .ctx-sep { height: 1px; margin: var(--sp-1) 0; background: var(--border); }
 @keyframes ctx-in { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .ctx-menu { animation: none; } }
+
+/* Radial twin (long-press): a zero-size anchor at the ring's centre; buttons sit at (--rx, --ry) around it
+   and fan out from the centre, one after another. */
+.hud > .ctx-radial, .ctx-radial { position: absolute; z-index: 6; width: 0; height: 0; padding: 0; background: none; border: 0; }
+.ctx-radial::before {
+  content: ''; position: absolute; left: -128px; top: -128px; width: 256px; height: 256px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(10, 10, 14, .55) 0%, rgba(10, 10, 14, .35) 55%, transparent 72%);
+}
+.ctx-radial-item, .ctx-radial-close {
+  position: absolute; left: 0; top: 0; padding: 0; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: rgba(23, 23, 27, .95); border: 1px solid var(--border); color: var(--fg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .5); touch-action: manipulation;
+}
+.ctx-radial-item {
+  width: 56px; height: 56px; min-height: 0; margin: -28px 0 0 -28px;
+  transform: translate(var(--rx), var(--ry));
+  animation: ctx-radial-in .16s ease-out both; animation-delay: calc(var(--i) * 18ms);
+}
+.ctx-radial-item.is-pressed { transform: translate(var(--rx), var(--ry)) scale(.94); }
+@media (prefers-reduced-motion: reduce) { .ctx-radial-item.is-pressed { transform: translate(var(--rx), var(--ry)); } }
+.ctx-radial-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctx-radial-icon { width: 20px; height: 20px; color: var(--accent); }
+.ctx-radial-text { font-weight: 800; font-size: var(--fs-md); color: var(--accent); line-height: 20px; }
+.ctx-radial-label { max-width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 600; line-height: 12px; }
+.ctx-radial-close { width: 40px; height: 40px; min-height: 0; margin: -20px 0 0 -20px; color: var(--muted); }
+.ctx-radial-name {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 116px)); white-space: nowrap; max-width: 220px;
+  overflow: hidden; text-overflow: ellipsis; padding: 2px 10px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600;
+  background: rgba(14, 14, 16, .85); border: 1px solid var(--border); pointer-events: none;
+}
+@keyframes ctx-radial-in { from { opacity: 0; transform: translate(0, 0) scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .ctx-radial-item { animation: none; } }
