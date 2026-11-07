@@ -9,7 +9,7 @@
  *   SPAWN_barkeep  ( 5.25, 0, -0.75)  behind the counter
  */
 import {
-  CELL, block, box, collider, cylinder, fog, floor, floorCollider, grid, group, light, mat, newScene,
+  CELL, block, box, collider, cylinder, fog, floor, floorCollider, glow, grid, group, light, mat, newScene, palette,
   spawn, torch, tableWithBenches, wall, writeGlb,
 } from './lib.mjs'
 
@@ -18,11 +18,11 @@ const D = 9 // z
 const H = 3.2
 const T = 0.3
 
-const plaster = mat('#b8a98a')
-const timber = mat('#4a3620')
-const planks = mat('#6b4e2e', { roughness: 1 })
-const stone = mat('#6f6a63')
-const counterMat = mat('#5a3f24')
+const plaster = mat(palette.plaster)
+const timber = mat(palette.timber)
+const planks = mat(palette.planks)
+const stone = mat(palette.stone)
+const counterMat = mat(palette.darkOak)
 
 const scene = newScene('tavern', { ambient_preset: 'tavern' })
 
@@ -58,14 +58,14 @@ const hearth = group('fireplace')
 hearth.add(block('hearth_left', [0.4, 2.4, 0.7], [-1.0, -D / 2 + 0.35], stone))
 hearth.add(block('hearth_right', [0.4, 2.4, 0.7], [1.0, -D / 2 + 0.35], stone))
 hearth.add(box('hearth_lintel', [2.4, 0.5, 0.7], [0, 2.15, -D / 2 + 0.35], stone))
-hearth.add(block('hearth_floor', [1.6, 0.12, 0.7], [0, -D / 2 + 0.35], mat('#3c3833')))
+hearth.add(block('hearth_floor', [1.6, 0.12, 0.7], [0, -D / 2 + 0.35], mat(palette.soot)))
 hearth.add(box('chimney', [2.4, H - 2.4, 0.7], [0, 2.4 + (H - 2.4) / 2, -D / 2 + 0.35], stone))
 for (const a of [0.4, 1.9]) {
-  const log = cylinder('firewood', 0.08, 0.08, 0.9, [0, -D / 2 + 0.4], mat('#3d2a17'), 6, 0.2)
+  const log = cylinder('firewood', 0.08, 0.08, 0.9, [0, -D / 2 + 0.4], mat(palette.charred), 6, 0.2)
   log.rotation.set(Math.PI / 2, 0, a)
   hearth.add(log)
 }
-hearth.add(cylinder('fire_flame', 0.0, 0.28, 0.7, [0, -D / 2 + 0.4], mat('#ffb347', { emissive: '#ff6a00', emissiveIntensity: 2.5 }), 6, 0.5))
+hearth.add(cylinder('fire_flame', 0.0, 0.28, 0.7, [0, -D / 2 + 0.4], glow(palette.flame, palette.flameCore, 2.5), 6, 0.5))
 scene.add(hearth)
 scene.add(collider('fireplace', [2.4, 2.4, 0.7], [0, -D / 2 + 0.35]))
 scene.add(light('LIGHT_fire', [0, 0.9, -D / 2 + 0.6], { flicker: 0.8, color_temp: 1800, intensity: 90 }))
@@ -73,13 +73,13 @@ scene.add(light('LIGHT_fire', [0, 0.9, -D / 2 + 0.6], { flicker: 0.8, color_temp
 // Bar counter along the east wall with shelves behind it
 const bar = group('bar')
 bar.add(block('counter', [0.6, 1.05, 5.2], [3.9, -0.5], counterMat))
-bar.add(box('counter_top', [0.8, 0.08, 5.4], [3.9, 1.07, -0.5], mat('#8a6a3e')))
+bar.add(box('counter_top', [0.8, 0.08, 5.4], [3.9, 1.07, -0.5], mat(palette.counterTop)))
 bar.add(block('shelf_back', [0.3, 2.2, 4.0], [W / 2 - 0.15, -0.5], timber))
-for (const y of [0.9, 1.5]) bar.add(box('shelf', [0.35, 0.05, 4.0], [W / 2 - 0.35, y, -0.5], mat('#8a6a3e')))
+for (const y of [0.9, 1.5]) bar.add(box('shelf', [0.35, 0.05, 4.0], [W / 2 - 0.35, y, -0.5], mat(palette.counterTop)))
 // Bottles and mugs on the shelves
 let i = 0
 for (const y of [0.95, 1.55]) for (const z of [-2.2, -1.5, -0.8, 0.0, 0.7, 1.3]) {
-  const tint = ['#4d7a3a', '#7a3a3a', '#3a5a7a', '#c9a35a'][i++ % 4]
+  const tint = [palette.bottleGreen, palette.bottleRed, palette.bottleBlue, palette.bottleAmber][i++ % 4]
   bar.add(cylinder('bottle', 0.05, 0.06, 0.28, [W / 2 - 0.35, z], mat(tint), 6, y + 0.14))
 }
 scene.add(bar)
@@ -88,7 +88,7 @@ scene.add(collider('shelf_back', [0.3, 2.2, 4.0], [W / 2 - 0.15, -0.5]))
 
 // Barrels in the north-east corner
 for (const [x, z] of [[5.1, -3.8], [4.3, -3.9], [5.2, -3.0]]) {
-  scene.add(cylinder('barrel', 0.38, 0.42, 0.9, [x, z], mat('#5a4328'), 10))
+  scene.add(cylinder('barrel', 0.38, 0.42, 0.9, [x, z], mat(palette.darkOak), 10))
 }
 scene.add(collider('barrels', [1.7, 0.9, 1.6], [4.8, -3.5]))
 
@@ -124,4 +124,5 @@ scene.add(grid([-W / 2 + CELL / 2, -D / 2 + CELL / 2], CELL, 'square'))
 // A back room behind the bar (north-east) stays hidden until revealed.
 scene.add(fog('FOG_cellar_stairs', [1.5, 1.5], [5.25, 3.75]))
 
-await writeGlb(scene, 'tavern.glb')
+// Beams and table sets are pure dressing: each is folded into one mesh (the group keeps its name).
+await writeGlb(scene, 'tavern.glb', { merge: [beams, ...tables.children] })

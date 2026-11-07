@@ -7,12 +7,15 @@
  * the viewer's own) and a pulsing amber ring on the combatant whose turn it is. A name label floats
  * above the viewer's own tokens, the selection, the current combatant and whatever is hovered.
  * While the viewer drags, the path and its length show on the floor (TokenOverlays.tsx).
+ * Look: toon materials, an ink outline and a rim light on minis, a soft blob shadow under every
+ * base, and initials that turn to stay upright on screen (stylize.ts, labelFacing.ts). The high
+ * graphics tier adds a thick outline in the selection colour around selected tokens.
  */
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor, useGLTF } from '@react-three/drei'
 import {
-  CanvasTexture, Color, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, PlaneGeometry,
+  CanvasTexture, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
   PointLight, RingGeometry, SpriteMaterial, SRGBColorSpace, Vector3,
 } from 'three'
 import type { Token } from '@/core/doc'
@@ -30,6 +33,15 @@ import { CombatBadges } from './CombatBadges'
 import { inCurrentSlot } from '@/state/initiative'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
 import { MoveTrail, Nameplate, TurnRing } from './TokenOverlays'
+import { blobShadowLook } from './atmosphere'
+import { labelYaw } from './labelFacing'
+import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
+
+/** Colour of the high-tier selection outline; matches the selection ring under the token. */
+export const SELECTION_OUTLINE_COLOR = '#ffd166'
+/** Ink outline and selection outline widths, in cells. */
+const INK_WIDTH = 0.014
+const SELECTION_WIDTH = 0.04
 
 /** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
 export const LOCAL_PRESENCE_COLOR = LOCAL_OWNER_COLOR
@@ -104,10 +116,16 @@ export class ModelBoundary extends Component<{ fallback: ReactNode; children: Re
  * are hidden so a scene model can double as a prop. `onObject` reports the clone once it exists.
  * With `fitCell` the model's footprint is fitted to the grid (see fitScale.ts) before `scale` applies.
  */
-export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject }: {
+export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject, mini = false, selected = false }: {
   url: string; scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
+  /** A token's miniature: rim light and ink outline (props get neither). */
+  mini?: boolean
+  /** Selected token: a thick outline in the selection colour on the high tier. */
+  selected?: boolean
 }) {
   const gltf = useGLTF(url)
+  const { graphics, grid } = useTable()
+  const mode = materialModeFor(gltf.scene, graphics.pbr)
   const object = useMemo(() => {
     const o = gltf.scene.clone(true) as Group
     o.traverse((m) => {
@@ -118,33 +136,85 @@ export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject }:
       }
       if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
     })
+    stylizeObject(o, mode, { rim: mini })
     return o
-  }, [gltf])
+  }, [gltf, mode, mini])
   const fit = useMemo(() => (fitCell ? fitObjectToCell(object, fitCell, fitRange) : 1), [object, fitCell, fitRange])
   useEffect(() => {
     onObject?.(object)
     return () => onObject?.(null)
   }, [object, onObject])
-  return <primitive object={object} scale={scale * fit} />
+  const cell = fitCell ?? grid.cellSize
+  useEffect(() => (mini ? addOutlines(object, outlineMaterial(OUTLINE_INK, INK_WIDTH * cell)) : undefined), [object, mini, cell])
+  const outlineSelected = mini && selected && graphics.selectionOutline
+  useEffect(
+    () => (outlineSelected ? addOutlines(object, outlineMaterial(SELECTION_OUTLINE_COLOR, SELECTION_WIDTH * cell), 'selection') : undefined),
+    [object, outlineSelected, cell],
+  )
+  const glow = useMemo(() => (graphics.glow ? buildGlow(object) : null), [object, graphics.glow])
+  useEffect(() => () => glow?.dispose(), [glow])
+  return (
+    <>
+      <primitive object={object} scale={scale * fit} />
+      {glow && <primitive object={glow.group} scale={scale * fit} />}
+    </>
+  )
 }
 
-function Disc({ token, radius, dimmed, ghost = false }: { token: Token; radius: number; dimmed: boolean; ghost?: boolean }) {
+/**
+ * The default token: a toon-shaded puck in the token colour with an ink outline. The initials sit
+ * on a separate disc on top that turns about the vertical every frame so they read upright from
+ * any camera yaw (`labelYaw`); `parentYaw` is the facing of the group the puck stands in.
+ */
+function Disc({ token, radius, dimmed, ghost = false, selected = false, parentYaw = 0 }: {
+  token: Token; radius: number; dimmed: boolean; ghost?: boolean; selected?: boolean; parentYaw?: number
+}) {
+  const { graphics, grid } = useTable()
   const initials = initialsOf(token.name)
   const top = useMemo(() => makeInitialsTexture(initials, token.color), [initials, token.color])
   useEffect(() => () => top.dispose(), [top])
-  const side = useMemo(() => new MeshStandardMaterial({ color: new Color(token.color).multiplyScalar(0.7), roughness: 0.6 }), [token.color])
-  const face = useMemo(() => new MeshStandardMaterial({ map: top, roughness: 0.5 }), [top])
-  useEffect(() => () => { side.dispose(); face.dispose() }, [side, face])
-  useEffect(() => {
-    // Ghost: a move the GM has not applied yet (queued while they were away) shows half-there.
-    const opacity = dimmed ? 0.45 : ghost ? 0.6 : 1
-    for (const m of [side, face]) { m.transparent = opacity < 1; m.opacity = opacity }
-  }, [dimmed, ghost, side, face])
   const h = radius * 0.22
+  const geometry = useMemo(() => {
+    const g = new CylinderGeometry(radius, radius, h, 40)
+    smoothNormals(g)
+    return g
+  }, [radius, h])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  const side = useMemo(() => toonMaterial({ color: new Color(token.color).multiplyScalar(0.7) }, true), [token.color])
+  const cap = useMemo(() => toonMaterial({ color: token.color }), [token.color])
+  const face = useMemo(() => toonMaterial({ map: top }), [top])
+  useEffect(() => () => { side.dispose(); cap.dispose(); face.dispose() }, [side, cap, face])
+  // Ghost: a move the GM has not applied yet (queued while they were away) shows half-there.
+  const opacity = dimmed ? 0.45 : ghost ? 0.6 : 1
+  useEffect(() => {
+    for (const m of [side, cap, face]) { m.transparent = opacity < 1; m.opacity = opacity }
+  }, [opacity, side, cap, face])
+  const label = useRef<Group>(null)
+  const yaw = useRef(parentYaw)
+  yaw.current = parentYaw
+  useFrame(({ camera }) => {
+    const l = label.current
+    if (!l) return
+    // The camera's screen-up, laid on the floor: the text's up follows it.
+    const e = camera.matrixWorld.elements
+    const y = labelYaw(e[4]!, e[6]!, yaw.current)
+    if (y !== null) l.rotation.y = y
+  })
+  const outlined = opacity === 1
+  const cell = grid.cellSize
   return (
-    <mesh castShadow receiveShadow position-y={h / 2} material={[side, face, side]}>
-      <cylinderGeometry args={[radius, radius, h, 40]} />
-    </mesh>
+    <group position-y={h / 2}>
+      <mesh castShadow receiveShadow geometry={geometry} material={[side, cap, side]} />
+      {outlined && <mesh geometry={geometry} material={outlineMaterial(OUTLINE_INK, INK_WIDTH * cell)} raycast={noRaycast} />}
+      {outlined && selected && graphics.selectionOutline && (
+        <mesh geometry={geometry} material={outlineMaterial(SELECTION_OUTLINE_COLOR, SELECTION_WIDTH * cell)} raycast={noRaycast} />
+      )}
+      <group ref={label} position-y={h / 2 + 0.002}>
+        <mesh rotation-x={-Math.PI / 2} material={face} receiveShadow>
+          <circleGeometry args={[radius * 0.97, 40]} />
+        </mesh>
+      </group>
+    </group>
   )
 }
 
@@ -512,6 +582,7 @@ export function TokenMesh({ token }: { token: Token }) {
   const showName = !dragGhost && nameplateShown({ mine, selected, hovered, current: isTurn })
   // Above the disc top, or above a mini's head (minis are fitted to about a cell tall at most).
   const nameY = (modelUrl ? 0.95 * cell * scale : radius * 0.22 + 0.12 * cell)
+  const disc = <Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} selected={selected} parentYaw={rotationY} />
 
   return (
     <>
@@ -536,14 +607,12 @@ export function TokenMesh({ token }: { token: Token }) {
       {/* Lifted part: the mini, its rings and light. The group below stays on the floor. */}
       <group ref={body} position-y={elevation} rotation-y={rotationY}>
         {modelUrl ? (
-          <ModelBoundary fallback={<Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />}>
-            <Suspense fallback={<Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />}>
-              <GlbMini url={modelUrl} scale={scale} fitCell={cell} />
+          <ModelBoundary fallback={disc}>
+            <Suspense fallback={disc}>
+              <GlbMini url={modelUrl} scale={scale} fitCell={cell} mini selected={selected} />
             </Suspense>
           </ModelBoundary>
-        ) : (
-          <Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />
-        )}
+        ) : disc}
         {ghost && (
           // Amber "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
           <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>
@@ -583,27 +652,63 @@ export function TokenMesh({ token }: { token: Token }) {
         {chips.length > 0 && <ConditionGlyphs chips={chips} radius={radius} />}
         {(vital || defense) && <CombatBadges vital={vital} defense={defense} radius={radius} />}
       </group>
-      {elevation > 0.01 && <ElevationMarker elevation={elevation} radius={radius} cell={cell} />}
+      <BlobShadow radius={radius} elevation={elevation} cell={cell} faded={dimmed || ghost} />
+      {elevation > 0.01 && <ElevationMarker elevation={elevation} cell={cell} />}
     </group>
     {dragGhost && <MoveTrail grid={grid} from={dragGhost.from} to={dragGhost} y={floorY + 0.014} pack={pack} />}
     </>
   )
 }
 
-/** Thin plumb line from the floor up to a lifted token plus a soft shadow disc, so height reads at a glance. */
-function ElevationMarker({ elevation, radius, cell }: { elevation: number; radius: number; cell: number }) {
-  const shadow = Math.max(0.12, 1 - elevation / (6 * cell))
+/** Thin plumb line from the floor up to a lifted token, so height reads at a glance. */
+function ElevationMarker({ elevation, cell }: { elevation: number; cell: number }) {
   return (
-    <group raycast={() => undefined}>
-      <mesh position-y={elevation / 2} raycast={() => undefined}>
-        <cylinderGeometry args={[0.012 * cell, 0.012 * cell, elevation, 6]} />
-        <meshBasicMaterial color="#f3ead8" transparent opacity={0.55} depthWrite={false} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.006} renderOrder={2} raycast={() => undefined}>
-        <circleGeometry args={[radius * (0.9 + 0.1 * (1 - shadow)), 40]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.4 * shadow} depthWrite={false} />
-      </mesh>
-    </group>
+    <mesh position-y={elevation / 2} raycast={noRaycast}>
+      <cylinderGeometry args={[0.012 * cell, 0.012 * cell, elevation, 6]} />
+      <meshBasicMaterial color="#f3ead8" transparent opacity={0.55} depthWrite={false} />
+    </mesh>
+  )
+}
+
+/** Soft radial shadow texture shared by every blob shadow. */
+let blobTexture: CanvasTexture | null = null
+function blobMap(): CanvasTexture {
+  if (blobTexture) return blobTexture
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  g.addColorStop(0, 'rgba(0,0,0,1)')
+  g.addColorStop(0.55, 'rgba(0,0,0,0.75)')
+  g.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, size, size)
+  blobTexture = new CanvasTexture(canvas)
+  return blobTexture
+}
+const blobMaterials = new Map<number, MeshBasicMaterial>()
+function blobMaterial(opacity: number): MeshBasicMaterial {
+  const key = Math.round(opacity * 20) / 20
+  let m = blobMaterials.get(key)
+  if (!m) {
+    m = new MeshBasicMaterial({ map: blobMap(), transparent: true, opacity: key, depthWrite: false, toneMapped: false })
+    blobMaterials.set(key, m)
+  }
+  return m
+}
+
+/**
+ * Blob shadow on the floor under the base: grounds the token on every graphics tier, including
+ * those without shadow maps. It widens and fades as the token is lifted (`blobShadowLook`).
+ */
+function BlobShadow({ radius, elevation, cell, faded }: { radius: number; elevation: number; cell: number; faded: boolean }) {
+  const look = blobShadowLook(elevation, cell)
+  const size = 2 * radius * look.scale
+  return (
+    <mesh geometry={hud().plane} material={blobMaterial(look.opacity * (faded ? 0.5 : 1))} rotation-x={-Math.PI / 2} position-y={0.003}
+      scale={[size, size, 1]} renderOrder={1} raycast={noRaycast} />
   )
 }
 

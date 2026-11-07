@@ -107,6 +107,13 @@ export interface TableUiState {
   pending: Record<TokenId, PendingMove>
   /** Eyes: first person from the selected (or own) token; otherwise the camera orbits the table. */
   firstPerson: boolean
+  /**
+   * Tactical view: the orbit camera looks straight down and turns in 45° steps (`tacticalTurn`).
+   * Toggled by the HUD, the T key, or by zooming out against the orbit camera's limit.
+   */
+  tactical: boolean
+  /** Tactical view heading in 45° steps from the default (south) heading; Q / E turn it. */
+  tacticalTurn: number
   showGrid: boolean
   /** Cells the local viewer can currently see; null when fog is off (everything visible). */
   visible: ReadonlySet<string> | null
@@ -168,6 +175,8 @@ export const useTableUi = create<TableUiState>((set) => ({
   multiSelect: false,
   pending: {} as Record<TokenId, PendingMove>,
   firstPerson: false,
+  tactical: false,
+  tacticalTurn: 0,
   showGrid: true,
   visible: null,
   targeting: null,

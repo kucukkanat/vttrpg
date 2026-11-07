@@ -35,6 +35,14 @@ const DEV_ROOM_MODEL = {
   sources: [`${import.meta.env.BASE_URL}library/scenes/dev-room.glb`],
 }
 
+/** A model from the generated library (public/library), referenced by its path. */
+function libraryModel(path: string) {
+  return {
+    sha256: path as AssetHash, kind: 'glb' as const, mime: 'model/gltf-binary', size: 0, name: path.split('/').pop()!,
+    sources: [`${import.meta.env.BASE_URL}library/${path}`],
+  }
+}
+
 const scene: Scene = {
   id: SCENE,
   name: 'Dev room',
@@ -53,13 +61,29 @@ const tokens: Token[] = [
     id: 'tok-rat' as TokenId, scene: SCENE, name: 'Sewer Rat', color: '#6c7a8a',
     position: { x: 3.75, y: 0, z: -2.25 }, rotationY: Math.PI, scale: 1.2, vision: 2, light: 0, hidden: false, conditions: [],
   },
+  {
+    id: 'tok-knight' as TokenId, scene: SCENE, name: 'Sir Brannoc', color: '#2f4f8c', model: libraryModel('minis/knight.glb'),
+    position: { x: -0.75, y: 0, z: 0.75 }, rotationY: 0.4, scale: 1, vision: 4, light: 0, hidden: false, conditions: [],
+  },
+  {
+    id: 'tok-wizard' as TokenId, scene: SCENE, name: 'Old Mag', color: '#5a3f6b', model: libraryModel('minis/wizard.glb'),
+    position: { x: -3.75, y: 0, z: -2.25 }, rotationY: -0.5, scale: 1, vision: 4, light: 0, hidden: false, conditions: [],
+  },
 ]
 
-/** The dev room again, shrunk to a doll's house: the only GLB in the starter library. */
+/** The dev room again, shrunk to a doll's house, plus a few library props (one of them lit). */
 const props: Prop[] = [
   {
     id: 'prop-dollhouse' as PropId, scene: SCENE, name: 'Doll house', model: DEV_ROOM_MODEL,
     position: { x: 2.25, y: 0, z: 2.25 }, rotation: { x: 0, y: Math.PI / 6, z: 0 }, scale: 0.15, solid: true,
+  },
+  {
+    id: 'prop-cauldron' as PropId, scene: SCENE, name: 'Cauldron', model: libraryModel('props/cauldron.glb'),
+    position: { x: 0.75, y: 0, z: 2.25 }, rotation: { x: 0, y: 0, z: 0 }, scale: 1, solid: true,
+  },
+  {
+    id: 'prop-rack' as PropId, scene: SCENE, name: 'Weapon rack', model: libraryModel('props/weapon-rack.glb'),
+    position: { x: 5.25, y: 0, z: 0.75 }, rotation: { x: 0, y: -Math.PI / 2, z: 0 }, scale: 1, solid: true,
   },
 ]
 
