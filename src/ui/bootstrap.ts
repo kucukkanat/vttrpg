@@ -23,18 +23,24 @@ export type Start =
 /** A controller plus an optional message worth showing (e.g. a GM demoted to player on rejoin). */
 export type StartedGame = GameController & { notice?: string }
 
-/** Dev only: `localStorage.setItem('vttrpg.relays', JSON.stringify(['ws://localhost:7777']))` points new games at other relays. */
-function relayList(): string[] {
-  if (!import.meta.env.DEV) return DEFAULT_RELAYS
+/** Dev only: a list of URLs from localStorage, else `fallback`. */
+function devList(key: string, fallback: string[]): string[] {
+  if (!import.meta.env.DEV) return fallback
   try {
-    const raw = localStorage.getItem('vttrpg.relays')
+    const raw = localStorage.getItem(key)
     const list: unknown = raw ? JSON.parse(raw) : null
     if (Array.isArray(list) && list.length && list.every((r) => typeof r === 'string')) return list as string[]
   } catch {
     // ignore
   }
-  return DEFAULT_RELAYS
+  return fallback
 }
+
+/** Dev only: `localStorage.setItem('vttrpg.relays', JSON.stringify(['ws://localhost:7777']))` points new games at other relays. */
+const relayList = () => devList('vttrpg.relays', DEFAULT_RELAYS)
+
+/** Dev only: `localStorage.setItem('vttrpg.blossom', JSON.stringify(['http://localhost:3000']))` uploads and fetches assets and snapshots there. */
+const blossomList = () => devList('vttrpg.blossom', DEFAULT_BLOSSOM_SERVERS)
 
 
 const metaOf = (connection: GameConnection) => connection.doc.getMap('meta')
@@ -76,6 +82,7 @@ export function snapshotUploader(identity: Pick<Identity, 'sign'>, servers: stri
 export function gameAssets(identity: Pick<Identity, 'sign'>): AssetResolver {
   return createAssetResolver({
     libraryBase: import.meta.env.BASE_URL + 'library/',
+    blossomServers: blossomList(),
     uploader: { sign: (ev) => identity.sign(ev) },
   })
 }
@@ -98,7 +105,7 @@ function finish(opts: {
     // edits reach late joiners as deltas on top of the founder's latest snapshot.
     if (opts.connection.isGm && opts.connection.role === 'gm') {
       const loop = createSnapshotLoop(opts.connection, {
-        upload: snapshotUploader(opts.identity),
+        upload: snapshotUploader(opts.identity, blossomList()),
         prune: (intent) => controller.dispatch(intent),
       })
       stopSnapshots = loop.stop
