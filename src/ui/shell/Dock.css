@@ -82,6 +82,9 @@
 .hp-fill { position: absolute; inset: 0 auto 0 0; background: var(--hp); border-radius: 5px; transition: width .25s ease; }
 .hp-num { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .hp-meter--low .hp-num { color: var(--hp); }
+/* Bloodied / down backup: a drop or a skull before the pips, so the state reads without the band colour. */
+.hp-meter .hp-state { flex: none; color: var(--hp); }
+.hp-meter--down .hp-state { color: var(--fg); }
 .token-bar-more { flex: none; font-size: var(--fs-lg); }
 .token-bar-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .token-bar-gm { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); padding-top: var(--sp-1); border-top: 1px solid var(--border); }
@@ -89,14 +92,9 @@
 .save-chip { background: transparent; }
 .save-chip .skill-chip-cost { color: var(--muted); }
 .condition-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
-/* GM condition toggles: the coloured letter chip drawn on the token, then the name. */
+/* GM condition toggles: the status icon drawn on the token (StatusBadge), then the name. */
 .condition-chips .condition-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
-.condition-chips .condition-chip.on { border-color: var(--cond); color: inherit; background: color-mix(in srgb, var(--cond) 22%, transparent); }
-.condition-chip-badge {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%;
-  font-size: 10px; font-weight: 800; letter-spacing: 0; color: #111; background: var(--cond); opacity: .45;
-}
-.condition-chip.on .condition-chip-badge { opacity: 1; box-shadow: 0 0 0 2px rgba(0, 0, 0, .35); }
+.condition-chips .condition-chip.on { border-color: var(--cond); color: inherit; background: color-mix(in srgb, var(--cond) 18%, transparent); }
 .condition-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .token-bar-head > button { flex: none; white-space: nowrap; }

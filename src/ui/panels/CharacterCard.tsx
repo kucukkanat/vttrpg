@@ -8,6 +8,7 @@ import type { Character, Token } from '@/core/doc'
 import type { RulesEngine } from '@/rules'
 import { conditionChips, hpBand, HP_BAND_COLORS, readResource } from '@/table/tokenHud'
 import { attributeTiles, cardLevel, cardSubtitle, formatMod, initials, inventorySummary, notesSummary } from './sheetCard'
+import { StatusBadge } from '../StatusBadge'
 import './CharacterCard.css'
 
 export interface CharacterCardProps {
@@ -73,7 +74,7 @@ export function CharacterCard({ rules, character, token, assets, onRoll }: Chara
           {resources.map(({ def, primary, reading }) => {
             const { current, max } = reading!
             const pct = Math.min(100, Math.max(0, (current / max) * 100))
-            const color = primary ? HP_BAND_COLORS[hpBand(current, max)] : 'var(--accent)'
+            const color = primary ? HP_BAND_COLORS[hpBand(current, max)] : 'var(--muted)'
             return (
               <div key={def.id} className={`cc-res${primary ? ' primary' : ''}`}>
                 <div className="cc-res-row">
@@ -113,7 +114,9 @@ export function CharacterCard({ rules, character, token, assets, onRoll }: Chara
       {chips.length > 0 && (
         <div className="cc-chips">
           {chips.map((c) => (
-            <span key={c.id} className="cc-chip" style={{ ['--chip' as string]: c.color }}>{c.name}</span>
+            <span key={c.id} className="cc-chip" style={{ ['--chip' as string]: c.color }}>
+              <StatusBadge chip={c} size={18} />{c.name}{c.turns !== null && <span className="sr-only">, {c.turns} {c.turns === 1 ? 'turn' : 'turns'} left</span>}
+            </span>
           ))}
         </div>
       )}

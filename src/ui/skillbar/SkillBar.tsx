@@ -30,6 +30,8 @@ import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
 import { conditionStyle, rangePreviewFor, type RangePreview } from './barVisuals'
 import { CostBadges, HpMeter } from './BarParts'
 import { SkillIcon } from './skillIcons'
+import { StatusBadge } from '../StatusBadge'
+import { conditionTurns } from '@/table/tokenHud'
 import { Icon } from '@/ui/icons'
 
 type Card = 'skills' | 'conditions' | 'assign' | null
@@ -223,6 +225,7 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
 /** GM: toggle the pack's conditions on the token. */
 function ConditionsCard({ controller, token, onClose }: { controller: GameController; token: Token; onClose(): void }) {
   const defs = controller.rules?.pack.conditions ?? []
+  const turns = conditionTurns(token, undefined)
   const set = (ids: string[]) => void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions: ids } })
   return (
     <div className="dock-card" role="dialog" aria-label={`${token.name}'s conditions`}>
@@ -231,12 +234,12 @@ function ConditionsCard({ controller, token, onClose }: { controller: GameContro
       <div className="condition-chips">
         {defs.map((c) => {
           const on = token.conditions.includes(c.id)
-          const { color, label } = conditionStyle(defs, c.id)
+          const look = conditionStyle(defs, c.id, turns.get(c.id) ?? null)
           return (
             <button key={c.id} type="button" className={`tiny condition-chip${on ? ' on' : ''}`} aria-pressed={on} title={c.description}
-              style={{ '--cond': color } as CSSProperties}
+              style={{ '--cond': look.color } as CSSProperties}
               onClick={() => set(on ? token.conditions.filter((x) => x !== c.id) : [...token.conditions, c.id])}>
-              <span className="condition-chip-badge" aria-hidden="true">{label}</span>
+              <StatusBadge chip={look} off={!on} />
               <span className="condition-chip-name">{c.name}</span>
             </button>
           )

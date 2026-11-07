@@ -158,6 +158,8 @@ export function guardConditions(v: unknown, file: string): ConditionDef[] {
     guardIdName(x, file, i)
     if (!isStr(x.description)) throw new PackError(file, `${x.id}: "description" required`)
     if (!opt(x.icon, isStr)) throw new PackError(file, `${x.id}: icon must be a string`)
+    if (x.category !== undefined && !['buff', 'harm', 'control', 'magic', 'affliction'].includes(x.category as string))
+      throw new PackError(file, `${x.id}: category must be buff, harm, control, magic or affliction`)
     if (x.modifiers !== undefined && !(isRec(x.modifiers) && Object.values(x.modifiers).every(isNum)))
       throw new PackError(file, `${x.id}: modifiers must map attribute ids to numbers`)
     return x as unknown as ConditionDef

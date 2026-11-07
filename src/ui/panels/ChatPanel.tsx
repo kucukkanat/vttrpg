@@ -9,6 +9,7 @@ import { formatDay, formatTime, groupMessages, isChatMessage } from './chatGroup
 import { DiceRow } from '../dice/DiceFace'
 import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
+import { Icon } from '../icons'
 import './ChatPanel.css'
 
 const HELP = [
@@ -121,7 +122,11 @@ export function ChatPanel({ controller }: { controller: GameController }) {
         <span className="roll-line" aria-hidden="true">
           <DiceRow dice={dieViews(r.formula, r.dice)} />
           <span className="roll-total">{r.total}</span>
-          {outcome && <span className={`roll-tag ${outcome.success ? 'ok' : 'bad'}${outcome.critical ? ' crit' : ''}`}>{outcomeText(outcome)}</span>}
+          {outcome && (
+            <span className={`roll-tag ${outcome.success ? 'ok' : 'bad'}${outcome.critical ? ' crit' : ''}`}>
+              {outcome.critical && <Icon name={outcome.success ? 'crit' : 'fumble'} size={12} />}{outcomeText(outcome)}
+            </span>
+          )}
         </span>
       </span>
     )
@@ -147,7 +152,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           }
           return (
             <div key={b.key} className={`group ${b.messages[0].kind}`}>
-              <div className="who">{name(b.author)}{b.to && <> → {b.to.map(name).join(', ')}</>}</div>
+              <div className="who">{b.messages[0].kind === 'whisper' && <Icon name="lock" size={12} className="who-lock" label="whisper" />}{name(b.author)}{b.to && <> → {b.to.map(name).join(', ')}</>}</div>
               {b.messages.map((m) => (
                 <div key={m.id} className={`msg ${m.kind}`}>
                   <span className="body">{body(m)}</span>

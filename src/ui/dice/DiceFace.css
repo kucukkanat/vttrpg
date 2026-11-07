@@ -14,6 +14,10 @@
 .die-face.nat-min .die-body { stroke: var(--bad); stroke-width: 2.25; fill: color-mix(in srgb, var(--bad) 16%, transparent); }
 .die-face.nat-min .die-pip { fill: var(--bad); }
 .die-face.nat-min { color: var(--bad); }
+/* The corner mark: a dark disc with the crit star or the fumble ring in the outcome colour. */
+.die-face .die-mark { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.die-face .die-mark circle { fill: var(--panel); stroke: none; }
+.die-face.nat-max .die-mark path:first-of-type { fill: currentColor; }
 /* Dropped by kh/kl: faded and struck (the strike line is drawn in the SVG). */
 .die-face.dropped { opacity: .45; text-decoration: none; }
 .die-face.dropped .die-body { stroke: var(--muted); fill: transparent; }

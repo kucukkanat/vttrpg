@@ -143,7 +143,11 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
           <span className="toast-formula">{shown.text}</span>
           <span className="toast-total">{r.total}</span>
           <DiceValues className="muted small" formula={r.formula} dice={r.dice} />
-          {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
+          {success !== null && (
+            <span className={`roll-toast-outcome ${success ? 'ok' : 'bad'}`}>
+              {critical && <Icon name={success ? 'crit' : 'fumble'} size={14} />}{critical ? (success ? 'critical success' : 'critical fail') : success ? 'success' : 'fail'}
+            </span>
+          )}
         </button>
       )}
     </>

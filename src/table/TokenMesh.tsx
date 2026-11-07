@@ -13,7 +13,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor, useGLTF } from '@react-three/drei'
 import {
   CanvasTexture, Color, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, PlaneGeometry,
-  PointLight, RingGeometry, SpriteMaterial, SRGBColorSpace, Vector3,
+  PointLight, RingGeometry, SRGBColorSpace, Vector3,
 } from 'three'
 import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
@@ -24,7 +24,8 @@ import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { doubleTapEdit, tapTwice } from './editTap'
-import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
+import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, hpState, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
+import { hpGlyphMaterial, statusChipMaterial } from './statusSprites'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
 import { MoveTrail, Nameplate, TargetRing, TurnRing } from './TokenOverlays'
 import { HOVER, MEASURE, SELECT, WAITING } from '@/ui/theme/palette'
@@ -179,37 +180,6 @@ function ownerMaterial(color: string): MeshBasicMaterial {
   }
   return m
 }
-/** One sprite material per chip look (label + colour); the pack's condition list bounds the cache. */
-const chipMaterials = new Map<string, SpriteMaterial>()
-function chipMaterial(chip: ConditionChip): SpriteMaterial {
-  const key = `${chip.label}|${chip.color}`
-  let m = chipMaterials.get(key)
-  if (m) return m
-  const size = 64
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = chip.color
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,0.7)'
-  ctx.lineWidth = 4
-  ctx.stroke()
-  const c = new Color(chip.color)
-  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
-  ctx.fillStyle = lum > 0.45 ? '#1a1612' : '#f6efe3'
-  ctx.font = `bold ${chip.label.length > 1 ? 30 : 36}px system-ui, sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(chip.label, size / 2, size / 2 + 2)
-  const map = new CanvasTexture(canvas)
-  map.colorSpace = SRGBColorSpace
-  m = new SpriteMaterial({ map, transparent: true, depthWrite: false, toneMapped: false })
-  chipMaterials.set(key, m)
-  return m
-}
 const noRaycast = () => undefined
 const tmpObject = new Object3D()
 
@@ -223,6 +193,7 @@ function HpBar({ current, max, radius }: { current: number; max: number; radius:
   const h = radius * 0.22
   const ratio = Math.min(1, Math.max(0, current / max))
   const band = hpBand(current, max)
+  const state = hpState(current, max)
   const pips = max <= MAX_PIPS ? Math.max(0, Math.round(max) - 1) : 0
   const dividers = useRef<InstancedMesh>(null)
   useLayoutEffect(() => {
@@ -244,21 +215,35 @@ function HpBar({ current, max, radius }: { current: number; max: number; radius:
         <mesh geometry={s.plane} material={s.bands[band]} position={[-(w - w * ratio) / 2, 0, 0.0005]} scale={[w * ratio, h, 1]} renderOrder={5} raycast={noRaycast} />
       )}
       {pips > 0 && <instancedMesh key={pips} ref={dividers} args={[s.plane, s.divider, pips]} renderOrder={6} frustumCulled={false} raycast={noRaycast} />}
+      {/* Bloodied / down: a drop or a skull at the bar's left end, so the state reads without the band colour. */}
+      {state && <mesh geometry={s.plane} material={hpGlyphMaterial(state)} position={[-(w + h) / 2 - h * 1.3, 0, 0.001]} scale={[h * 2.4, h * 2.4, 1]} renderOrder={6} raycast={noRaycast} />}
     </group>
   )
 }
 
-/** Camera-facing lettered chips around the rim of the disc, one sprite each with a shared material per look. */
+/**
+ * Camera-facing status chips around the rim of the disc (category frame, glyph, turns left), one
+ * sprite each with a shared material per look. A chip on its last turn pulses.
+ */
 function ConditionGlyphs({ chips, radius }: { chips: ConditionChip[]; radius: number }) {
-  const size = radius * 0.55
-  const ringR = radius * 1.2
+  const size = radius * 0.62
+  const ringR = radius * 1.22
   const y = radius * 0.22 + size * 0.5
+  const pulsing = useRef<(Object3D | null)[]>([])
+  const anyLast = chips.some((c) => c.last)
+  useFrame(({ clock }) => {
+    if (!anyLast) return
+    const k = 1 + 0.18 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 5))
+    for (const o of pulsing.current) o?.scale.set(size * k, size * k, 1)
+  })
+  pulsing.current = []
   return (
     <>
       {chips.map((c, i) => {
         const a = chipAngle(i)
         return (
-          <sprite key={c.id} material={chipMaterial(c)} position={[Math.cos(a) * ringR, y, -Math.sin(a) * ringR]} scale={[size, size, 1]} renderOrder={7} raycast={noRaycast} />
+          <sprite key={c.id} ref={c.last ? (o) => { pulsing.current.push(o) } : undefined} material={statusChipMaterial(c)}
+            position={[Math.cos(a) * ringR, y, -Math.sin(a) * ringR]} scale={[size, size, 1]} renderOrder={7} raycast={noRaycast} />
         )
       })}
     </>

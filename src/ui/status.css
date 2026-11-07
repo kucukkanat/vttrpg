@@ -1,0 +1,20 @@
+/* Status icons (StatusBadge.tsx): category frame (shape + colour), monochrome glyph, turns badge. */
+.status-badge { position: relative; display: inline-flex; flex: none; color: var(--st-glyph); line-height: 0; }
+.status-badge svg { display: block; overflow: visible; }
+.status-badge .status-frame { fill: var(--st-fill); stroke: var(--st, var(--muted)); stroke-width: 2.25; stroke-linejoin: round; }
+.status-badge .status-letters { fill: currentColor; font-family: var(--font-body); font-weight: 800; letter-spacing: 0; }
+.status-badge.off { opacity: .45; }
+.status-badge.off .status-frame { stroke-dasharray: 3 2; }
+/* Turns left: a small number on the lower right corner. */
+.status-turns {
+  position: absolute; right: -5px; bottom: -4px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px;
+  background: var(--fg); color: var(--bg); font-size: 10px; font-weight: 800; line-height: 14px; text-align: center;
+  font-variant-numeric: tabular-nums; box-shadow: 0 0 0 1.5px var(--st-fill);
+}
+@media (pointer: coarse) { .status-turns { font-size: var(--fs-xs); min-width: 16px; height: 16px; line-height: 16px; border-radius: 8px; } }
+/* Last turn: a slow pulse; reduced motion keeps a thicker frame instead. */
+.status-badge.last .status-frame { stroke-width: 3; }
+@media (prefers-reduced-motion: no-preference) {
+  .status-badge.last { animation: status-last 1.2s ease-in-out infinite; }
+}
+@keyframes status-last { 50% { transform: scale(1.12); filter: brightness(1.35); } }

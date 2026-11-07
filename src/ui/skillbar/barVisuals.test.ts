@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { TokenId } from '@/core/ids'
 import type { ConditionDef } from '@/core/pack'
-import { CONDITION_PALETTE, HP_BAND_COLORS, UNKNOWN_CONDITION_COLOR } from '@/table/tokenHud'
+import { CATEGORY_COLORS, HP_BAND_COLORS, UNKNOWN_CONDITION_COLOR } from '@/table/tokenHud'
 import { conditionStyle, costBadges, hpMeter, rangePreviewFor, reachCells, resourceAbbr } from './barVisuals'
 import { isIconName, resolveIcon, SKILL_ICON_NAMES } from './skillIcons'
 
@@ -19,6 +19,7 @@ describe('hp meter', () => {
   })
   it('colours by band', () => {
     expect(hpMeter(2, 6).color).toBe(HP_BAND_COLORS.mid)
+    expect([hpMeter(4, 6).state, hpMeter(3, 6).state, hpMeter(0, 6).state]).toEqual([null, 'bloodied', 'down'])
   })
 })
 
@@ -54,11 +55,26 @@ describe('range preview', () => {
 })
 
 describe('condition chips', () => {
-  const defs: ConditionDef[] = [{ id: 'frightened', name: 'Frightened', description: '' }, { id: 'shield', name: 'Shield of Faith', description: '' }]
-  it('matches the token chips: palette by pack index, letters from the name', () => {
-    expect(conditionStyle(defs, 'shield')).toEqual({ color: CONDITION_PALETTE[1], label: 'SF' })
-    expect(conditionStyle(defs, 'frightened')).toEqual({ color: CONDITION_PALETTE[0], label: 'FR' })
-    expect(conditionStyle(defs, 'odd')).toEqual({ color: UNKNOWN_CONDITION_COLOR, label: 'OD' })
+  const defs: ConditionDef[] = [
+    { id: 'frightened', name: 'Frightened', description: '', icon: 'ghost' },
+    { id: 'shield', name: 'Shield of Faith', description: '', icon: 'shield', category: 'buff' },
+  ]
+  it('matches the token chips: category frame and colour, glyph from the pack icon, letters as fallback', () => {
+    expect(conditionStyle(defs, 'shield')).toMatchObject({ color: CATEGORY_COLORS.buff, shape: 'circle', glyph: 'shield', label: 'SF' })
+    expect(conditionStyle(defs, 'frightened', 1)).toMatchObject({ color: CATEGORY_COLORS.control, shape: 'square', glyph: 'ghost', turns: 1, last: true })
+    expect(conditionStyle(defs, 'odd')).toMatchObject({ color: UNKNOWN_CONDITION_COLOR, glyph: null, label: 'OD' })
+  })
+  it('has a glyph for every condition icon the bundled packs use', () => {
+    const packs = resolve(__dirname, '../../../packs')
+    for (const pack of readdirSync(packs)) {
+      let list: ConditionDef[] = []
+      try { list = JSON.parse(readFileSync(resolve(packs, pack, 'conditions.json'), 'utf8')) as ConditionDef[] } catch { continue }
+      for (const c of list) {
+        const look = conditionStyle(list, c.id)
+        expect(look.glyph, `${pack}/${c.id}: ${c.icon}`).toBe(c.icon)
+        expect(c.category, `${pack}/${c.id} names a category`).toBeDefined()
+      }
+    }
   })
 })
 

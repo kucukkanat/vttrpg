@@ -56,7 +56,10 @@ export interface ConditionDef {
   id: string
   name: string
   description: string
+  /** Glyph name drawn on the status chip (see src/ui/theme/glyphs.ts); unknown names fall back to letters. */
   icon?: string
+  /** Status kind: sets the chip's border shape and colour. Absent: guessed from the id, else harm. */
+  category?: 'buff' | 'harm' | 'control' | 'magic' | 'affliction'
   /** Attribute modifiers while active, e.g. { str: -2 }. */
   modifiers?: Record<string, number>
 }
