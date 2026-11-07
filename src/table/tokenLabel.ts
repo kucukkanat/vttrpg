@@ -1,6 +1,7 @@
 /**
  * How a token is lettered, shared by the disc texture on the table and the HUD turn strip. Pure; no three.js.
  */
+import { INK, MINE, WAITING } from '@/ui/theme/palette'
 
 /** Two letters for a token: "Pip" -> "PI", "Old Rat King" -> "OK", "" -> "?". */
 export function initialsOf(name: string): string {
@@ -24,13 +25,13 @@ export function luminance(color: string): number {
 
 /** Text colour that reads on a token colour: dark ink on light tokens, cream on dark ones. */
 export function inkOn(color: string): string {
-  return luminance(color) > 0.45 ? '#1a1612' : '#f6efe3'
+  return luminance(color) > 0.45 ? INK : '#f6efe3'
 }
 
 /** Ring colour for an owned token whose owner is offline (no presence colour to show). */
-export const OFFLINE_OWNER_COLOR = '#9a9892'
+export const OFFLINE_OWNER_COLOR = WAITING
 /** Colour the local player is shown as when their presence has no colour yet (see the Players panel). */
-export const LOCAL_OWNER_COLOR = '#7cc4ff'
+export const LOCAL_OWNER_COLOR = MINE
 
 /**
  * The owner ring on a token: the owning player's presence colour, or null when nobody but the GM

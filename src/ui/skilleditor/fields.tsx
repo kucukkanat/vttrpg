@@ -140,7 +140,7 @@ export function Chips({ options, value, onChange, labelOf }: {
             type="button"
             aria-pressed={on}
             onClick={() => toggle(id)}
-            style={{ borderColor: on ? 'var(--accent)' : undefined, background: on ? 'rgba(224,164,88,0.16)' : undefined, borderRadius: 999 }}
+            style={{ borderColor: on ? 'var(--select)' : undefined, background: on ? 'var(--row-on)' : undefined, borderRadius: 999 }}
           >
             {labelOf ? labelOf(id) : id}
           </button>

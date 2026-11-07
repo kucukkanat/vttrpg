@@ -5,6 +5,7 @@
  */
 import type { Character, Token } from '@/core/doc'
 import type { ConditionDef, ResourceDef } from '@/core/pack'
+import { HP_HIGH, HP_LOW, HP_MID } from '@/ui/theme/palette'
 
 export interface ResourceReading {
   current: number
@@ -51,7 +52,7 @@ export function hpBand(current: number, max: number): HpBand {
   return r > 0.5 ? 'high' : r > 0.25 ? 'mid' : 'low'
 }
 
-export const HP_BAND_COLORS: Record<HpBand, string> = { high: '#5fd36b', mid: '#f2b33d', low: '#e0453a' }
+export const HP_BAND_COLORS: Record<HpBand, string> = { high: HP_HIGH, mid: HP_MID, low: HP_LOW }
 
 /** Bars up to this many points are split into pips; longer ones are a continuous fill. */
 export const MAX_PIPS = 12

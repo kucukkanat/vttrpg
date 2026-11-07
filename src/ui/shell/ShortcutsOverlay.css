@@ -12,7 +12,7 @@
 .shortcuts {
   width: min(100%, 560px); max-height: 100%; overflow: auto; -webkit-overflow-scrolling: touch;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-lg);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, .6);
+  box-shadow: var(--shadow-lg);
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
   display: grid; gap: var(--sp-3);
 }

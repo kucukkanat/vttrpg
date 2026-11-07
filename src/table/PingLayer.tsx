@@ -25,12 +25,13 @@ import {
 } from './ping'
 import { FloorCatcher, FloorLabel, floorPoint } from './RulerLayer'
 import { useTableUi } from './tableState'
+import { MINE } from '@/ui/theme/palette'
 import { doubleTapEdit } from './editTap'
 import { vfxBus } from './vfx/bus'
 import { RingEffect } from './vfx/presets/RingEffect'
 import type { ScheduledEffect } from './vfx/schedule'
 
-const DEFAULT_COLOR = '#7cc4ff'
+const DEFAULT_COLOR = MINE
 /** Ring pulses per ping: start offset and length, within PING_DURATION_MS. */
 const PULSES: { delay: number; duration: number }[] = [{ delay: 0, duration: 1100 }, { delay: 450, duration: 1100 }, { delay: 900, duration: 1100 }]
 

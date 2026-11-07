@@ -5,8 +5,8 @@
   position: absolute; z-index: 6;
   min-width: 200px; max-width: min(300px, calc(100% - 2 * var(--sp-2)));
   padding: var(--sp-1);
-  border-radius: var(--r-md); background: rgba(23, 23, 27, .95); border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   animation: ctx-in .12s ease;
 }
@@ -20,8 +20,8 @@
   background: transparent; border: 0; border-radius: var(--r-sm); color: var(--fg);
   font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; touch-action: manipulation;
 }
-.ctx-row:hover, .ctx-row:focus-visible { background: rgba(224, 164, 88, .14); outline: none; }
-.ctx-row:active { filter: none; background: rgba(224, 164, 88, .24); }
+.ctx-row:hover, .ctx-row:focus-visible { background: var(--hover); box-shadow: inset 2px 0 0 var(--select); outline: none; }
+.ctx-row:active { filter: none; background: var(--row-on); }
 .ctx-row--danger { color: var(--danger); }
 .ctx-row .ctx-sub, .ctx-head .ctx-sub { margin-left: auto; padding-left: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
 .ctx-sep { height: 1px; margin: var(--sp-1) 0; background: var(--border); }

@@ -8,10 +8,10 @@
 .die-face .die-sides { font-size: 8px; color: var(--muted); margin-top: 1px; letter-spacing: .02em; }
 .die-face .die-strike { stroke: var(--fg); stroke-width: 2; stroke-linecap: round; }
 /* Natural max / natural 1: coloured outline and a soft fill. */
-.die-face.nat-max .die-body { stroke: var(--ok); stroke-width: 2.25; fill: rgba(143, 209, 143, .16); }
+.die-face.nat-max .die-body { stroke: var(--ok); stroke-width: 2.25; fill: color-mix(in srgb, var(--ok) 16%, transparent); }
 .die-face.nat-max .die-pip { fill: var(--ok); }
 .die-face.nat-max { color: var(--ok); }
-.die-face.nat-min .die-body { stroke: var(--bad); stroke-width: 2.25; fill: rgba(242, 139, 130, .16); }
+.die-face.nat-min .die-body { stroke: var(--bad); stroke-width: 2.25; fill: color-mix(in srgb, var(--bad) 16%, transparent); }
 .die-face.nat-min .die-pip { fill: var(--bad); }
 .die-face.nat-min { color: var(--bad); }
 /* Dropped by kh/kl: faded and struck (the strike line is drawn in the SVG). */

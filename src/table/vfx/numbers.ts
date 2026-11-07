@@ -6,6 +6,7 @@
 import type { Token } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import { CHEST_HEIGHT_CELLS, type VfxEvent } from './schedule'
+import { DAMAGE, HEAL } from '@/ui/theme/palette'
 
 export interface FloatingNumberSpec {
   /** Unique per instance: `${eventId}:n:${index}`. */
@@ -22,8 +23,8 @@ export interface FloatingNumberSpec {
   cellSize: number
 }
 
-export const DAMAGE_COLOR = '#ff5f52'
-export const HEAL_COLOR = '#5fd36b'
+export const DAMAGE_COLOR = DAMAGE
+export const HEAL_COLOR = HEAL
 export const NUMBER_DURATION_MS = 1100
 /** Delay after the event so the number follows the hit flash instead of preceding it. */
 export const NUMBER_DELAY_MS = 120

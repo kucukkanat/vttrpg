@@ -18,10 +18,11 @@
   width: min(100%, 560px);
   padding: 10px;
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.66);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  color: #f3ead8;
+  background: var(--scrim);
+  border: 1px solid var(--border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--on-glass);
   pointer-events: auto;
 }
 
@@ -36,12 +37,21 @@
   padding: 0 4px;
   font-size: 13px;
   line-height: 1.35;
-  color: #ffb3a7;
+  color: var(--warn-fg);
   overflow-wrap: anywhere;
 }
 
+/* Warning triangle (icon mask, not a text glyph) before the friendly-fire / player warning. */
 .targeting-bar__warn::before {
-  content: '\26A0\00A0';
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 4px;
+  vertical-align: -0.2em;
+  background: currentColor;
+  -webkit-mask: var(--icon-warn) center / contain no-repeat;
+  mask: var(--icon-warn) center / contain no-repeat;
 }
 
 .targeting-bar__actions {
@@ -54,10 +64,10 @@
   min-height: 44px;
   min-width: 44px;
   padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--glass-edge);
   border-radius: 10px;
-  background: rgba(40, 40, 48, 0.92);
-  color: #f3ead8;
+  background: var(--glass-btn);
+  color: var(--on-glass);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -65,14 +75,14 @@
 }
 
 .targeting-bar__btn:focus-visible {
-  outline: 2px solid var(--accent, #e0a458);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .targeting-bar__btn--primary {
-  background: var(--accent, #e0a458);
-  border-color: var(--accent, #e0a458);
-  color: var(--accent-fg, #1a1612);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
 }
 
 /* Wide tables: text on the left, buttons on the right, the warning on its own row. */

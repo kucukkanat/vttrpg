@@ -4,7 +4,7 @@
  * menu (right-click / long-press) and drag-to-move with snapping; dragging a selected token moves the whole selection.
  * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
  * chips around the disc, a ring in the owner's presence colour on player-owned tokens (thicker on
- * the viewer's own) and a pulsing amber ring on the combatant whose turn it is. A name label floats
+ * the viewer's own) and a pulsing gold ring on the combatant whose turn it is. A name label floats
  * above the viewer's own tokens, the selection, the current combatant and whatever is hovered.
  * While the viewer drags, the path and its length show on the floor (TokenOverlays.tsx).
  */
@@ -26,7 +26,8 @@ import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { doubleTapEdit, tapTwice } from './editTap'
 import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
-import { MoveTrail, Nameplate, TurnRing } from './TokenOverlays'
+import { MoveTrail, Nameplate, TargetRing, TurnRing } from './TokenOverlays'
+import { HOVER, MEASURE, SELECT, WAITING } from '@/ui/theme/palette'
 
 /** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
 export const LOCAL_PRESENCE_COLOR = LOCAL_OWNER_COLOR
@@ -533,24 +534,19 @@ export function TokenMesh({ token }: { token: Token }) {
           <Disc token={token} radius={radius} dimmed={dimmed} ghost={ghost} />
         )}
         {ghost && (
-          // Amber "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
+          // Muted "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
           <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>
             <ringGeometry args={[radius * 1.15, radius * 1.3, 48]} />
-            <meshBasicMaterial color="#e0a458" transparent opacity={0.6} depthWrite={false} />
+            <meshBasicMaterial color={WAITING} transparent opacity={0.7} depthWrite={false} />
           </mesh>
         )}
         {(selected || hovered) && !targeting && (
           <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>
             <ringGeometry args={[radius * 1.12, radius * (selected ? 1.3 : 1.22), 48]} />
-            <meshBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
+            <meshBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </mesh>
         )}
-        {targetInside && (
-          <mesh rotation-x={-Math.PI / 2} position-y={0.012} renderOrder={6} raycast={() => undefined}>
-            <ringGeometry args={[radius * 1.1, radius * 1.45, 48]} />
-            <meshBasicMaterial color="#ff5a1f" transparent opacity={0.95} depthWrite={false} />
-          </mesh>
-        )}
+        {targetInside && <TargetRing radius={radius} />}
         {token.light > 0 && (
           <pointLight
             ref={light}
@@ -584,7 +580,7 @@ function ElevationMarker({ elevation, radius, cell }: { elevation: number; radiu
     <group raycast={() => undefined}>
       <mesh position-y={elevation / 2} raycast={() => undefined}>
         <cylinderGeometry args={[0.012 * cell, 0.012 * cell, elevation, 6]} />
-        <meshBasicMaterial color="#f3ead8" transparent opacity={0.55} depthWrite={false} />
+        <meshBasicMaterial color={MEASURE} transparent opacity={0.55} depthWrite={false} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position-y={0.006} renderOrder={2} raycast={() => undefined}>
         <circleGeometry args={[radius * (0.9 + 0.1 * (1 - shadow)), 40]} />

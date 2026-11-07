@@ -11,9 +11,9 @@
 .toast-item {
   pointer-events: auto; display: inline-flex; align-items: center; gap: var(--sp-2);
   min-height: 44px; max-width: min(100%, 480px); padding: 0 var(--sp-1) 0 var(--sp-3);
-  border-radius: var(--r-md); background: rgba(0, 0, 0, .78); border: 1px solid var(--border);
+  border-radius: var(--r-md); background: var(--scrim); border: 1px solid var(--border); color: var(--on-glass);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: var(--fg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .4); animation: toast-up .2s ease;
+  box-shadow: var(--shadow); animation: toast-up .2s ease;
 }
 .toast-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toast-item button { min-height: 44px; min-width: 44px; }

@@ -7,7 +7,7 @@
 }
 .cc-initials {
   display: grid; place-items: center; font-size: 22px; font-weight: 700; color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); user-select: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); /* white on the token colour, as on the disc */ user-select: none;
 }
 .cc-ident { min-width: 0; display: grid; gap: 2px; }
 .cc-name { font-size: var(--fs-xl); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
@@ -35,7 +35,11 @@
 .char-card button.cc-tile { cursor: pointer; }
 @media (hover: hover) { .char-card button.cc-tile:hover { border-color: var(--accent); } }
 .cc-abbr { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--muted); font-weight: 600; }
-button.cc-tile .cc-abbr::before { content: "⚄ "; color: var(--accent); }
+/* Rollable tiles carry a small die icon (an SVG mask, so it takes the text colour) instead of a glyph. */
+button.cc-tile .cc-abbr::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; margin-right: 3px; vertical-align: -0.15em; background: currentColor;
+  -webkit-mask: var(--icon-die) center / contain no-repeat; mask: var(--icon-die) center / contain no-repeat;
+}
 .cc-value { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .cc-max { font-size: var(--fs-sm); font-weight: 400; color: var(--muted); }
 .cc-mod { font-size: var(--fs-sm); color: var(--muted); font-variant-numeric: tabular-nums; }

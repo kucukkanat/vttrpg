@@ -1,16 +1,57 @@
 /* ---------------------------------------------------------------------------------------------
    Tokens. See docs/UX.md for the scales and where they apply.
    --------------------------------------------------------------------------------------------- */
+/* Display face: Alegreya Bold (SIL OFL 1.1, see theme/fonts/OFL.txt), latin subset, 24 kB, bundled so
+   the app still needs no server. Headings, names and numbers only; body text stays on the system stack. */
+@font-face {
+  font-family: "Alegreya"; font-style: normal; font-weight: 600 800; font-display: swap;
+  src: url("./theme/fonts/alegreya-latin-700.woff2") format("woff2");
+}
 :root {
   color-scheme: dark;
-  /* colour */
+  /* colour: neutrals */
   --bg: #0e0e10; --panel: #17171b; --panel-2: #1f1f25; --field: #0b0b0d; --border: #2a2a31;
-  --fg: #e8e6e3; --muted: #9a9892; --accent: #e0a458; --accent-fg: #1a1612;
+  --fg: #e8e6e3; --muted: #9a9892;
+  --btn: #26262d; --hover: #22222a; --row-on: #2b2b35; --well: #101014;
+  /* colour roles: one meaning each (docs/UX.md "Colour roles"; table colours in src/ui/theme/palette.ts) */
+  --accent: #e0a458; --accent-fg: #1a1612;   /* brand and primary actions only */
+  --now: #ffc53d; --now-fg: #1a1408;         /* whose turn it is */
+  --select: #f3ead8;                          /* selection */
+  --mine: #7cc4ff;                            /* the viewer's own */
+  --hostile: #ff7a4d;                         /* hostile / targeted (text-safe tint of the 3D #ff5a1f) */
+  --help: #3ee08f;                            /* heals and buffs */
+  --measure: #e8dcc0;                         /* range, distance, move path */
+  --total: var(--fg);                         /* roll totals */
   --ok: #8fd18f; --bad: #f28b82; --danger: #ff7b72; --whisper: #c58af9;
+  --danger-fg: #ff9a93; --danger-border: #7a2e2e; --warn-fg: #ffb3a7;
+  --hp-high: #3fbf7f; --hp-mid: #f2b33d; --hp-low: #d8342c;
+  --st-buff: #43d39e; --st-harm: #e5484d; --st-control: #ffb347; --st-magic: #4c8dff; --st-affliction: #c77ddd;
+  --st-fill: #16161a; --st-glyph: #f3ead8;
+  /* glass over the table: one recipe per weight, and the text that sits on it */
+  --glass: rgba(18, 18, 22, .9);              /* dock, chips, pills, bars */
+  --glass-strong: rgba(18, 18, 22, .95);      /* menus and popovers that hold controls */
+  --scrim: rgba(0, 0, 0, .72);                /* toasts, preview bar, overlay labels */
+  --glass-blur: blur(6px);
+  --glass-btn: rgba(40, 40, 48, .92); --glass-edge: rgba(255, 255, 255, .18);
+  --on-glass: #f3ead8;
+  --parchment: #f3ead8;                       /* text over the black scene cover, both themes */
+  --error-glass: rgba(120, 30, 30, .9); --on-error: #f3ead8;
+  --shadow: 0 6px 20px rgba(0, 0, 0, .4); --shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+  --track: rgba(255, 255, 255, .14);          /* empty pips and bars */
+  /* icon masks for CSS-only glyphs, drawn like src/ui/icons.tsx (24 grid, 1.75 stroke) */
+  --icon-die: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='3'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.4' fill='black' stroke='none'/%3E%3Ccircle cx='15.5' cy='8.5' r='1.4' fill='black' stroke='none'/%3E%3Ccircle cx='12' cy='12' r='1.4' fill='black' stroke='none'/%3E%3Ccircle cx='8.5' cy='15.5' r='1.4' fill='black' stroke='none'/%3E%3Ccircle cx='15.5' cy='15.5' r='1.4' fill='black' stroke='none'/%3E%3C/svg%3E");
+  --icon-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E");
+  --icon-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5 2.5 20h19L12 3.5z'/%3E%3Cpath d='M12 10v4.5'/%3E%3Ccircle cx='12' cy='17.2' r='1.1' fill='black' stroke='none'/%3E%3C/svg%3E");
+  /* pack theme hook (src/ui/theme/theme.ts writes these from pack.json "theme") */
+  --frame-tint: transparent;
   /* spacing */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
-  /* type */
-  --fs-xs: 11px; --fs-sm: 12px; --fs-md: 14px; --fs-lg: 16px; --fs-xl: 18px;
+  /* type: sizes scale with the text-size preset (data-text-scale on <html>) */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Alegreya", Georgia, "Times New Roman", serif;
+  --text-scale: 1;
+  --fs-xs: calc(11px * var(--text-scale)); --fs-sm: calc(12px * var(--text-scale)); --fs-md: calc(14px * var(--text-scale));
+  --fs-lg: calc(16px * var(--text-scale)); --fs-xl: calc(18px * var(--text-scale));
   /* radii */
   --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
   /* safe areas */
@@ -24,13 +65,38 @@
   --kb: 0px;                             /* on-screen keyboard overlap, set by the shell */
 }
 @media (pointer: coarse) {
-  :root { --control: 44px; --head-h: 48px; }
+  /* Touch: 44px controls, and nothing smaller than 12px (tab and drawer labels, tags). */
+  :root { --control: 44px; --head-h: 48px; --fs-xs: calc(12px * var(--text-scale)); }
+}
+/* Text-size preset (Players panel): everything sized from the --fs-* tokens follows. */
+:root[data-text-scale="large"] { --text-scale: 1.15; }
+:root[data-text-scale="larger"] { --text-scale: 1.3; }
+
+/* Daylight: a high-contrast light theme for bright rooms and outdoor phones. Chosen by the system
+   setting or by hand (src/ui/theme/theme.ts sets data-theme); the 3D table itself stays dark. */
+:root[data-theme="daylight"] {
+  color-scheme: light;
+  --bg: #f4f1ea; --panel: #fbfaf6; --panel-2: #ece8de; --field: #ffffff; --border: #b9b1a1;
+  --fg: #17150f; --muted: #5a5549;
+  --btn: #f1ede4; --hover: #e7e2d6; --row-on: #ddd6c6; --well: #ece8de;
+  --accent: #8f4c00; --accent-fg: #ffffff;
+  --now: #7a5600; --now-fg: #ffffff;
+  --select: #17150f; --mine: #0b63c4; --hostile: #b8360a; --help: #0b6b3d; --measure: #5a5549;
+  --ok: #186b26; --bad: #b3261e; --danger: #b3261e; --whisper: #7b2fbf;
+  --danger-fg: #9c2a1a; --danger-border: #d9a39b; --warn-fg: #9c2a1a;
+  --st-fill: #fbfaf6; --st-glyph: #17150f;
+  --glass: rgba(251, 250, 246, .94); --glass-strong: rgba(251, 250, 246, .98); --scrim: rgba(248, 246, 240, .94);
+  --glass-btn: rgba(236, 232, 222, .96); --glass-edge: rgba(23, 21, 15, .28);
+  --on-glass: #17150f;
+  --error-glass: rgba(179, 38, 30, .96); --on-error: #ffffff;
+  --shadow: 0 6px 20px rgba(0, 0, 0, .18); --shadow-lg: 0 12px 32px rgba(0, 0, 0, .22);
+  --track: rgba(23, 21, 15, .16);
 }
 
 /* ---------------------------------------------------------------------------------------------
    Base
    --------------------------------------------------------------------------------------------- */
-html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: var(--fs-md); line-height: 1.35; }
+html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--fs-md); line-height: 1.35; }
 * { box-sizing: border-box; }
 /* Pinch and double-tap zoom the table, never the page. */
 html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
@@ -40,7 +106,7 @@ p { margin: 0 0 var(--sp-2); }
 
 button {
   min-height: var(--control); padding: 0 var(--sp-3); font: inherit; font-size: var(--fs-md);
-  background: #26262d; color: var(--fg); border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--btn); color: var(--fg); border: 1px solid var(--border); border-radius: var(--r-sm);
   cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1);
 }
@@ -53,7 +119,7 @@ button.tiny { padding: 0 var(--sp-2); font-size: var(--fs-sm); min-height: 28px;
 button.icon { padding: 0 var(--sp-2); min-width: var(--control); font-size: var(--fs-lg); line-height: 1; background: transparent; border-color: transparent; }
 @media (hover: hover) { button.icon:hover { border-color: var(--border); background: var(--panel-2); } }
 button.wide { width: 100%; }
-button.danger { border-color: #7a2e2e; color: #ff9a93; }
+button.danger { border-color: var(--danger-border); color: var(--danger-fg); }
 input, select, textarea {
   min-height: var(--control); font: inherit; font-size: var(--fs-md);
   background: var(--field); color: var(--fg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0 var(--sp-2); width: 100%;
@@ -77,12 +143,22 @@ label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap:
 /* A <details> summary drawn as a row with its own chevron (the native marker is lost under display:flex). */
 summary.disclosure { min-height: var(--control); display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; list-style: none; }
 summary.disclosure::-webkit-details-marker { display: none; }
-summary.disclosure::before { content: "▸"; flex: none; width: 12px; font-size: var(--fs-sm); color: var(--muted); }
-details[open] > summary.disclosure::before { content: "▾"; }
+summary.disclosure::before {
+  content: ""; flex: none; width: 12px; height: 12px; background: var(--muted); transition: transform .15s ease;
+  -webkit-mask: var(--icon-chevron) center / contain no-repeat; mask: var(--icon-chevron) center / contain no-repeat;
+}
+details[open] > summary.disclosure::before { transform: rotate(90deg); }
+/* An icon mask in the text colour, for CSS that cannot hold an <Icon>. */
+.mask-icon { display: inline-block; flex: none; width: 1em; height: 1em; background: currentColor; -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
 /* Keyboard shortcut beside a button label; touch screens have no keyboard, so it is dropped there. */
 .key-hint { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--muted); padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; }
 @media (pointer: coarse) { .key-hint { display: none; } }
 .ok { color: var(--ok); } .bad { color: var(--bad); }
+/* The display face: names, titles and the numbers that matter (totals, HP, rounds). Lining, tabular
+   figures so numbers line up; body text, labels and controls keep the system stack. */
+.display, .host-title, .topbar .game-name, .cc-name, .cc-value, .token-bar-name, .init-round, .roll-total, .toast-total, .scene-transition__name {
+  font-family: var(--font-display); font-variant-numeric: lining-nums tabular-nums;
+}
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 
 /* Scroll containers: momentum on iOS, thin bars elsewhere. */
@@ -110,6 +186,8 @@ details[open] > summary.disclosure::before { content: "▾"; }
 .game--phone.kb .tabbar { display: none; }
 
 .topbar { grid-area: top; }
+/* Pack frame tint (theme hook): a wash over the chrome, transparent by default. */
+html :is(.topbar, .col, .drawer, .bsheet, .tabbar, .chip, .cam-group, .dock-bar, .dock-card) { background-image: linear-gradient(var(--frame-tint), var(--frame-tint)); }
 .table { grid-area: table; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); }
 .table canvas { display: block; }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); text-align: center; padding: var(--sp-4); }
@@ -149,10 +227,10 @@ details[open] > summary.disclosure::before { content: "▾"; }
 .menu-list {
   position: absolute; right: 0; top: calc(100% + 4px); min-width: 220px; z-index: 40;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-1);
-  display: grid; gap: 2px; box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+  display: grid; gap: 2px; box-shadow: var(--shadow-lg);
 }
 .menu-list button { justify-content: flex-start; min-height: 44px; background: transparent; border-color: transparent; border-radius: var(--r-sm); }
-.menu-list button.danger { color: #ff9a93; }
+.menu-list button.danger { color: var(--danger-fg); }
 .menu-info { padding: var(--sp-2) var(--sp-3) var(--sp-1); }
 
 /* ---------------------------------------------------------------------------------------------
@@ -163,9 +241,10 @@ details[open] > summary.disclosure::before { content: "▾"; }
 /* One shrinkable column: a row never sizes the track to its content and pushes the panel sideways. */
 .list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .list li { min-height: var(--control); padding: 0 var(--sp-2); border-radius: var(--r-sm); cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); }
-@media (hover: hover) { .list li:hover { background: #22222a; } }
-.list li:active { background: #22222a; }
-.list li.selected { background: #2b2b35; }
+@media (hover: hover) { .list li:hover { background: var(--hover); } }
+.list li:active { background: var(--hover); }
+/* Selected rows: a neutral raised fill plus a cream edge (selection is cream, not the brand amber). */
+.list li.selected { background: var(--row-on); box-shadow: inset 2px 0 0 var(--select); }
 /* Text in a row truncates instead of widening the panel; dots and small tags keep their size. */
 .list li > span:not(.dot) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list li > span.small { flex: none; }
@@ -179,9 +258,9 @@ details[open] > summary.disclosure::before { content: "▾"; }
   background: transparent; border: 1px solid transparent;
 }
 button.list-row-main { justify-content: flex-start; }
-button.list-row-main:active { background: #22222a; filter: none; }
-@media (hover: hover) { button.list-row-main:hover { background: #22222a; border-color: transparent; } }
-.list-row.selected .list-row-main { background: #2b2b35; }
+button.list-row-main:active { background: var(--hover); filter: none; }
+@media (hover: hover) { button.list-row-main:hover { background: var(--hover); border-color: transparent; } }
+.list-row.selected .list-row-main { background: var(--row-on); box-shadow: inset 2px 0 0 var(--select); }
 .list-row-main > span:not(.dot) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-row-main > span.small { flex: none; }
 .list-row > button:not(.list-row-main) { flex: none; }
@@ -193,8 +272,8 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .check input { width: auto; }
 .swatches { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .swatch { width: 28px; height: 28px; min-height: 0; min-width: 0; border-radius: 50%; border: 2px solid transparent; padding: 0; }
-.swatch.on { border-color: #fff; }
-.tiny-file { display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--sp-2); font-size: var(--fs-sm); background: #26262d; border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; margin: 0; }
+.swatch.on { border-color: var(--select); }
+.tiny-file { display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--sp-2); font-size: var(--fs-sm); background: var(--btn); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; margin: 0; }
 @media (pointer: coarse) {
   /* `.check input { width: auto }` must not undo the 24px checkbox; the label row is already --control tall. */
   .check input[type=checkbox] { width: 24px; height: 24px; }
@@ -216,7 +295,7 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .chat .log { flex: 1; min-height: 0; font-size: var(--fs-md); display: flex; flex-direction: column; gap: var(--sp-1); overflow-anchor: auto; }
 .chat .who { color: var(--muted); font-size: var(--fs-sm); }
 .chat .msg { overflow-wrap: anywhere; }
-.chat .msg.roll { color: var(--accent); }
+.chat .msg.roll { color: var(--total); }
 .msg.whisper { color: var(--whisper); }
 .msg.system { color: var(--muted); font-style: italic; }
 .chatform { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); flex: none; }
@@ -294,20 +373,20 @@ button.list-row-main:active { background: #22222a; filter: none; }
   content: ""; position: absolute; top: 0; bottom: 1px; width: 32px; z-index: 1; pointer-events: none;
   opacity: 0; transition: opacity .15s;
 }
-.drawer-strip::before { left: 0; background: linear-gradient(to right, var(--panel), rgba(23, 23, 27, 0)); }
-.drawer-strip::after { right: 0; background: linear-gradient(to left, var(--panel), rgba(23, 23, 27, 0)); }
+.drawer-strip::before { left: 0; background: linear-gradient(to right, var(--panel), transparent); }
+.drawer-strip::after { right: 0; background: linear-gradient(to left, var(--panel), transparent); }
 .drawer-strip.fade-start::before, .drawer-strip.fade-end::after { opacity: 1; }
 .drawer-head { display: flex; align-items: center; gap: var(--sp-1); min-height: var(--head-h); padding: 0 var(--sp-2) 0 var(--sp-3); }
 .drawer .hosted { flex: 1; min-height: 0; --actions-right: calc(var(--control) * 2 + var(--sp-2) + var(--sp-1)); }
 .drawer .hosted > .panel { overflow: auto; }
 .drawer .hosted > .panel.sheet { max-height: none; }
-.pin.on { color: var(--accent); }
+.pin.on { color: var(--select); }
 .pin:not(.on) { opacity: .6; }
 
 /* Build tag. Hosts show it as muted footer text; the tag from main.tsx sits after the page content on the
    home, new-game and join pages (never over it) and is hidden while a game is on screen so it never overlaps. */
 .build-id { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--muted); }
-.build-tag { display: block; padding: 0 calc(var(--sp-4) + var(--sar)) calc(var(--sp-3) + var(--sab)) calc(var(--sp-4) + var(--sal)); text-align: center; font-size: 10px; color: var(--muted); font-family: ui-monospace, monospace; }
+.build-tag { display: block; padding: 0 calc(var(--sp-4) + var(--sar)) calc(var(--sp-3) + var(--sab)) calc(var(--sp-4) + var(--sal)); text-align: center; font-size: var(--fs-xs); color: var(--muted); font-family: ui-monospace, monospace; }
 .game ~ .build-tag, #root:has(.game) > .build-tag { display: none; }
 .col-foot, .drawer-foot {
   flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1);
@@ -325,8 +404,9 @@ button.list-row-main:active { background: #22222a; filter: none; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: transparent; border: 0; border-radius: 0; color: var(--muted); font-size: var(--fs-xs);
 }
-.tab.on { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
-.drawer-tabs .tab.on { box-shadow: inset 0 -2px 0 var(--accent); }
+/* The open tab is a selection: cream text and edge, never the brand amber. */
+.tab.on { color: var(--select); box-shadow: inset 0 2px 0 var(--select); }
+.drawer-tabs .tab.on { box-shadow: inset 0 -2px 0 var(--select); }
 .tab .glyph { display: inline-flex; width: 20px; height: 20px; line-height: 1; }
 .tab .lbl { font-size: var(--fs-xs); line-height: 1.2; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Unread counters on the shell's tabs and drawer toggle only; other pages style their own `.badge`. */
@@ -362,8 +442,8 @@ button.list-row-main:active { background: #22222a; filter: none; }
   width: 100%; min-height: 48px; justify-content: flex-start; gap: var(--sp-3); padding: 0 var(--sp-3);
   background: transparent; border-color: transparent; font-size: var(--fs-md); text-align: left; color: var(--fg);
 }
-.more-row:active { background: #22222a; filter: none; }
-.more-row.on { background: #2b2b35; color: var(--accent); }
+.more-row:active { background: var(--hover); filter: none; }
+.more-row.on { background: var(--row-on); color: var(--select); }
 .more-row .glyph { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 20px; line-height: 1; }
 .more-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .more-tag { flex: none; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
@@ -382,20 +462,20 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .chip {
   display: inline-flex; align-items: center; gap: var(--sp-2); min-height: var(--control); max-width: 75%;
   padding: 0 var(--sp-3) 0 var(--sp-2); border-radius: 999px;
-  background: rgba(23, 23, 27, .85); border: 1px solid var(--border); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: var(--glass); border: 1px solid var(--border); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
 }
 .chip-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-hint { color: var(--accent); font-size: var(--fs-sm); flex: none; }
 .toast {
   align-self: center; display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: center;
   padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); max-width: 90%;
-  background: rgba(0, 0, 0, .72); border: 1px solid var(--border); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  color: var(--fg); animation: toast-in .2s ease;
+  background: var(--scrim); border: 1px solid var(--border); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--on-glass); animation: toast-in .2s ease;
 }
 /* Long formulas ("4d6kh3+2d8+…") have no spaces: let them break instead of running past the card. */
 .toast > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .toast-formula { font-style: italic; }
-.toast-total { font-weight: 700; font-size: var(--fs-xl); color: var(--accent); }
+.toast-total { font-family: var(--font-display); font-variant-numeric: lining-nums tabular-nums; font-weight: 800; font-size: calc(var(--fs-xl) + 2px); color: var(--total); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -404,5 +484,5 @@ button.list-row-main:active { background: #22222a; filter: none; }
   .status.connecting .dot { animation: none; }
 }
 
-.audio-unlock { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--accent); color: #111; font-weight: 600; border: 0; padding: 10px 16px; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.audio-unlock { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--accent); color: var(--accent-fg); font-weight: 600; border: 0; padding: 10px 16px; border-radius: 999px; box-shadow: var(--shadow-lg); }
 @media (min-width: 1100px) { .audio-unlock { bottom: 16px; } }

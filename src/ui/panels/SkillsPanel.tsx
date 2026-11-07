@@ -107,8 +107,8 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
   const btn = (active: boolean, disabled: boolean): CSSProperties => ({
     display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 10, rowGap: 0, alignItems: 'center', textAlign: 'left',
     minHeight: 'var(--control)', padding: '6px 10px', borderRadius: 8, width: '100%',
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-    background: active ? 'rgba(224,164,88,0.16)' : disabled ? '#1c1c21' : '#26262d',
+    border: `1px solid ${active ? 'var(--select)' : 'var(--border)'}`,
+    background: active ? 'var(--row-on)' : disabled ? 'var(--panel-2)' : 'var(--btn)',
     opacity: disabled ? 0.55 : 1, cursor: disabled ? 'default' : 'pointer', touchAction: 'manipulation',
   })
 
@@ -138,7 +138,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
                   {skill.name}
                   {skill.id in custom && <span className="muted small" style={{ marginLeft: 6, fontWeight: 400 }} title="Custom skill for this game">custom</span>}
                 </span>
-                <span className="small" style={{ color: disabled ? '#ff9b8f' : 'var(--accent)', whiteSpace: 'nowrap' }}>{reason ?? costLabel(skill, labelOf)}</span>
+                <span className="small" style={{ color: disabled ? 'var(--bad)' : 'var(--muted)', whiteSpace: 'nowrap' }}>{reason ?? costLabel(skill, labelOf)}</span>
                 <span className="muted small" style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {shapeLabel(skill)} — {skill.description}
                 </span>
@@ -148,7 +148,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
         </div>
       )}
       {outcome.length > 0 && (
-        <div className="small" style={{ marginTop: 8, padding: '6px 8px', borderRadius: 8, background: '#101014', borderLeft: '3px solid var(--accent)' }}>
+        <div className="small" style={{ marginTop: 8, padding: '6px 8px', borderRadius: 8, background: 'var(--well)', borderLeft: '3px solid var(--measure)' }}>
           {outcome.map((m) => <div key={m.id}>{m.text}</div>)}
         </div>
       )}

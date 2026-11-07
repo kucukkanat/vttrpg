@@ -26,8 +26,8 @@ const css = `
   width: max-content; max-width: min(520px, calc(100% - var(--sp-4) * 2 - var(--sal) - var(--sar)));
   display: flex; align-items: center; gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4); border-radius: var(--r-md);
-  background: rgba(23, 23, 27, .92); border: 1px solid var(--accent); color: var(--fg);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: var(--glass); border: 1px solid var(--accent); color: var(--fg);
+  box-shadow: var(--shadow-lg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   animation: gm-callout-in .25s ease;
 }
 .gm-callout--bottom { bottom: calc(var(--sp-4) + var(--sab) + var(--dock-h, 0px)); }

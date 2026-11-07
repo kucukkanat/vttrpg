@@ -4,7 +4,7 @@
   --sheet-muted: var(--muted, #9a9892);
   --sheet-border: var(--border, #2a2a31);
   --sheet-accent: var(--accent, #e0a458);
-  --sheet-field: #0b0b0d;
+  --sheet-field: var(--field, #0b0b0d);
   color: var(--sheet-fg);
   background: var(--sheet-bg);
   font-size: 14px;
@@ -51,12 +51,15 @@
 .sheet .list-item { display: grid; gap: 6px; grid-template-columns: 1fr auto; align-items: end; }
 .sheet .list-item .fields { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .sheet button {
-  min-height: var(--control, 44px); background: #26262d; color: var(--sheet-fg); border: 1px solid var(--sheet-border); border-radius: 6px;
+  min-height: var(--control, 44px); background: var(--btn, #26262d); color: var(--sheet-fg); border: 1px solid var(--sheet-border); border-radius: 6px;
   padding: 4px 12px; cursor: pointer; font: inherit;
 }
 .sheet button:hover { border-color: var(--sheet-accent); }
 .sheet button.roll { font-weight: 600; }
-.sheet button.roll::before { content: "⚄ "; }
+.sheet button.roll::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -0.15em; background: currentColor;
+  -webkit-mask: var(--icon-die) center / contain no-repeat; mask: var(--icon-die) center / contain no-repeat;
+}
 .sheet .conditions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Narrow hosts (a 200px desktop column, a 320px phone): the pack's fixed column count would squeeze
