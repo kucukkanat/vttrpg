@@ -17,7 +17,7 @@ each thing has exactly one home (research and audit: `research_notes/UI redesign
 | The hand | bottom centre | the selected token (a player's own when nothing is selected): name (opens the character card), find-on-table, HP, saves and skills as cards, End turn; GM adds −/+, Conditions, the skill list and combat join/leave. Hide, Assign and Remove live in the token menu (⋯, right-click, long-press) |
 | The scroll | right edge | chat. Rolled up it is a rod with the unread count; `]` or a tap unrolls it. The composer has one seal control for the whisper target and the roll mode (advantage, who sees rolls) and a log filter |
 | Dice well | bottom right | dice roll inside the well, never over the board; the result reads out on a paper slip beside it; the brass Roll coin opens the dice pad |
-| GM screen | bottom left, GM only | a leather plaque with **Play / Prep / Build** and a live line (sounds playing, the round). **Prep** raises three leaves over the board: Scenes & encounters (Scenes, Prep), Cast (Tokens, Skill editor), Reference (Sound, Players, Journal). **Build** folds into a tool tray (Tools, Scene settings) beside a live board. The board's frame takes the mode's colour: brass, green, blue |
+| GM screen | bottom left, GM only | a leather plaque with **Play / Prep / Build** and a live line (sounds playing, the round). **Prep** raises three leaves over the board: Scenes & encounters (Scenes, Prep), Cast (Tokens, Skill editor), Reference (Sound, Players, Journal, Credits). **Build** folds into a tool tray (Library, Tools, Kit, Scene settings) beside a live board: the Library picks a model up (a ghost on the cursor; click stamps, R or the wheel turns, Alt is free, Esc puts it down), Alt-click on a prop is the eyedropper. My models cards have a menu (Rename, Remove from library, confirmed on the card) and show the upload status. A thin budget bar at the tray's foot shows the scene's triangles, draw calls and texture memory against this device's graphics tier, warning-coloured over the low tier; hovering it lists the five heaviest models with Select all of these. Co-GMs in Build see each other's cursor ring and name, a faint ghost of what they hold and a thin outline on what they have selected, in their colour; it clears when they leave Build or idle for 30 s, and players never see it. A first Build visit gets one-time tips (pick up, turn, put down, undo, paste). Credits lists the scene's models that need attribution: a Reference tab for the GM, a card for players. The board's frame takes the mode's colour: brass, green, blue |
 | One card | over the board's left side | any other panel (Character, Skills, Initiative, Journal, Players, Sound, Scenes for players): one at a time, Esc or ✕ puts it away |
 | Command palette | Ctrl/⌘-K or Search | every action, panel, token and scene, with where it lives and its key |
 | The bell | top rail | whispers, handouts and anything else with an action, kept until handled (toasts still flash; `ui/attention.ts`) |
@@ -269,11 +269,46 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `G` / `F` / `T` / `M` | grid / first person / top-down / ruler (table) |
 | `Q` / `E` | turn the top-down view 45° |
 | `Enter` | cast the staged aim |
-| `Delete` / `Backspace` | remove the selected prop (GM) |
-| `Z` | Zen |
+| `Delete` / `Backspace` | remove the selected props (GM, one undo step) |
+| `Z` | Zen (with props selected in Build or edit mode it constrains to Z instead) |
 | `i` | on a focused skill chip: pin its tooltip |
 
 The shell never binds a key the table uses.
+
+Build keys, with props selected in Build or edit mode (GM; `table/build/transformKeys.ts`):
+
+| Key | Action |
+|---|---|
+| Shift-click / drag on empty board | add or drop a prop / box select (mouse; Shift adds, Alt-drag orbits) |
+| `Tab` | cycle move, turn, scale (the gizmo highlights it) |
+| `X` / `Y` / `Z`, a number, `Enter` | move metres, turn degrees or scale along that axis; `Esc` cancels; expressions such as `1.5*2` work |
+| `R` / `Shift+R` | turn 15° / 90° about the selection's centre |
+| `End` | drop onto the surface below |
+| `A` | advanced gizmo (3-axis rings, per-axis scale, local or world axes, numeric inspector in Details) |
+| `Cmd/Ctrl+C` / `V` / `D` | copy / paste under the pointer / duplicate one cell over; Alt-drag duplicates |
+| `Esc` | let go of the props |
+
+The simple gizmo is a turn ring on the floor (15°, Shift 90°), a height arrow and a uniform scale
+cube; dragging a prop moves the selection (half cells, Alt free). Every transform is one
+`props.update`, so one undo step. On touch: tap selects, drag moves, two-finger twist and pinch
+turn and scale when the first finger is on the selection, and a long-press opens Duplicate, Turn,
+Drop to surface, Edit and Delete. Copied props also go to the system clipboard as `vttprops:` text,
+which pastes into another scene or game.
+
+Kit keys, while a Kit tool is out (GM; `table/kits/`):
+
+| Key | Action |
+|---|---|
+| drag | Floor: a rectangle of floor. Wall: walls along the grid lines (corners, tees and crossings join by themselves); Shift or "Room outline" draws the four walls of a room. Roof: a roof over the room. Erase: everything in the rectangle |
+| click | Door / Window: put one in the wall under the pointer. Stairs: stairs up to the next level. Pillar: on the grid corner. Pick: take the piece under the pointer in hand |
+| `R` / `Shift+R` | turn the piece in hand a quarter |
+| `PgUp` / `PgDn` | build one level up or down (also the ▲ ▼ control at the board's top right) |
+| `Esc` | put the tool away |
+
+Every tool shows a ghost (blue: what it adds, red: what gives way) and every stroke is one
+`tiles.place`, so one undo step. The cutaway (the tray's slider, or ✂ on the board) hides every
+level above the cut, props and tokens included; on "auto" it follows the selected token's level,
+or the level being built while a Kit tool is out. Kits need a tablet or a desktop.
 
 ## Play flows on touch and feedback
 

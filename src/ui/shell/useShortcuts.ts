@@ -5,7 +5,7 @@
  * M toggles the ruler tool while a table is mounted.
  */
 import { useEffect } from 'react'
-import { undoLast } from '@/state/undo'
+import { describeOutcome, redoLast, undoLast } from '@/state/undo'
 import { useTableUi } from '@/table/tableState'
 import { pushToast } from '../toasts'
 
@@ -21,7 +21,7 @@ export interface ShortcutHandlers {
   openPanel?(id: string): void
 }
 
-export type ShortcutGroup = 'Table' | 'Panels' | 'Chat'
+export type ShortcutGroup = 'Table' | 'Build' | 'Panels' | 'Chat'
 
 export interface Shortcut {
   /** Human-readable key, "Cmd/Ctrl+Z"; several alternatives joined with " / ". */
@@ -32,7 +32,8 @@ export interface Shortcut {
 
 /**
  * Every keyboard shortcut in the game screen, for the shortcuts overlay. Panels and Chat are bound
- * here (desktop only); Table keys live in the table itself and work on every layout with a keyboard.
+ * here (desktop only); Table keys live in the table itself and work on every layout with a keyboard;
+ * Build keys (props selected in Build or edit mode) live in src/table/build/PropEditor.tsx.
  * Keep in step with docs/UX.md.
  */
 export const SHORTCUTS: readonly Shortcut[] = [
@@ -44,14 +45,26 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'M', what: 'Measure with the ruler (again to put it away)', group: 'Table' },
   { keys: 'Enter', what: 'While aiming a skill: cast at the chosen spot', group: 'Table' },
   { keys: 'Alt', what: 'Held while dragging or drawing: move freely, off the grid', group: 'Table' },
-  { keys: 'R', what: 'While stamping a captured prefab: turn it', group: 'Table' },
   { keys: 'Double-click', what: 'Edit a token or prop (move, turn, scale); again or elsewhere to stop', group: 'Table' },
-  { keys: 'Delete / Backspace', what: 'Remove the selected prop (GM)', group: 'Table' },
+  { keys: 'Delete / Backspace', what: 'Remove the selected props (GM; one undo step)', group: 'Table' },
   { keys: 'Esc', what: 'Close a tip, card or menu; cancel aiming; deselect', group: 'Table' },
-  { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores)', group: 'Table' },
-  { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
+  { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores; not while editing props)', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Z', what: 'Undo your last build edit or removal (GM)', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Shift+Z, Ctrl+Y', what: 'Redo what you undid (GM)', group: 'Table' },
   { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
   { keys: 'Arrows', what: 'Move through the token menu or the search results', group: 'Table' },
+  { keys: 'Shift+click', what: 'Add a prop to the selection, or drop it from it', group: 'Build' },
+  { keys: 'Drag', what: 'On empty board in Build: select every prop in the box (Shift adds; Alt-drag moves the camera)', group: 'Build' },
+  { keys: 'Alt+drag', what: 'On a prop: drag copies of the selection, the originals stay', group: 'Build' },
+  { keys: 'Tab', what: 'With props selected: cycle move, turn, scale', group: 'Build' },
+  { keys: 'X / Y / Z', what: 'Pick an axis, type a number (1.5*2 works), Enter applies, Esc cancels', group: 'Build' },
+  { keys: 'R / Shift+R', what: 'Turn the selected props (or the stamp) 15° / 90°', group: 'Build' },
+  { keys: 'End', what: 'Drop the selected props onto the surface below', group: 'Build' },
+  { keys: 'A', what: 'Advanced gizmo: tilt on every axis, stretch per axis, exact values', group: 'Build' },
+  { keys: 'Cmd/Ctrl+C', what: 'Copy the selected props (also as text, to paste in another game)', group: 'Build' },
+  { keys: 'Cmd/Ctrl+V', what: 'Paste props under the pointer', group: 'Build' },
+  { keys: 'Cmd/Ctrl+D', what: 'Duplicate the selected props, one cell over', group: 'Build' },
+  { keys: 'Esc', what: 'Let go of the selected props', group: 'Build' },
   { keys: '[', what: 'Put the card away', group: 'Panels' },
   { keys: ']', what: 'Unroll or roll up the scroll (chat)', group: 'Panels' },
   { keys: '1 – 9', what: 'Open the n-th panel as the card (again to put it away)', group: 'Panels' },
@@ -61,7 +74,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Esc', what: 'Leave the chat input', group: 'Chat' },
 ]
 
-export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Panels', 'Chat']
+export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Build', 'Panels', 'Chat']
 
 /** Window event panels use to ask the shell for another panel (the skill bar opens the Skill editor). */
 export const OPEN_PANEL_EVENT = 'vtt:open-panel'
@@ -94,18 +107,27 @@ export function isTypingTarget(el: Element | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable
 }
 
-/** Cmd/Ctrl+Z (no Shift/Alt) outside a field: undo the GM's last destructive action. */
+/** Cmd/Ctrl+Z (no Shift/Alt) outside a field: undo this GM's last edit. */
 export function isUndoKey(e: KeyboardEvent): boolean {
   return (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z'
 }
 
+/** Cmd/Ctrl+Shift+Z, or Ctrl+Y (no Shift), outside a field: redo. */
+export function isRedoKey(e: KeyboardEvent): boolean {
+  if (e.altKey) return false
+  const key = e.key.toLowerCase()
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'z') return true
+  return e.ctrlKey && !e.metaKey && !e.shiftKey && key === 'y'
+}
+
 export function useShortcuts(enabled: boolean, handlers: ShortcutHandlers) {
-  // Undo works on every layout with a keyboard; it is a no-op for players (nothing on the stack).
+  // Undo and redo work on every layout with a keyboard; no-ops for players (nothing on the stacks).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!isUndoKey(e) || isTypingTarget(document.activeElement)) return
+      const dir = isUndoKey(e) ? 'undo' : isRedoKey(e) ? 'redo' : null
+      if (!dir || isTypingTarget(document.activeElement)) return
       e.preventDefault()
-      void undoLast().then((entry) => entry && pushToast({ text: `Restored ${entry.subject}`, ttl: 2500 }))
+      void (dir === 'undo' ? undoLast() : redoLast()).then((o) => o && pushToast({ text: describeOutcome(o, dir), ttl: o.note ? 5000 : 2500 }))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

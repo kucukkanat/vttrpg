@@ -11,6 +11,7 @@
 import * as Y from 'yjs'
 import type { AssetRef } from '@/core/assets'
 import { DOC_KEYS, type GameDocShape, type GameMeta } from '@/core/doc'
+import { readAllTiles, writeTilesJson } from '@/state/tilesDoc'
 import type { AssetResolver } from '@/assets'
 
 export const GAME_FILE_FORMAT = 'vttrpg-game'
@@ -58,12 +59,34 @@ export function collectAssetRefs(value: unknown): AssetRef[] {
   return [...out.values()]
 }
 
+/**
+ * A copy of `value` where every asset ref whose plaintext hash is in `shared` takes that ref's
+ * `sources` and `enc` (the re-shared, encrypted copy). Everything else is left as is.
+ */
+export function withSharedRefs<T>(value: T, shared: ReadonlyMap<string, AssetRef>): T {
+  if (!shared.size) return value
+  const walk = (v: unknown, depth: number): unknown => {
+    if (depth > 40 || v === null || typeof v !== 'object') return v
+    if (Array.isArray(v)) return v.map((x) => walk(x, depth + 1))
+    const r = v as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+    for (const [k, x] of Object.entries(r)) out[k] = walk(x, depth + 1)
+    const next = typeof r.sha256 === 'string' && Array.isArray(r.sources) ? shared.get(r.sha256) : undefined
+    if (next) {
+      out.sources = [...next.sources]
+      if (next.enc) out.enc = { ...next.enc }
+    }
+    return out
+  }
+  return walk(value, 0) as T
+}
+
 /** Plain JSON of the doc, every key from `DOC_KEYS` except the event log. */
 export function docToJson(doc: Y.Doc): Omit<GameDocShape, 'events'> {
   const out: Record<string, unknown> = {}
   for (const key of DOC_KEYS) {
     if (key === 'events') continue
-    out[key] = key === 'chat' ? doc.getArray(key).toJSON() : doc.getMap(key).toJSON()
+    out[key] = key === 'chat' ? doc.getArray(key).toJSON() : key === 'tiles' ? readAllTiles(doc) : doc.getMap(key).toJSON()
   }
   if (!isRec(out.initiative) || !Array.isArray((out.initiative as { order?: unknown }).order)) delete out.initiative
   return out as unknown as Omit<GameDocShape, 'events'>
@@ -185,6 +208,7 @@ export function writeImportedDoc(doc: Y.Doc, file: GameFile, gm: GameMeta['gm'],
         arr.push((value as unknown[]).filter(isRec))
         continue
       }
+      if (key === 'tiles') { writeTilesJson(doc, value); continue }
       const map = doc.getMap(key)
       if (!isRec(value)) continue
       for (const [k, v] of Object.entries(value)) map.set(k, v)

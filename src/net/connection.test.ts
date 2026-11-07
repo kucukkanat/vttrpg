@@ -12,6 +12,7 @@ import { localIdentity } from './identity'
 import { StatusTracker } from './pool'
 import { FakePool, FakeRelay, type FakeRelayOptions } from './testing'
 import { createMemoryGameStore } from './localStore'
+import { encryptBlob, newBlobKey } from '@/core/blobCrypto'
 
 const RELAYS = ['wss://fake.one', 'wss://fake.two']
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -343,7 +344,11 @@ describe('intents', () => {
     expect(got).toHaveLength(1)
     expect(got[0].from).toBe(playerId.pubkey) // envelope lied; the signature wins
     expect(got[0].intent).toEqual({ type: 'chat.say', text: 'hi' })
-    expect(w.relay.published.some((e) => e.kind === KIND_INTENT && !e.content.includes('hi'))).toBe(true)
+    // Encrypted on the wire: the plaintext envelope never appears. (Checking for the bare word "hi"
+    // failed now and then, because random base64 ciphertext contains it.)
+    const intents = w.relay.published.filter((e) => e.kind === KIND_INTENT)
+    expect(intents.length).toBeGreaterThan(0)
+    expect(intents.some((e) => e.content.includes('"text":"hi"') || e.content.includes('chat.say'))).toBe(false)
 
     const before = w.relay.published.length
     w.gm.sendIntent({ id: 'i2', from: w.gm.gm, at: 2, intent: { type: 'fog.reset', scene: 's' as never } })
@@ -493,6 +498,12 @@ describe('presence', () => {
 })
 
 describe('snapshots', () => {
+  const latestPointer = (w: World) => {
+    const m = w.relay.stored.filter((e) => e.kind === KIND_MANIFEST).sort((a, b) => b.created_at - a.created_at)[0]
+    return m ? readManifest(w.gameKey, w.gameId, m)?.snapshot : undefined
+  }
+
+  // Snapshots from builds before encryption carry no key: still loaded as the raw update.
   it('publishes a pointer and joiners load it before replaying newer deltas', async () => {
     const w = await world()
     w.gm.doc.getMap('meta').set('name', 'Snap')
@@ -518,6 +529,31 @@ describe('snapshots', () => {
     expect(fetched).toEqual(['https://blossom.example/snap.bin'])
     expect(player.doc.getMap('meta').get('name')).toBe('Snap')
     expect(player.doc.getMap('meta').get('after')).toBe(1)
+  })
+
+  it('decrypts an encrypted snapshot after the ciphertext hash check', async () => {
+    const w = await world()
+    w.gm.doc.getMap('meta').set('name', 'Sealed')
+    await settle()
+    const { ciphertext, key } = await encryptBlob(w.gm.snapshot())
+    const sha = await sha256Hex(ciphertext)
+    await w.gm.publishSnapshotPointer('https://blossom.example/sealed', sha, key)
+    expect(latestPointer(w)).toMatchObject({ sha256: sha, key })
+    w.relay.stored = w.relay.stored.filter((e) => e.kind !== KIND_DELTA)
+    const fetchImpl = (async () => new Response(ciphertext.slice().buffer as ArrayBuffer, { status: 200 })) as unknown as typeof fetch
+    const { conn: player } = await join(w, { fetchImpl })
+    expect(player.doc.getMap('meta').get('name')).toBe('Sealed')
+  })
+
+  it('falls back to a full replay when the snapshot key is wrong', async () => {
+    const w = await world()
+    w.gm.doc.getMap('meta').set('name', 'Replay')
+    await settle()
+    const { ciphertext } = await encryptBlob(w.gm.snapshot())
+    await w.gm.publishSnapshotPointer('https://blossom.example/sealed', await sha256Hex(ciphertext), newBlobKey())
+    const fetchImpl = (async () => new Response(ciphertext.slice().buffer as ArrayBuffer, { status: 200 })) as unknown as typeof fetch
+    const { conn: player } = await join(w, { fetchImpl })
+    expect(player.doc.getMap('meta').get('name')).toBe('Replay')
   })
 
   it('falls back to a full replay when the snapshot hash does not match', async () => {

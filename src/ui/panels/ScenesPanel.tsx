@@ -81,7 +81,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
     await staged(scene)
   }
   const addFromFile = async (file: File) => {
-    const ref = await controller.assets.importFile(file)
+    const ref = await controller.assets.shareFile(file)
     const id = newId<'SceneId'>()
     const scene: Scene = {
       id, name: titleCase(file.name), model: ref, grid: { type: 'square', cellSize, origin: { x: 0, y: 0, z: 0 } }, cameraMode: 'orbit', darkness: 0.8,

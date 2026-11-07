@@ -1,9 +1,12 @@
 /**
- * Fits a loaded GLB to the grid. Library minis and props are authored to fit one cell, but an
- * uploaded model or a whole scene used as a mini can be any size. Tokens get their largest
- * horizontal extent scaled to exactly one cell; props are only corrected when they are clearly off
- * (wider than a cell, or so small they would vanish). The token's or prop's own `scale` stays a
- * multiplier on top of the fitted size, so "Size x1" always means one cell for a token.
+ * Fits a loaded GLB to the grid. Library minis are authored to fit one cell, but an uploaded model
+ * or a whole scene used as a mini can be any size, so tokens get their largest horizontal extent
+ * scaled to exactly one cell, and the token's own `scale` is a multiplier on top ("Size x1" always
+ * means one cell).
+ *
+ * Props are no longer fitted: since prop model v2 they are drawn at their real size times their
+ * per-axis scale. `PROP_FIT` and `legacyPropFit` remain only to read and migrate version 1 props,
+ * which stored a number meaning "times the model fitted to at most one cell" (see src/core/props.ts).
  */
 import { Box3, Mesh, type Object3D } from 'three'
 
@@ -12,7 +15,7 @@ export interface FitRange { min: number; max: number }
 
 /** A mini is exactly one cell wide at size 1. */
 export const TOKEN_FIT: FitRange = { min: 1, max: 1 }
-/** A prop keeps its authored size unless it is bigger than a cell or smaller than a tenth of one. */
+/** Version 1 props: kept their authored size unless bigger than a cell or smaller than a tenth of one. */
 export const PROP_FIT: FitRange = { min: 0.1, max: 1 }
 
 const HELPER_MESH = /^(COL|FOG)_/
@@ -50,4 +53,12 @@ export function fitScale(extent: number, cellSize: number, range: FitRange): num
 
 export function fitObjectToCell(object: Object3D, cellSize: number, range: FitRange): number {
   return fitScale(horizontalExtent(object), cellSize, range)
+}
+
+/**
+ * The fit a version 1 prop was drawn with: `object` (the loaded model, root unscaled) brought
+ * inside `PROP_FIT` on a grid of `cellSize`. Used once per legacy prop, by the scale migration.
+ */
+export function legacyPropFit(object: Object3D, cellSize: number): number {
+  return fitObjectToCell(object, cellSize, PROP_FIT)
 }

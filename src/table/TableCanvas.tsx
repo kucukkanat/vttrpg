@@ -13,13 +13,18 @@
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
  * Tools (`tableState.tool`, HUD buttons): the ruler measures distances (RulerLayer, M); ping marks a
  * spot for every client (PingLayer; also a double-tap or a long touch on empty floor).
- * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
- * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
+ * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo for tokens, scene
+ * nodes and the scene; build/PropGizmo for props), scene nodes are selectable.
+ * Props in Build or edit mode (build/PropEditor): Shift-click adds to the selection, dragging empty
+ * board in Build draws a selection box, Tab cycles move / turn / scale, X / Y / Z then a number and
+ * Enter transforms exactly, R turns 15° (Shift 90°), End drops onto the surface below, A shows the
+ * advanced gizmo, Ctrl/Cmd C / V / D copy, paste and duplicate, Delete removes the selection.
+ * G stays the grid key in every mode.
  * Rendering follows the device's graphics preset (graphics.ts): resolution, shadows, antialiasing
  * and an idle frame-rate cap. A lost WebGL context pauses the table behind a notice and remounts
  * the canvas once the browser gives the GPU back (or on Reload).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Box3, Color, Fog, NeutralToneMapping, SRGBColorSpace, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
@@ -33,7 +38,15 @@ import { CameraRig } from './CameraRig'
 import { ambientLevels, fogColor, fogRange } from './atmosphere'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
 import { BuildLayer, useDrawnBlocking } from './build/BuildLayer'
+import { KitLayer } from './kits/KitLayer'
+import { KitBoardControl } from './kits/KitBoardControl'
+import { heightVisible, levelCellKey, tokenLevel } from './kits/levels'
+import { useKitScene } from './kits/useKitScene'
+import { BuilderPresence } from './build/BuilderPresence'
 import { EditGizmo } from './EditGizmo'
+import { PropEditor } from './build/PropEditor'
+import { PropEditOverlay } from './build/PropEditOverlay'
+import { removeSelection } from './build/propActions'
 import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
@@ -43,7 +56,7 @@ import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
 import { MoveBar, moveMissed, TwoTapMoveLayer } from './MovePreview'
-import { Props } from './PropMesh'
+import { Props } from './Props'
 import { RangePreview } from './RangePreview'
 import { DeclaredActions } from './DeclaredActions'
 import { RulerLayer } from './RulerLayer'
@@ -83,6 +96,8 @@ export interface TableCanvasProps {
   targeting?: TargetingProps
   className?: string
   style?: CSSProperties
+  /** Extra scene content inside the canvas (dev stories: probes, benchmarks). */
+  children?: ReactNode
 }
 
 // Stable objects: R3F re-applies `camera` / `gl` props whenever the object identity changes.
@@ -152,7 +167,7 @@ export function TableCanvas(props: TableCanvasProps) {
   )
 }
 
-function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting }: Omit<TableCanvasProps, 'className' | 'style'> & { sceneId: SceneId; scene: Scene; onReady(scene: SceneId, ready: boolean): void }) {
+function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsset, viewer, cameraMode, showGrid, onSceneLoaded, targeting, children }: Omit<TableCanvasProps, 'className' | 'style'> & { sceneId: SceneId; scene: Scene; onReady(scene: SceneId, ready: boolean): void }) {
   const resolve = resolveAsset ?? defaultResolveAsset
   /** Events older than the canvas are never replayed. */
   const mountedAt = useRef(Date.now()).current
@@ -178,7 +193,10 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
 
   useEffect(() => { uiSet({ showGrid: showGrid ?? true }) }, [showGrid, uiSet])
   useEffect(() => {
-    uiSet({ firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {} })
+    uiSet({
+      firstPerson: false, drag: null, grab: null, hovered: null, contextMenu: null, editDrag: false, editPreview: null, nodeBase: null, propWalls: {},
+      propPreview: null, boxSelect: null, transformEntry: null, propMenu: null,
+    })
   }, [sceneId, uiSet])
 
   // Resolve the scene model to a URL. Keyed on the content hash, not the object: the store
@@ -228,8 +246,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         case 'q': case 'Q': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn - 1 }); break
         case 'e': case 'E': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn + 1 }); break
         case 'Delete': case 'Backspace': {
-          const sel = useGame.getState().selection
-          if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'prop.remove', prop: sel.id }); setSelection(null) }
+          // Every selected prop in one intent (one undo step).
+          if (gm && useGame.getState().propSelection.length) { e.preventDefault(); removeSelection(onIntent) }
           break
         }
         case 'Escape': setSelection(null); break
@@ -301,6 +319,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   // Walls and doors drawn on the table (build tools); a closed door blocks like a wall.
   const drawnWalls = useDrawnBlocking(sceneId)
   const walls = useMemo(() => (drawnWalls.length ? [...baseWalls, ...drawnWalls] : baseWalls), [baseWalls, drawnWalls])
+  // Grid kit tiles: occupancy, walls per level, cutaway.
+  const kits = useKitScene(sceneId, grid, floorY)
   useEffect(() => {
     const c = bounds3.getCenter(new Vector3())
     tableRuntime.sceneCenter = { x: c.x, y: floorY, z: c.z }
@@ -319,8 +339,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
 
   const graphics = useGraphics()
   const ctx: TableContextValue = useMemo(
-    () => ({ sceneId, scene, grid, floorY, loaded, walls, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve, graphics }),
-    [sceneId, scene, grid, floorY, loaded, walls, viewer, onIntent, onPresence, resolve, graphics],
+    () => ({ sceneId, scene, grid, floorY, loaded, walls, kits, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve, graphics }),
+    [sceneId, scene, grid, floorY, loaded, walls, kits, viewer, onIntent, onPresence, resolve, graphics],
   )
   // WebGL context loss (app switch on a phone, a GPU reset): notice while lost, then a fresh canvas.
   const [glLost, setGlLost] = useState(false)
@@ -356,12 +376,13 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         {!uncapped && <FramePacer graphics={graphics} />}
         <ContextGuard onLost={onContextLost} onRestored={remountCanvas} />
         <TableContext.Provider value={ctx}>
-          {url && <SceneLoaderBridge key={modelRetry} url={url} onLoaded={handleLoaded} onError={handleLoadError} />}
+          {url && <SceneLoaderBridge key={modelRetry} url={url} sha256={scene.model?.sha256} onLoaded={handleLoaded} onError={handleLoadError} />}
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} clip={floorRect} />}
           <Props sceneId={sceneId} />
+          <KitLayer kit={kits} bounds={bounds2} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
@@ -373,9 +394,12 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
+          <BuilderPresence />
           <EditGizmo />
+          <PropEditor />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />
+          {children}
         </TableContext.Provider>
       </Canvas>
       {model && !loaded && !error && <Overlay>Loading scene…</Overlay>}
@@ -384,6 +408,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
       {!targeting && <MoveBar onIntent={onIntent} grid={grid} floorY={floorY} viewer={viewer ?? null} />}
+      <PropEditOverlay gm={gm} />
+      {gm && !viewer?.display && <KitBoardControl kit={kits} />}
       {glLost && <ContextLostNotice onReload={remountCanvas} />}
     </div>
   )
@@ -595,17 +621,17 @@ function CameraShake({ cellSize }: { cellSize: number }) {
 }
 
 /** Loads the GLB inside the canvas so the renderer is available for KTX2 detection. */
-function SceneLoaderBridge({ url, onLoaded, onError }: { url: string; onLoaded(s: LoadedScene): void; onError(e: unknown): void }) {
+function SceneLoaderBridge({ url, sha256, onLoaded, onError }: { url: string; sha256?: string; onLoaded(s: LoadedScene): void; onError(e: unknown): void }) {
   const gl = useThree((s) => s.gl)
   useEffect(() => {
     let live = true
     let result: LoadedScene | null = null
-    loadSceneModel(url, { renderer: gl }).then(
+    loadSceneModel(url, sha256 ? { renderer: gl, sha256 } : { renderer: gl }).then(
       (s) => { if (live) { result = s; onLoaded(s) } else disposeScene(s) },
       (e: unknown) => { if (live) onError(e) },
     )
     return () => { live = false; if (result) disposeScene(result) }
-  }, [url, gl, onLoaded, onError])
+  }, [url, sha256, gl, onLoaded, onError])
   return null
 }
 
@@ -637,13 +663,16 @@ function Tokens({ sceneId, viewer }: { sceneId: SceneId; viewer: ViewerInfo | nu
   const tokens = useGame((s) => s.tokens)
   const presence = useGame((s) => s.presence)
   const visible = useTableUi((s) => s.visible)
-  const { grid } = useTable()
-  // Players only see tokens standing in cells they can see (their own always).
+  const { grid, floorY, kits } = useTable()
+  const cut = kits?.cut ?? Infinity
+  // Players only see tokens standing in cells they can see (their own always). The cutaway hides
+  // tokens above its level.
   const list = useMemo(() => Object.values(tokens).filter((t) => {
     if (t.scene !== sceneId) return false
+    if (!heightVisible(t.position.y, cut, floorY, grid)) return false
     if (!visible || !viewer || viewer.isGm || canControl(viewer, t)) return true
-    return visible.has(cellKey(worldToCell(grid, t.position.x, t.position.z)))
-  }), [tokens, sceneId, visible, viewer, grid])
+    return visible.has(levelCellKey(cellKey(worldToCell(grid, t.position.x, t.position.z)), tokenLevel(t.position.y, floorY, grid)))
+  }), [tokens, sceneId, visible, viewer, grid, cut, floorY])
   const ghosts = useMemo(
     () => Object.values(presence).filter((p) => p.dragging && p.pubkey !== viewer?.pubkey && tokens[p.dragging.token]?.scene === sceneId),
     [presence, tokens, sceneId, viewer],

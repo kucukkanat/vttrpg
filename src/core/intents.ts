@@ -8,6 +8,7 @@ import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, Scen
 import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility, CreatureTemplate, Encounter } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
+import type { CatalogueEntry } from './catalogue'
 
 export type Intent =
   | { type: 'token.move'; token: TokenId; position: Vec3; rotationY?: number }
@@ -59,9 +60,25 @@ export type Intent =
   | { type: 'audio.stop'; asset?: AssetRef }
   /** GM housekeeping: drop events older than `before`. */
   | { type: 'event.prune'; before: number }
-  /** Standalone props (GM only). */
+  /**
+   * Standalone props (GM and co-GMs). Each takes a batch and is applied in one transaction, so a
+   * stamp, a paste or a multi-select edit is one change and one network message. Validated by
+   * `validatePropsIntent` (src/core/props.ts). `props.place` may carry the walls of a stamped
+   * prefab so the whole stamp stays one intent.
+   */
+  | { type: 'props.place'; props: Prop[]; walls?: Wall[] }
+  | { type: 'props.update'; updates: PropUpdate[] }
+  | { type: 'props.remove'; ids: PropId[] }
+  /**
+   * Fold the one-cell fit of version 1 props into a per-axis scale (see `LegacyPropScale`). Sent by
+   * a GM client once a legacy prop's model has loaded; props already migrated are left alone.
+   */
+  | { type: 'props.migrate'; items: { id: PropId; fit: number }[] }
+  /** @deprecated Single-prop forms kept for older clients; applied as a batch of one. */
   | { type: 'prop.add'; prop: Prop }
+  /** @deprecated See `props.update`. */
   | { type: 'prop.update'; prop: PropId; patch: Partial<Prop> }
+  /** @deprecated See `props.remove`. */
   | { type: 'prop.remove'; prop: PropId }
   /** Journal and handouts (GM only). */
   | { type: 'note.upsert'; note: Note }
@@ -107,9 +124,40 @@ export type Intent =
   | { type: 'light.add'; light: PlacedLight }
   | { type: 'light.update'; light: LightId; patch: Partial<PlacedLight> }
   | { type: 'light.remove'; light: LightId }
-  /** Prefabs (GM only). Stamping one is plain `prop.add` and `wall.add`. */
+  /**
+   * Grid kit tiles (GM and co-GMs; see src/core/kits.ts and src/core/tiles.ts). One paint stroke is
+   * one intent: `keys` are cell keys `x,level,z,slot`, `values[i]` is `kit:piece:rot[:variant]`
+   * with `kit` indexing this intent's `kits`, or `''` to clear the cell. Applied in one transaction.
+   */
+  | { type: 'tiles.place'; scene: SceneId; kits: string[]; keys: string[]; values: string[] }
+  | { type: 'tiles.erase'; scene: SceneId; keys: string[] }
+  /** Open or close a kit door. The GM always; players when the scene allows doors (`playersOpenDoors`). */
+  | { type: 'tiles.door'; scene: SceneId; key: string; open: boolean }
+  /** Prefabs (GM only). Stamping one is a single `props.place` carrying the walls. */
   | { type: 'prefab.upsert'; prefab: Prefab }
   | { type: 'prefab.remove'; prefab: PrefabId }
+  /**
+   * The game's own models, "My models" (GM only). `catalogue.add` saves an imported or uploaded
+   * entry (validated by `badCatalogueEntry`: a shareable licence, never a built-in); adding an id
+   * that exists replaces it. Removing one leaves props placed from it on the table.
+   */
+  | { type: 'catalogue.add'; entry: CatalogueEntry }
+  | { type: 'catalogue.remove'; id: string }
+
+/** The fields of a prop `props.update` may change. Scale is always per-axis here. */
+export interface PropPatch {
+  position?: Vec3
+  rotation?: Vec3
+  scale?: Vec3
+  name?: string
+  solid?: boolean
+  locked?: boolean
+}
+
+export interface PropUpdate {
+  id: PropId
+  patch: PropPatch
+}
 
 export interface IntentEnvelope {
   id: string

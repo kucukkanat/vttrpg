@@ -14,7 +14,7 @@
  */
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useCursor, useGLTF } from '@react-three/drei'
+import { useCursor } from '@react-three/drei'
 import {
   CanvasTexture, CircleGeometry, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
   PointLight, RingGeometry, Shape, ShapeGeometry, SRGBColorSpace, Vector3,
@@ -23,8 +23,10 @@ import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
 import { useSession } from '@/ui/session'
 import { canControl, useTable } from './context'
-import { snapToCell } from './grid'
+import { snapToCell, worldToCell } from './grid'
 import { moveBlocked } from './build/wallEdit'
+import { onStair, standAt, tokenDrawY, tokenLevel } from './kits/levels'
+import { moveWallsAt } from './kits/useKitScene'
 import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
@@ -40,6 +42,8 @@ import { ownerShapeIn, shapePoints, type OwnerShape } from './ownerShape'
 import { blobShadowLook } from './atmosphere'
 import { labelYaw } from './labelFacing'
 import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
+import { MissingModel } from './MissingAsset'
+import { useModel } from './useModel'
 
 /** Colour of the high-tier selection outline: the palette's selection role, like the ring under the token. */
 export const SELECTION_OUTLINE_COLOR = SELECT
@@ -116,33 +120,45 @@ export class ModelBoundary extends Component<{ fallback: ReactNode; children: Re
 }
 
 /**
+ * A table-ready copy of a loaded model: shadows on, scene helpers (`COL_*`, `FOG_*`) hidden, lights
+ * casting no shadow, materials stylised (stylize.ts; converted materials are cached per source, so
+ * every copy of a model shares them).
+ */
+export function prepareModel(scene: Object3D, mode: ReturnType<typeof materialModeFor>, rim = false): Group {
+  const o = scene.clone(true) as Group
+  o.traverse((m) => {
+    if (m instanceof Mesh) {
+      if (/^(COL|FOG)_/.test(m.name)) { m.visible = false; return }
+      m.castShadow = true
+      m.receiveShadow = true
+    }
+    if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
+  })
+  stylizeObject(o, mode, { rim })
+  return o
+}
+
+/**
  * A GLB instance with shadows on. Scene-convention helpers (`COL_*`, `FOG_*`) inside the file
  * are hidden so a scene model can double as a prop. `onObject` reports the clone once it exists.
  * With `fitCell` the model's footprint is fitted to the grid (see fitScale.ts) before `scale` applies.
  */
-export function GlbMini({ url, scale, fitCell, fitRange = TOKEN_FIT, onObject, mini = false, selected = false }: {
-  url: string; scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
+export function GlbMini({ url, sha256, name, scale, fitCell, fitRange = TOKEN_FIT, onObject, mini = false, selected = false }: {
+  url: string
+  /** The asset's hash: shares one parse between URLs of the same file and keys its stats. */
+  sha256?: string | undefined
+  /** File name for the over-budget warning. */
+  name?: string | undefined
+  scale: number; fitCell?: number; fitRange?: FitRange; onObject?(o: Group | null): void
   /** A token's miniature: rim light and ink outline (props get neither). */
   mini?: boolean
   /** Selected token: a thick outline in the selection colour on the high tier. */
   selected?: boolean
 }) {
-  const gltf = useGLTF(url)
+  const gltf = useModel(url, sha256, name)
   const { graphics, grid } = useTable()
   const mode = materialModeFor(gltf.scene, graphics.pbr)
-  const object = useMemo(() => {
-    const o = gltf.scene.clone(true) as Group
-    o.traverse((m) => {
-      if (m instanceof Mesh) {
-        if (/^(COL|FOG)_/.test(m.name)) { m.visible = false; return }
-        m.castShadow = true
-        m.receiveShadow = true
-      }
-      if ((m as { isLight?: boolean }).isLight) (m as { castShadow: boolean }).castShadow = false
-    })
-    stylizeObject(o, mode, { rim: mini })
-    return o
-  }, [gltf, mode, mini])
+  const object = useMemo(() => prepareModel(gltf.scene, mode, mini), [gltf, mode, mini])
   const fit = useMemo(() => (fitCell ? fitObjectToCell(object, fitCell, fitRange) : 1), [object, fitCell, fitRange])
   useEffect(() => {
     onObject?.(object)
@@ -364,21 +380,63 @@ function OwnerRing({ radius, color, mine, shape }: { radius: number; color: stri
   )
 }
 
-export function useAssetUrl(ref: Token['model']): string | null {
+/** Pauses before resolving a missing model again; the last one repeats. Its upload may still be running. */
+const MISSING_RETRY_MS = [3_000, 10_000, 30_000, 60_000]
+
+/** Last URL each asset hash resolved to on this client (the resolver keeps object URLs alive). */
+const resolvedUrls = new Map<string, string>()
+
+/** Resolves a model ref; `missing` once no source had it (retried in the background until it loads). */
+export function useAssetLoad(ref: Token['model']): { url: string | null; missing: boolean } {
   const { resolveAsset } = useTable()
-  const [url, setUrl] = useState<string | null>(null)
+  // A model already resolved on this client starts with its URL, so a prop switching between the
+  // instanced and the standalone renderer (PropBatch.tsx) shows no loading crate in between.
+  const known = ref ? resolvedUrls.get(ref.sha256) ?? null : null
+  const [state, setState] = useState<{ url: string | null; missing: boolean }>({ url: known, missing: false })
   useEffect(() => {
     let live = true
-    setUrl(null)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const cached = ref ? resolvedUrls.get(ref.sha256) ?? null : null
+    setState((s) => (s.url === cached && !s.missing ? s : { url: cached, missing: false }))
     if (!ref) return
-    resolveAsset(ref).then((u) => { if (live) setUrl(u) }, () => { if (live) setUrl(null) })
-    return () => { live = false }
+    const attempt = (n: number) => {
+      resolveAsset(ref).then(
+        (u) => {
+          resolvedUrls.set(ref.sha256, u)
+          if (live) setState((s) => (s.url === u && !s.missing ? s : { url: u, missing: false }))
+        },
+        () => {
+          if (!live) return
+          setState({ url: null, missing: true })
+          timer = setTimeout(() => attempt(n + 1), MISSING_RETRY_MS[Math.min(n, MISSING_RETRY_MS.length - 1)])
+        },
+      )
+    }
+    attempt(0)
+    return () => { live = false; clearTimeout(timer) }
   }, [ref, resolveAsset])
-  return url
+  return state
+}
+
+export function useAssetUrl(ref: Token['model']): string | null {
+  return useAssetLoad(ref).url
 }
 
 export function TokenMesh({ token }: { token: Token }) {
-  const { grid, floorY, viewer, walls, onIntent, onPresence } = useTable()
+  const { grid, floorY: sceneFloorY, viewer, walls: sceneWalls, onIntent, onPresence, kits } = useTable()
+  // Storeys: the token stands on the level its height says (level 0, the scene floor, without kit
+  // tiles); it is drawn, dragged and blocked on that level.
+  const level = tokenLevel(token.position.y, sceneFloorY, grid)
+  const floorY = tokenDrawY(token.position.y, sceneFloorY, grid)
+  const walls = useMemo(() => moveWallsAt(kits, level, sceneWalls), [kits, level, sceneWalls])
+  /** Height a move to (x, z) lands at: the floor tile or stair there (kit storeys), else the scene floor. */
+  const landY = (x: number, z: number): number => {
+    if (!kits?.tiles) return sceneFloorY
+    const from = worldToCell(grid, token.position.x, token.position.z)
+    const to = worldToCell(grid, x, z)
+    const max = kits.cut === Infinity ? level : kits.cut
+    return standAt(kits.occ, { level, stair: onStair(token.position.y, sceneFloorY, grid), x: from.q, z: from.r }, { x: to.q, z: to.r }, max, sceneFloorY, grid).y
+  }
   const selected = useGame((s) => s.selectedTokens.includes(token.id))
   const setSelected = useGame((s) => s.setSelectedToken)
   const toggleSelected = useGame((s) => s.toggleSelected)
@@ -397,7 +455,7 @@ export function TokenMesh({ token }: { token: Token }) {
   // Live transform while the edit gizmo drags this token.
   const preview = useTableUi((s) => (s.editPreview && s.editPreview.target.kind === 'token' && s.editPreview.target.id === token.id ? s.editPreview : null))
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
-  const modelUrl = useAssetUrl(token.model)
+  const { url: modelUrl, missing: modelMissing } = useAssetLoad(token.model)
   const character = useGame((s) => (token.character ? s.characters[token.character] : undefined))
   const showHpToPlayers = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const ownerPresence = useGame((s) => (token.owner ? s.presence[token.owner]?.color : undefined))
@@ -505,7 +563,7 @@ export function TokenMesh({ token }: { token: Token }) {
     onPresence({ dragging: undefined })
     if (commit && ghost && ghost.token === token.id) {
       if (Math.abs(ghost.x - token.position.x) > 1e-4 || Math.abs(ghost.z - token.position.z) > 1e-4) {
-        onIntent({ type: 'token.move', token: token.id, position: { x: ghost.x, y: floorY, z: ghost.z } })
+        onIntent({ type: 'token.move', token: token.id, position: { x: ghost.x, y: landY(ghost.x, ghost.z), z: ghost.z } })
         // The rest of the selection moves by the same delta: one intent per token the viewer may move.
         const s = useGame.getState()
         for (const m of groupMoveTargets(ghost, s.tokens, s.selectedTokens)) {
@@ -513,7 +571,7 @@ export function TokenMesh({ token }: { token: Token }) {
           if (!t || !canControl(viewer, t)) continue
           const p = snapToCell(grid, m.x, m.z)
           if (Math.abs(p.x - t.position.x) > 1e-4 || Math.abs(p.z - t.position.z) > 1e-4) {
-            onIntent({ type: 'token.move', token: m.token, position: { x: p.x, y: floorY, z: p.z } })
+            onIntent({ type: 'token.move', token: m.token, position: { x: p.x, y: t.position.y ?? floorY, z: p.z } })
           }
         }
       }
@@ -631,10 +689,10 @@ export function TokenMesh({ token }: { token: Token }) {
         {modelUrl ? (
           <ModelBoundary fallback={disc}>
             <Suspense fallback={disc}>
-              <GlbMini url={modelUrl} scale={scale} fitCell={cell} mini selected={selected} />
+              <GlbMini url={modelUrl} sha256={token.model?.sha256} name={token.model?.name} scale={scale} fitCell={cell} mini selected={selected} />
             </Suspense>
           </ModelBoundary>
-        ) : disc}
+        ) : modelMissing ? <>{disc}<MissingModel size={0.45 * cell * scale} y={radius * 0.22} /></> : disc}
         {ghost && (
           // Muted "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
           <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>

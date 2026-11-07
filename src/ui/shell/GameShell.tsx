@@ -17,6 +17,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useGame } from '@/state/store'
+import { useTableUi } from '@/table/tableState'
 import type { AssetRef } from '@/core/assets'
 import { sharedAudioEngine } from '@/audio'
 import type { GameController } from '../controller'
@@ -40,6 +41,7 @@ import { GmCallout } from '../onboarding/GmCallout'
 import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, type LayoutPresetId } from './layoutPresets'
 import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
 import { panelShown, useTableLayout } from './tableLayout'
+import { HeldBar } from '../library/HeldBar'
 import { Bell, CardHost, CombatControl, DiceWell, GmScreen, JournalBook, PresenceRow, Scroll } from './TableChrome'
 import { CommandPalette, type PaletteActions } from './CommandPalette'
 import { PhoneBar, PhoneSheets } from './PhoneBar'
@@ -99,6 +101,19 @@ export function GameShell({ controller }: { controller: GameController }) {
     // Only on mount and when the device class changes; later toggles are the user's.
   }, [bp]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!phone) setScrollPref({ open: layout.scrollOpen }) }, [layout.scrollOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The table needs to know about Build: the prop gizmo, power keys and box select live there.
+  useEffect(() => {
+    useTableUi.getState().set({ buildMode: mode === 'build' })
+    return () => useTableUi.getState().set({ buildMode: false })
+  }, [mode])
+  // GM: uploads that never reached Blossom last time go out again (loaded lazily, after the doc).
+  useEffect(() => {
+    if (!isGm || display) return
+    let cancel: (() => void) | undefined
+    let live = true
+    void import('../library/reshare').then((m) => { if (live) cancel = m.reshareOnStart(controller.assets) })
+    return () => { live = false; cancel?.() }
+  }, [isGm, display, controller])
   // Players have no Prep or Build; a GM demoted mid-session drops back to Play.
   useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
 
@@ -227,6 +242,7 @@ export function GameShell({ controller }: { controller: GameController }) {
         <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
+        {isGm && chrome && <HeldBar phone={phone} />}
         {meta?.activeScene && <OnboardingTips controller={controller} />}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />

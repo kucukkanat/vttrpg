@@ -9,8 +9,11 @@ import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import { toggleBuildTool, type BuildTool } from '@/table/build/buildState'
+import type { CatalogueEntry } from '@/core/catalogue'
+import { searchCatalogue } from '../catalogue'
+import { pickUpEntry, useBuiltinCatalogue, useMyModels } from '../library/useCatalogue'
 import { newSeed } from '@/dice'
-import { undoLast } from '@/state/undo'
+import { describeOutcome, redoLast, undoLast } from '@/state/undo'
 import { useRollMode } from '../rollMode'
 import { pushToast } from '../toasts'
 import { setTextScale, setThemePref } from '../theme/theme'
@@ -61,8 +64,11 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
       for (const [tool, title, words] of tools) {
         add('Build', { id: `build:${tool}`, title, words, where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'build' }); toggleBuildTool(tool) } })
       }
+      add('Build', { id: 'build:library', title: 'Model library', words: 'props models place stamp furniture assets', where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'library' }) } })
+      add('Build', { id: 'build:eyedropper', title: 'Eyedropper: pick a prop’s model up', words: 'same again copy model', keys: 'Alt+click', where: 'GM screen · Build', run: () => { setTableMode('build'); toggleBuildTool('eyedropper') } })
       add('Build', { id: 'build:scene', title: 'Scene settings', words: 'darkness weather ambience fog grid', where: 'GM screen · Build', run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'scenes' }) } })
-      add('Build', { id: 'build:undo', title: 'Undo the last removal', words: 'restore', keys: 'Cmd/Ctrl+Z', run: () => void undoLast().then((e) => e && pushToast({ text: `Restored ${e.subject}`, ttl: 2500 })) })
+      add('Build', { id: 'build:undo', title: 'Undo your last edit', words: 'restore removal move', keys: 'Cmd/Ctrl+Z', run: () => void undoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'undo'), ttl: 2500 })) })
+      add('Build', { id: 'build:redo', title: 'Redo', words: 'again repeat', keys: 'Cmd/Ctrl+Shift+Z', run: () => void redoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'redo'), ttl: 2500 })) })
     }
 
     // Table tools.
@@ -113,6 +119,7 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
     // Game.
     if (isGm) add('Game', { id: 'game:invite', title: 'Invite players', words: 'link share join', where: 'Top bar', run: requestInvite })
     if (actions.exportGame) add('Game', { id: 'game:export', title: 'Export the game file', words: 'save backup download', run: actions.exportGame })
+    add('Game', { id: 'game:credits', title: 'Scene credits', words: 'licence attribution authors models cc by', where: isGm ? 'Reference' : 'Card', run: () => actions.openPanel('credits') })
     add('Game', { id: 'game:keys', title: 'Keyboard shortcuts', words: 'keys help', keys: '?', run: () => toggleShortcutsOverlay(true) })
     add('Game', { id: 'theme:dark', title: 'Theme: lamplight (dark)', words: 'appearance colour', run: () => setThemePref('dark') })
     add('Game', { id: 'theme:daylight', title: 'Theme: parchment (light)', words: 'appearance colour bright daylight', run: () => setThemePref('daylight') })
@@ -123,6 +130,23 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
     add('Game', { id: 'game:leave', title: 'Leave the game', words: 'exit quit home', run: actions.leave })
     return list
   }, [controller, panels, actions, tokens, scenes, active, combat, isGm])
+}
+
+/** Most library models one search lists. */
+const MAX_MODEL_RESULTS = 6
+
+/** GM: library models matching the query; running one picks the model up in Build. */
+function useLibraryCommands(isGm: boolean, query: string): Command[] {
+  const builtin = useBuiltinCatalogue(isGm)
+  const mine = useMyModels()
+  return useMemo(() => {
+    if (!isGm || query.trim().length < 2) return []
+    const pool: CatalogueEntry[] = [...mine, ...(builtin ?? [])]
+    return searchCatalogue(pool, query).slice(0, MAX_MODEL_RESULTS).map((e) => ({
+      id: `model:${e.id}`, group: 'Library' as const, title: `Place ${e.title}`, where: e.kit ? 'Library · kit' : 'Library',
+      run: () => { setTableMode('build'); useTableLayout.getState().set({ buildTab: 'library' }); pickUpEntry(e) },
+    }))
+  }, [isGm, query, builtin, mine])
 }
 
 /** Suggested with an empty query: what this moment most likely needs. */
@@ -157,11 +181,12 @@ function PaletteDialog({ controller, panels, actions, onClose }: { controller: G
   const [at, setAt] = useState(0)
   const input = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const models = useLibraryCommands(controller.connection.isGm, query)
   const results = useMemo(() => {
-    if (query.trim()) return filterCommands(all, query)
+    if (query.trim()) return [...filterCommands(all, query), ...models]
     const grouped = [...all].sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group))
     return [...suggested(all, controller.connection.isGm, combat), ...grouped]
-  }, [all, query, controller, combat])
+  }, [all, query, controller, combat, models])
   useEffect(() => { input.current?.focus() }, [])
   useEffect(() => { setAt(0) }, [query])
   useEffect(() => {

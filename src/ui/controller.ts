@@ -6,18 +6,20 @@
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
 import { docBlockingSegments, moveBlocked, sceneWalls } from '@/table/build/wallEdit'
+import { levelOfHeight } from '@/core/kits'
+import { kitRuntime } from '@/table/kits/runtime'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import { vfxBus } from '@/table/vfx/bus'
 import { numbersEvent } from '@/table/vfx/numbers'
 import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
-import type { Presence } from '@/core/presence'
+import { admitPresence, type Presence } from '@/core/presence'
 import type { Character, GameDocShape, GameEvent, ResourceDelta, RollResult } from '@/core/doc'
 import type { PlayerPubkey, SceneId } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
-import { bindUndoDispatcher, recordUndo, undoLast } from '@/state/undo'
+import { bindUndoDispatcher, captureUndo, commitUndo, describeOutcome, isReplaying, undoLast } from '@/state/undo'
 import { newSeed, rollFromSeed } from '@/dice'
 import { withAdvantage } from '@/rules'
 import type { TokenId } from '@/core/ids'
@@ -73,7 +75,7 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters, tiles: s.tiles }
   }
 
   /** A player's token move through a drawn or imported wall or a closed door (the table stops such drags too). */
@@ -82,7 +84,13 @@ export function createController(opts: {
     const s = useGame.getState()
     const t = s.tokens[intent.token]
     if (!t) return false
-    return moveBlocked(t.position, intent.position, docBlockingSegments(s.scenes[t.scene], sceneWalls(s.walls, t.scene)))
+    const scene = s.scenes[t.scene]
+    // Storeys: the token moves on its level, blocked by that level's kit walls (the scene's own
+    // walls belong to level 0), as the mounted table reports them.
+    const level = scene ? Math.max(0, levelOfHeight(t.position.y ?? 0, 0, scene.grid.cellSize)) : 0
+    const kit = kitRuntime.moveWalls?.(t.scene, level) ?? []
+    const base = level === 0 ? docBlockingSegments(scene, sceneWalls(s.walls, t.scene)) : []
+    return moveBlocked(t.position, intent.position, kit.length ? [...base, ...kit] : base)
   }
 
   /** The sheet a roll intent was made from, if it names one that still exists. */
@@ -173,7 +181,7 @@ export function createController(opts: {
   const offIntent = connection.isGm ? connection.onIntent((env) => void gmApply(env)) : () => {}
   const pingsSeen = new Map<string, number>()
   const offPresence = connection.onPresence((p) => {
-    useGame.getState().setPresence(p)
+    useGame.getState().setPresence(admitPresence(p, { fromWriter: connection.isWriter(p.pubkey), viewerBuilds: connection.isGm }))
     rememberName(p.pubkey, p.name)
     const ping = takePing(pingsSeen, p)
     if (ping) vfxBus.emit('ping', ping)
@@ -212,17 +220,20 @@ export function createController(opts: {
       }
       return
     }
-    // Destructive intents from this client get an inverse on the undo stack and an Undo toast
-    // before they are applied; `undoLast()` dispatches the inverse through this same function.
+    // Build edits and destructive intents from this client go on its own undo stack: captured from
+    // the store before they apply and settled against it after (so a refused intent records
+    // nothing). Destructive ones also get an Undo toast. `undoLast()`/`redoLast()` dispatch through
+    // this same function; what they send is not recorded again.
     bindUndoDispatcher(dispatch)
-    const undo = recordUndo(intent, useGame.getState())
-    if (undo) {
+    const pending = isReplaying() ? null : captureUndo(intent, useGame.getState())
+    await gmApply(env)
+    const undo = commitUndo(pending, useGame.getState())
+    if (undo?.destructive) {
       pushToast({
         text: undo.label,
-        action: { label: 'Undo', run: () => void undoLast().then((e) => e && pushToast({ text: `Restored ${e.subject}`, ttl: 2500 })) },
+        action: { label: 'Undo', run: () => void undoLast().then((o) => o && pushToast({ text: describeOutcome(o, 'undo'), ttl: 2500 })) },
       })
     }
-    await gmApply(env)
   }
 
   return {

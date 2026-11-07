@@ -6,6 +6,9 @@
 import type { Character, GameDocShape, RollAdvantage, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
 import type { CharacterId } from '@/core/ids'
+import { validatePropsIntent } from '@/core/props'
+import { validateTilesIntent } from '@/core/tiles'
+import { badCatalogueEntry } from '@/core/catalogue'
 import type { ChargenStep, ConditionDuration, Effect, RollResolution, SkillDef } from '@/core/pack'
 import { parseFormula } from '@/dice/fair'
 import type { LoadedPack, RulesEngine, SkillCondition, SkillDamage } from './index'
@@ -180,6 +183,13 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const doc = docRaw as GameDocShape
     // Holds for the GM too: the table always has a live scene to show.
     if (intent.type === 'scene.remove' && doc.meta?.activeScene === intent.scene) return 'switch to another scene before removing the live one'
+    // Prop batches are checked for shape and references whoever sends them; only the GM and
+    // co-GMs may send them at all (the fall-through below refuses players).
+    const badProps = validatePropsIntent(intent, doc) ?? validateTilesIntent(intent, doc)
+    if (badProps) return badProps
+    // "My models": only shareable licences, never a built-in; the GM-only rule is the fall-through.
+    if (intent.type === 'catalogue.add') { const bad = badCatalogueEntry(intent.entry); if (bad) return bad }
+    if (intent.type === 'catalogue.remove' && (typeof intent.id !== 'string' || !intent.id)) return 'catalogue entry without an id'
     if (actor.isGm) return null
     switch (intent.type) {
       case 'roll':
@@ -261,6 +271,9 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         if (!doc.scenes?.[wall.scene]?.playersOpenDoors) return 'only the GM opens doors here'
         return wall.door.locked ? 'that door is locked' : null
       }
+      case 'tiles.door':
+        // Kit doors follow the scene's door rule; they have no lock.
+        return doc.scenes?.[intent.scene]?.playersOpenDoors ? null : 'only the GM opens doors here'
       default:
         return 'only the GM may do that'
     }

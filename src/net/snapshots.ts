@@ -2,13 +2,18 @@
  * GM-side snapshot loop: periodically uploads the whole Yjs state and points the
  * manifest at it so late joiners skip the delta replay, and prunes stale
  * transient events. Uploading is injected so net stays independent of assets.
+ *
+ * Each snapshot is encrypted under a fresh key before it leaves the device (`core/blobCrypto.ts`);
+ * the key rides in the manifest pointer, which is itself encrypted under the game key. Joiners
+ * check the ciphertext hash, then decrypt.
  */
 import type { Intent } from '@/core/intents'
+import { encryptBlob } from '@/core/blobCrypto'
 import type { GameConnection } from './index'
 import { REMOTE_ORIGIN } from './connection'
 
 export interface SnapshotLoopOptions {
-  /** Store the bytes somewhere public (Blossom) and return where and their sha256. */
+  /** Store the (already encrypted) bytes somewhere public (Blossom) and return where and their sha256. */
   upload(bytes: Uint8Array): Promise<{ url: string; sha256: string }>
   /** Applies a GM intent locally (the controller's dispatch). Receives `event.prune`. */
   prune?(intent: Intent): void | Promise<void>
@@ -65,9 +70,10 @@ export function createSnapshotLoop(connection: GameConnection, opts: SnapshotLoo
     deltas = 0
     try {
       const bytes = connection.snapshot()
-      const { url, sha256 } = await opts.upload(bytes)
+      const { ciphertext, key } = await encryptBlob(bytes)
+      const { url, sha256 } = await opts.upload(ciphertext)
       if (stopped) return false
-      await connection.publishSnapshotPointer(url, sha256)
+      await connection.publishSnapshotPointer(url, sha256, key)
       log('net: snapshot published', bytes.length, 'bytes ->', url)
       return true
     } catch (e) {

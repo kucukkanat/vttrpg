@@ -1,7 +1,10 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 
 /** Dev stories live in their module folders (`src/<module>/devStory.tsx`); discovered at build time. */
-const modules = import.meta.glob<{ default?: ComponentType; DevStory?: ComponentType }>('../../**/devStory.tsx')
+// Dev builds only: the router never shows a story in production, so the build drops the list.
+const modules = import.meta.env.DEV
+  ? import.meta.glob<{ default?: ComponentType; DevStory?: ComponentType }>('../../**/devStory.tsx')
+  : {}
 const stories: Record<string, React.LazyExoticComponent<ComponentType>> = {}
 for (const [file, load] of Object.entries(modules)) {
   const name = file.replace(/^(\.\.\/)+/, '').replace(/\/devStory\.tsx$/, '').replace(/\//g, '-')
@@ -13,8 +16,13 @@ for (const [file, load] of Object.entries(modules)) {
   })
 }
 
+/** Short names for stories that live deeper in a module. */
+const ALIASES: Record<string, string> = { 'props-bench': 'table-propsBench', 'kit-bench': 'table-kits' }
+
 export function DevStories({ story }: { story: string }) {
-  const Story = stories[story]
+  // Anything after `?` is the story's own options (see e.g. table/propsBench).
+  const name = story.split('?')[0] ?? story
+  const Story = stories[ALIASES[name] ?? name]
   if (!Story) return <div style={{ padding: 24 }}>Unknown story “{story}”. Known: {Object.keys(stories).join(', ') || 'none yet'}</div>
   return (
     <Suspense fallback={<div style={{ padding: 24 }}>Loading story…</div>}>

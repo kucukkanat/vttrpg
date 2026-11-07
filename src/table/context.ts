@@ -9,6 +9,7 @@ import type { Presence } from '@/core/presence'
 import type { GraphicsPreset } from './graphics'
 import type { LoadedScene } from './sceneLoader'
 import type { WallSegment } from './walls'
+import type { KitScene } from './kits/useKitScene'
 
 export interface ViewerInfo {
   pubkey: PlayerPubkey
@@ -29,6 +30,11 @@ export interface TableContextValue {
   loaded: LoadedScene | null
   /** Everything that blocks sight and movement right now: model, imported, prop and drawn walls, closed doors. */
   walls: readonly WallSegment[]
+  /**
+   * Grid kit tiles of the scene: occupancy, walls per level and the cutaway. Optional so stories
+   * and tests that build a context by hand need not supply it.
+   */
+  kits?: KitScene
   viewer: ViewerInfo | null
   onIntent(intent: Intent): void
   onPresence(p: Partial<Presence>): void

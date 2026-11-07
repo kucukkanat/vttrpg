@@ -8,6 +8,9 @@ import type { Vec3 } from '@/core/geometry'
 import type { PropId, SceneId, TokenId } from '@/core/ids'
 import type { Selection } from '@/state/store'
 import type { GizmoMode, NodeBase } from './editing'
+import type { PropPose } from './build/groupTransform'
+import type { TransformEntry } from './build/transformKeys'
+import type { ScreenRect } from './build/boxSelect'
 import type { WallSegment } from './walls'
 
 export interface DragGhost {
@@ -68,6 +71,8 @@ export interface EditPreview {
   position: Vec3
   rotationY: number
   scale: number
+  /** Props: the per-axis scale the preview shows (`scale` is its uniform handle value). */
+  scaleVec?: Vec3
   elevation?: number
 }
 
@@ -129,7 +134,25 @@ export interface TableUiState {
   editMode: boolean
   /** Snap gizmo translation / rotation / scale to steps (Alt held = free). */
   snap: boolean
+  /** What typed numbers and the highlighted gizmo handle act on; Tab cycles it (props). */
   gizmoMode: GizmoMode
+  /**
+   * The GM screen is in Build (the shell publishes it): a prop selection gets the gizmo and the
+   * power keys, and dragging empty board draws a selection box (mouse).
+   */
+  buildMode: boolean
+  /** Advanced gizmo for props: 3-axis rings, per-axis scale, numeric inspector (A, edit bar). */
+  advanced: boolean
+  /** Axes of the advanced gizmo: the world's, or the primary prop's own. */
+  gizmoSpace: 'world' | 'local'
+  /** A number being typed after X / Y / Z (power keys); null otherwise. */
+  transformEntry: TransformEntry | null
+  /** Poses the selected props show while a group transform is in progress (committed on release). */
+  propPreview: Record<PropId, PropPose> | null
+  /** Box select in progress: the rectangle in pixels relative to the table's top-left corner. */
+  boxSelect: ScreenRect | null
+  /** Prop menu (right-click, long-press): which prop and where on screen (viewport pixels). */
+  propMenu: { prop: PropId; x: number; y: number; radial?: boolean } | null
   /** A gizmo handle or a prop is being dragged: camera controls stay off. */
   editDrag: boolean
   editPreview: EditPreview | null
@@ -188,6 +211,13 @@ export const useTableUi = create<TableUiState>((set) => ({
   editMode: false,
   snap: true,
   gizmoMode: 'translate',
+  buildMode: false,
+  advanced: false,
+  gizmoSpace: 'world',
+  transformEntry: null,
+  propPreview: null,
+  boxSelect: null,
+  propMenu: null,
   editDrag: false,
   editPreview: null,
   nodeBase: null,
@@ -313,11 +343,16 @@ export function setSceneError(scene: SceneId, error: string | null): void {
  * Non-reactive values the canvas publishes for hosts (where the camera looks, where the scene
  * is), so a panel can place a new prop somewhere sensible without subscribing to the render loop.
  */
-export const tableRuntime: { cameraTarget: Vec3 | null; cameraPosition: Vec3 | null; sceneCenter: Vec3 | null; floorY: number } = {
+export const tableRuntime: {
+  cameraTarget: Vec3 | null; cameraPosition: Vec3 | null; sceneCenter: Vec3 | null; floorY: number
+  /** Where the pointer last crossed the floor plane over the table (paste lands here); null when off the table. */
+  cursorFloor: Vec3 | null
+} = {
   cameraTarget: null,
   cameraPosition: null,
   sceneCenter: null,
   floorY: 0,
+  cursorFloor: null,
 }
 
 /** Where a newly added object should appear: the camera target, else the scene centre. */
