@@ -88,3 +88,10 @@ export function setKitTool(tool: KitTool | null): void {
 export function kitToolActive(): boolean {
   return useBuildUi.getState().tool === 'kit' && useKitUi.getState().tool !== null
 }
+
+/** Build one level up or down (PgUp / PgDn, the scene bar's ▲ ▼); a cutaway set by hand follows. */
+export function stepLevel(by: number): void {
+  const s = useKitUi.getState()
+  const level = Math.max(0, Math.min(31, s.level + by))
+  s.set({ level, ...(s.cutaway !== null ? { cutaway: level } : {}) })
+}
