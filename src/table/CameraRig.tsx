@@ -85,7 +85,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
   }, [effectiveMode, follow])
   useEffect(() => () => useTableUi.getState().set({ cameraActive: null }), [])
 
-  // "Find me": frame the token in orbit mode, keeping the current viewing direction. In token mode
+  // "Find me": centre the token in orbit mode, keeping the viewing direction and the zoom. In token mode
   // the request is already satisfied by the selection switching the follow target.
   const focusRequest = useTableUi((s) => s.focusRequest)
   useEffect(() => {
@@ -102,7 +102,8 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     dir.normalize()
     // Look down at ~30° or steeper so walls between the camera and the token do not hide it.
     if (dir.y < 0.5) { dir.y = 0.5; dir.normalize() }
-    const dist = 4 * cellSize * Math.max(1, token.scale)
+    // Keep the zoom: only the point the camera looks at moves.
+    const dist = camera.position.distanceTo(from)
     r.orbitPose = { pos: target.clone().addScaledVector(dir, dist), target }
     r.settled = false
     setOrbitReady(false)
@@ -121,10 +122,12 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
       r.pitch = 0.42
       r.dist = 3 * cellSize * Math.max(0.6, follow.scale)
     }
-    if (r.lastMode !== effectiveMode || (follow && r.lastFollow !== follow.id)) { r.settled = false; setOrbitReady(false) }
+    // In orbit a new follow target changes nothing by itself (the selection pans through focusToken).
+    if (r.lastMode !== effectiveMode || (effectiveMode === 'token' && follow && r.lastFollow !== follow.id)) { r.settled = false; setOrbitReady(false) }
     r.lastMode = effectiveMode
     r.lastFollow = follow?.id ?? null
-  }, [effectiveMode, follow, camera, cellSize])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveMode, follow?.id, camera, cellSize])
 
   // Initial overview on mount.
   useEffect(() => {

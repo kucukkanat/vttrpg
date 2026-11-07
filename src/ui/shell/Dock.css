@@ -1,7 +1,8 @@
 /* Bottom dock over the table (shell/Dock.tsx): edit bar or skill bar, with an optional card above it.
    Centred, at most 640px wide, wrapping rather than scrolling sideways. */
 .dock {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
+  /* Under the HUD (z 4) so the token menu and dice pad open over the bar. */
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; pointer-events: none;
   display: flex; justify-content: center;
   padding: 0 calc(var(--sp-2) + var(--sar)) calc(var(--sp-2) + var(--sab)) calc(var(--sp-2) + var(--sal));
 }

@@ -40,7 +40,7 @@ import { RulerLayer } from './RulerLayer'
 import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
 import { ScenePreviewBar, SceneTransition } from './SceneTransition'
-import { clearSceneTransition, sceneTransitionEvent, setPreviewScene, setSceneError, tableRuntime, useTableUi } from './tableState'
+import { clearSceneTransition, sceneTransitionEvent, setPreviewScene, setSceneError, tableRuntime, useTableUi, focusToken } from './tableState'
 import { stagedSummary, stageTargeting } from './targeting'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import './TargetingBar.css'
@@ -513,6 +513,9 @@ function CameraRigFromStore({ mode, sceneId, viewer, bounds, floorY, cellSize, w
     const owned = viewer ? inScene.find((t) => t.owner === viewer.pubkey) : undefined
     return owned ?? inScene[0] ?? null
   }, [tokens, sceneId, selectedId, viewer])
+  // Selecting a token on this scene centres the orbit camera on it without changing the zoom.
+  const selectedHere = !!selectedId && tokens[selectedId]?.scene === sceneId
+  useEffect(() => { if (selectedId && selectedHere) focusToken(selectedId) }, [selectedId, selectedHere])
   return <CameraRig mode={mode} follow={follow} bounds={bounds} floorY={floorY} cellSize={cellSize} walls={walls} />
 }
 
