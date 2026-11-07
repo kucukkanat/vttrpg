@@ -5,6 +5,7 @@
  */
 import type { Prop } from '@/core/doc'
 import { propScale } from '@/core/props'
+import { partsOf } from '@/core/catalogueParts'
 import { knownLegacyFit } from '../propMigration'
 import { useTableUi } from '../tableState'
 import { pickUpModel, useBuildUi } from './buildState'
@@ -18,6 +19,7 @@ export function heldFromProp(p: Prop): HeldModel {
     model: p.model,
     tilt: { x: p.rotation.x, z: p.rotation.z },
     scale: { ...propScale(p, knownLegacyFit(p.id) ?? 1) },
+    ...(partsOf(p) ? { fixtures: partsOf(p)! } : {}),
   }
 }
 

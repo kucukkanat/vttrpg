@@ -5,7 +5,10 @@
  * `libraryLogic.libraryResults`; `modelShelfFor` maps the filter onto it.
  */
 import type { CreatureTemplate, Encounter, EncounterRow, Prefab } from '@/core/doc'
+import type { CatalogueEntry } from '@/core/catalogue'
+import { catalogueParts, kitPieceParts, litModelLight, type PropParts } from '@/core/catalogueParts'
 import type { KitManifest, KitPiece, KitSlot } from '@/core/kits'
+import { LIGHT_SOURCES, type LightSourceId } from '@/table/build/lightSources'
 import type { CreatureEntry } from '@/core/pack'
 import { prefabSummary } from '@/table/build/prefab'
 import type { HeldCreatureToken } from '@/table/build/creaturePickup'
@@ -75,6 +78,67 @@ export function kitShelf(manifest: KitManifest | undefined, p: ShelfPrefs): KitG
     (p.filter === 'favourites' ? fav.has(piece.catalogue) : p.filter === 'recent' ? recent.has(piece.catalogue) : true)
     && matchesQuery(`${piece.title} ${piece.slot} ${manifest.title ?? manifest.id}`, p.query)
   return KIT_GROUPS.map((g) => ({ label: g.label, pieces: manifest.pieces.filter((x) => g.slots.includes(x.slot) && keep(x)) })).filter((g) => g.pieces.length)
+}
+
+// ------------------------------------------------------------------ lights
+
+/** The recent / favourite id of a light source card (catalogue ids are `builtin:…`, so no clash). */
+export const lightSourceRef = (id: LightSourceId) => `light:${id}`
+
+export interface LightShelf {
+  sources: (typeof LIGHT_SOURCES)[number][]
+  /** Lit models (torch, candle, lantern, campfire, brazier…), each with the light it carries. */
+  models: { entry: CatalogueEntry; light: NonNullable<PropParts['light']> }[]
+}
+
+/** Keeps `items` whose ref passes the filter (recent and favourites keep their own order). */
+function byFilter<T>(items: T[], refOf: (t: T) => string, p: ShelfPrefs): T[] {
+  if (p.filter === 'recent') return inOrderOf(items, p.recent, refOf)
+  if (p.filter === 'favourites') return inOrderOf(items, p.favourites, refOf)
+  return items
+}
+
+/**
+ * The Lights shelf: the three light sources, then every model that shines (its light from
+ * `litModelLight`), searched by title and tags. 'mine' keeps the game's own lit models.
+ */
+export function lightShelf(entries: readonly CatalogueEntry[], p: ShelfPrefs, mine: ReadonlySet<string> = new Set()): LightShelf {
+  const sources = p.filter === 'mine' ? [] : byFilter(LIGHT_SOURCES.filter((s) => matchesQuery(`${s.title} ${s.hint} light source`, p.query)), (s) => lightSourceRef(s.id), p)
+  const lit = entries.filter((e) => !e.kit && (p.filter !== 'mine' || mine.has(e.id)) && matchesQuery(`${e.title} ${e.tags.join(' ')}`, p.query))
+    .flatMap((entry) => { const light = litModelLight(entry); return light ? [{ entry, light }] : [] })
+    .sort((a, b) => a.entry.title.localeCompare(b.entry.title))
+  return { sources, models: byFilter(lit, (m) => m.entry.id, p) }
+}
+
+// ------------------------------------------------------------------ walls & doors
+
+export type InvisibleSegment = 'wall' | 'door'
+
+export const INVISIBLE_SEGMENTS: readonly { id: InvisibleSegment; title: string; hint: string }[] = [
+  { id: 'wall', title: 'Invisible wall', hint: 'Click to start, click to end; clicks chain. Esc stops.' },
+  { id: 'door', title: 'Invisible door', hint: 'Drag across the doorway (or click both ends).' },
+]
+
+export const segmentRef = (id: InvisibleSegment) => `segment:${id}`
+
+export interface WallShelf {
+  invisible: (typeof INVISIBLE_SEGMENTS)[number][]
+  /** Wall, gate and door models of the catalogue, with the parts they carry. */
+  models: { entry: CatalogueEntry; parts: PropParts }[]
+  /** Straight kit wall, door and window pieces, placed as props (the Kit shelf still paints them). */
+  kit: { piece: KitPiece; kit: string; parts: PropParts }[]
+}
+
+/** The Walls & doors shelf: the invisible wall and door, wall and door models, and kit walls as props. */
+export function wallShelf(entries: readonly CatalogueEntry[], manifests: readonly KitManifest[], p: ShelfPrefs, mine: ReadonlySet<string> = new Set()): WallShelf {
+  const invisible = p.filter === 'mine' ? [] : byFilter(INVISIBLE_SEGMENTS.filter((s) => matchesQuery(`${s.title} invisible map ${s.id}`, p.query)), (s) => segmentRef(s.id), p)
+  const models = entries.filter((e) => !e.kit && e.category !== 'kit' && (p.filter !== 'mine' || mine.has(e.id)) && matchesQuery(`${e.title} ${e.tags.join(' ')}`, p.query))
+    .flatMap((entry) => { const parts = catalogueParts(entry); return parts && (parts.wall || parts.door) ? [{ entry, parts }] : [] })
+    .sort((a, b) => a.entry.title.localeCompare(b.entry.title))
+  const kit = p.filter === 'mine' ? [] : manifests.flatMap((m) => m.pieces
+    .filter((piece) => matchesQuery(`${piece.title} ${piece.slot} ${m.title ?? m.id}`, p.query))
+    .flatMap((piece) => { const parts = kitPieceParts(piece); return parts ? [{ piece, kit: m.id, parts }] : [] }))
+  return { invisible, models: byFilter(models, (m) => m.entry.id, p), kit: byFilter(kit, (k) => k.piece.catalogue, p) }
 }
 
 // ------------------------------------------------------------------ creatures

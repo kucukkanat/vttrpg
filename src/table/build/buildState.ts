@@ -10,16 +10,18 @@ import type { HeldCreatures } from './creaturePickup'
 import { DEFAULT_SCATTER_RANGE, DEFAULT_SNAP_CELLS, NO_SCATTER, rollScatter, type HeldModel, type ScatterRoll } from './placement'
 
 export type BuildTool =
-  /** Drag to draw a wall; ends snap to cell corners and to existing wall ends. */
+  /** @deprecated Drawn walls are retired: arms the Invisible wall tool (`segment`). */
   | 'wall'
-  /** Same, drawing a door. Tap a door on the table to open or close it. */
+  /** @deprecated Drawn doors are retired: arms the Invisible door tool (`segment`). */
   | 'door'
+  /** Invisible wall or door (`segment` says which): click to start, click to end; walls chain. */
+  | 'segment'
   /** Tap or drag over walls and doors to remove them (imported walls too). */
   | 'erase'
   /** Fog brush: paint cells explored, or back into fog. */
   | 'fog-reveal'
   | 'fog-hide'
-  /** Tap to place a light. */
+  /** @deprecated Placed lights are retired: picks up a warm light source to stamp. */
   | 'light'
   /** Drag a rectangle; its props and walls become a prefab. */
   | 'prefab-capture'
@@ -66,6 +68,8 @@ export interface BuildUiState {
   roll: ScatterRoll
   /** A library card being dragged over the board (HTML drag and drop). */
   dragging: HeldModel | null
+  /** Which invisible segment the `segment` tool stretches. */
+  segment: 'wall' | 'door'
   /** The creatures in hand while `tool` is 'creature'. */
   creatures: HeldCreatures | null
   /** Creatures placed from the Library show to players at once (off: hidden until revealed). */
@@ -89,6 +93,7 @@ export const useBuildUi = create<BuildUiState>((set) => ({
   scatterRange: DEFAULT_SCATTER_RANGE,
   roll: NO_SCATTER,
   dragging: null,
+  segment: 'wall',
   creatures: null,
   placeVisible: false,
   set: (partial) => set(partial),
@@ -117,5 +122,11 @@ export function pickUpModel(held: HeldModel, yaw = 0): void {
 /** Put the held model down (Esc, right-click). */
 export function putDownModel(): void {
   const s = useBuildUi.getState()
-  if (s.tool === 'place' || s.tool === 'eyedropper' || s.tool === 'creature') s.set({ tool: null })
+  if (s.tool === 'place' || s.tool === 'eyedropper' || s.tool === 'creature' || s.tool === 'segment') s.set({ tool: null })
+}
+
+/** Arm the Invisible wall or Invisible door tool (the same one again puts it away). */
+export function armSegmentTool(kind: 'wall' | 'door'): void {
+  const s = useBuildUi.getState()
+  s.set(s.tool === 'segment' && s.segment === kind ? { tool: null } : { tool: 'segment', segment: kind })
 }
