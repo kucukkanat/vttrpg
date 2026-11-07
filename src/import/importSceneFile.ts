@@ -83,7 +83,7 @@ export async function importSceneFile(file: File, controller: ImportController, 
     imageFile = await hooks.pickImage({ name: parsed.name ?? file.name, imagePath: parsed.imagePath, pixelSize: parsed.pixelSize, format: parsed.format })
     if (!imageFile) return null
   }
-  const asset = await controller.assets.importFile(imageFile)
+  const asset = await controller.assets.shareFile(imageFile)
   const scene = sceneFromParsedMap(parsed, asset, { cellSize: hooks.cellSize, gridType: hooks.gridType, darkness: hooks.darkness })
   await controller.dispatch({ type: 'scene.add', scene })
   if (hooks.activate !== false) await controller.dispatch({ type: 'scene.activate', scene: scene.id })

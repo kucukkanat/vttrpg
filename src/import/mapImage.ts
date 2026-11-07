@@ -13,7 +13,7 @@ import { buildImageScene } from './scene'
 
 /** The slice of the game controller imports need; structural so tests can pass a stub. */
 export interface ImportController {
-  assets: { importFile(file: File): Promise<AssetRef> }
+  assets: { shareFile(file: File): Promise<AssetRef> }
   dispatch(intent: Intent): Promise<void>
 }
 
@@ -64,7 +64,7 @@ export function suggestColumns(pixelWidth: number): number {
 /** Import the image as an asset, lay it out `columns` cells wide and add + activate the scene. */
 export async function createImageScene(file: File, controller: ImportController, opts: MapImageOptions, size?: ImageSize): Promise<Scene> {
   const px = size ?? (await readImageSize(file))
-  const asset = await controller.assets.importFile(file)
+  const asset = await controller.assets.shareFile(file)
   const layout = imageSceneLayout(opts.columns, px.width, px.height, opts.cellSize)
   const scene = buildImageScene({
     name: opts.name ?? file.name.replace(/\.[^.]+$/, ''),
