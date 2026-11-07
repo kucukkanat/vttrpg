@@ -12,6 +12,7 @@
     "test": "vitest run",
     "lint": "eslint src",
     "library:index": "node scripts/build-library-index.mjs",
+    "library": "node scripts/make-library/fetch.mjs && node scripts/make-library/index.mjs && node scripts/make-library/thumbs.mjs && node scripts/build-library-index.mjs",
     "scenes": "node scripts/make-scenes/index.mjs && node scripts/build-library-index.mjs",
     "props": "node scripts/make-props/index.mjs && node scripts/build-library-index.mjs",
     "creatures": "node scripts/build-creatures/index.mjs"
@@ -30,12 +31,17 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@types/node": "^24.19.2",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^5.0.0",
     "fake-indexeddb": "^6.2.7",
+    "meshoptimizer": "^1.3.0",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.0",
     "vite": "^7.1.0",
     "vite-plugin-pwa": "^1.3.0",
