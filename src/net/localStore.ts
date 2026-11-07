@@ -143,3 +143,16 @@ let shared: LocalGameStore | undefined
 export function localGameStore(): LocalGameStore {
   return (shared ??= openLocalGameStore())
 }
+
+/**
+ * Reads from `inner` and never writes: a viewer opened next to the GM's own tab (a table display)
+ * starts from the local copy at once without overwriting it with its own state.
+ */
+export function readOnlyGameStore(inner: LocalGameStore): LocalGameStore {
+  return {
+    load: (gameId) => inner.load(gameId),
+    async saveDoc() {},
+    async saveManifest() {},
+    async remove() {},
+  }
+}

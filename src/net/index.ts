@@ -83,11 +83,11 @@ export interface InviteInfo {
 }
 
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
-export { currentProfile, profileSuffix } from './identity'
+export { currentProfile, profileSuffix, ephemeralIdentity } from './identity'
 export { IntentQueue, INTENT_QUEUE_TTL_MS, QUEUEABLE_INTENTS } from './connection'
 export type { QueueOutcome } from './connection'
 export { GM_AWAY_AFTER_MS } from '@/core/presence'
 export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
 export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'
-export { localGameStore, openLocalGameStore, createMemoryGameStore } from './localStore'
+export { localGameStore, openLocalGameStore, createMemoryGameStore, readOnlyGameStore } from './localStore'
 export type { LocalGameStore, LocalGameRecord } from './localStore'

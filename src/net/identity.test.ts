@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { SECRET_STORAGE_KEY, loadIdentity, profileFromUrl, secretStorageKey } from './identity'
+import { SECRET_STORAGE_KEY, ephemeralIdentity, loadIdentity, profileFromUrl, secretStorageKey } from './identity'
 
 const hex64 = /^[0-9a-f]{64}$/
 
@@ -49,5 +49,16 @@ describe('loadIdentity', () => {
     expect(alice.pubkey).not.toBe(bob1.pubkey)
     expect(plain.pubkey).not.toBe(bob1.pubkey)
     expect(plainAgain.pubkey).toBe(plain.pubkey)
+  })
+})
+
+describe('ephemeral identity', () => {
+  it('is a fresh key every time and stores nothing', () => {
+    const before = globalThis.localStorage?.length ?? 0
+    const a = ephemeralIdentity()
+    const b = ephemeralIdentity()
+    expect(a.pubkey).toMatch(hex64)
+    expect(a.pubkey).not.toBe(b.pubkey)
+    expect(globalThis.localStorage?.length ?? 0).toBe(before)
   })
 })
