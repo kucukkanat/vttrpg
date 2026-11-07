@@ -31,6 +31,7 @@ import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
 import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, presetLayouts, type LayoutPresetId, type TabletLayout } from './layoutPresets'
 import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
+import { Cues } from '../cues'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
@@ -196,6 +197,7 @@ export function GameShell({ controller }: { controller: GameController }) {
         {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />
+        <Cues controller={controller} />
         {zen ? <RestoreChrome label="Show UI" onRestore={() => setZen(false)} />
           : display ? <RestoreChrome label="Exit display" onRestore={() => pickPreset('auto')} /> : null}
       </section>

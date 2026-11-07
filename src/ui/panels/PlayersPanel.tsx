@@ -13,6 +13,7 @@ import type { Token } from '@/core/doc'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { useClaimPrompt } from './ClaimPrompt'
 import { CoGmControls } from './CoGmControls'
+import { SoundPrefs } from './SoundPrefs'
 import { buildInviteUrl, selectAll, useCopy } from '../invite'
 import { ListRow } from '../components'
 import { colorName } from '../colorName'
@@ -189,6 +190,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <input type="checkbox" checked={skipDice} onChange={(e) => setSkipDice(e.target.checked)} />
           <span>Skip 3D dice <span className="muted small">· results still show in chat</span></span>
         </label>
+        <SoundPrefs controller={controller} />
       </div>
     </div>
   )
