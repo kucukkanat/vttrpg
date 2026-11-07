@@ -106,11 +106,12 @@ export function sanitizeBuildPresence(raw: unknown): PresenceBuild | undefined {
 
 /**
  * What a received presence may carry into the store: build data only from a writer (GM or co-GM)
- * and only for a viewer who builds too; players keep none of it. The cursor is cleaned either way.
+ * and only for a viewer who builds too. Players keep none of it, the cursor included (only
+ * builders draw cursors); for builders the cursor is cleaned.
  */
 export function admitPresence(p: Presence, opts: { fromWriter: boolean; viewerBuilds: boolean }): Presence {
   const out: Presence = { ...p }
-  const cursor = cleanPoint(p.cursor)
+  const cursor = opts.viewerBuilds ? cleanPoint(p.cursor) : null
   if (cursor) out.cursor = cursor
   else delete out.cursor
   const build = opts.fromWriter && opts.viewerBuilds ? sanitizeBuildPresence(p.build) : undefined

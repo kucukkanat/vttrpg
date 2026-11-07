@@ -299,7 +299,7 @@ const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, 
       {manage && (
         <>
           <button type="button" className="lib-more" aria-label={`${entry.title}: rename or remove`} title="Rename or remove from library"
-            aria-haspopup="menu" onClick={() => setMenu('open')}>
+            aria-haspopup="menu" onClick={() => { onLeave(); setMenu('open') }}>
             <LibIcon name="more" size={14} />
           </button>
           <span className="lib-status"><AssetStatusBadge sha256={entry.model.sha256} /></span>

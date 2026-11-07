@@ -14,6 +14,7 @@
 .budget-pop {
   position: absolute; left: 0; bottom: 100%; z-index: 30; width: min(320px, 90vw); padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  background: var(--panel) var(--paper-tex); color: var(--fg);
 }
 .budget-pop p { margin: 0 0 var(--sp-1); }
 .budget-table { border-collapse: collapse; margin-bottom: var(--sp-1); font-variant-numeric: tabular-nums; }

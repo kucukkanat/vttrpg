@@ -55,7 +55,9 @@ describe('admitting presence', () => {
   })
 
   it('drops it for players and from non-writers', () => {
-    expect(admitPresence(p(), { fromWriter: true, viewerBuilds: false }).build).toBeUndefined()
+    const player = admitPresence(p(), { fromWriter: true, viewerBuilds: false })
+    expect(player.build).toBeUndefined()
+    expect(player.cursor).toBeUndefined()
     expect(admitPresence(p(), { fromWriter: false, viewerBuilds: true }).build).toBeUndefined()
   })
 
