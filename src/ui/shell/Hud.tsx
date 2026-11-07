@@ -14,6 +14,7 @@ import { DiceValues } from '../components'
 import { Icon } from '../icons'
 import { InitiativeChip } from '../panels/InitiativePanel'
 import { TurnCue } from '../feedback/TurnCue'
+import { TipLayer } from '../tips/TipLayer'
 import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
 import { useSession } from '../session'
 import { newSeed } from '@/dice'
@@ -139,6 +140,7 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
       <InitiativeChip />
       <TurnCue />
       <ContextMenu />
+      <TipLayer />
       {shown && r && (
         <button type="button" className="toast roll-toast" onClick={onOpenChat} aria-live="polite">
           <span className="muted small">{who(shown.author)}</span>

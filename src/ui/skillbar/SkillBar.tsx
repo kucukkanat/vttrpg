@@ -18,7 +18,8 @@ import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { firstOwnedToken, useGame } from '@/state/store'
 import { newSeed, rollFromSeed } from '@/dice/fair'
 import { useTableUi } from '@/table/tableState'
-import { readResource } from '@/table/tokenHud'
+import { conditionChips, readResource } from '@/table/tokenHud'
+import { mergeHandlers, pinOnClick, tipTriggerProps } from '../tips/useTipTrigger'
 import { useMoveDraft } from '@/table/twoTapMove'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
@@ -45,6 +46,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
   })
   const aimingAny = useTargeting((s) => s.pending !== null)
   const moving = useMoveDraft((s) => s.draft !== null)
+  const showHp = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const [card, setCard] = useState<{ token: TokenId; kind: Card } | null>(null)
   const casting = useSkillCasting(controller, token)
   const init = useGame((s) => s.initiative)
@@ -68,6 +70,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const up = active && currentEntry(init)?.token === token.id
   const mayEnd = up && (isGm || token.owner === me)
   const inOrder = !!init?.order.some((e) => e.token === token.id)
+  // Statuses with their tap-to-pin explanations: the GM always, players on their own token or when HP is shown.
+  const statuses = isGm || token.owner === me || showHp ? conditionChips(token, character, rules?.pack.conditions ?? []) : []
 
   const roll = (label: string, formula: string) => {
     if (!character) return
@@ -101,6 +105,17 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
           <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}>⋯</button>
         </div>
+        {statuses.length > 0 && (
+          <div className="token-bar-status" role="group" aria-label={`${token.name}'s statuses`}>
+            {statuses.map((c) => (
+              <button key={c.id} type="button" className="status-badge" style={{ '--cond': c.color } as CSSProperties}
+                aria-label={`${c.name}, status: what it does`} {...pinOnClick(() => ({ kind: 'condition', condition: c.id }))}>
+                <span className="condition-chip-badge" aria-hidden="true">{c.label}</span>
+                <span className="status-badge-name">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="token-bar-chips">
           {!character && <span className="muted small skill-bar-note">{isGm ? 'No sheet: skills and saves need one.' : 'No character sheet.'}</span>}
           {character && canUse && saves.map((s) => (
@@ -115,10 +130,10 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {character && skills.map((skill) => {
             const reason = canUse ? shortfall(skill) : 'not yours'
             return (
-              <button key={skill.id} type="button" className="skill-chip" disabled={reason !== null}
-                title={reason ? `${skill.name}: ${reason}` : skill.description} onClick={() => use(skill)}
-                aria-label={`${skill.name}, ${reason ?? costLabel(skill, labelOf)}`}
-                {...previewHandlers(skill, token.id)}>
+              <button key={skill.id} type="button" className="skill-chip" aria-disabled={reason !== null || undefined}
+                onClick={() => { if (reason === null) use(skill) }}
+                aria-label={`${skill.name}, ${reason ?? costLabel(skill, labelOf)}`} aria-keyshortcuts="i"
+                {...mergeHandlers(previewHandlers(skill, token.id), tipTriggerProps(() => ({ kind: 'skill', skill: skill.id, token: token.id, reason })))}>
                 <SkillIcon icon={skill.icon} kind={skill.target.kind} />
                 <span className="skill-chip-text">
                   <span className="skill-chip-name">{skill.name}</span>
