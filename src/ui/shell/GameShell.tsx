@@ -29,6 +29,7 @@ import { useGameAlerts } from './useGameAlerts'
 import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
+import { OnboardingTips } from '../onboarding/OnboardingTips'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
 // the shell's chrome renders before it downloads. Both are module-level so the components keep
@@ -177,6 +178,7 @@ export function GameShell({ controller }: { controller: GameController }) {
         {meta?.activeScene && <Dock controller={controller} />}
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
+        {meta?.activeScene && <OnboardingTips controller={controller} />}
         {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />
