@@ -12,7 +12,7 @@ import { useGame } from '@/state/store'
 import type { GameController } from '../controller'
 import { rollInitiative } from '../panels/initiative'
 import { creatureSheetData, hpFormula, mergeGroupInitiative, resolveCreature, rowName, tokenNames, type ResolvedCreature } from './encounters'
-import { spawnNpcs, type Spawned, type SpawnSpec } from './npc'
+import { spawnNpcs, type Spawned, type SpawnOptions, type SpawnSpec } from './npc'
 
 /**
  * Save the creature's action skills as game skills (only those that changed) and return their ids
@@ -51,12 +51,16 @@ export interface PlacedRow {
   tokens: TokenId[]
 }
 
-/** Spawn every row (hidden): creatures with their stat block, plain rows as before. */
+/**
+ * Spawn every row (hidden unless `opts.hidden` is false, near `opts.at` when given): creatures with
+ * their stat block, plain rows as before.
+ */
 export async function placeRows(
   controller: GameController,
   rows: EncounterRow[],
   compendium: readonly CreatureEntry[] | undefined,
   templates: Record<string, CreatureTemplate> | undefined,
+  opts: SpawnOptions = {},
 ): Promise<{ placed: PlacedRow[]; missing: string[] }> {
   const rules = controller.rules
   const config = rules?.pack.manifest.creatures
@@ -83,7 +87,7 @@ export async function placeRows(
     }
   }
   if (!specs.length) return { placed: [], missing }
-  const spawned: Spawned[] = await spawnNpcs(controller, specs, { hidden: true })
+  const spawned: Spawned[] = await spawnNpcs(controller, specs, { hidden: opts.hidden ?? true, ...(opts.at ? { at: opts.at } : {}) })
   const byRow = new Map<number, TokenId[]>()
   spawned.forEach((s, i) => {
     const r = owners[i]!

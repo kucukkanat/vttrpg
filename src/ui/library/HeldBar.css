@@ -11,3 +11,4 @@
 .game--phone .held-bar { top: auto; bottom: calc(var(--tabbar-h, 56px) + var(--sab, 0px) + 96px); }
 @media (pointer: coarse) { .held-bar button { min-height: 44px; min-width: 44px; } }
 @media (max-width: 900px) { .held-bar-keys { display: none; } }
+.held-bar .check { white-space: nowrap; margin: 0; }
