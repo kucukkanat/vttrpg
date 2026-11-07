@@ -82,6 +82,16 @@ describe('formats', () => {
     await expect(collectModelSet([])).rejects.toMatchObject({ code: 'empty' })
   })
 
+  it('unpacks zips and finds the model inside', async () => {
+    const { zipSync } = await import('fflate')
+    const zip = zipSync({ 'pack/models/stool.obj': enc.encode(cubeObj(1)), 'pack/readme.txt': enc.encode('hi'), '__MACOSX/._stool.obj': new Uint8Array(4) })
+    const set = await collectModelSet([{ name: 'pack.zip', bytes: zip }])
+    expect(set.format).toBe('obj')
+    expect(set.main.name).toBe('pack/models/stool.obj')
+    expect(set.files.map((f) => f.name).sort()).toEqual(['pack/models/stool.obj', 'pack/readme.txt'])
+    await expect(collectModelSet([{ name: 'bad.zip', bytes: enc.encode('PK\x03\x04 not really') }])).rejects.toMatchObject({ code: 'corrupt' })
+  })
+
   it('rejects selections over the 100 MB limit before reading them', async () => {
     const huge = { size: MAX_IMPORT_BYTES + 1, name: 'big.glb', arrayBuffer: () => { throw new Error('should not read') } } as unknown as File
     await expect(readFiles([huge])).rejects.toMatchObject({ code: 'too-large' })
