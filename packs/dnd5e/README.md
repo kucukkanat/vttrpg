@@ -21,6 +21,7 @@ this pack adds on top of it and how it uses the engine.
 | `sheet.json` | Identity, abilities and saves, 18 skills, combat, attacks, spellcasting, equipment, features, conditions, notes |
 | `chargen.json` | Roll abilities, race table, class table, Acolyte background, alignment, vitals |
 | `skills/*.json` | Two weapon attacks and seven spells |
+| `glossary.json` | Rules terms the tooltips link to: Armor Class, saving throw, spell save DC, attack roll, natural 20 and 1, proficiency bonus, spell slot, cantrip, concentration, ability modifier, bonus action |
 
 ## Sheet data
 

@@ -20,6 +20,7 @@ understands is described here; the engine (`src/rules`) never special-cases a pa
 | `sheet.json` | Layout rendered by the generic sheet component |
 | `chargen.json` | Character generation steps and tables |
 | `skills/*.json` | Skills and spells: cost, targeting, effect rows, VFX cues |
+| `glossary.json` | Optional `[{ id, term, aliases?, text }]`: rules terms the skill and status tooltips link to (saves, the three attributes, armor, cells) |
 
 Paths in `pack.json` are relative to the pack folder. `loadPack('packs/mausritter/')` fetches
 `pack.json`, then every listed file, validates the shapes and parses every expression, so a

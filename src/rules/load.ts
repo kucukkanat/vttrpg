@@ -7,6 +7,7 @@ import type {
   ChargenSchema,
   ConditionDef,
   Effect,
+  GlossaryTerm,
   PackManifest,
   ResourceDef,
   RollResolution,
@@ -71,6 +72,7 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   ])
   const skills = await Promise.all((f.skills ?? []).map((file) => read(file).then((v) => guardSkill(v, file))))
   const chargen = f.chargen ? guardChargen(await read(f.chargen), f.chargen) : undefined
+  const glossary = f.glossary ? guardGlossary(await read(f.glossary), f.glossary) : undefined
 
   const ids = new Set<string>()
   for (const s of skills) {
@@ -79,7 +81,7 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   }
   if (manifest.resolution?.kind === 'roll-under') expr(manifest.resolution.die, 'pack.json', 'resolution.die')
 
-  return { manifest, attributes, resources, conditions, sheet, skills, chargen }
+  return { manifest, attributes, resources, conditions, sheet, skills, chargen, ...(glossary ? { glossary } : {}) }
 }
 
 // ------------------------------------------------------------------- guards
@@ -117,6 +119,7 @@ export function guardManifest(v: unknown): PackManifest {
     if (!isStr(files[k])) throw new PackError(file, `files.${k} required`)
   if (!opt(files.chargen, isStr)) throw new PackError(file, 'files.chargen must be a string')
   if (!opt(files.skills, isStrArr)) throw new PackError(file, 'files.skills must be a list of paths')
+  if (!opt(files.glossary, isStr)) throw new PackError(file, 'files.glossary must be a string')
   return v as unknown as PackManifest
 }
 
@@ -150,6 +153,16 @@ export function guardResources(v: unknown, file: string): ResourceDef[] {
     if (x.resetOn !== undefined && !['rest', 'longRest', 'session', 'never'].includes(x.resetOn as string))
       throw new PackError(file, `${x.id}: bad resetOn`)
     return x as unknown as ResourceDef
+  })
+}
+
+export function guardGlossary(v: unknown, file: string): GlossaryTerm[] {
+  return guardArray(v, file).map((x, i) => {
+    if (!isStr(x.id) || !x.id) throw new PackError(file, `entry ${i}: "id" required`)
+    if (!isStr(x.term) || !x.term.trim()) throw new PackError(file, `${x.id}: "term" required`)
+    if (!isStr(x.text)) throw new PackError(file, `${x.id}: "text" required`)
+    if (!opt(x.aliases, isStrArr)) throw new PackError(file, `${x.id}: aliases must be a list of strings`)
+    return x as unknown as GlossaryTerm
   })
 }
 

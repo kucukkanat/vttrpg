@@ -27,7 +27,22 @@ export interface PackManifest {
     sheet: string
     chargen?: string
     skills?: string[]
+    /** Optional rules terms for the layered tooltips (`GlossaryTerm[]`). */
+    glossary?: string
   }
+}
+
+/**
+ * A rules term the tooltips can explain ("Advantage", "Saving throw"). Skill, condition and other
+ * glossary texts that mention the term (or an alias) link to it. Conditions and resources are
+ * terms already; a glossary entry with the same name adds to them rather than repeating them.
+ */
+export interface GlossaryTerm {
+  id: string
+  term: string
+  /** Other spellings that link to this term ("save", "saves" for "Saving throw"). */
+  aliases?: string[]
+  text: string
 }
 
 export type RollResolution =

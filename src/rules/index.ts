@@ -3,7 +3,7 @@
  */
 import type { Character, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
-import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, SheetSchema, SkillDef, ChargenSchema, VfxCue } from '@/core/pack'
+import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, SheetSchema, SkillDef, ChargenSchema, VfxCue, GlossaryTerm } from '@/core/pack'
 
 export interface LoadedPack {
   manifest: PackManifest
@@ -13,6 +13,8 @@ export interface LoadedPack {
   sheet: SheetSchema
   skills: SkillDef[]
   chargen?: ChargenSchema
+  /** Rules terms for the tooltips (`files.glossary`). */
+  glossary?: GlossaryTerm[]
 }
 
 export interface RulesEngine {
