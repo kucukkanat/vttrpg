@@ -1,0 +1,488 @@
+{
+  "sections": [
+    {
+      "title": "Identity",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "name",
+          "label": "Name"
+        },
+        {
+          "kind": "text",
+          "bind": "size",
+          "label": "Size"
+        },
+        {
+          "kind": "text",
+          "bind": "creature_type",
+          "label": "Type"
+        },
+        {
+          "kind": "text",
+          "bind": "alignment",
+          "label": "Alignment"
+        },
+        {
+          "kind": "text",
+          "bind": "cr_text",
+          "label": "Challenge rating"
+        },
+        {
+          "kind": "number",
+          "bind": "xp",
+          "label": "XP"
+        },
+        {
+          "kind": "number",
+          "bind": "prof_bonus",
+          "label": "Proficiency bonus"
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "number",
+          "bind": "armor_base",
+          "label": "Armor Class"
+        },
+        {
+          "kind": "text",
+          "bind": "ac_note",
+          "label": "Armor"
+        },
+        {
+          "kind": "computed",
+          "label": "AC with conditions",
+          "expr": "ac"
+        },
+        {
+          "kind": "resource",
+          "bind": "hp",
+          "label": "Hit points"
+        },
+        {
+          "kind": "text",
+          "bind": "hp_dice",
+          "label": "Hit dice"
+        },
+        {
+          "kind": "roll",
+          "label": "Roll hit points",
+          "formula": "roll(hp_dice)"
+        },
+        {
+          "kind": "number",
+          "bind": "speed_base",
+          "label": "Walking speed (ft)"
+        },
+        {
+          "kind": "text",
+          "bind": "speed_text",
+          "label": "Speed"
+        },
+        {
+          "kind": "computed",
+          "label": "Speed now (ft)",
+          "expr": "speed"
+        },
+        {
+          "kind": "number",
+          "bind": "initiative_bonus",
+          "label": "Initiative bonus beyond DEX"
+        },
+        {
+          "kind": "computed",
+          "label": "Initiative bonus",
+          "expr": "initiative"
+        },
+        {
+          "kind": "roll",
+          "label": "Initiative",
+          "formula": "d20 + initiative"
+        }
+      ]
+    },
+    {
+      "title": "Abilities",
+      "columns": 4,
+      "fields": [
+        {
+          "kind": "number",
+          "bind": "str",
+          "label": "STR"
+        },
+        {
+          "kind": "computed",
+          "label": "STR mod",
+          "expr": "str_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "STR save bonus",
+          "expr": "str_mod + save_prof.str * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "STR save",
+          "formula": "d20 + str_mod + save_prof.str * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "dex",
+          "label": "DEX"
+        },
+        {
+          "kind": "computed",
+          "label": "DEX mod",
+          "expr": "dex_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "DEX save bonus",
+          "expr": "dex_mod + save_prof.dex * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "DEX save",
+          "formula": "d20 + dex_mod + save_prof.dex * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "con",
+          "label": "CON"
+        },
+        {
+          "kind": "computed",
+          "label": "CON mod",
+          "expr": "con_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "CON save bonus",
+          "expr": "con_mod + save_prof.con * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "CON save",
+          "formula": "d20 + con_mod + save_prof.con * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "int",
+          "label": "INT"
+        },
+        {
+          "kind": "computed",
+          "label": "INT mod",
+          "expr": "int_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "INT save bonus",
+          "expr": "int_mod + save_prof.int * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "INT save",
+          "formula": "d20 + int_mod + save_prof.int * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "wis",
+          "label": "WIS"
+        },
+        {
+          "kind": "computed",
+          "label": "WIS mod",
+          "expr": "wis_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "WIS save bonus",
+          "expr": "wis_mod + save_prof.wis * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "WIS save",
+          "formula": "d20 + wis_mod + save_prof.wis * pb"
+        },
+        {
+          "kind": "number",
+          "bind": "cha",
+          "label": "CHA"
+        },
+        {
+          "kind": "computed",
+          "label": "CHA mod",
+          "expr": "cha_mod"
+        },
+        {
+          "kind": "computed",
+          "label": "CHA save bonus",
+          "expr": "cha_mod + save_prof.cha * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "CHA save",
+          "formula": "d20 + cha_mod + save_prof.cha * pb"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "roll",
+          "label": "Acrobatics",
+          "formula": "d20 + dex_mod + prof.acrobatics * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Animal Handling",
+          "formula": "d20 + wis_mod + prof.animal_handling * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Arcana",
+          "formula": "d20 + int_mod + prof.arcana * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Athletics",
+          "formula": "d20 + str_mod + prof.athletics * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Deception",
+          "formula": "d20 + cha_mod + prof.deception * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "History",
+          "formula": "d20 + int_mod + prof.history * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Insight",
+          "formula": "d20 + wis_mod + prof.insight * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Intimidation",
+          "formula": "d20 + cha_mod + prof.intimidation * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Investigation",
+          "formula": "d20 + int_mod + prof.investigation * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Medicine",
+          "formula": "d20 + wis_mod + prof.medicine * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Nature",
+          "formula": "d20 + int_mod + prof.nature * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Perception",
+          "formula": "d20 + wis_mod + prof.perception * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Performance",
+          "formula": "d20 + cha_mod + prof.performance * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Persuasion",
+          "formula": "d20 + cha_mod + prof.persuasion * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Religion",
+          "formula": "d20 + int_mod + prof.religion * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Sleight of Hand",
+          "formula": "d20 + dex_mod + prof.sleight_of_hand * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Stealth",
+          "formula": "d20 + dex_mod + prof.stealth * pb"
+        },
+        {
+          "kind": "roll",
+          "label": "Survival",
+          "formula": "d20 + wis_mod + prof.survival * pb"
+        }
+      ]
+    },
+    {
+      "title": "Senses and resistances",
+      "columns": 2,
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "senses",
+          "label": "Senses"
+        },
+        {
+          "kind": "computed",
+          "label": "Passive Perception",
+          "expr": "passive_perception"
+        },
+        {
+          "kind": "text",
+          "bind": "languages",
+          "label": "Languages"
+        },
+        {
+          "kind": "text",
+          "bind": "vulnerabilities",
+          "label": "Vulnerabilities"
+        },
+        {
+          "kind": "text",
+          "bind": "resistances",
+          "label": "Resistances"
+        },
+        {
+          "kind": "text",
+          "bind": "immunities",
+          "label": "Immunities"
+        },
+        {
+          "kind": "text",
+          "bind": "condition_immunities",
+          "label": "Condition immunities"
+        }
+      ]
+    },
+    {
+      "title": "Traits",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "traits",
+          "label": "Traits",
+          "item": [
+            {
+              "kind": "text",
+              "bind": "name",
+              "label": "Trait"
+            },
+            {
+              "kind": "text",
+              "bind": "desc",
+              "label": "Description",
+              "multiline": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Actions",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "actions",
+          "label": "Actions",
+          "item": [
+            {
+              "kind": "text",
+              "bind": "name",
+              "label": "Action"
+            },
+            {
+              "kind": "text",
+              "bind": "type",
+              "label": "When (action/bonus/reaction/legendary)"
+            },
+            {
+              "kind": "text",
+              "bind": "kind",
+              "label": "Skill (melee/ranged/save/save-only/other)"
+            },
+            {
+              "kind": "number",
+              "bind": "bonus",
+              "label": "To hit"
+            },
+            {
+              "kind": "text",
+              "bind": "damage",
+              "label": "Damage"
+            },
+            {
+              "kind": "text",
+              "bind": "damage_type",
+              "label": "Damage type"
+            },
+            {
+              "kind": "number",
+              "bind": "cells",
+              "label": "Reach or range (cells)"
+            },
+            {
+              "kind": "text",
+              "bind": "ability",
+              "label": "Save ability"
+            },
+            {
+              "kind": "number",
+              "bind": "dc",
+              "label": "Save DC"
+            },
+            {
+              "kind": "text",
+              "bind": "desc",
+              "label": "Description",
+              "multiline": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Conditions",
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "conditions",
+          "label": "Active conditions",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Condition"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Notes",
+      "fields": [
+        {
+          "kind": "text",
+          "bind": "notes",
+          "label": "Notes",
+          "multiline": true
+        }
+      ]
+    }
+  ]
+}

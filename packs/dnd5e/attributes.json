@@ -13,7 +13,8 @@
   { "id": "int_mod", "name": "Intelligence modifier", "derived": "floor((int - 10) / 2)" },
   { "id": "wis_mod", "name": "Wisdom modifier", "derived": "floor((wis - 10) / 2)" },
   { "id": "cha_mod", "name": "Charisma modifier", "derived": "floor((cha - 10) / 2)" },
-  { "id": "pb", "name": "Proficiency bonus", "derived": "2 + floor((level - 1) / 4)" },
+  { "id": "prof_bonus", "name": "Proficiency bonus override (creatures, by CR; 0 = by level)", "min": 0 },
+  { "id": "pb", "name": "Proficiency bonus", "derived": "max(prof_bonus, 2 + floor((level - 1) / 4))" },
 
   { "id": "speed_base", "name": "Base speed (ft)", "min": 0 },
   { "id": "speed", "name": "Speed (ft)", "derived": "max(0, speed_base)" },
@@ -23,7 +24,8 @@
   { "id": "shield", "name": "Shield bonus", "min": 0 },
   { "id": "ac_bonus", "name": "Other AC bonus" },
   { "id": "ac", "name": "Armor Class", "abbr": "AC", "derived": "armor_base + (armor_dex_cap == 0 ? 0 : min(dex_mod, armor_dex_cap)) + shield + ac_bonus" },
-  { "id": "initiative", "name": "Initiative", "derived": "dex_mod" },
+  { "id": "initiative_bonus", "name": "Initiative bonus beyond DEX" },
+  { "id": "initiative", "name": "Initiative", "derived": "dex_mod + initiative_bonus" },
   { "id": "passive_perception", "name": "Passive Perception", "derived": "10 + wis_mod + prof.perception * pb" },
 
   {

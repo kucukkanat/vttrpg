@@ -3,9 +3,10 @@
 A system pack for VTTRPG implementing the core of fifth edition from the System Reference
 Document 5.1: six abilities with modifiers, proficiency bonus, d20 attack rolls against Armor
 Class, saving throws against a DC, hit points and hit dice, spell slots, the SRD conditions and
-4d6-drop-lowest character creation with the SRD races and classes. Everything in this folder is
-SRD 5.1 content under CC-BY-4.0 (attribution in `LICENSE.md`); nothing from the Player's
-Handbook beyond the SRD is included.
+4d6-drop-lowest character creation with the SRD races and classes, plus the SRD 5.2.1 and SRD
+5.1 creature stat blocks with an NPC sheet and the SRD 5.2.1 encounter XP budget. Everything in
+this folder is SRD content under CC-BY-4.0 (attributions in `LICENSE.md`); nothing from the
+Player's Handbook or Monster Manual beyond the SRDs is included.
 
 `packs/mausritter/README.md` is the reference for the pack format itself. This file covers what
 this pack adds on top of it and how it uses the engine.
@@ -21,6 +22,10 @@ this pack adds on top of it and how it uses the engine.
 | `sheet.json` | Identity, abilities and saves, 18 skills, combat, attacks, spellcasting, equipment, features, conditions, notes |
 | `chargen.json` | Roll abilities, race table, class table, Acolyte background, alignment, vitals |
 | `skills/*.json` | Two weapon attacks and seven spells |
+| `npc-sheet.json` | The `npc` layout for creature stat blocks (see Creatures) |
+| `creatures/srd-2024.json`, `creatures/srd-2014.json` | 331 SRD 5.2.1 and 325 SRD 5.1 creatures, built by `npm run creatures` |
+| `creature-actions.json` | Templates that turn stat-block actions into skills |
+| `encounter.json` | XP budget per character by level (Low, Moderate, High), SRD 5.2.1 |
 
 ## Sheet data
 
@@ -65,9 +70,13 @@ top of the computed value (`shield-of-faith` adds 2 to `ac`).
 | `cantrip_dice` | 1, 2 at level 5, 3 at 11, 4 at 17 |
 | `melee_mod`, `ranged_mod` | STR or DEX according to the readied weapon's `ability` |
 
-The generic sheet renderer shows stored values only, so derived numbers appear through the
-"Proficiency bonus", "Armor Class", "Speed", "Passive Perception" and "Spell save DC" buttons,
-which print the value in chat, and inside every roll.
+The sheet shows derived numbers with `computed` fields ("Proficiency bonus", "Armor Class",
+"Speed", "Passive Perception", "Spell save DC") and uses them inside every roll.
+
+`prof_bonus` and `initiative_bonus` are stored attributes that are 0 for characters: `pb` is
+`max(prof_bonus, 2 + floor((level - 1) / 4))` and `initiative` is `dex_mod + initiative_bonus`,
+so creatures can carry their CR-based proficiency bonus and SRD 5.2 initiative. Sheets made before
+these existed read them as 0 (the engine treats a declared but missing attribute as 0).
 
 ### Armor Class
 
@@ -131,6 +140,60 @@ target.save_prof.<ability> * target.pb` against the caster's `spell_dc`; the eng
 `d20-vs-dc` resolution marks success when the total meets the DC. Attack rows read the natural
 die as `save.dice.0` to apply the natural 1 and 20 rules.
 
+## Creatures
+
+`pack.json`'s `creatures` section lists the snapshot files and names the sheet keys the encounter
+builder writes (`hp`, `hp_dice`, `armor_base` for the AC override, `xp`, `cr`, `notes`). The
+snapshots are fetched only when the GM opens the creature browser.
+
+### Creature sheet data
+
+A creature is a character with `sheet: "npc"` whose data uses the PC keys wherever the rules
+overlap, so every PC skill works against it (`target.ac`, saving throws, passive Perception):
+
+```
+size, creature_type, alignment, cr_text, senses, languages     strings
+cr, xp                         numbers (cr 0.25 for 1/4)
+level                          1; prof_bonus carries the CR-based proficiency bonus
+str .. cha                     ability scores
+save_prof.<ability>            (save bonus - modifier) / pb: 1 when proficient, 0 otherwise
+prof.<skill>                   (skill bonus - modifier) / pb: 1, 2 for expertise
+armor_base                     the stat block's AC; armor_dex_cap 0, shield 0, ac_bonus 0
+ac_note                        "natural armor"
+hp, hp_dice                    { current, max } (the average) and "2d6+2"
+initiative_bonus               stat-block initiative minus the DEX modifier
+speed_base, speed_text         walking speed in feet, and every speed as text
+vulnerabilities, resistances, immunities, condition_immunities   text
+traits                         list of { name, desc }
+actions                        list of actions, below
+```
+
+Each action is `{ name, desc, type, kind, ... }` where `type` is `action`, `bonus`, `reaction`,
+`legendary` or `lair` and `kind` picks a template in `creature-actions.json`:
+
+| `kind` | Fields | Skill |
+|---|---|---|
+| `melee`, `ranged` | `bonus`, `damage` ("1d6+2"), `dice` ("1d6", doubled on a natural 20), `damage_type`, `cells` | `d20 + bonus` vs `target.ac`; natural 20 always hits for extra dice, natural 1 misses |
+| `save` | `ability`, `dc`, `damage`, `half` (1/0), `shape` (`single`, `cone`, `line`, `radius`), `cells`, `size` | damage rolled once, each target saves vs `dc`, half or none on a success |
+| `save-only` | `ability`, `dc`, `shape`, `cells`, `size` | each target saves vs `dc`; the effect is adjudicated from the text |
+| `other` | none | text on the sheet only (Multiattack, spellcasting, recharge rules) |
+
+Template formulas read the action through its sheet path (`d20 + actions.0.bonus`), so editing a
+placed creature's to-hit or damage takes effect at once. The compiled skills are `onlyListed`:
+only the creature's tokens get them. Ranges are in 5-foot cells.
+
+The snapshots are parsed from stat-block text, which Open5e serves more reliably than its
+structured attack fields. Known gaps: attacks whose damage depends on a condition keep only the
+unconditional part, Multiattack and recharge are text, and a handful of attacks with no damage
+(grapples) stay `other`.
+
+### Encounter difficulty
+
+`encounter.json` holds the SRD 5.2.1 "XP Budget per Character" table: for a party level, each band
+(Low, Moderate, High) has an XP budget per character, added up over the party. The encounter
+builder sums `xp` over the non-friendly creatures and shows where the total falls, with the
+arithmetic. SRD 5.1 has no encounter-building table; the 2014 multipliers are not used.
+
 ## Not modelled
 
 - Advantage and disadvantage, cover, opportunity attacks, reach beyond 5 feet, two-weapon fighting.
@@ -140,5 +203,7 @@ die as `save.dice.0` to apply the natural 1 and 20 rules.
   resistances and vulnerabilities; critical hits from paralysis.
 - Levelling up: edit `level`, `hp.max`, hit dice and slot maxima by hand (the `max` expressions
   in `resources.json` give the numbers).
-- Monster stat blocks, multiclassing, feats, subclasses other than the SRD defaults named in the
+- Monster spellcasting, Multiattack, recharge, legendary action budgets and legendary
+  resistances (all text on the NPC sheet).
+- Multiclassing, feats, subclasses other than the SRD defaults named in the
   class features, the Half-Elf's skill choices and the free language picks.

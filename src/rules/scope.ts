@@ -110,6 +110,9 @@ export function characterScope(c: Character, pack: LoadedPack): Scope {
       if (root === 'name' && path.length === 1) return c.name
       if (root === 'armor') return path.length === 1 ? totalArmor(data, pack) : undefined
       if (root === 'weapon') return getPath(equippedWeapon(data, pack), path.slice(1))
+      // A stored attribute the pack declares but this sheet predates (added in a later pack
+      // version) reads as 0 plus its condition modifiers, so derived formulas can rely on it.
+      if (path.length === 1 && attrIds.has(root)) return conditionModifier(data, pack, root)
       return undefined
     }
     if (attrIds.has(root) && typeof v === 'number' && (path.length === 1 || (path.length === 2 && path[1] === 'current')))

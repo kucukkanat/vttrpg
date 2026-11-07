@@ -25,6 +25,14 @@ Paths in `pack.json` are relative to the pack folder. `loadPack('packs/mausritte
 `pack.json`, then every listed file, validates the shapes and parses every expression, so a
 typo in a formula fails at load time rather than mid-session.
 
+Optional files this pack does not use (see `packs/dnd5e/README.md` for a pack that does):
+`files.sheets` maps extra sheet layout ids to files (a character picks one with its `sheet`
+field), `files.creatureActions` holds templates that turn stat-block actions into skills,
+`files.encounter` an XP budget for the encounter difficulty meter, and a top-level `creatures`
+section lists compendium snapshots fetched on demand. Without `creatures`, the GM's NPC generator
+and encounters roll NPCs with `chargen.json` as before. A stored attribute the pack declares but a
+sheet lacks reads as 0, so a pack update can add attributes without breaking older sheets.
+
 ### Resolution
 
 ```json

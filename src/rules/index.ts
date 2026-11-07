@@ -3,7 +3,7 @@
  */
 import type { Character, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
-import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, SheetSchema, SkillDef, ChargenSchema, VfxCue } from '@/core/pack'
+import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, SheetSchema, SkillDef, ChargenSchema, VfxCue, CreatureActionTemplates, EncounterRules } from '@/core/pack'
 
 export interface LoadedPack {
   manifest: PackManifest
@@ -13,6 +13,12 @@ export interface LoadedPack {
   sheet: SheetSchema
   skills: SkillDef[]
   chargen?: ChargenSchema
+  /** Extra sheet layouts by id (`files.sheets`). */
+  sheets?: Record<string, SheetSchema>
+  creatureActions?: CreatureActionTemplates
+  encounter?: EncounterRules
+  /** Folder the pack was loaded from, for files fetched later (creature snapshots). */
+  baseUrl?: string
 }
 
 export interface RulesEngine {
@@ -53,5 +59,7 @@ export { loadPack, createRulesEngine, BUILTIN_PACKS } from './impl'
 export { guardSkill, PackError } from './load'
 /** Parse a DSL expression; throws `ExprError` with a message on syntax errors. */
 export { parse as parseExpression, ExprError } from './expr'
+export { sheetFor, loadCreatures, compileActionSkills, creatureSkillPrefix } from './creatures'
+export type { CreatureCompendium } from './creatures'
 export { SheetView } from './SheetView'
 export type { SheetViewProps } from './SheetView'

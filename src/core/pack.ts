@@ -27,7 +27,109 @@ export interface PackManifest {
     sheet: string
     chargen?: string
     skills?: string[]
+    /** Further sheet layouts by id (e.g. `npc`), chosen per character by `Character.sheet`. */
+    sheets?: Record<string, string>
+    /** Templates that turn stat-block actions into skills (`CreatureActionTemplates`). */
+    creatureActions?: string
+    /** Encounter difficulty budget (`EncounterRules`). */
+    encounter?: string
   }
+  /** Creature compendium; its snapshot files are fetched only when the GM opens the browser. */
+  creatures?: CreatureConfig
+}
+
+/**
+ * Where the pack keeps creatures and which sheet keys mean what, so the encounter builder can
+ * apply overrides and budgets without knowing the system. Paths are dotted sheet-data paths.
+ */
+export interface CreatureConfig {
+  /** Compendium snapshots (`CreatureFile`), relative to the pack folder. */
+  files: string[]
+  /** Sheet layout id (a key of `files.sheets`) creature characters use. */
+  sheet?: string
+  /** Resource holding hit points (`{ current, max }`). */
+  hp: string
+  /** Dice formula string for rolled hit points, e.g. `hp_dice`. */
+  hpFormula?: string
+  /** Number the AC override writes. */
+  ac?: string
+  /** Experience value used by the difficulty meter. */
+  xp?: string
+  /** Challenge rating (number) and its display text, for the browser's filter and list. */
+  cr?: string
+  crText?: string
+  /** Text field the encounter row's notes are written into. */
+  notes?: string
+}
+
+/** One compendium creature: search fields plus sheet data in the pack's creature layout. */
+export interface CreatureEntry {
+  /** Stable id within the pack, e.g. `srd-2024_goblin-warrior`. */
+  key: string
+  name: string
+  /** Document key of the source (`srd-2024`); its licence and attribution are in the file header. */
+  source: string
+  cr?: number
+  xp?: number
+  type?: string
+  size?: string
+  data: Record<string, unknown>
+}
+
+export interface CreatureDocument {
+  key: string
+  name: string
+  /** Short name for lists, e.g. "SRD 5.2.1". */
+  title?: string
+  license: string
+  attribution: string
+  url?: string
+  via?: string
+}
+
+export interface CreatureFile {
+  document: CreatureDocument
+  creatures: CreatureEntry[]
+}
+
+/**
+ * Templates that compile a creature's stat-block actions into ordinary skills, so monsters use the
+ * same targeting, VFX and outcome flow as characters. `list` is the sheet list holding the actions
+ * and `kindField` the item field naming a template. In template strings `$.` becomes the action's
+ * data path (`actions.2.`) so rolls read the live sheet, and `${field}` / `${field|default}` the
+ * field's value at compile time (ability ids, ranges). Actions without a matching template, or
+ * missing a `requires` field, stay text on the sheet.
+ */
+export interface CreatureActionTemplates {
+  list: string
+  kindField: string
+  templates: Record<string, CreatureActionTemplate>
+}
+
+export interface CreatureActionTemplate {
+  requires?: string[]
+  icon?: string
+  /** Shape with numbers or `${...}` strings; numeric strings become numbers after substitution. */
+  target: Record<string, unknown>
+  cost?: { resource: string; amount: string }[]
+  effects: Effect[]
+  vfx: VfxCue[]
+}
+
+/**
+ * Encounter difficulty as data: per-character XP budgets by level for each band, the character
+ * field holding a level and the creature field holding XP. The engine only adds numbers up.
+ */
+export interface EncounterRules {
+  /** Where the table comes from, shown under the meter. */
+  source: string
+  /** Sheet path of a character's level. */
+  level: string
+  /** Sheet path of a creature's XP. */
+  xp: string
+  bands: { id: string; name: string }[]
+  /** Level (as a string key) to one budget per band, in `bands` order. */
+  budget: Record<string, number[]>
 }
 
 export type RollResolution =
@@ -118,6 +220,11 @@ export interface SkillDef {
   target: TargetShape
   effects: Effect[]
   vfx: VfxCue[]
+  /**
+   * Only tokens whose `skills` list names it have it (compiled stat-block actions): it is left out
+   * of the implicit every-skill list and the add-skill picker.
+   */
+  onlyListed?: boolean
 }
 
 export interface ChargenStep {
