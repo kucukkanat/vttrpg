@@ -116,7 +116,55 @@ export interface Character {
   name: string
   owner?: PlayerPubkey
   portrait?: AssetRef
+  /** Which of the pack's sheet layouts renders it (`PackManifest.files.sheets`); absent = the main sheet. */
+  sheet?: string
   data: Record<string, unknown>
+}
+
+/**
+ * A creature stat block owned by this game: a copy of a compendium entry the GM edited (a
+ * reskinned goblin) or a homebrew monster. Placing it gives every token its own `Character` copy.
+ */
+export interface CreatureTemplate {
+  id: string
+  name: string
+  /** Compendium key it was copied from (`CreatureEntry.key`); absent for homebrew. */
+  from?: string
+  /** Document key of the original's source, kept for attribution. */
+  source?: string
+  /** Sheet data in the pack's creature layout. */
+  data: Record<string, unknown>
+  updatedAt: number
+}
+
+/** One row of an encounter: N of a creature, with per-row tweaks. */
+export interface EncounterRow {
+  id: string
+  /** `pack:<compendium key>` or `game:<template id>`; absent = a plain mini (or a chargen sheet). */
+  creatureRef?: string
+  count: number
+  color: string
+  /** Values written over the stat block on placement; `name` also names plain minis. */
+  overrides?: { name?: string; ac?: number; hp?: number; notes?: string }
+  /** Hit points from the stat block's average or rolled from its hit dice, per token. */
+  hpMode?: 'average' | 'roll'
+  /** Allies of the party: placed like the rest, left out of the difficulty budget. */
+  friendly?: boolean
+  /** Rows without a creature: roll a character sheet for each token with the pack's chargen. */
+  generateSheet?: boolean
+}
+
+/** A prepared fight. Lives in the shared document so it follows the GM across devices. */
+export interface Encounter {
+  id: string
+  name: string
+  rows: EncounterRow[]
+  /** Tokens created by the last Place, so Reveal / Hide / Remove act on exactly those. */
+  placed: TokenId[]
+  /** Party for the difficulty meter when set by hand; otherwise the players' claimed sheets. */
+  party?: { size: number; level: number }
+  /** When it was created; the Prep list is in this order. */
+  createdAt?: number
 }
 
 export interface ChatMessage {
@@ -214,6 +262,10 @@ export interface GameDocShape {
   customSkills: Record<SkillId, SkillDef>
   /** Turn order; optional so documents from before the tracker existed still fit. */
   initiative?: InitiativeState
+  /** Game-level creature templates (edited stat blocks, homebrew), keyed by id. GM data. */
+  creatures?: Record<string, CreatureTemplate>
+  /** Prepared encounters, keyed by id. GM data (see ARCHITECTURE.md on what players can read). */
+  encounters?: Record<string, Encounter>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'creatures', 'encounters'] as const

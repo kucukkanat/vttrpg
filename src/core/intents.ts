@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry } from './doc'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, CreatureTemplate, Encounter } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -64,6 +64,11 @@ export type Intent =
   | { type: 'initiative.next'; token?: TokenId }
   | { type: 'initiative.remove'; token: TokenId }
   | { type: 'initiative.end' }
+  /** Game creature templates and encounters (GM only). */
+  | { type: 'creature.upsert'; creature: CreatureTemplate }
+  | { type: 'creature.remove'; creature: string }
+  | { type: 'encounter.upsert'; encounter: Encounter }
+  | { type: 'encounter.remove'; encounter: string }
 
 export interface IntentEnvelope {
   id: string

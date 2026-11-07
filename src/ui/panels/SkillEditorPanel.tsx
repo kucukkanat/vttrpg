@@ -95,7 +95,8 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
 
   const pack = rules?.pack ?? null
   const packSkillIds = useMemo(() => new Set((pack?.skills ?? []).map((s) => s.id as string)), [pack])
-  const customList = useMemo(() => Object.values(custom).sort((a, b) => a.name.localeCompare(b.name)), [custom])
+  // Creature actions compiled from stat blocks are custom skills too, but they belong to the creature's tokens.
+  const customList = useMemo(() => Object.values(custom).filter((s) => !s.onlyListed).sort((a, b) => a.name.localeCompare(b.name)), [custom])
   const takenIds = useMemo(() => new Set([...packSkillIds, ...Object.keys(custom)]), [packSkillIds, custom])
 
   const validation = useMemo(() => (view.kind === 'edit' ? validateForm(view.form, pack) : null), [view, pack])

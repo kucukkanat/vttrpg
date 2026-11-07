@@ -136,3 +136,14 @@ describe('undo stack', () => {
     expect(useUndo.getState().stack).toHaveLength(0)
   })
 })
+
+describe('undo for encounters and creature templates', () => {
+  it('brings a deleted encounter or stat block back', () => {
+    const encounter = { id: 'e1', name: 'Ambush', rows: [], placed: [] }
+    const creature = { id: 'c1', name: 'Swamp Goblin', data: {}, updatedAt: 1 }
+    const s = snapshot({ encounters: { e1: encounter }, creatures: { c1: creature } })
+    expect(captureUndo({ type: 'encounter.remove', encounter: 'e1' }, s, 9)).toEqual({ label: 'Deleted Ambush', subject: 'Ambush', inverse: [{ type: 'encounter.upsert', encounter }], at: 9 })
+    expect(captureUndo({ type: 'creature.remove', creature: 'c1' }, s)?.inverse).toEqual([{ type: 'creature.upsert', creature }])
+    expect(captureUndo({ type: 'encounter.remove', encounter: 'gone' }, s)).toBeNull()
+  })
+})

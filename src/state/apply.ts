@@ -3,7 +3,7 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
@@ -133,6 +133,8 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const notes = doc.getMap<Note>('notes')
   const customSkills = doc.getMap<SkillDef>('customSkills')
   const initiative = doc.getMap<unknown>('initiative')
+  const creatures = doc.getMap<CreatureTemplate>('creatures')
+  const encounters = doc.getMap<Encounter>('encounters')
 
   doc.transact(() => {
     switch (intent.type) {
@@ -310,6 +312,18 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       }
       case 'initiative.end':
         writeInitiative(initiative, EMPTY_INITIATIVE)
+        break
+      case 'creature.upsert':
+        creatures.set(intent.creature.id, intent.creature)
+        break
+      case 'creature.remove':
+        creatures.delete(intent.creature)
+        break
+      case 'encounter.upsert':
+        encounters.set(intent.encounter.id, intent.encounter)
+        break
+      case 'encounter.remove':
+        encounters.delete(intent.encounter)
         break
     }
   }, from)

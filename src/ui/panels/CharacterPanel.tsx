@@ -1,18 +1,13 @@
 import { useState } from 'react'
 import type { GameController } from '../controller'
 import { useEffectiveToken, useGame } from '@/state/store'
-import { SheetView } from '@/rules'
+import { SheetView, sheetFor } from '@/rules'
 import { newSeed } from '@/dice'
 import type { Character } from '@/core/doc'
 import type { CharacterId } from '@/core/ids'
 import { CharacterCard } from './CharacterCard'
 import { loadSheetMode, saveSheetMode, type SheetMode } from './sheetCard'
-
-function setPath(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
-  const [head, ...rest] = path.split('.')
-  const next = rest.length ? setPath(((obj[head] as Record<string, unknown>) ?? {}), rest.join('.'), value) : value
-  return { ...obj, [head]: next }
-}
+import { setDataPath } from '../sheetEdit'
 
 export function CharacterPanel({ controller }: { controller: GameController }) {
   // The selected token, else the player's own: the sheet stays available when nothing is selected.
@@ -65,12 +60,12 @@ export function CharacterPanel({ controller }: { controller: GameController }) {
         <CharacterCard rules={rules} character={character} token={token} assets={controller.assets} onRoll={roll} />
       ) : (
         <SheetView
-          schema={rules.pack.sheet}
+          schema={sheetFor(rules.pack, character)}
           character={character}
           readOnly={!canEdit}
           compute={(expr) => rules.evaluateNow(expr, character)}
           onChange={(path, value) => {
-            const next: Character = path === 'name' ? { ...character, name: String(value) } : { ...character, data: setPath(character.data, path, value) }
+            const next: Character = path === 'name' ? { ...character, name: String(value) } : { ...character, data: setDataPath(character.data, path, value) }
             void controller.dispatch({ type: 'character.upsert', character: next })
           }}
           onRoll={roll}

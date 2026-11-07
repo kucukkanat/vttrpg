@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 import type * as Y from 'yjs'
-import type { Character, ChatMessage, FogState, GameEvent, GameMeta, InitiativeState, Note, Prop, Scene, Token } from '@/core/doc'
+import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, Prop, Scene, Token } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
@@ -43,6 +43,10 @@ export interface GameState {
   customSkills: Record<SkillId, SkillDef>
   /** Turn order; null until the GM has started initiative once (then `active` says whether it is running). */
   initiative: InitiativeState | null
+  /** Game creature templates (edited or homebrew stat blocks). */
+  creatures: Record<string, CreatureTemplate>
+  /** Prepared encounters. */
+  encounters: Record<string, Encounter>
   presence: Record<string, Presence>
   notices: LocalNotice[]
   pushNotice(text: string, at?: number): LocalNotice
@@ -61,7 +65,7 @@ export interface GameState {
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'creatures' | 'encounters'>>): void
 }
 
 let noticeSeq = 0
@@ -78,6 +82,8 @@ export const useGame = create<GameState>((set) => ({
   notes: {} as Record<NoteId, Note>,
   customSkills: {} as Record<SkillId, SkillDef>,
   initiative: null,
+  creatures: {},
+  encounters: {},
   presence: {},
   notices: [],
   pushNotice: (text, at = Date.now()) => {
@@ -177,6 +183,8 @@ export function bindDoc(doc: Y.Doc): () => void {
       notes: doc.getMap('notes').toJSON() as Record<NoteId, Note>,
       customSkills: doc.getMap('customSkills').toJSON() as Record<SkillId, SkillDef>,
       initiative: readInitiative(doc),
+      creatures: doc.getMap('creatures').toJSON() as Record<string, CreatureTemplate>,
+      encounters: doc.getMap('encounters').toJSON() as Record<string, Encounter>,
     })
   }
   sync()

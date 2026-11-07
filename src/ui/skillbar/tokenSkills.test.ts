@@ -21,4 +21,11 @@ describe('token skills', () => {
     expect(missingSkills({ skills: ['heal'] }, all).map((s) => s.id)).toEqual(['attack', 'fireball'])
     expect(missingSkills({}, all)).toEqual([])
   })
+  it('keeps listed-only skills (creature actions) to the tokens that name them', () => {
+    const bite = { ...skill('creature:wolf:0'), onlyListed: true } as SkillDef
+    const withBite = [...all, bite]
+    expect(tokenSkillIds({}, withBite)).toEqual(['attack', 'heal', 'fireball'])
+    expect(tokenSkillIds({ skills: ['creature:wolf:0'] }, withBite)).toEqual(['creature:wolf:0'])
+    expect(missingSkills({ skills: [] }, withBite).map((s) => s.id)).toEqual(['attack', 'heal', 'fireball'])
+  })
 })
