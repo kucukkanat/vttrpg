@@ -269,11 +269,31 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `G` / `F` / `T` / `M` | grid / first person / top-down / ruler (table) |
 | `Q` / `E` | turn the top-down view 45° |
 | `Enter` | cast the staged aim |
-| `Delete` / `Backspace` | remove the selected prop (GM) |
-| `Z` | Zen |
+| `Delete` / `Backspace` | remove the selected props (GM, one undo step) |
+| `Z` | Zen (with props selected in Build or edit mode it constrains to Z instead) |
 | `i` | on a focused skill chip: pin its tooltip |
 
 The shell never binds a key the table uses.
+
+Build keys, with props selected in Build or edit mode (GM; `table/build/transformKeys.ts`):
+
+| Key | Action |
+|---|---|
+| Shift-click / drag on empty board | add or drop a prop / box select (mouse; Shift adds, Alt-drag orbits) |
+| `Tab` | cycle move, turn, scale (the gizmo highlights it) |
+| `X` / `Y` / `Z`, a number, `Enter` | move metres, turn degrees or scale along that axis; `Esc` cancels; expressions such as `1.5*2` work |
+| `R` / `Shift+R` | turn 15° / 90° about the selection's centre |
+| `End` | drop onto the surface below |
+| `A` | advanced gizmo (3-axis rings, per-axis scale, local or world axes, numeric inspector in Details) |
+| `Cmd/Ctrl+C` / `V` / `D` | copy / paste under the pointer / duplicate one cell over; Alt-drag duplicates |
+| `Esc` | let go of the props |
+
+The simple gizmo is a turn ring on the floor (15°, Shift 90°), a height arrow and a uniform scale
+cube; dragging a prop moves the selection (half cells, Alt free). Every transform is one
+`props.update`, so one undo step. On touch: tap selects, drag moves, two-finger twist and pinch
+turn and scale when the first finger is on the selection, and a long-press opens Duplicate, Turn,
+Drop to surface, Edit and Delete. Copied props also go to the system clipboard as `vttprops:` text,
+which pastes into another scene or game.
 
 ## Play flows on touch and feedback
 
