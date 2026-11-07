@@ -1,9 +1,9 @@
 /**
  * The pieces of the table layout around the board (docs/UX.md "Table layout"): the one paper card,
- * the scroll (chat), the dice well, the GM screen's plaque (Play / Build), the presence row, the
+ * the scroll (chat), the dice well, the GM screen's plaque (the GM drawer), the presence row, the
  * bell and the combat control. Each reads `useTableLayout` and hosts registry panels through
- * PanelHost, so the panels themselves do not know where they are. The Build workspace is
- * `src/ui/build/`.
+ * PanelHost, so the panels themselves do not know where they are. The GM's Library and Inspector
+ * are GmHosts.tsx.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GameController } from '../controller'
@@ -11,7 +11,7 @@ import type { ChatMessage } from '@/core/doc'
 import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
 import { PanelHost } from './PanelHost'
-import { setTableMode, useTableLayout, type TableMode } from './tableLayout'
+import { useTableLayout } from './tableLayout'
 import { DicePad, WellReadout } from './Hud'
 import { isTypingTarget } from './useShortcuts'
 import { useAttention, handleAttention } from '../attention'
@@ -130,49 +130,20 @@ export function DiceWell({ dice, roll, who, compact = false }: { dice: ReactNode
   )
 }
 
-const MODES: { id: TableMode; label: string; hint: string }[] = [
-  { id: 'play', label: 'Play', hint: 'Run the table: the board, the hand and the GM drawer' },
-  { id: 'build', label: 'Build', hint: 'Make the world: the Library, the Inspector, the tools and the scene bar' },
-]
-
-export { setTableMode }
-
 /**
- * The GM screen's plaque (bottom left): the mode and a live line (sounds playing, the round).
- * Build mounts the Build workspace around the board (GameShell).
+ * The GM screen's plaque (bottom left): the GM drawer and a live line (sounds playing, the round).
+ * There are no modes: the Library on the left edge changes the world at any moment.
  */
 export function GmScreen({ live, onLive, drawer }: { live: string; onLive(): void; drawer?: ReactNode }) {
-  const mode = useTableLayout((s) => s.mode)
   return (
-    <div className={`t-plaque t-plaque--${mode}`} role="group" aria-label="GM screen">
+    <div className="t-plaque" role="group" aria-label="GM screen">
       <div className="t-plaque-head">
         <strong>GM screen</strong>
-        <span className="t-plaque-state">{mode === 'play' ? 'play' : 'build'}</span>
       </div>
       <div className="t-plaque-row">
-        <div className="t-modes" role="radiogroup" aria-label="Mode">
-          {MODES.map((m) => (
-            <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
-          ))}
-        </div>
-        {mode !== 'build' && drawer}
+        {drawer}
+        {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
       </div>
-      {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
-    </div>
-  )
-}
-
-/** The phone version of the GM screen in Play: the mode switch. */
-export function GmScreenSheet() {
-  const mode = useTableLayout((s) => s.mode)
-  return (
-    <div className="t-screen-sheet">
-      <div className="t-modes" role="radiogroup" aria-label="Mode">
-        {MODES.map((m) => (
-          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} onClick={() => setTableMode(m.id)}>{m.label}</button>
-        ))}
-      </div>
-      <p className="muted small">Play runs the table. Build makes the world: the Library, the Inspector, the tools and the scene; the bar below changes to them.</p>
     </div>
   )
 }

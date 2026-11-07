@@ -1,10 +1,10 @@
 /**
- * What the Build Inspector shows: one context at a time. A selection wins over the active tool,
- * and the tool over the scene, which shows when nothing is selected and no tool is out.
+ * What the GM's Inspector shows: one context at a time, or nothing. A selection wins over the
+ * tool in hand; with nothing selected and no kit or creatures in hand there is no Inspector at all
+ * (the scene's settings open from the scene title instead).
  */
 import type { Selection } from '@/state/store'
 import type { BuildTool } from '@/table/build/buildState'
-import { stripToolOf, type StripTool } from './buildTools'
 
 export type InspectorContext =
   | { kind: 'prop' }
@@ -12,10 +12,10 @@ export type InspectorContext =
   | { kind: 'token' }
   /** A named part of the scene model, picked in edit mode. */
   | { kind: 'node' }
-  | { kind: 'tool'; tool: Exclude<StripTool, 'select'> }
+  /** A kit card is in hand: the paint options. */
+  | { kind: 'paint' }
   /** Creatures from the Library in hand: where and how they land. */
   | { kind: 'creature' }
-  | { kind: 'scene' }
 
 export interface InspectorInput {
   selection: Selection | null
@@ -24,15 +24,14 @@ export interface InspectorInput {
   tool: BuildTool | null
 }
 
-export function inspectorContext({ selection, propCount, selectedToken, tool }: InspectorInput): InspectorContext {
+export function inspectorContext({ selection, propCount, selectedToken, tool }: InspectorInput): InspectorContext | null {
   if (propCount > 1) return { kind: 'props', count: propCount }
   if (propCount === 1) return { kind: 'prop' }
   if (selectedToken || selection?.kind === 'token') return { kind: 'token' }
   if (selection?.kind === 'node') return { kind: 'node' }
+  if (tool === 'kit') return { kind: 'paint' }
   if (tool === 'creature') return { kind: 'creature' }
-  const strip = stripToolOf(tool)
-  if (strip !== 'select') return { kind: 'tool', tool: strip }
-  return { kind: 'scene' }
+  return null
 }
 
 /** The Inspector's heading for a context. */
@@ -42,8 +41,7 @@ export function contextTitle(c: InspectorContext): string {
     case 'props': return `${c.count} props`
     case 'token': return 'Token'
     case 'node': return 'Scene part'
-    case 'tool': return c.tool === 'paint' ? 'Paint' : c.tool === 'walls' ? 'Walls' : c.tool === 'light' ? 'Light' : 'Fog'
+    case 'paint': return 'Paint'
     case 'creature': return 'Placing creatures'
-    case 'scene': return 'Scene'
   }
 }

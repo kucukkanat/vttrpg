@@ -24,3 +24,9 @@
 
 /* Rename in place (GM). */
 .scene-rename { flex: 1; min-width: 0; min-height: 32px; padding: 2px 6px; }
+
+/* The GM's scene card (SceneSwitcher.tsx): the switcher over the live scene's settings. */
+.scene-card { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.scene-card > .panel { overflow: visible; }
+.scene-card-settings { display: flex; flex-direction: column; gap: var(--sp-2); border-top: 1px solid var(--border); }
+.scene-card-head { margin: 0; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }

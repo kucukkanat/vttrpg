@@ -1,6 +1,6 @@
 /**
  * Panels the game screen can show. The shell decides placement (shell/tableLayout.ts `routePanel`:
- * the scroll, the one card, or the Build workspace for the GM; sheets on phones). Add a panel here and
+ * the scroll, the one card, or the Library dock for the GM; sheets on phones). Add a panel here and
  * it is reachable everywhere, including the command palette.
  */
 import { createElement, lazy, Suspense, type ComponentType } from 'react'
@@ -69,5 +69,5 @@ export const PANELS: PanelDef[] = [
   { id: 'tables', title: 'Random tables', short: 'Tables', glyph: 'dice', component: RandomTablesPanel, scope: 'gm' },
   { id: 'npc', title: 'NPC', short: 'NPC', glyph: 'pawn', component: NpcCard, scope: 'gm' },
   { id: 'encounters', title: 'Encounters', short: 'Encounters', glyph: 'swords', component: EncounterRun, scope: 'gm' },
-  { id: 'scene-switcher', title: 'Scenes', short: 'Switch scene', glyph: 'map', component: SceneSwitcher, scope: 'gm' },
+  { id: 'scene-switcher', title: 'Scene', short: 'Scene: switch, add, settings', glyph: 'map', component: SceneSwitcher, scope: 'gm' },
 ]

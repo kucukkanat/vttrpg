@@ -1,7 +1,7 @@
 /**
  * Edit bar: shown over the bottom of the table while edit mode is on (double tap on a token or prop,
- * or "Edit" in its menu), and in Build while props are selected (there without Details: the Build
- * Inspector shows them). Names what is being edited, toggles
+ * or "Edit" in its menu), and while props are selected with the Edit toggle on (there without
+ * Details: the Inspector shows them). Names what is being edited, toggles
  * snapping, cycles the prop gizmo's mode (like Tab), toggles the advanced prop gizmo (like A; with
  * world or local axes), and opens "Details" with the numeric editors (size, model, solid, hide a
  * room part…; in advanced mode the prop inspector with expressions).
@@ -38,7 +38,7 @@ export function EditBar({ controller }: { controller: GameController }) {
   const space = useTableUi((s) => s.gizmoSpace)
   const gizmoMode = useTableUi((s) => s.gizmoMode)
   const props = useGame((s) => s.propSelection.length > 0)
-  // In Build the Inspector holds the details; the bar keeps snap, the gizmo mode and Done.
+  // With Edit on the Inspector holds the details; the bar keeps snap, the gizmo mode and Deselect.
   const building = useTableUi((s) => s.buildMode)
   // Phones get no advanced mode.
   const phone = useBreakpoint() === 'phone'

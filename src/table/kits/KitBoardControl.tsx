@@ -1,5 +1,5 @@
 /**
- * The GM's small level control on the board: the level being built (up, down; PgUp / PgDn do the
+ * The GM's small level control on the board: the level being worked on (up, down; PgUp / PgDn do the
  * same) and the cutaway (follow the selected token, or cut at the build level). Shown once the
  * scene has storeys or a kit tool is out. HTML, over the canvas.
  */
@@ -28,9 +28,9 @@ export function KitBoardControl({ kit }: { kit: KitScene }) {
   const cutLabel = kit.cut === Infinity ? 'all' : `≤ ${kit.cut}`
   return (
     <div style={box} role="group" aria-label="Levels" data-testid="kit-levels">
-      <button type="button" style={btn} title="Build one level up (PgUp)" aria-label="Level up" onClick={() => stepLevel(1)}>▲</button>
+      <button type="button" style={btn} title="One level up (PgUp)" aria-label="Level up" onClick={() => stepLevel(1)}>▲</button>
       <div style={{ textAlign: 'center', padding: '2px 0' }} aria-live="polite">Level {level}</div>
-      <button type="button" style={btn} title="Build one level down (PgDn)" aria-label="Level down" onClick={() => stepLevel(-1)} disabled={level === 0}>▼</button>
+      <button type="button" style={btn} title="One level down (PgDn)" aria-label="Level down" onClick={() => stepLevel(-1)} disabled={level === 0}>▼</button>
       <button type="button" style={{ ...btn, marginTop: 4, background: cutaway !== null ? 'rgba(124,196,255,0.25)' : btn.background }}
         title={cutaway === null ? 'Cutaway follows the selected token; tap to cut at the build level' : 'Cutaway set by hand; tap to follow the selected token again'}
         aria-pressed={cutaway !== null}

@@ -1,5 +1,5 @@
 /**
- * Tokens card (players; the GM's tokens are the Build Library's "In this scene" filter and the
+ * Tokens card (players; the GM's tokens are the Library's "In this scene" filter and the
  * Inspector): the list (with a filter once it gets long), claiming, and the token editor on the
  * player's own tokens. Rotation, elevation and the model live in edit mode's Details; the row's
  * pencil and "Edit rotation and model" send the selection there.
@@ -122,7 +122,7 @@ function TokenProps({ controller, token, onEdit }: { controller: GameController;
       </div>
     )
   }
-  // The same editor as the Build Inspector's token context.
+  // The same editor as the Inspector's token context.
   return (
     <div className="props">
       <TokenEditor controller={controller} token={token} />

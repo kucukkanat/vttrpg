@@ -1,126 +1,96 @@
 /**
  * The table layout's own state (docs/UX.md "Table layout"). The board fills the screen; around it:
  *
- *   - the GM screen (bottom left, GM only): Play / Build. Build opens the Build workspace (the
- *     scene bar, the Library dock, the Inspector dock and the tool strip; `src/ui/build/`).
+ *   - the GM screen (bottom left, GM only): the GM drawer and the live line
+ *   - the Library dock (left edge, GM only): folded to a slim rail, or open on a shelf
+ *   - the Inspector (right, GM only): shown while something is selected (src/ui/build/)
  *   - one paper card at a time (character, journal, players, initiative, sound, skills…)
  *   - the scroll (chat) on the right edge, rolled up or open
  *   - the command palette (Ctrl/⌘-K) and the bell (things waiting for you)
  *
+ * There is one mode: the GM runs the table and changes the world from the Library at any moment.
  * `routePanel` decides where a registry panel opens, so `openPanel(id)` (shortcuts, toasts,
  * panels asking for each other) needs no knowledge of the layout. UI-only; never synced, except
- * the Build docks' fold state, which is remembered per device.
+ * whether the Library dock is open, which is remembered per device.
  */
 import { create } from 'zustand'
-import { useGame } from '@/state/store'
-import { useBuildUi } from '@/table/build/buildState'
-import { useKitUi } from '@/table/kits/kitState'
 import { useLibraryView, type LibraryFilter, type LibraryShelf } from '../library/libraryView'
-
-/** Play is running the table; Build is making the world. */
-export type TableMode = 'play' | 'build'
-
-/**
- * Any mode value, old or new, as a mode. Prep is gone: its scenes, creatures and encounters moved
- * into Build, so a stored or in-memory 'prep' opens Build.
- */
-export function normalizeMode(mode: unknown): TableMode {
-  return mode === 'build' || mode === 'prep' ? 'build' : 'play'
-}
 
 export type PanelRoute =
   | { kind: 'scroll' }
   | { kind: 'card'; id: string }
-  /** The Build workspace: the Library on a shelf (and filter), or the Inspector on the scene. */
-  | { kind: 'build'; shelf?: LibraryShelf; filter?: LibraryFilter; inspector?: 'scene' }
+  /** The GM's Library dock, on a shelf (and filter). */
+  | { kind: 'library'; shelf?: LibraryShelf; filter?: LibraryFilter }
 
 /**
  * Where a panel opens. Chat is the scroll for everyone. For the GM, the things that add to the
- * world open the Build Library on their shelf (models, kit, creatures for the old Prep, the
- * scene's tokens as the in-scene outliner), and 'build' opens the Inspector on the scene;
- * everything else is the one card. Players have no Build, so every panel is a card for them.
+ * world open the Library on their shelf (models, kit, creatures for the old Prep, the scene's
+ * tokens as the in-scene outliner; the old Build opens it as it stands); everything else is the
+ * one card. Players have no Library dock, so every panel is a card for them.
  */
 export function routePanel(id: string, isGm: boolean): PanelRoute {
   if (id === 'chat') return { kind: 'scroll' }
   if (!isGm) return { kind: 'card', id }
   switch (id) {
-    case 'library': return { kind: 'build', shelf: 'models' }
-    case 'kit': return { kind: 'build', shelf: 'kit' }
-    case 'prep': return { kind: 'build', shelf: 'creatures' }
-    case 'tokens': return { kind: 'build', filter: 'in-scene' }
-    case 'build': return { kind: 'build', inspector: 'scene' }
+    case 'library': return { kind: 'library', shelf: 'models' }
+    case 'kit': return { kind: 'library', shelf: 'kit' }
+    case 'prep': return { kind: 'library', shelf: 'creatures' }
+    case 'tokens': return { kind: 'library', filter: 'in-scene' }
+    case 'build': return { kind: 'library' }
     default: return { kind: 'card', id }
   }
 }
 
-/** The Build docks' fold state, per device. */
-export interface BuildFolds {
-  buildLibraryOpen: boolean
-  buildInspectorOpen: boolean
-}
+export const LIBRARY_DOCK_KEY = 'vtt.library.dock'
 
-export const BUILD_FOLDS_KEY = 'vtt.build.docks'
-/**
- * First visit: the Inspector open, the Library folded to its rail (the Library's own controls
- * would put an idle Build over its control budget). Asking for anything the Library holds opens it.
- */
-const DEFAULT_FOLDS: BuildFolds = { buildLibraryOpen: false, buildInspectorOpen: true }
-
-/** The stored fold state (the defaults when nothing, or something unreadable, is stored). */
-export function readBuildFolds(raw: string | null): BuildFolds {
-  if (!raw) return { ...DEFAULT_FOLDS }
+/** Whether the stored dock state says open; a first visit (or anything unreadable) starts folded. */
+export function readLibraryOpen(raw: string | null): boolean {
+  if (!raw) return false
   try {
-    const v = JSON.parse(raw) as Partial<Record<keyof BuildFolds, unknown>>
-    return {
-      buildLibraryOpen: typeof v.buildLibraryOpen === 'boolean' ? v.buildLibraryOpen : DEFAULT_FOLDS.buildLibraryOpen,
-      buildInspectorOpen: typeof v.buildInspectorOpen === 'boolean' ? v.buildInspectorOpen : DEFAULT_FOLDS.buildInspectorOpen,
-    }
+    const v = JSON.parse(raw) as { open?: unknown } | null
+    return typeof v?.open === 'boolean' ? v.open : false
   } catch {
-    return { ...DEFAULT_FOLDS }
+    return false
   }
 }
 
-function loadFolds(): BuildFolds {
-  try { return readBuildFolds(localStorage.getItem(BUILD_FOLDS_KEY)) } catch { return { ...DEFAULT_FOLDS } }
+function loadLibraryOpen(): boolean {
+  try { return readLibraryOpen(localStorage.getItem(LIBRARY_DOCK_KEY)) } catch { return false }
 }
-function saveFolds(f: BuildFolds) {
-  try { localStorage.setItem(BUILD_FOLDS_KEY, JSON.stringify(f)) } catch { /* private mode, quota */ }
+function saveLibraryOpen(open: boolean) {
+  try { localStorage.setItem(LIBRARY_DOCK_KEY, JSON.stringify({ open })) } catch { /* private mode, quota */ }
 }
 
 /**
- * Phones: the bottom bar's own sheets; one sheet at a time. Play: the dice pad, Tools, the GM
- * screen. Build: the Library, the build tools, the Inspector and the scene bar.
+ * Phones: the bottom bar's own sheets; one sheet at a time. The dice pad, Tools (with the GM
+ * drawer), the GM's Library, and the Inspector while something is selected.
  */
-export type PhoneSheet = 'dice' | 'tools' | 'screen' | 'library' | 'inspector' | 'scene'
+export type PhoneSheet = 'dice' | 'tools' | 'library' | 'inspector'
 
-interface TableLayoutState extends BuildFolds {
-  mode: TableMode
+interface TableLayoutState {
   /** The panel shown as the floating card, or null. */
   card: string | null
   scrollOpen: boolean
   palette: boolean
   bell: boolean
   phone: PhoneSheet | null
+  /** The GM's Library dock is open (else folded to its rail); per device. */
+  libraryOpen: boolean
   set(partial: Partial<Omit<TableLayoutState, 'set' | 'open'>>): void
   /** Open a registry panel wherever this layout keeps it; on phones every place is one sheet, so the others close. */
   open(id: string, isGm: boolean, phone?: boolean): void
 }
 
 export const useTableLayout = create<TableLayoutState>((set, get) => ({
-  mode: 'play',
   card: null,
   scrollOpen: false,
   palette: false,
   bell: false,
   phone: null,
-  ...loadFolds(),
+  libraryOpen: loadLibraryOpen(),
   set: (partial) => {
-    const next = 'mode' in partial ? { ...partial, mode: normalizeMode(partial.mode) } : partial
-    set(next)
-    if ('buildLibraryOpen' in partial || 'buildInspectorOpen' in partial) {
-      const s = get()
-      saveFolds({ buildLibraryOpen: s.buildLibraryOpen, buildInspectorOpen: s.buildInspectorOpen })
-    }
+    set(partial)
+    if ('libraryOpen' in partial) saveLibraryOpen(get().libraryOpen)
   },
   open: (id, isGm, phone = false) => {
     const r = routePanel(id, isGm)
@@ -129,21 +99,18 @@ export const useTableLayout = create<TableLayoutState>((set, get) => ({
     const solo = phone ? { scrollOpen: false, card: null, phone: null } : {}
     if (r.kind === 'scroll') s.set({ ...solo, scrollOpen: true })
     else if (r.kind === 'card') s.set({ ...solo, card: id })
-    else if (r.inspector) {
-      showSceneInInspector()
-      s.set({ ...solo, mode: 'build', card: null, buildInspectorOpen: true, ...(phone ? { phone: 'inspector' as const } : {}) })
-    } else {
-      useLibraryView.getState().set({ ...(r.shelf ? { shelf: r.shelf } : {}), filter: r.filter ?? 'all' })
-      s.set({ ...solo, mode: 'build', card: null, buildLibraryOpen: true, ...(phone ? { phone: 'library' as const } : {}) })
-    }
+    else openLibrary(phone, r.shelf, r.filter)
   },
 }))
 
-/** Put the build tool away and let go of the selection, so the Inspector shows the scene. */
-export function showSceneInInspector(): void {
-  useKitUi.getState().set({ tool: null })
-  useBuildUi.getState().set({ tool: null })
-  useGame.getState().setSelection(null)
+/**
+ * Open the GM's Library, on phones as the one sheet. With a shelf or a filter it shows that
+ * (the filter defaults to All); with neither, the shelf and filter stay as they were.
+ */
+export function openLibrary(phone: boolean, shelf?: LibraryShelf, filter?: LibraryFilter): void {
+  if (shelf || filter) useLibraryView.getState().set({ ...(shelf ? { shelf } : {}), filter: filter ?? 'all' })
+  const s = useTableLayout.getState()
+  s.set(phone ? { scrollOpen: false, card: null, phone: 'library' } : { libraryOpen: true })
 }
 
 /** True when the panel is on screen in the current layout state (for unread counters). */
@@ -151,16 +118,4 @@ export function panelShown(s: Pick<TableLayoutState, 'card' | 'scrollOpen'>, id:
   const r = routePanel(id, isGm)
   if (r.kind === 'scroll') return s.scrollOpen
   return s.card === id
-}
-
-/** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
-export function setTableMode(mode: TableMode | 'prep') {
-  const s = useTableLayout.getState()
-  const next = normalizeMode(mode)
-  if (s.mode === next) return
-  if (s.mode === 'build') {
-    useKitUi.getState().set({ tool: null })
-    useBuildUi.getState().set({ tool: null })
-  }
-  s.set({ mode: next, phone: null })
 }

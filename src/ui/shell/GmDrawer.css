@@ -1,12 +1,9 @@
-/* The GM drawer on the plaque (GmDrawer.tsx): a brass button beside Play | Build, and a fan of
+/* The GM drawer on the plaque (GmDrawer.tsx): a brass button beside the live line, and a fan of
    leather tiles rising over the board above the plaque. */
-.t-plaque-row { display: flex; align-items: stretch; gap: var(--sp-2); }
-.t-plaque-row > .t-modes { flex: 1; }
-/* Two modes now: Play and Build. */
-.t-plaque .t-modes, .t-screen-sheet .t-modes { grid-template-columns: repeat(2, 1fr); }
-.t-drawer { display: flex; }
+.t-plaque-row { display: flex; align-items: stretch; gap: var(--sp-2); min-width: 0; }
+.t-drawer { display: flex; flex: none; }
 .t-drawer-btn {
-  position: relative; min-width: 42px; min-height: 38px; padding: 0 var(--sp-2); border-radius: 8px;
+  position: relative; min-width: 42px; min-height: 38px; padding: 0 var(--sp-3); gap: var(--sp-1); border-radius: 8px; font-weight: 700;
   background: rgba(0, 0, 0, .35); border: 1px solid rgba(241, 213, 142, .35); color: #e8d7b0;
 }
 .t-drawer-btn.on, .t-drawer-btn:hover { border-color: var(--brass-hi); color: var(--brass-hi); }

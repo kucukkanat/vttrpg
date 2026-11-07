@@ -9,8 +9,9 @@
  *   the hand      the selected token's card and actions, bottom centre
  *   the scroll    chat on the right edge, rolled up or open
  *   dice well     bottom right; dice roll inside it
- *   GM screen     bottom left (GM): Play | Build and, in Play, the GM drawer; Build adds the
- *                 scene bar, the Library and Inspector docks and the tool strip (src/ui/build/)
+ *   GM screen     bottom left (GM): the GM drawer and the live line
+ *   Library       left edge (GM): a slim rail with the Edit pencil, or the open dock (GmHosts.tsx)
+ *   Inspector     right (GM): a slim card while something is selected
  *   one card      any other panel, one at a time
  *
  * Phones keep the same pieces as a bottom bar and sheets (PhoneBar.tsx). One React tree for every
@@ -45,6 +46,8 @@ import { panelShown, useTableLayout } from './tableLayout'
 import { HeldBar } from '../library/HeldBar'
 import { Bell, CardHost, CombatControl, DiceWell, GmScreen, JournalBook, PresenceRow, Scroll } from './TableChrome'
 import { GmDrawer } from './GmDrawer'
+import { InspectorHost, LibraryHost } from './GmHosts'
+import { useEditMode } from './editMode'
 import { CommandPalette, type PaletteActions } from './CommandPalette'
 import { PhoneBar, PhoneSheets } from './PhoneBar'
 import { Cues } from '../cues'
@@ -61,8 +64,6 @@ import './Table.css'
 // their identity across renders and the canvas is never remounted by a layout change.
 const TableCanvas = lazy(() => import('@/table/TableCanvas').then((m) => ({ default: m.TableCanvas })))
 const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => ({ default: m.DiceTrayOverlay })))
-// The Build workspace is GM-only and used in Build alone: loaded the first time the GM opens Build.
-const BuildWorkspace = lazy(() => import('../build/BuildWorkspace'))
 
 /** Dice in the well: a camera close over a small tray, so a die reads at the well's size. */
 const WELL_ZOOM = 2.4
@@ -96,7 +97,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   usePackTheme(controller.rules?.pack.manifest.theme)
   const keyboard = useKeyboardInset()
   const layout = useTableLayout()
-  const mode = isGm ? layout.mode : 'play'
+  const editing = useEditMode((s) => s.on) && isGm
 
   // The scroll starts rolled up (the rod shows unread messages); per device after the first toggle.
   const [scrollPref, setScrollPref] = usePersisted<{ open: boolean | null }>('vtt.shell.scroll', { open: null })
@@ -105,11 +106,11 @@ export function GameShell({ controller }: { controller: GameController }) {
     // Only on mount and when the device class changes; later toggles are the user's.
   }, [bp]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!phone) setScrollPref({ open: layout.scrollOpen }) }, [layout.scrollOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-  // The table needs to know about Build: the prop gizmo, power keys and box select live there.
+  // The table needs to know about the Edit toggle: prop selection, the gizmo, power keys and box select.
   useEffect(() => {
-    useTableUi.getState().set({ buildMode: mode === 'build' })
+    useTableUi.getState().set({ buildMode: editing })
     return () => useTableUi.getState().set({ buildMode: false })
-  }, [mode])
+  }, [editing])
   // GM: uploads that never reached Blossom last time go out again (loaded lazily, after the doc).
   useEffect(() => {
     if (!isGm || display) return
@@ -118,9 +119,6 @@ export function GameShell({ controller }: { controller: GameController }) {
     void import('../library/reshare').then((m) => { if (live) cancel = m.reshareOnStart(controller.assets) })
     return () => { live = false; cancel?.() }
   }, [isGm, display, controller])
-  // Players have no Build; a GM demoted mid-session drops back to Play.
-  useEffect(() => { if (!isGm && layout.mode !== 'play') layout.set({ mode: 'play' }) }, [isGm, layout])
-
   const openPanel = useCallback((id: string) => useTableLayout.getState().open(id, isGm, phone), [isGm, phone])
 
   const chatOpen = layout.scrollOpen
@@ -181,12 +179,13 @@ export function GameShell({ controller }: { controller: GameController }) {
   const pickPreset = useCallback((id: LayoutPresetId) => setView({ preset: id }), [setView])
   const actions = useMemo<PaletteActions>(() => ({
     openPanel,
+    phone,
     zen: () => setZen(true),
     display: () => pickPreset('display'),
     compact: (on) => pickPreset(on ? 'compact' : 'auto'),
     exportGame: isGm ? () => void exportFile() : undefined,
     leave,
-  }), [openPanel, pickPreset, isGm, exportFile, leave])
+  }), [openPanel, phone, pickPreset, isGm, exportFile, leave])
 
   const liveLine = [
     playing.size ? `${playing.size} ${playing.size === 1 ? 'sound' : 'sounds'} playing` : '',
@@ -194,7 +193,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   ].filter(Boolean).join(' · ')
 
   const style = { '--kb': `${keyboard}px` } as CSSProperties
-  const cls = ['game', 'game--table', `game--${bp}`, `game--mode-${mode}`, isGm ? 'game--gm' : '', zen ? 'game--zen' : '', display ? 'game--display' : '', keyboard > 0 ? 'kb' : ''].filter(Boolean).join(' ')
+  const cls = ['game', 'game--table', `game--${bp}`, isGm ? 'game--gm' : '', editing ? 'game--editing' : '', zen ? 'game--zen' : '', display ? 'game--display' : '', keyboard > 0 ? 'kb' : ''].filter(Boolean).join(' ')
   const chrome = !zen && !display
 
   const trailing = (
@@ -213,7 +212,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   return (
     <div className={cls} style={style}>
       <TopBar controller={controller} compact={phone} center={<CombatControl controller={controller} />} trailing={trailing}
-        onScene={() => layout.set({ card: isGm ? 'scene-switcher' : 'scenes' })} />
+        onScene={() => openPanel(isGm ? 'scene-switcher' : 'scenes')} />
 
       <section className="table">
         {meta?.activeScene ? (
@@ -244,7 +243,8 @@ export function GameShell({ controller }: { controller: GameController }) {
         {!phone && <Scroll controller={controller} chat={panels.find((p) => p.id === 'chat')} unread={unread} />}
         {!phone && isGm && <GmScreen live={liveLine} onLive={() => openPanel('sound')}
           drawer={<GmDrawer me={controller.pubkey} playing={playing.size} journalNew={journalUnread} />} />}
-        {!phone && isGm && chrome && mode === 'build' && <Suspense fallback={null}><BuildWorkspace controller={controller} /></Suspense>}
+        {!phone && isGm && chrome && <LibraryHost controller={controller} />}
+        {isGm && chrome && <InspectorHost controller={controller} phone={phone} />}
         <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}

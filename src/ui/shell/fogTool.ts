@@ -1,13 +1,11 @@
 /**
- * The fog brush on the Play tool rail (GM): the same build fog tools as Build's (`fog-reveal`,
- * `fog-hide`, the brush size in `useBuildUi`), offered on the rail while the GM plays. Build has
- * its own fog tool, so the rail leaves it out there; players never get it.
+ * The fog brush on the tool rail (GM): the build fog tools (`fog-reveal`, `fog-hide`, the brush
+ * size in `useBuildUi`). Players never get it.
  */
 import type { BuildTool } from '@/table/build/buildState'
-import type { TableMode } from './tableLayout'
 
-export function fogToolAvailable(isGm: boolean, mode: TableMode): boolean {
-  return isGm && mode === 'play'
+export function fogToolAvailable(isGm: boolean): boolean {
+  return isGm
 }
 
 export const isFogTool = (tool: BuildTool | null): tool is 'fog-reveal' | 'fog-hide' => tool === 'fog-reveal' || tool === 'fog-hide'
