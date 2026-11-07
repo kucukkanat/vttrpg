@@ -13,8 +13,13 @@ for (const [file, load] of Object.entries(modules)) {
   })
 }
 
+/** Short names for stories that live deeper in a module. */
+const ALIASES: Record<string, string> = { 'props-bench': 'table-propsBench' }
+
 export function DevStories({ story }: { story: string }) {
-  const Story = stories[story]
+  // Anything after `?` is the story's own options (see e.g. table/propsBench).
+  const name = story.split('?')[0] ?? story
+  const Story = stories[ALIASES[name] ?? name]
   if (!Story) return <div style={{ padding: 24 }}>Unknown story “{story}”. Known: {Object.keys(stories).join(', ') || 'none yet'}</div>
   return (
     <Suspense fallback={<div style={{ padding: 24 }}>Loading story…</div>}>
