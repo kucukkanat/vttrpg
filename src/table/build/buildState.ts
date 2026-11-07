@@ -23,6 +23,8 @@ export type BuildTool =
   | 'prefab-capture'
   /** Tap to stamp `stamp.prefab` (R turns it). */
   | 'prefab-stamp'
+  /** A grid kit tool (kits/kitState.ts says which). */
+  | 'kit'
 
 /** Walls proposed by detection, waiting for the GM to accept or discard them. */
 export interface WallProposal {

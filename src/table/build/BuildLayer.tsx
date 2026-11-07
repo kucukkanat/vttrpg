@@ -91,7 +91,7 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
       <Doors />
       <Lights />
       {gm && (active || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
-      {active && <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />}
+      {active && active !== 'kit' && <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />}
       <ViewSync />
     </>
   )

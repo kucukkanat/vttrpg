@@ -27,7 +27,7 @@ export type LeafId = (typeof LEAVES)[number]['id']
 const PLAY_CARDS = new Set(['journal', 'players', 'sound'])
 
 /** Panels the Build tray shows as tabs: the tools, and the scene's own settings. */
-export const BUILD_TABS = ['build', 'scenes'] as const
+export const BUILD_TABS = ['build', 'kit', 'scenes'] as const
 
 export type PanelRoute =
   | { kind: 'scroll' }
@@ -44,6 +44,7 @@ export function routePanel(id: string, isGm: boolean): PanelRoute {
   if (id === 'chat') return { kind: 'scroll' }
   if (!isGm) return { kind: 'card', id }
   if (id === 'build') return { kind: 'build', tab: 'build' }
+  if (id === 'kit') return { kind: 'build', tab: 'kit' }
   // Sound, Players and the Journal are used at the table as much as in prep: a card, in any mode.
   if (PLAY_CARDS.has(id)) return { kind: 'card', id }
   const leaf = LEAVES.find((l) => (l.panels as readonly string[]).includes(id))

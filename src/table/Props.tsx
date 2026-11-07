@@ -10,6 +10,8 @@ import { useTableUi } from './tableState'
 import { groupProps, idsKey, standaloneIds } from './propInstances'
 import { PropBatch } from './PropBatch'
 import { MemoPropMesh } from './PropMesh'
+import { useTable } from './context'
+import { heightVisible } from './kits/levels'
 
 let instancing = true
 /** Turns instanced prop rendering off (every prop standalone); for the benchmark's baseline. */
@@ -25,7 +27,13 @@ export function Props({ sceneId }: { sceneId: SceneId }) {
   const previewId = useTableUi((s) => (s.editPreview?.target.kind === 'prop' ? (s.editPreview.target.id as PropId) : null))
   const standalone = useMemo(() => standaloneIds({ selection, propSelection, previewId }), [selection, propSelection, previewId])
   const key = idsKey(standalone)
-  const list = useMemo(() => Object.values(props).filter((p) => p.scene === sceneId), [props, sceneId])
+  // The kit cutaway hides props that start above its level.
+  const { kits, floorY, grid } = useTable()
+  const cut = kits?.cut ?? Infinity
+  const list = useMemo(
+    () => Object.values(props).filter((p) => p.scene === sceneId && heightVisible(p.position.y, cut, floorY, grid)),
+    [props, sceneId, cut, floorY, grid],
+  )
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for `standalone`
   const { singles, groups } = useMemo(() => groupProps(list, standalone, instancing), [list, key])
   return (

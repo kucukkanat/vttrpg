@@ -6,6 +6,9 @@
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
 import { docBlockingSegments, moveBlocked, sceneWalls } from '@/table/build/wallEdit'
+import { levelOfHeight } from '@/core/kits'
+import { kitWalls } from '@/table/kits/kitWalls'
+import { pieceLookup, useKitManifests } from '@/table/kits/manifests'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import { vfxBus } from '@/table/vfx/bus'
 import { numbersEvent } from '@/table/vfx/numbers'
@@ -82,7 +85,14 @@ export function createController(opts: {
     const s = useGame.getState()
     const t = s.tokens[intent.token]
     if (!t) return false
-    return moveBlocked(t.position, intent.position, docBlockingSegments(s.scenes[t.scene], sceneWalls(s.walls, t.scene)))
+    const scene = s.scenes[t.scene]
+    // Storeys: the token moves on its level, blocked by that level's kit walls (the scene's own
+    // walls belong to level 0). Kits whose manifest has not loaded here block nothing yet.
+    const level = scene ? Math.max(0, levelOfHeight(t.position.y ?? 0, 0, scene.grid.cellSize)) : 0
+    const tiles = s.tiles[t.scene]
+    const kit = tiles && scene ? kitWalls(tiles, level, pieceLookup(tiles.kits, useKitManifests.getState().manifests), scene.grid) : null
+    const base = level === 0 ? docBlockingSegments(scene, sceneWalls(s.walls, t.scene)) : []
+    return moveBlocked(t.position, intent.position, kit ? [...base, ...kit.sight, ...kit.move] : base)
   }
 
   /** The sheet a roll intent was made from, if it names one that still exists. */
