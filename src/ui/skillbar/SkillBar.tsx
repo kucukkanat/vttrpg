@@ -102,7 +102,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
               {isGm && <button type="button" className="icon" aria-label={`${primary?.name} plus 1`} onClick={() => changeHp(1)}>+</button>}
             </span>
           )}
-          {mayEnd && <button type="button" className="tiny primary" onClick={endTurn}>End turn</button>}
+          {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
           <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}>⋯</button>
         </div>
         <div className="token-bar-chips">
