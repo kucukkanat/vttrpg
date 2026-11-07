@@ -71,3 +71,14 @@ export function planNumbers(event: VfxEvent, tokens: Readonly<Record<string, Tok
   })
   return out.sort((a, b) => a.fireAt - b.fireAt)
 }
+
+/**
+ * A cue-less 'vfx' event that only floats numbers: what the GM appends when they change a
+ * resource by hand (the token bar's HP −/+), so every table shows the same number a skill would.
+ * Null when every delta rounds to zero.
+ */
+export function numbersEvent(id: string, at: number, scene: VfxEvent['scene'], numbers: NonNullable<VfxEvent['numbers']>): VfxEvent | null {
+  const kept = numbers.filter((n) => Number.isFinite(n.delta) && Math.round(n.delta) !== 0)
+  if (!kept.length) return null
+  return { id, at, kind: 'vfx', cues: [], scene, targets: [...new Set(kept.map((n) => n.token))], numbers: kept }
+}
