@@ -142,3 +142,8 @@
 .bw-phone-insp.panel { border: 0; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
 .bw-phone-head { margin: 0; }
 .bw-phone-scene .bw-bar-btn { color: var(--fg); background: var(--panel-2); border-color: var(--border); }
+
+/* The Library fills its dock and its card grid is the one scroller. Without a bounded height the
+   grid never overflows, and its overscroll containment then swallowed the wheel entirely. */
+.bw-lib-body { display: flex; flex-direction: column; overflow: hidden; }
+.bw-lib-body > .library-panel { flex: 1 1 auto; min-height: 0; }
