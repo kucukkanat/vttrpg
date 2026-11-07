@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility } from './doc'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility, CreatureTemplate, Encounter } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -84,6 +84,11 @@ export type Intent =
    */
   | { type: 'initiative.next'; token?: TokenId }
   | { type: 'initiative.remove'; token: TokenId }
+  /** Game creature templates and encounters (GM only). */
+  | { type: 'creature.upsert'; creature: CreatureTemplate }
+  | { type: 'creature.remove'; creature: string }
+  | { type: 'encounter.upsert'; encounter: Encounter }
+  | { type: 'encounter.remove'; encounter: string }
   /** GM only: end the encounter; with `summary` a combat report goes to the chat log. */
   | { type: 'initiative.end'; summary?: EncounterSummary }
   /** GM only: declare what a combatant will do next (shown to everyone until resolved). */

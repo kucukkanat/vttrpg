@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 import type * as Y from 'yjs'
-import type { Character, ChatMessage, FogState, GameEvent, GameMeta, InitiativeState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
+import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
@@ -43,6 +43,10 @@ export interface GameState {
   customSkills: Record<SkillId, SkillDef>
   /** Turn order; null until the GM has started initiative once (then `active` says whether it is running). */
   initiative: InitiativeState | null
+  /** Game creature templates (edited or homebrew stat blocks). */
+  creatures: Record<string, CreatureTemplate>
+  /** Prepared encounters. */
+  encounters: Record<string, Encounter>
   /** Drawn walls and doors of every scene (filter by `scene`). */
   walls: Record<WallId, Wall>
   prefabs: Record<PrefabId, Prefab>
@@ -65,7 +69,7 @@ export interface GameState {
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters'>>): void
 }
 
 let noticeSeq = 0
@@ -82,6 +86,8 @@ export const useGame = create<GameState>((set) => ({
   notes: {} as Record<NoteId, Note>,
   customSkills: {} as Record<SkillId, SkillDef>,
   initiative: null,
+  creatures: {},
+  encounters: {},
   walls: {} as Record<WallId, Wall>,
   prefabs: {} as Record<PrefabId, Prefab>,
   lights: {} as Record<LightId, PlacedLight>,
@@ -187,6 +193,8 @@ export function bindDoc(doc: Y.Doc): () => void {
       notes: doc.getMap('notes').toJSON() as Record<NoteId, Note>,
       customSkills: doc.getMap('customSkills').toJSON() as Record<SkillId, SkillDef>,
       initiative: readInitiative(doc),
+      creatures: doc.getMap('creatures').toJSON() as Record<string, CreatureTemplate>,
+      encounters: doc.getMap('encounters').toJSON() as Record<string, Encounter>,
       walls: doc.getMap('walls').toJSON() as Record<WallId, Wall>,
       prefabs: doc.getMap('prefabs').toJSON() as Record<PrefabId, Prefab>,
       lights: doc.getMap('lights').toJSON() as Record<LightId, PlacedLight>,

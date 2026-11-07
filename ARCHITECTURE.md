@@ -35,6 +35,41 @@ inner files. Stubs throw `not implemented` until the owning branch lands.
 - World units are meters. Grid cell size per scene. +Y up. Blender exports with +Y up.
 - Nostr pubkeys are hex, not npub, inside the app.
 
+## What players can read
+
+The game document is one Yjs doc, and every delta is NIP-44 encrypted under the single game key
+that travels in the invite link (`src/net/README.md`). Every invited player therefore decrypts
+**the whole document**. "GM only" is a UI rule, not a cryptographic one:
+
+- Journal notes with `sharedWith: 'gm'` are filtered out in `JournalPanel` and `ui/notices.ts`.
+- Encounters (`encounters`) and game creature templates (`creatures`) are hidden by the Prep
+  panel being GM-only.
+- Hidden tokens and their sheets (including monster hit points) are skipped by the table and the
+  initiative names, but they are in the doc.
+
+A player who opens the dev tools can read all of it. That is acceptable for a group that trusts
+each other with spoilers, and it is what lets encounters follow the GM across devices with no
+server. Do not put anything in the doc that must stay secret from players.
+
+### GM-private section (designed, not built)
+
+The way to make GM data truly private without a server:
+
+1. A second Yjs doc, `gmDoc`, holding `encounters`, `creatures` and GM notes.
+2. Its updates go out as kind `1078` events tagged `g` = `<gameId>:gm` (players never subscribe),
+   with content NIP-44 encrypted under a key only the GM holds: the NIP-44 conversation key of the
+   GM with their own pubkey (`identity.conversationKey(gm)`), or, for NIP-07 identities that cannot
+   export it, `window.nostr.nip44.encrypt(gm, plaintext)` to self.
+3. The GM's other devices sign in with the same identity, derive the same key and replay the
+   `:gm` deltas; the local IndexedDB copy and the snapshot loop gain a second record for it.
+4. Placing an encounter copies what players should see (tokens, their sheets) into the shared doc,
+   as today.
+
+It needs a second delta stream, local-copy record and snapshot pointer in `src/net`
+(`connection.ts`, `localStore.ts`, `snapshots.ts`). The move of encounters into the doc keeps them
+in maps of their own (`encounters`, `creatures`) and behind the `encounter.*` and `creature.*`
+intents, so moving them into `gmDoc` later only changes where `applyIntent` writes those keys and
+where the store reads them.
 ## Co-GM and handover
 
 `PLAN.md` deferred co-GM because the GM client is the only writer and every player holds the

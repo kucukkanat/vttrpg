@@ -10,13 +10,14 @@
  *   scene.remove   -> scene.add   (tokens, props and fog of the scene are never deleted, so they come back with it)
  *   fog.reset      -> fog.reveal  (the cells that were revealed), plus fog.revealAll if the map was fully revealed
  *   fog.revealAll  -> fog.reset   (then fog.reveal of what had been explored before)
+ *   encounter.remove / creature.remove -> encounter.upsert / creature.upsert
  *   wall.remove    -> wall.add    (the removed walls and doors)
  *   light.remove   -> light.add
  *   prefab.remove  -> prefab.upsert
  */
 import { create } from 'zustand'
 import type { Intent } from '@/core/intents'
-import type { FogState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
+import type { CreatureTemplate, Encounter, FogState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { LightId, NoteId, PrefabId, PropId, SceneId, TokenId, WallId } from '@/core/ids'
 
 export const MAX_UNDO = 20
@@ -34,6 +35,8 @@ export interface UndoSnapshot {
   prefabs?: Record<PrefabId, Prefab>
   /** Only `activeScene` is read: removing the live scene is refused, so there is nothing to undo. */
   meta?: { activeScene: SceneId | null } | null
+  encounters?: Record<string, Encounter>
+  creatures?: Record<string, CreatureTemplate>
 }
 
 export interface UndoEntry {
@@ -64,6 +67,17 @@ export function captureUndo(intent: Intent, s: UndoSnapshot, now = Date.now()): 
       if (!note) return null
       const title = note.title || 'note'
       return { label: `Deleted ${title}`, subject: title, inverse: [{ type: 'note.upsert', note }], at: now }
+    }
+    case 'encounter.remove': {
+      const encounter = s.encounters?.[intent.encounter]
+      if (!encounter) return null
+      const name = encounter.name || 'encounter'
+      return { label: `Deleted ${name}`, subject: name, inverse: [{ type: 'encounter.upsert', encounter }], at: now }
+    }
+    case 'creature.remove': {
+      const creature = s.creatures?.[intent.creature]
+      if (!creature) return null
+      return { label: `Deleted ${creature.name}`, subject: creature.name, inverse: [{ type: 'creature.upsert', creature }], at: now }
     }
     case 'scene.remove': {
       const scene = s.scenes[intent.scene]

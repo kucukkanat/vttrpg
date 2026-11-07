@@ -265,6 +265,21 @@ describe('initiative', () => {
   })
 })
 
+describe('creature templates and encounters', () => {
+  it('upserts and removes them in their own maps', () => {
+    const doc = new Y.Doc()
+    const encounter = { id: 'e1', name: 'Ambush', rows: [{ id: 'r1', creatureRef: 'pack:srd-2024_goblin-warrior', count: 4, color: '#fff', hpMode: 'roll' as const }], placed: [] }
+    const creature = { id: 'c1', name: 'Swamp Goblin', from: 'srd-2024_goblin-warrior', data: { xp: 50 }, updatedAt: 1 }
+    applyIntent(doc, env({ type: 'encounter.upsert', encounter }))
+    applyIntent(doc, env({ type: 'creature.upsert', creature }))
+    expect(doc.getMap('encounters').toJSON()).toEqual({ e1: encounter })
+    expect(doc.getMap('creatures').toJSON()).toEqual({ c1: creature })
+    applyIntent(doc, env({ type: 'encounter.remove', encounter: 'e1' }))
+    applyIntent(doc, env({ type: 'creature.remove', creature: 'c1' }))
+    expect(doc.getMap('encounters').size + doc.getMap('creatures').size).toBe(0)
+  })
+})
+
 describe('encounter intents', () => {
   const t = (id: string) => id as TokenId
   const read = (doc: Y.Doc) => doc.getMap('initiative').toJSON() as InitiativeState

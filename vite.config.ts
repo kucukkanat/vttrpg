@@ -89,7 +89,8 @@ export default defineConfig(({ command }) => ({
         // blobs are cached on first use. The `three` vendor chunk is the largest file (about 1 MB
         // minified), then the draco decoder (720 kB) and basis transcoder (530 kB): keep the limit above.
         globPatterns: ['**/*.{js,css,html,svg,png,json,wasm}'],
-        globIgnores: ['**/library/scenes/**', '**/*.map'],
+        // Creature compendiums (about 1.4 MB for dnd5e) are only opened by the GM: cached on first use.
+        globIgnores: ['**/library/scenes/**', '**/*.map', '**/packs/*/creatures/**'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: command === 'build' ? '/vttrpg/index.html' : '/index.html',
         runtimeCaching: [
@@ -97,6 +98,11 @@ export default defineConfig(({ command }) => ({
             urlPattern: ({ url }) => url.pathname.includes('/library/'),
             handler: 'CacheFirst',
             options: { cacheName: 'library', expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/packs/') && url.pathname.includes('/creatures/'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'creatures', expiration: { maxEntries: 20 } },
           },
         ],
       },

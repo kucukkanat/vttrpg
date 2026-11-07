@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AssetResolver } from '@/assets'
 import type { Character, Token } from '@/core/doc'
-import type { RulesEngine } from '@/rules'
+import { sheetFor, type RulesEngine } from '@/rules'
+import { getPath } from '@/rules/expr'
 import { conditionChips, hpBand, HP_BAND_COLORS, readResource } from '@/table/tokenHud'
 import { attributeTiles, cardLevel, cardSubtitle, formatMod, initials, inventorySummary, notesSummary } from './sheetCard'
 import './CharacterCard.css'
@@ -39,15 +40,19 @@ export function CharacterCard({ rules, character, token, assets, onRoll }: Chara
   const { pack } = rules
   const portrait = usePortrait(assets, character.portrait)
   const compute = useMemo(() => (expr: string) => rules.evaluateNow(expr, character), [rules, character])
-  const subtitle = cardSubtitle(pack.sheet, character)
-  const level = cardLevel(character)
+  const sheet = sheetFor(pack, character)
+  const subtitle = cardSubtitle(sheet, character)
+  // Creatures show their challenge rating where characters show a level.
+  const crPath = character.sheet && character.sheet === pack.manifest.creatures?.sheet ? pack.manifest.creatures.crText : undefined
+  const cr = crPath ? getPath(character.data, crPath.split('.')) : undefined
+  const level = crPath ? null : cardLevel(character)
   const resources = pack.resources
     .map((def, i) => ({ def, primary: i === 0, reading: readResource(character.data, def, compute) }))
     .filter((r) => r.reading !== null)
-  const tiles = attributeTiles(pack.sheet, pack.attributes, character, compute)
+  const tiles = attributeTiles(sheet, pack.attributes, character, compute)
   const chips = conditionChips(token, character, pack.conditions)
-  const gear = inventorySummary(pack.sheet, character)
-  const notes = notesSummary(pack.sheet, character)
+  const gear = inventorySummary(sheet, character)
+  const notes = notesSummary(sheet, character)
 
   return (
     <div className="char-card">
@@ -59,9 +64,10 @@ export function CharacterCard({ rules, character, token, assets, onRoll }: Chara
         )}
         <div className="cc-ident">
           <div className="cc-name">{character.name}</div>
-          {(subtitle || level !== null) && (
+          {(subtitle || level !== null || cr !== undefined) && (
             <div className="cc-sub">
               {level !== null && <span className="cc-level">Lv {level}</span>}
+              {(typeof cr === 'string' || typeof cr === 'number') && <span className="cc-level">CR {cr}</span>}
               {subtitle}
             </div>
           )}
