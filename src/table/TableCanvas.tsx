@@ -8,7 +8,8 @@
  * Mouse: drag a token to move it (snaps to cells; a selected token drags the whole selection), click
  * selects, Shift/Cmd-click adds to the selection, right-click opens the token menu, drag empty
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
- * two fingers pan, pinch zooms, long-press opens the token menu.
+ * two fingers pan, pinch zooms, long-press opens the token menu. With one of your tokens selected, a tap
+ * on a cell previews the move and a second tap there (or Move) commits it (MovePreview).
  * Targeting (`props.targeting`): see TargetingLayer. Esc cancels.
  * Tools (`tableState.tool`, HUD buttons): the ruler measures distances (RulerLayer, M); ping marks a
  * spot for every client (PingLayer; also a double-tap or a long touch on empty floor).
@@ -41,6 +42,7 @@ import { GridOverlay } from './GridOverlay'
 import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
+import { MoveBar, moveMissed, TwoTapMoveLayer } from './MovePreview'
 import { Props } from './PropMesh'
 import { RangePreview } from './RangePreview'
 import { DeclaredActions } from './DeclaredActions'
@@ -341,7 +343,12 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
         camera={CAMERA_OPTS}
         gl={graphics.antialias ? GL_OPTS.on : GL_OPTS.off}
         style={CANVAS_STYLE}
-        onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null); if (!targeting) pingMissed(e) }}
+        onPointerMissed={(e) => {
+          // Touch with a token of yours selected: the tap previews or commits a two-tap move instead.
+          if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current && moveMissed(e)) return
+          if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null)
+          if (!targeting) pingMissed(e)
+        }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <Atmosphere darkness={scene.darkness} bounds={bounds3} />
@@ -361,6 +368,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           {!targeting && <RangePreview />}
           <DeclaredActions />
           <PingLayer bounds={bounds2} />
+          {!targeting && <TwoTapMoveLayer />}
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
@@ -374,6 +382,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {image && imageStatus?.kind === 'loading' && <Overlay>Loading map…</Overlay>}
       {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
+      {!targeting && <MoveBar onIntent={onIntent} grid={grid} floorY={floorY} viewer={viewer ?? null} />}
       {glLost && <ContextLostNotice onReload={remountCanvas} />}
     </div>
   )
@@ -531,8 +540,8 @@ function TargetingBar({ targeting }: { targeting: TargetingProps }) {
 
 type ShakeEvent = { intensity?: number; duration?: number } | undefined
 type ShakeBus = {
-  on?(event: string, handler: (e: ShakeEvent) => void): unknown
-  off?(event: string, handler: (e: ShakeEvent) => void): unknown
+  on?(event: string, handler: (...args: unknown[]) => void): unknown
+  off?(event: string, handler: (...args: unknown[]) => void): unknown
   addEventListener?(event: string, handler: (e: Event) => void): void
   removeEventListener?(event: string, handler: (e: Event) => void): void
 }
@@ -545,8 +554,10 @@ function subscribeShake(handler: (e: ShakeEvent) => void): () => void {
   const bus = (vfx as Record<string, unknown>).vfxBus as ShakeBus | undefined
   if (!bus) return () => {}
   if (typeof bus.on === 'function') {
-    const off = bus.on('shake', handler)
-    return () => { if (typeof off === 'function') off(); else bus.off?.('shake', handler) }
+    // `vfxBus` emits (strength 0..1, durationMs); an object payload is still accepted.
+    const h = (a?: unknown, b?: unknown) => handler(typeof a === 'number' ? { intensity: a, duration: typeof b === 'number' ? b : undefined } : (a as ShakeEvent))
+    const off = bus.on('shake', h)
+    return () => { if (typeof off === 'function') off(); else bus.off?.('shake', h) }
   }
   if (typeof bus.addEventListener === 'function') {
     const h = (e: Event) => handler((e as CustomEvent<ShakeEvent>).detail)

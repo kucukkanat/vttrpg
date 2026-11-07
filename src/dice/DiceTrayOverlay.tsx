@@ -3,8 +3,9 @@
  * element (which should be `position: relative/absolute`), camera looking slightly down
  * onto a tray sized to fill the viewport. Pointer events pass through to the UI below.
  *
- * Once the dice settle they stay for `lingerMs`, then fade out over `fadeMs`, so they leave with
- * the roll toast instead of popping. Phones get smaller dice (`zoom` 0.7). When the viewer has
+ * Once the dice settle the roll toast's total pops (choreography.ts), the dice stay for `lingerMs`
+ * (shorter on phones), then fade out over `fadeMs`; on phones they instead shrink into the toast
+ * (`yieldTo`), and `yieldNow` sends them off at once. Phones get smaller dice (`zoom` 0.7). When the viewer has
  * asked to skip 3D dice, or the system prefers reduced motion, nothing is drawn and `onSettled`
  * fires at once so the parent can clear the roll.
  */
@@ -13,6 +14,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { DiceTray, type DiceTrayProps } from './DiceTray'
 import { useMatchMedia, useSkipDice } from './skipDice'
+import { announceDiceSettled, PHONE_LINGER_MS, YIELD_MS, yieldTransform } from './choreography'
 
 export interface DiceTrayOverlayProps extends Omit<DiceTrayProps, 'position' | 'size' | 'floor'> {
   className?: string
@@ -29,6 +31,10 @@ export interface DiceTrayOverlayProps extends Omit<DiceTrayProps, 'position' | '
   lingerMs?: number
   /** Fade-out duration after `lingerMs`. Default 1000. Parents clearing `rollId` should wait linger + fade. */
   fadeMs?: number
+  /** Phones: where the settled dice shrink to (the roll toast's box); null or missing fades instead. */
+  yieldTo?(): DOMRect | null
+  /** Get out of the way now (the chat keyboard or a full sheet needs the room). */
+  yieldNow?: boolean
 }
 
 interface Fit { size: [number, number]; z: number }
@@ -53,7 +59,7 @@ function fitTray(camera: PerspectiveCamera, fill: number): Fit {
   return { size: [halfW * 2 * fill, depth * fill], z: (zNear + zFar) / 2 }
 }
 
-type SceneProps = Omit<DiceTrayOverlayProps, 'className' | 'style' | 'zoom' | 'lingerMs' | 'fadeMs'> & { tilt: number; fill: number; zoom: number }
+type SceneProps = Omit<DiceTrayOverlayProps, 'className' | 'style' | 'zoom' | 'lingerMs' | 'fadeMs' | 'yieldTo' | 'yieldNow'> & { tilt: number; fill: number; zoom: number }
 
 function Scene({ tilt, fill, zoom, dieSize = 0.5, shadows = true, ...tray }: SceneProps) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
@@ -97,41 +103,60 @@ function Scene({ tilt, fill, zoom, dieSize = 0.5, shadows = true, ...tray }: Sce
   )
 }
 
-export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor = 'shadow', zoom, lingerMs = 3000, fadeMs = 1000, onSettled, ...rest }: DiceTrayOverlayProps) {
+export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor = 'shadow', zoom, lingerMs = 3000, fadeMs = 1000, onSettled, yieldTo, yieldNow = false, ...rest }: DiceTrayOverlayProps) {
   const skip = useSkipDice()
   const phone = useMatchMedia(PHONE_QUERY)
   const z = zoom ?? (phone ? PHONE_ZOOM : 1)
 
-  // Fade: full opacity while rolling and lingering, then 0; a new roll resets it.
-  const [fading, setFading] = useState(false)
+  // Leaving: full opacity while rolling and lingering, then a fade, or on phones a shrink into the
+  // roll toast (`yieldTransform`); a new roll resets it.
+  const [leave, setLeave] = useState<{ kind: 'fade' } | { kind: 'yield'; transform: string } | null>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const latest = useRef({ onSettled, lingerMs })
-  latest.current = { onSettled, lingerMs }
+  const latest = useRef({ onSettled, lingerMs, phone, yieldTo })
+  latest.current = { onSettled, lingerMs, phone, yieldTo }
   useEffect(() => {
-    setFading(false)
+    setLeave(null)
     clearTimeout(timer.current)
     return () => clearTimeout(timer.current)
   }, [rest.rollId])
 
+  const goAway = () => {
+    clearTimeout(timer.current)
+    const { phone: onPhone, yieldTo: target } = latest.current
+    const to = onPhone ? target?.() : null
+    const from = canvas.current?.getBoundingClientRect()
+    setLeave(to && from && from.width > 0 ? { kind: 'yield', transform: yieldTransform(from, to) } : { kind: 'fade' })
+  }
+  // The keyboard or a full sheet needs the room: yield now.
+  useEffect(() => { if (yieldNow && rest.rollId) goAway() }, [yieldNow, rest.rollId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Skipping: report the roll as settled straight away so the parent clears it on its usual schedule.
   useEffect(() => {
-    if (skip && rest.rollId) latest.current.onSettled?.(rest.rollId)
+    if (skip && rest.rollId) { latest.current.onSettled?.(rest.rollId); announceDiceSettled(rest.rollId) }
   }, [skip, rest.rollId])
 
   if (skip) return null
 
   const settled = (id: string) => {
     latest.current.onSettled?.(id)
+    announceDiceSettled(id)
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => setFading(true), latest.current.lingerMs)
+    timer.current = setTimeout(goAway, latest.current.phone ? Math.min(PHONE_LINGER_MS, latest.current.lingerMs) : latest.current.lingerMs)
   }
 
+  const leaving = leave !== null
   return (
     <Canvas
+      ref={canvas}
       className={className}
       style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', background: 'transparent',
-        opacity: fading ? 0 : 1, transition: `opacity ${fadeMs}ms ease`,
+        opacity: leaving ? 0 : 1,
+        transform: leave?.kind === 'yield' ? leave.transform : undefined, transformOrigin: 'center',
+        transition: leave?.kind === 'yield'
+          ? `transform ${YIELD_MS}ms cubic-bezier(.5, 0, .75, 0), opacity ${YIELD_MS}ms ease-in`
+          : `opacity ${fadeMs}ms ease`,
         ...style,
       }}
       gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}

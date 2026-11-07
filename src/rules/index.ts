@@ -3,7 +3,7 @@
  */
 import type { AppliedDamage, Character, RollAdvantage, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
-import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, ConditionDuration, SheetSchema, SkillDef, ChargenSchema, VfxCue, CreatureActionTemplates, EncounterRules } from '@/core/pack'
+import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, ConditionDuration, SheetSchema, SkillDef, ChargenSchema, VfxCue, CreatureActionTemplates, EncounterRules, GlossaryTerm } from '@/core/pack'
 
 export interface LoadedPack {
   manifest: PackManifest
@@ -19,6 +19,8 @@ export interface LoadedPack {
   encounter?: EncounterRules
   /** Folder the pack was loaded from, for files fetched later (creature snapshots). */
   baseUrl?: string
+  /** Rules terms for the tooltips (`files.glossary`). */
+  glossary?: GlossaryTerm[]
 }
 
 /** One damage or heal row's result on one target of a skill, for the apply-damage card. */
@@ -71,6 +73,8 @@ export interface RulesEngine {
     damage?: SkillDamage[]
     /** Conditions added, with their durations. */
     conditions?: SkillCondition[]
+    /** Characters a `vs` roll of the caster's showed its best natural face against (a critical hit); drives the bigger crit numbers. */
+    crits?: string[]
   }>
   /**
    * Skills created or overridden in this game (`GameDocShape.customSkills`). They are merged over

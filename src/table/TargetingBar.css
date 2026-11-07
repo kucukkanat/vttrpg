@@ -87,3 +87,6 @@
   .targeting-bar__warn { grid-row: 2; grid-column: 1 / -1; }
   .targeting-bar__btn { flex: 0 0 auto; min-width: 96px; }
 }
+
+/* Two-tap move preview (MovePreview.tsx) reuses the card; the hint is secondary. */
+.move-bar__hint { color: rgba(243, 234, 216, 0.65); }

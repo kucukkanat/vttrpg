@@ -1,6 +1,7 @@
 /**
  * What a token shows on the table besides itself (TokenMesh mounts these):
- * - TurnRing: a pulsing amber ring on the footprint of the combatant whose turn it is.
+ * - TurnRing: a pulsing amber ring on the footprint of the combatant whose turn it is, with a one-off
+ *   flare bursting outward when the turn starts.
  * - Nameplate: the token's name floating above it (DOM label, pointer events pass through).
  * - MoveTrail: while the viewer drags a token, the straight path's cells tinted on the floor and
  *   the distance ("4 cells · 6 m") at the ghost. The maths is in moveDistance.ts.
@@ -11,8 +12,12 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { CircleGeometry, Color, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, RingGeometry, type Mesh } from 'three'
 import type { GridSpec } from '@/core/geometry'
+import { prefersReducedMotion, readPref } from '@/ui/feedback/prefs'
 import { cellToWorld, hexRadius } from './grid'
 import { moveMeasure, pathCells } from './moveDistance'
+import { flareAt } from './turnFlare'
+import type { OwnerShape } from './ownerShape'
+import { OwnerShapeGlyph } from './OwnerShapeGlyph'
 import type { RulerPoint } from './ruler'
 import { FloorLabel } from './RulerLayer'
 
@@ -28,13 +33,28 @@ function turnRings() {
   return turnGeometry
 }
 
-/** Pulsing double ring outside the selection ring (which ends at 1.3 radii). */
+/**
+ * Pulsing double ring outside the selection ring (which ends at 1.3 radii). When the turn starts
+ * (the ring mounts) a wide flare bursts out once so the change of turn is seen across the table;
+ * the "Turn chime" preference and reduced motion both turn the flare off.
+ */
 export function TurnRing({ radius }: { radius: number }) {
   const pulse = useRef<Mesh>(null)
+  const flare = useRef<Mesh>(null)
+  const flareStart = useRef<number | null>(null)
+  const flareOn = useMemo(() => readPref('turnCue') && !prefersReducedMotion(), [])
   const pulseMat = useMemo(() => new MeshBasicMaterial({ color: TURN_COLOR, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false }), [])
   const steadyMat = useMemo(() => new MeshBasicMaterial({ color: TURN_COLOR, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }), [])
-  useLayoutEffect(() => () => { pulseMat.dispose(); steadyMat.dispose() }, [pulseMat, steadyMat])
+  const flareMat = useMemo(() => new MeshBasicMaterial({ color: TURN_COLOR, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }), [])
+  useLayoutEffect(() => () => { pulseMat.dispose(); steadyMat.dispose(); flareMat.dispose() }, [pulseMat, steadyMat, flareMat])
   useFrame(({ clock }) => {
+    const f = flare.current
+    if (f) {
+      flareStart.current ??= clock.elapsedTime
+      const at = flareAt((clock.elapsedTime - flareStart.current) * 1000)
+      f.visible = at !== null
+      if (at) { f.scale.set(radius * at.scale, radius * at.scale, 1); flareMat.opacity = at.opacity }
+    }
     const m = pulse.current
     if (!m) return
     const w = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 3.2) // 0..1, about one beat every two seconds
@@ -47,15 +67,17 @@ export function TurnRing({ radius }: { radius: number }) {
     <group rotation-x={-Math.PI / 2} position-y={0.006} raycast={noRaycast}>
       <mesh ref={pulse} geometry={g.outer} material={pulseMat} scale={[radius, radius, 1]} renderOrder={4} raycast={noRaycast} />
       <mesh geometry={g.inner} material={steadyMat} scale={[radius, radius, 1]} renderOrder={4} raycast={noRaycast} />
+      {flareOn && <mesh ref={flare} geometry={g.outer} material={flareMat} scale={[radius, radius, 1]} renderOrder={4} raycast={noRaycast} />}
     </group>
   )
 }
 
 /**
  * The token's name above it. `accent` outlines the label (owner colour, or the turn colour);
- * `mine` adds a small "you" tag so the viewer's own token reads at a glance.
+ * `mine` adds a small "you" tag so the viewer's own token reads at a glance; `shape` repeats the
+ * owner's ring shape before the name (a colour-blind-safe backup for the accent colour).
  */
-export function Nameplate({ name, y, accent, mine, current }: { name: string; y: number; accent: string | null; mine: boolean; current: boolean }) {
+export function Nameplate({ name, y, accent, mine, current, shape = null }: { name: string; y: number; accent: string | null; mine: boolean; current: boolean; shape?: OwnerShape | null }) {
   return (
     <Html position={[0, y, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }} pointerEvents="none">
       <div style={{
@@ -65,6 +87,7 @@ export function Nameplate({ name, y, accent, mine, current }: { name: string; y:
         background: 'rgba(14,14,16,0.78)', border: `1px solid ${current ? TURN_COLOR : accent ?? 'rgba(255,255,255,0.18)'}`,
         boxShadow: '0 1px 4px rgba(0,0,0,0.45)', userSelect: 'none', WebkitUserSelect: 'none', pointerEvents: 'none',
       }}>
+        {shape && accent && <OwnerShapeGlyph shape={shape} color={accent} size={11} />}
         {mine && <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: accent ?? '#7cc4ff' }}>you</span>}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
       </div>

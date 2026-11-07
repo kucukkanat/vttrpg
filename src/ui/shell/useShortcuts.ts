@@ -43,6 +43,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Esc', what: 'Deselect; cancel skill targeting', group: 'Table' },
   { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores)', group: 'Table' },
   { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
+  { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
+  { keys: 'Arrows', what: 'Move through the token menu; Home / End jump to the ends', group: 'Table' },
   { keys: '[ / ]', what: 'Show or hide the left / right column', group: 'Panels' },
   { keys: '1 – 9', what: 'Expand or fold the n-th panel section', group: 'Panels' },
   { keys: '?', what: 'This list', group: 'Panels' },

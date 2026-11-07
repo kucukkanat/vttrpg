@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { guardChargen, guardManifest, guardSheet, guardSkill, loadPack, resolvePackUrl } from './load'
+import { buildGlossary, linkTerms } from '@/ui/tips/glossary'
+import { guardChargen, guardGlossary, guardManifest, guardSheet, guardSkill, loadPack, resolvePackUrl } from './load'
 import { fileFetch, loadMausritter } from './test-helpers'
 
 describe('loadPack', () => {
@@ -25,6 +26,21 @@ describe('loadPack', () => {
     expect(pack.skills).toHaveLength(4)
     expect(spy).toHaveBeenCalledWith('packs/mausritter/pack.json')
     expect(spy).toHaveBeenCalledWith('packs/mausritter/skills/fireball.json')
+  })
+
+  it('loads each built-in pack glossary, and every skill description links at least one term', async () => {
+    for (const id of ['mausritter', 'dnd5e']) {
+      const pack = await loadPack(`packs/${id}/`, fileFetch)
+      expect(pack.glossary?.length).toBeGreaterThan(3)
+      const g = buildGlossary(pack)
+      for (const s of pack.skills) expect(linkTerms(s.description, g).some((p) => p.id), `${id}/${s.id}`).toBe(true)
+    }
+  })
+
+  it('rejects a malformed glossary entry', () => {
+    expect(() => guardGlossary([{ id: 'x', text: 'no term' }], 'glossary.json')).toThrow(/"term" required/)
+    expect(() => guardGlossary([{ id: 'x', term: 'X', text: 't', aliases: 'nope' }], 'glossary.json')).toThrow(/aliases/)
+    expect(guardGlossary([{ id: 'x', term: 'X', text: 't', aliases: ['ex'] }], 'glossary.json')).toHaveLength(1)
   })
 
   it('resolves file paths against the base url', () => {

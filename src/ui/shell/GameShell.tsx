@@ -42,6 +42,8 @@ import { canSeeRoll } from '../rollMode'
 // their identity across renders and the canvas is never remounted by a breakpoint change.
 const TableCanvas = lazy(() => import('@/table/TableCanvas').then((m) => ({ default: m.TableCanvas })))
 const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => ({ default: m.DiceTrayOverlay })))
+/** Where phone dice shrink to when they yield: the roll toast, while it is on screen. */
+const rollToastBox = () => document.querySelector('.roll-toast')?.getBoundingClientRect() ?? null
 
 function TableLoading() {
   return (
@@ -120,9 +122,12 @@ export function GameShell({ controller }: { controller: GameController }) {
   // Hidden rolls (GM only, blind) neither animate nor toast for those who may not read them.
   const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length && canSeeRoll(m, controller.pubkey, controller.connection.gm)) ?? null, [chat, controller])
   useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
+  // Phones: the settled dice shrink into the roll toast, and leave at once when the keyboard or a full sheet needs the room.
+  const diceYieldNow = bp === 'phone' && (keyboard > 0 || (!!phoneTab && sheetSize === 'full'))
   const dice = shownRoll ? (
     <Suspense fallback={null}>
-      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)} />
+      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" onSettled={() => setTimeout(() => setShownRoll(null), 4000)} onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)}
+        yieldTo={rollToastBox} yieldNow={diceYieldNow} />
     </Suspense>
   ) : null
 

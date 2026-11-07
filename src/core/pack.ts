@@ -37,6 +37,8 @@ export interface PackManifest {
     creatureActions?: string
     /** Encounter difficulty budget (`EncounterRules`). */
     encounter?: string
+    /** Optional rules terms for the layered tooltips (`GlossaryTerm[]`). */
+    glossary?: string
   }
   /** Creature compendium; its snapshot files are fetched only when the GM opens the browser. */
   creatures?: CreatureConfig
@@ -134,6 +136,19 @@ export interface EncounterRules {
   bands: { id: string; name: string }[]
   /** Level (as a string key) to one budget per band, in `bands` order. */
   budget: Record<string, number[]>
+}
+
+/**
+ * A rules term the tooltips can explain ("Advantage", "Saving throw"). Skill, condition and other
+ * glossary texts that mention the term (or an alias) link to it. Conditions and resources are
+ * terms already; a glossary entry with the same name adds to them rather than repeating them.
+ */
+export interface GlossaryTerm {
+  id: string
+  term: string
+  /** Other spellings that link to this term ("save", "saves" for "Saving throw"). */
+  aliases?: string[]
+  text: string
 }
 
 export type RollResolution =

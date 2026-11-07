@@ -67,6 +67,21 @@ export function outcomeFor(
   return out
 }
 
+/**
+ * Whether a roll's natural resolution die (`RollInfo.natural`, the kept die under advantage)
+ * shows its best face for the roller: a natural 20 for `d20-vs-dc`, a natural 1 for `roll-under`.
+ * Used to mark critical hits for the table's numbers.
+ */
+export function bestNatural(resolution: RollResolution | undefined, natural: number | undefined): boolean {
+  const r = resolution ?? DEFAULT_RESOLUTION
+  return natural !== undefined && natural === (r.kind === 'roll-under' ? 1 : advantageDie(r))
+}
+
+/** A `vs` roll the caster makes (an attack), not one the target makes (a save): its formula reads nothing of the target. */
+export function rolledByCaster(formula: string): boolean {
+  return !/\btarget\./.test(formula)
+}
+
 export function createRulesEngine(pack: LoadedPack): RulesEngine {
   const grid = inventoryField(pack)
   const skillById = new Map<string, SkillDef>()
@@ -349,6 +364,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const rolls: Record<string, RollInfo> = {}
     let last: RollInfo | undefined
     const saves = new Map<string, RollInfo>()
+    const crits = new Set<string>()
     const damage: SkillDamage[] = []
     const added: SkillCondition[] = []
     const model = pack.manifest.damage
@@ -422,6 +438,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
           for (const t of tgts.length ? tgts : [src]) {
             const tv = await evalNumber(e.vs, scopeFor(t), stream, `${label} target`)
             const r = await rollInfo(formula, scopeFor(t), tv)
+            // The caster's natural best face is a critical hit whatever the total (a natural 20 always hits).
+            if (bestNatural(resolution, r.natural) && rolledByCaster(e.formula) && t !== src) crits.add(t.id)
             saves.set(t.id, r)
             rolls[label] = r
             last = r
@@ -521,7 +539,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
     for (const e of skill.effects) await applyEffect(e)
 
-    return { patches: patchesFor(), messages, vfx: skill.vfx, damage, conditions: added }
+    return { patches: patchesFor(), messages, vfx: skill.vfx, damage, conditions: added, ...(crits.size ? { crits: [...crits] } : {}) }
 
     /** Changed top-level sheet keys per touched character. */
     function patchesFor(): { character: string; data: Data }[] {

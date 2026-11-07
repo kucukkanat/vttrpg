@@ -39,6 +39,7 @@
     "conditions": "conditions.json",
     "sheet": "sheet.json",
     "chargen": "chargen.json",
+    "glossary": "glossary.json",
     "skills": [
       "skills/attack-melee.json",
       "skills/attack-ranged.json",

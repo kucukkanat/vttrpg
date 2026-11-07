@@ -8,10 +8,13 @@
  * spell. A staged pick holds the preview until the next press re-aims. A tap on the source
  * token, the Cancel button, right click or Esc cancels. Tokens do not take pointer events while
  * targeting is active. The pure staging rules live in `stageTargeting`.
+ *
+ * Touch on area shapes (burst, cone, line): the aim snaps to cell centres, and while the finger
+ * drags it sits `FINGER_OFFSET_PX` above the touch point so the finger never covers the template.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, Shape, ShapeGeometry, Vector3 } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Plane, Raycaster, Shape, ShapeGeometry, Vector2, Vector3 } from 'three'
 import type { Token } from '@/core/doc'
 import type { TargetShape, Vec2, Vec3 } from '@/core/geometry'
 import type { TokenId } from '@/core/ids'
@@ -19,7 +22,9 @@ import { useGame } from '@/state/store'
 import { useTable } from './context'
 import type { Bounds2 } from './grid'
 import { useTableUi } from './tableState'
-import { resolveShape, shapeOutline, stageTargeting, tokenAt, tokensInRange, tokensInShape, type ResolvedShape } from './targeting'
+import {
+  fingerAimPoint, isAreaShape, resolveShape, shapeOutline, snapAim, stageTargeting, tokenAt, tokensInRange, tokensInShape, type ResolvedShape,
+} from './targeting'
 
 export interface TargetingProps {
   /** Skill name for the bar ("Fireball → Bramble, Nettle"). */
@@ -149,10 +154,33 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
   const drag = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean; touch: boolean } | null>(null)
   const plane = useMemo(() => new Plane(new Vector3(0, 1, 0), -floorY), [floorY])
   const hit = useMemo(() => new Vector3(), [])
+  const gl = useThree((s) => s.gl)
+  const camera = useThree((s) => s.camera)
+  const offsetRay = useMemo(() => new Raycaster(), [])
+  const ndc = useMemo(() => new Vector2(), [])
 
   const pointAt = (e: ThreeEvent<PointerEvent>): Vec2 | null => {
     if (!e.ray.intersectPlane(plane, hit)) return null
     return { x: hit.x, y: hit.z }
+  }
+  const area = isAreaShape(shape)
+  /**
+   * Where a touch aims an area shape: snapped to the grid, and while the finger drags, through a
+   * point a finger-width above it so the template stays visible. Other input aims at the pointer.
+   */
+  const aimAt = (e: ThreeEvent<PointerEvent>, touch: boolean, dragging: boolean): Vec2 | null => {
+    if (!touch || !area) return pointAt(e)
+    let p: Vec2 | null
+    if (dragging) {
+      const rect = gl.domElement.getBoundingClientRect()
+      const f = fingerAimPoint(e.nativeEvent.clientX, e.nativeEvent.clientY, rect)
+      ndc.set(((f.x - rect.left) / rect.width) * 2 - 1, -((f.y - rect.top) / rect.height) * 2 + 1)
+      offsetRay.setFromCamera(ndc, camera)
+      p = offsetRay.ray.intersectPlane(plane, hit) ? { x: hit.x, y: hit.z } : pointAt(e)
+    } else {
+      p = pointAt(e)
+    }
+    return p ? snapAim(grid, p) : null
   }
   /** A lift stages the pick for the bar's Cast button (or cancels on a plain tap on the caster). */
   const stage = (p: Vec2, onCaster: boolean) => {
@@ -168,15 +196,14 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
     e.stopPropagation()
     capture(e).set(e.pointerId)
     if (controls) controls.enabled = false
-    drag.current = { pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false, touch: e.pointerType === 'touch' }
-    const p = pointAt(e)
+    const touch = e.pointerType === 'touch'
+    drag.current = { pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false, touch }
+    const p = aimAt(e, touch, false)
     if (p) setPointer(p)
   }
   const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
     const d = drag.current
     if (d && e.pointerId !== d.pointerId) return
-    const p = pointAt(e)
-    if (!p) return
     // A staged pick holds the preview where it was aimed; the next press starts aiming again.
     if (!d && useTableUi.getState().targeting?.candidate) return
     if (d) {
@@ -184,6 +211,8 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
       if (!d.moved && Math.hypot(e.nativeEvent.clientX - d.startX, e.nativeEvent.clientY - d.startY) >= DRAG_THRESHOLD_PX) d.moved = true
       if (d.touch && !d.moved) return // a steady finger keeps the preview where it landed
     }
+    const p = aimAt(e, !!d?.touch, !!d?.moved)
+    if (!p) return
     setPointer(p)
   }
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
@@ -193,7 +222,7 @@ export function TargetingLayer({ targeting, bounds }: { targeting: TargetingProp
     capture(e).release(e.pointerId)
     drag.current = null
     if (controls) controls.enabled = true
-    const p = pointAt(e) ?? pointer
+    const p = aimAt(e, d.touch, d.moved) ?? pointer
     setPointer(p)
     // A plain tap on the caster cancels (an aimed drag that ends there does not).
     stage(p, !d.moved && shape.kind !== 'self' && tokenAt(p, candidates, grid.cellSize) === source)

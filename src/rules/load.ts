@@ -9,6 +9,7 @@ import type {
   CreatureActionTemplates,
   Effect,
   EncounterRules,
+  GlossaryTerm,
   PackManifest,
   ResourceDef,
   RollResolution,
@@ -79,6 +80,7 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   const encounter = f.encounter ? guardEncounter(await read(f.encounter), f.encounter) : undefined
   if (manifest.creatures?.sheet && !sheets[manifest.creatures.sheet])
     throw new PackError('pack.json', `creatures.sheet "${manifest.creatures.sheet}" is not in files.sheets`)
+  const glossary = f.glossary ? guardGlossary(await read(f.glossary), f.glossary) : undefined
 
   const ids = new Set<string>()
   for (const s of skills) {
@@ -91,6 +93,7 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   if (Object.keys(sheets).length) pack.sheets = sheets
   if (creatureActions) pack.creatureActions = creatureActions
   if (encounter) pack.encounter = encounter
+  if (glossary) pack.glossary = glossary
   return pack
 }
 
@@ -145,6 +148,7 @@ export function guardManifest(v: unknown): PackManifest {
     for (const k of ['sheet', 'hpFormula', 'ac', 'xp', 'cr', 'crText', 'notes'])
       if (!opt(c[k], isStr)) throw new PackError(file, `creatures.${k} must be a string`)
   }
+  if (!opt(files.glossary, isStr)) throw new PackError(file, 'files.glossary must be a string')
   return v as unknown as PackManifest
 }
 
@@ -190,6 +194,16 @@ export function guardResources(v: unknown, file: string): ResourceDef[] {
     if (x.resetOn !== undefined && !['rest', 'longRest', 'session', 'never'].includes(x.resetOn as string))
       throw new PackError(file, `${x.id}: bad resetOn`)
     return x as unknown as ResourceDef
+  })
+}
+
+export function guardGlossary(v: unknown, file: string): GlossaryTerm[] {
+  return guardArray(v, file).map((x, i) => {
+    if (!isStr(x.id) || !x.id) throw new PackError(file, `entry ${i}: "id" required`)
+    if (!isStr(x.term) || !x.term.trim()) throw new PackError(file, `${x.id}: "term" required`)
+    if (!isStr(x.text)) throw new PackError(file, `${x.id}: "text" required`)
+    if (!opt(x.aliases, isStrArr)) throw new PackError(file, `${x.id}: aliases must be a list of strings`)
+    return x as unknown as GlossaryTerm
   })
 }
 
