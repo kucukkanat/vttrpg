@@ -125,6 +125,12 @@ export interface ConditionChip {
   label: string
   name: string
   color: string
+  /** Turns left when the condition has a duration (`Token.effects`). */
+  remaining?: number
+  /** The pack's category, for styling buffs and debuffs apart. */
+  category?: 'buff' | 'debuff' | 'neutral'
+  /** Held by someone's concentration. */
+  concentration?: boolean
 }
 
 /** "Shield of Faith" -> "SF", "Injured" -> "IN". */
@@ -141,7 +147,7 @@ export function chipLabel(name: string): string {
  * grey chip so nothing is silently dropped.
  */
 export function conditionChips(
-  token: Pick<Token, 'conditions'>,
+  token: Pick<Token, 'conditions'> & Partial<Pick<Token, 'effects'>>,
   character: Pick<Character, 'data'> | undefined,
   defs: readonly ConditionDef[],
 ): ConditionChip[] {
@@ -155,12 +161,17 @@ export function conditionChips(
   return ids.map((id) => {
     const i = defs.findIndex((d) => d.id === id)
     const def = i >= 0 ? defs[i]! : undefined
-    return {
+    const chip: ConditionChip = {
       id,
       label: chipLabel(def?.name ?? id),
       name: def?.name ?? id,
       color: i >= 0 ? CONDITION_PALETTE[i % CONDITION_PALETTE.length]! : UNKNOWN_CONDITION_COLOR,
     }
+    const effect = token.effects?.[id]
+    if (effect?.remaining !== undefined) chip.remaining = effect.remaining
+    if (effect?.concentration) chip.concentration = true
+    if (def?.category) chip.category = def.category
+    return chip
   })
 }
 

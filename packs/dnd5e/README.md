@@ -14,13 +14,13 @@ this pack adds on top of it and how it uses the engine.
 
 | File | Contents |
 |---|---|
-| `pack.json` | Manifest, square grid of 1.5 m (one 5-foot square), `resolution: d20-vs-dc` |
+| `pack.json` | Manifest, square grid of 1.5 m (one 5-foot square), `resolution: d20-vs-dc`, the damage model (13 SRD damage types, temporary hit points) and the concentration rule |
 | `attributes.json` | Abilities, level and 20 derived attributes (modifiers, proficiency bonus, AC, initiative, speed, passive Perception, spellcasting numbers) |
 | `resources.json` | `hp`, `hit_dice`, `slots_1`..`slots_3` with max expressions |
-| `conditions.json` | The 15 SRD conditions plus the `shield-of-faith` buff |
+| `conditions.json` | The 15 SRD conditions, the `shield-of-faith` buff and `concentrating`, each with a `category` |
 | `sheet.json` | Identity, abilities and saves, 18 skills, combat, attacks, spellcasting, equipment, features, conditions, notes |
 | `chargen.json` | Roll abilities, race table, class table, Acolyte background, alignment, vitals |
-| `skills/*.json` | Two weapon attacks and seven spells |
+| `skills/*.json` | Two weapon attacks and eight spells |
 
 ## Sheet data
 
@@ -33,11 +33,13 @@ prof.<skill>                   0 (none), 1 (proficient), 2 (expertise); skill id
 speed_base                     walking speed in feet from race
 armor_base, armor_dex_cap, shield, ac_bonus     see Armor Class below
 hp, hit_dice                   { current, max }
+temp_hp                        temporary hit points, a plain number (spent first, never healed)
+resistances, vulnerabilities, immunities   lists of damage type ids (`fire`), or `all`
 hit_die, hit_die_sides         "d10" and 10
 slots_1, slots_2, slots_3      { current, max }
 caster                         'full' | 'half' | 'pact' | 'none'
 spell_ability                  'int' | 'wis' | 'cha' | 'none'
-melee, ranged                  readied weapons: { name, damage: "1d8", ability: 'str' | 'dex' }
+melee, ranged                  readied weapons: { name, damage: "1d8", ability: 'str' | 'dex', type: 'slashing' }
 attacks                        list of { name, bonus, damage } for anything else
 spells                         list of { name, level }
 equipment                      list of { name, qty }
@@ -80,15 +82,40 @@ barbarian's Unarmored Defense, magic items.
 
 Roll buttons use `d20 + <ability>_mod + save_prof.<ability> * pb` and
 `d20 + <ability>_mod + prof.<skill> * pb`; set a proficiency field to 1 (or 2 for expertise) to
-turn it on. Advantage and disadvantage are not modelled; roll twice.
+turn it on. Advantage and disadvantage come from the roll-mode toggle (Adv / Dis in the dice
+pad, the chat and the character panel): the next roll's `d20` becomes `2d20kh1` or `2d20kl1`.
+On a skill it applies to the caster's attack roll, never to the targets' saves.
 
 ### Conditions
 
 Descriptions follow the SRD. The only effects the engine can express are numeric modifiers:
 `grappled`, `restrained`, `paralyzed`, `stunned`, `unconscious` and `petrified` set the speed to
 0 (a large negative modifier on `speed_base`, clamped by `speed`), and `shield-of-faith` adds 2
-to `ac`. Advantage, disadvantage, auto-fail saves and incapacitation are text for the table.
-`exhaustion` is a single condition; track the level in notes.
+to `ac`. `petrified` grants resistance to all damage and immunity to poison. Advantage,
+disadvantage, auto-fail saves and incapacitation are text for the table. `exhaustion` is a
+single condition; track the level in notes.
+
+Conditions can last a number of turns. The GM sets one in the token's Conditions card ("Lasts
+N turns", ending at the end or start of the token's turn); skills set it with `duration`. They
+count down while initiative runs and end with a chat notice.
+
+### Damage, resistances and temporary hit points
+
+Damage rows carry a type (`fire`, or the readied weapon's `type`). Resistance halves it,
+vulnerability doubles it, immunity ignores it, from the sheet's lists and from conditions.
+Temporary hit points absorb damage first; gaining more keeps the higher value. Every skill
+that deals or heals damage posts a card in chat with what each target took and buttons to
+switch to half, double or healing, or undo; a plain roll without a pass/fail (a damage button,
+`/r 2d6`) gets an "Apply…" button that applies the total to the selected tokens, with a type
+picker. The GM uses any card; a player uses it on tokens they own.
+
+### Concentration
+
+`shield-of-faith` needs concentration. Casting a concentration spell ends the caster's previous
+one and every condition it added, and marks the caster `concentrating`. Damage to a
+concentrating creature posts a prompt for a CON save (`d20 + con_mod + save_prof.con * pb`)
+against DC 10 or half the damage, whichever is higher; failing it, dropping to 0 hit points or
+pressing "Drop it" ends the spell. The GM can ignore a prompt.
 
 ## Chargen
 
@@ -124,20 +151,23 @@ level, full/half/pact slot progressions to 3rd level) for sheets levelled past 1
 | `sacred-flame` | none | single, 12 | DEX save vs `spell_dc` or `cantrip_dice`d8 radiant |
 | `cure-wounds` | 1 `slots_1` | single, touch | heal `d8 + spell_mod` up to max |
 | `healing-word` | 1 `slots_1` | single, 12 | heal `d4 + spell_mod` up to max |
-| `shield-of-faith` | 1 `slots_1` | single, 12 | adds the `shield-of-faith` condition (+2 AC) |
+| `shield-of-faith` | 1 `slots_1` | single, 12 | concentration; adds `shield-of-faith` (+2 AC) for 100 of the caster's turns (10 minutes) |
+| `false-life` | 1 `slots_1` | self | `d4 + 4` temporary hit points |
 
 Ranges are in grid cells of 5 feet. Saving throws roll `d20 + target.<ability>_mod +
 target.save_prof.<ability> * target.pb` against the caster's `spell_dc`; the engine's
 `d20-vs-dc` resolution marks success when the total meets the DC. Attack rows read the natural
-die as `save.dice.0` to apply the natural 1 and 20 rules.
+die as `save.natural` (the kept die under advantage) to apply the natural 1 and 20 rules.
 
 ## Not modelled
 
-- Advantage and disadvantage, cover, opportunity attacks, reach beyond 5 feet, two-weapon fighting.
-- Casting with a higher-level slot, concentration tracking (remove the condition by hand),
+- Advantage from conditions (a blinded attacker does not get disadvantage by itself; use the
+  toggle), cover, opportunity attacks, reach beyond 5 feet, two-weapon fighting.
+- Casting with a higher-level slot, incapacitation ending concentration (drop it by hand),
   spell preparation limits, components, ritual casting, pact slots recovering on a short rest.
-- Death saving throws beyond a plain `d20 >= 10` button; temporary hit points; damage types,
-  resistances and vulnerabilities; critical hits from paralysis.
+- Death saving throws beyond a plain `d20 >= 10` button; critical hits from paralysis; damage
+  types on attacks listed under `attacks` (only the readied weapons carry one); durations in
+  real time outside initiative (an hour of False Life is not tracked).
 - Levelling up: edit `level`, `hp.max`, hit dice and slot maxima by hand (the `max` expressions
   in `resources.json` give the numbers).
 - Monster stat blocks, multiclassing, feats, subclasses other than the SRD defaults named in the

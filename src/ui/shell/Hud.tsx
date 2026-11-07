@@ -16,6 +16,8 @@ import { InitiativeChip } from '../panels/InitiativePanel'
 import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
 import { useSession } from '../session'
 import { newSeed } from '@/dice'
+import { RollModeBar } from '../panels/RollCards'
+import { useRollMode } from '../rollMode'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -160,6 +162,7 @@ function DicePad() {
   const [open, setOpen] = useState(false)
   const [formula, setFormula] = useState('')
   const [last, setLast] = useState(lastRollFormula)
+  const armed = useRollMode((s) => s.advantage)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -179,8 +182,9 @@ function DicePad() {
   }
   return (
     <div className="cam-group cam-dice-group">
-      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label="Roll dice" title="Roll dice" onClick={() => setOpen(!open)}>
+      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label={armed ? `Roll dice (next d20 with ${armed})` : 'Roll dice'} title={armed ? `Next d20 roll with ${armed}` : 'Roll dice'} onClick={() => setOpen(!open)}>
         <Icon name="dice" className="cam-icon" />
+        {armed && <kbd aria-hidden>{armed === 'advantage' ? 'ADV' : 'DIS'}</kbd>}
       </button>
       {open && (
         <div className="dice-pad" role="dialog" aria-label="Roll dice">
@@ -188,6 +192,7 @@ function DicePad() {
             {quickDice(pack).map((f) => <button key={f} type="button" className="die-chip" onClick={() => roll(f)} aria-label={`Roll ${f}`}>{f}</button>)}
             <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) roll(last) }} title={last ? `Roll ${last} again` : 'Nothing rolled yet'}>Last</button>
           </div>
+          <RollModeBar />
           <form className="dice-pad-form" onSubmit={(e) => { e.preventDefault(); roll(formula); setFormula('') }}>
             <input value={formula} onChange={(e) => setFormula(e.target.value)} placeholder="2d6+1" aria-label="Dice formula" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
             <button type="submit" className="primary" disabled={!formula.trim()}>Roll</button>

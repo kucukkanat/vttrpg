@@ -110,6 +110,10 @@ export interface Token {
    * game's custom skills, as before per-token skills existed.
    */
   skills?: string[]
+  /** Durations and concentration links for conditions on this token (sheet or token list), by condition id. */
+  effects?: Record<string, ConditionEffect>
+  /** This token is concentrating on a skill; a new concentration skill ends the old one. */
+  concentrating?: { skill: string; name: string }
 }
 
 /** Sheet data is pack-defined; the engine treats it as an opaque JSON object. */
@@ -136,6 +140,71 @@ export interface ChatMessage {
   channel?: 'combat'
   /** The end-of-encounter report, rendered as a table (kind 'system'). */
   summary?: EncounterSummary
+  /**
+   * Rolls: who may read the result. Absent = everyone. Hidden by the interface only: the document
+   * is shared and every member holds the game key (see docs/ROLLS.md).
+   */
+  visibility?: RollVisibility
+  /** An amount the GM (or the token's owner) can apply to tokens: the apply-damage card. */
+  damage?: DamageCard
+  /** A concentration save prompted by damage; `result` is set once it is rolled or dismissed. */
+  concentration?: ConcentrationCheck
+}
+
+/**
+ * `public`: everyone sees the result. `gm`: the roller and the GM. `blind`: the GM only; the
+ * roller sees that the roll was made, and the GM mixes in its own seed so the roller cannot work
+ * the result out from theirs.
+ */
+export type RollVisibility = 'public' | 'gm' | 'blind'
+export type RollAdvantage = 'advantage' | 'disadvantage'
+
+/** How an apply-damage button scales the card's amount; `-1` heals by the amount. */
+export type DamageFactor = 1 | 0.5 | 2 | -1
+
+/** What one apply-damage choice did to a sheet, so it can be undone or swapped for another. */
+export interface AppliedDamage {
+  factor: DamageFactor
+  /** Final amount after the factor and the target's resistances (positive). */
+  amount: number
+  /** Sheet keys changed and by how much (`hp: -7`, `temp_hp: -3`), for undo. */
+  changes: { key: string; delta: number }[]
+  /** "resistant", "immune", "vulnerable" when a trait changed the amount. */
+  note?: string
+}
+
+export interface DamageTarget {
+  token: TokenId
+  /** Raw amount for this target before factor and traits; defaults to the card's amount. */
+  amount?: number
+  applied?: AppliedDamage
+}
+
+export interface DamageCard {
+  amount: number
+  /** Damage type id from the pack's damage model (`fire`), if known. */
+  type?: string
+  /** `heal` cards apply as healing at factor 1. */
+  heal?: boolean
+  targets: DamageTarget[]
+}
+
+export interface ConcentrationCheck {
+  token: TokenId
+  dc: number
+  result?: 'kept' | 'lost' | 'dismissed'
+}
+
+/** A timed or concentration-bound condition on a token. Keyed by condition id in `Token.effects`. */
+export interface ConditionEffect {
+  /** Turns left; absent = lasts until removed (or until the concentration holding it ends). */
+  remaining?: number
+  /** Count down at the start or the end of the turn of `on` (default `end`). */
+  tick?: 'start' | 'end'
+  /** Token whose turns count down the duration (the caster for "until the end of your next turn"); default the bearer. */
+  on?: TokenId
+  /** Caster concentrating on it: the condition ends when their concentration does. */
+  concentration?: TokenId
 }
 
 export interface RollResult {
@@ -146,6 +215,8 @@ export interface RollResult {
   total: number
   /** Pack-specific interpretation, e.g. { success: true, critical: false }. */
   outcome?: Record<string, unknown>
+  /** Rolled with advantage or disadvantage (the formula's d20 became 2d20kh1 / 2d20kl1). */
+  advantage?: RollAdvantage
 }
 
 export interface FogState {

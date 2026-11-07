@@ -6,7 +6,7 @@
   "target": { "kind": "single", "range": 12 },
   "effects": [
     { "kind": "roll", "formula": "d20 + target.dex_mod + target.save_prof.dex * target.pb", "vs": "spell_dc", "label": "DEX save" },
-    { "kind": "damage", "formula": "save.success ? 0 : roll(cantrip_dice + 'd8')", "resource": "hp" },
+    { "kind": "damage", "formula": "save.success ? 0 : roll(cantrip_dice + 'd8')", "resource": "hp", "type": "radiant" },
     { "kind": "message", "text": "Radiance falls on {target.name}." }
   ],
   "vfx": [

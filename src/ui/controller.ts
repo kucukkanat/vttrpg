@@ -18,8 +18,12 @@ import type { PlayerPubkey, SceneId } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
 import { bindDoc, useGame } from '@/state/store'
 import { bindUndoDispatcher, recordUndo, undoLast } from '@/state/undo'
-import { rollFromSeed } from '@/dice'
+import { newSeed, rollFromSeed } from '@/dice'
+import { withAdvantage } from '@/rules'
+import type { TokenId } from '@/core/ids'
 import { pushToast } from './toasts'
+import { concentrationContext, damageContext, packNames, skillExtras } from './combat'
+import { withRollMode } from './rollMode'
 
 export interface GameController {
   connection: GameConnection
@@ -94,27 +98,35 @@ export function createController(opts: {
   }
 
   async function resolveContext(env: IntentEnvelope): Promise<ApplyContext> {
-    const ctx: ApplyContext = {}
+    const ctx: ApplyContext = { pack: packNames(rules) }
     const { intent } = env
     if (intent.type === 'roll') {
       // Formulas from the sheet (`d20 <= str`) evaluate against the character they were rolled from.
       const character = rollCharacter(intent)
-      ctx.roll = rules
-        ? await rules.roll(intent.formula, intent.seed, character ? { character } : {})
-        : ((await rollFromSeed(intent.formula, intent.seed)) as RollResult)
+      // A player's blind roll: the GM mixes in its own seed so the roller cannot derive the result from theirs.
+      const seed = intent.visibility === 'blind' && env.from !== connection.gm ? `${intent.seed}.${newSeed()}` : intent.seed
+      const context: Record<string, unknown> = character ? { character } : {}
+      if (intent.advantage) context.advantage = intent.advantage
+      if (rules) ctx.roll = await rules.roll(intent.formula, seed, context)
+      else {
+        const formula = (intent.advantage && withAdvantage(intent.formula, intent.advantage)) || intent.formula
+        ctx.roll = (await rollFromSeed(formula, seed)) as RollResult
+        if (formula !== intent.formula && intent.advantage) ctx.roll.advantage = intent.advantage
+      }
     }
+    if (intent.type === 'damage.apply') ctx.damage = damageContext(rules, useGame.getState(), intent)
+    if (intent.type === 'concentration.save' && rules) ctx.concentration = await concentrationContext(rules, useGame.getState(), intent)
     if (intent.type === 'skill.use' && rules) {
       const s = useGame.getState()
       const src = s.tokens[intent.source]
       const source = src?.character ? s.characters[src.character] : undefined
       // Tokens without a sheet still take part as targets (messages, vfx); patches to them are dropped by apply.
-      const targets = intent.targets
-        .map((t) => s.tokens[t])
-        .filter((t): t is NonNullable<typeof t> => !!t)
-        .map((t) => (t.character && s.characters[t.character]) || rules.blankCharacter(t.id, t.name))
+      const present = intent.targets.map((t) => s.tokens[t]).filter((t): t is NonNullable<typeof t> => !!t)
+      const targets = present.map((t) => (t.character && s.characters[t.character]) || rules.blankCharacter(t.id, t.name))
       if (source) {
-        const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed)
-        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx }
+        const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed, intent.advantage ? { advantage: intent.advantage } : {})
+        const extras = skillExtras(rules, s, intent, present.map((t) => t.id as TokenId), r)
+        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx, ...extras }
       }
     }
     return ctx
@@ -165,7 +177,9 @@ export function createController(opts: {
     if (ping) vfxBus.emit('ping', ping)
   })
 
-  const dispatch = async (intent: Intent): Promise<void> => {
+  const dispatch = async (raw: Intent): Promise<void> => {
+    // Rolls and skills pick up the roll-mode toggles (advantage, GM-only, blind) at send time.
+    const intent = withRollMode(raw, rules)
     const env: IntentEnvelope = { id: crypto.randomUUID(), from: me.pubkey, at: Date.now(), intent }
     if (!connection.isGm) {
       const result = connection.sendIntent(env)
