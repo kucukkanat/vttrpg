@@ -11,6 +11,9 @@ export type PackId = Brand<string, 'PackId'>
 export type SkillId = Brand<string, 'SkillId'>
 export type PropId = Brand<string, 'PropId'>
 export type NoteId = Brand<string, 'NoteId'>
+export type WallId = Brand<string, 'WallId'>
+export type LightId = Brand<string, 'LightId'>
+export type PrefabId = Brand<string, 'PrefabId'>
 
 export function newId<T extends string>(): Brand<string, T> {
   return crypto.randomUUID() as Brand<string, T>

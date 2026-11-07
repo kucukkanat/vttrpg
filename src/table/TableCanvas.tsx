@@ -27,6 +27,7 @@ import type { Presence } from '@/core/presence'
 import { useGame } from '@/state/store'
 import { CameraRig } from './CameraRig'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
+import { BuildLayer, useDrawnBlocking } from './build/BuildLayer'
 import { EditGizmo } from './EditGizmo'
 import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
@@ -272,10 +273,13 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   const sceneWallsKey = scene.walls ? JSON.stringify(scene.walls) : ''
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sceneWalls = useMemo<WallSegment[]>(() => scene.walls ?? [], [sceneWallsKey])
-  const walls = useMemo(
+  const baseWalls = useMemo(
     () => [...transformWalls(loaded?.walls ?? [], transform), ...sceneWalls, ...Object.values(propWalls).flat()],
     [loaded, transform, sceneWalls, propWalls],
   )
+  // Walls and doors drawn on the table (build tools); a closed door blocks like a wall.
+  const drawnWalls = useDrawnBlocking(sceneId)
+  const walls = useMemo(() => (drawnWalls.length ? [...baseWalls, ...drawnWalls] : baseWalls), [baseWalls, drawnWalls])
   useEffect(() => {
     const c = bounds3.getCenter(new Vector3())
     tableRuntime.sceneCenter = { x: c.x, y: floorY, z: c.z }
@@ -287,8 +291,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   )
 
   const ctx: TableContextValue = useMemo(
-    () => ({ sceneId, scene, grid, floorY, loaded, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve }),
-    [sceneId, scene, grid, floorY, loaded, viewer, onIntent, onPresence, resolve],
+    () => ({ sceneId, scene, grid, floorY, loaded, walls, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve }),
+    [sceneId, scene, grid, floorY, loaded, walls, viewer, onIntent, onPresence, resolve],
   )
 
   // Orbit, or Eyes (first person from the followed token); a `cameraMode` prop pins it (dev stories).
@@ -323,6 +327,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <PingLayer bounds={bounds2} />
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
+          <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
           <EditGizmo />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />

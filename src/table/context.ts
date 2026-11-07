@@ -7,10 +7,16 @@ import type { PlayerPubkey, SceneId } from '@/core/ids'
 import type { Intent } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import type { LoadedScene } from './sceneLoader'
+import type { WallSegment } from './walls'
 
 export interface ViewerInfo {
   pubkey: PlayerPubkey
   isGm: boolean
+  /**
+   * A table display (TV, second screen): sees what the party sees, never reveals or moves anything.
+   * `follow` glides along with the GM's shared camera; otherwise it frames the whole scene.
+   */
+  display?: { follow: boolean }
 }
 
 export interface TableContextValue {
@@ -20,6 +26,8 @@ export interface TableContextValue {
   /** Height of the floor tokens stand on. */
   floorY: number
   loaded: LoadedScene | null
+  /** Everything that blocks sight and movement right now: model, imported, prop and drawn walls, closed doors. */
+  walls: readonly WallSegment[]
   viewer: ViewerInfo | null
   onIntent(intent: Intent): void
   onPresence(p: Partial<Presence>): void
@@ -43,7 +51,15 @@ export function canControl(viewer: ViewerInfo | null, token: Token): boolean {
 /** Fog is revealed by tokens the viewer controls; the GM also reveals for unowned tokens. */
 export function revealsFor(viewer: ViewerInfo | null, token: Token): boolean {
   if (!viewer) return true
+  if (viewer.display) return false
   if (viewer.isGm) return !token.owner || token.owner === viewer.pubkey
+  return token.owner === viewer.pubkey
+}
+
+/** Whose sight a viewer sees through: the GM every token's; a display every player's; a player their own. */
+export function seesThrough(viewer: ViewerInfo | null, token: Token): boolean {
+  if (!viewer || viewer.isGm) return true
+  if (viewer.display) return !!token.owner
   return token.owner === viewer.pubkey
 }
 

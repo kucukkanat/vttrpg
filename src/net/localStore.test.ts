@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import type { GameId, PlayerPubkey } from '@/core/ids'
 import type { Manifest } from './codec'
-import { createMemoryGameStore, openLocalGameStore } from './localStore'
+import { createMemoryGameStore, openLocalGameStore, readOnlyGameStore } from './localStore'
 
 const gm = 'a'.repeat(64) as PlayerPubkey
 const manifest: Manifest = { name: 'Local', gm, relays: ['wss://x'], snapshot: { url: 'https://b/x', sha256: 'ff', at: 10 } }
@@ -73,5 +73,21 @@ describe('local game store without IndexedDB', () => {
     } finally {
       Object.defineProperty(globalThis, 'indexedDB', { value: saved, configurable: true })
     }
+  })
+})
+
+describe('read-only game store', () => {
+  it('reads through to the inner store and drops every write', async () => {
+    const inner = createMemoryGameStore()
+    const gameId = crypto.randomUUID() as GameId
+    await inner.saveManifest(gameId, manifest)
+    const ro = readOnlyGameStore(inner)
+    expect((await ro.load(gameId))?.manifest).toEqual(manifest)
+    await ro.saveDoc(gameId, new Uint8Array([1, 2, 3]))
+    await ro.saveManifest(gameId, { ...manifest, name: 'Changed' })
+    await ro.remove(gameId)
+    const kept = await inner.load(gameId)
+    expect(kept?.manifest?.name).toBe('Local')
+    expect(kept?.update).toBeUndefined()
   })
 })

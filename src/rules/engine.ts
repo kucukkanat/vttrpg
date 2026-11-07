@@ -235,6 +235,13 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       case 'initiative.remove':
       case 'initiative.end':
         return 'only the GM runs initiative'
+      case 'door.set': {
+        // Players work doors only where the GM allows it, and never a locked one.
+        const wall = doc.walls?.[intent.wall]
+        if (!wall?.door) return 'that is not a door'
+        if (!doc.scenes?.[wall.scene]?.playersOpenDoors) return 'only the GM opens doors here'
+        return wall.door.locked ? 'that door is locked' : null
+      }
       default:
         return 'only the GM may do that'
     }

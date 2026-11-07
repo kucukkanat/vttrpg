@@ -110,6 +110,20 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest])
 
+  // A shared view (GM pull, a display following the GM): glide there in orbit mode; null frames the scene.
+  const viewRequest = useTableUi((s) => s.viewRequest)
+  useEffect(() => {
+    if (!viewRequest) return
+    useTableUi.getState().set({ viewRequest: undefined })
+    if (effectiveMode !== 'orbit') return
+    const r = rig.current
+    const p = viewRequest.pose
+    r.orbitPose = p ? { pos: new Vector3(p.pos.x, p.pos.y, p.pos.z), target: new Vector3(p.target.x, p.target.y, p.target.z) } : null
+    r.settled = false
+    setOrbitReady(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewRequest])
+
   // Mode / follow-target changes start a transition.
   useEffect(() => {
     const r = rig.current
@@ -217,6 +231,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     if (c && c.enabled !== controlsEnabled && !dragging) c.enabled = controlsEnabled
     const look = c && effectiveMode === 'orbit' ? c.target : r.target
     tableRuntime.cameraTarget = { x: look.x, y: look.y, z: look.z }
+    tableRuntime.cameraPosition = { x: camera.position.x, y: camera.position.y, z: camera.position.z }
     const step = 1 - Math.exp(-dt * (r.settled ? 10 : 4))
     if (effectiveMode === 'orbit') {
       if (!r.settled) {

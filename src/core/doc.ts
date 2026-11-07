@@ -5,7 +5,7 @@
  */
 import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
-import type { CharacterId, NoteId, PackId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
+import type { CharacterId, LightId, NoteId, PackId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
 import type { SkillDef, VfxCue } from './pack'
 
 export type CameraMode = 'orbit' | 'token'
@@ -50,6 +50,8 @@ export interface Scene {
   transform?: SceneTransform
   /** Per-node overrides inside the scene model, keyed by the node's name in the GLB. */
   overrides?: Record<string, NodeOverride>
+  /** Players may open and close the unlocked doors drawn in this scene (`door.set`). The GM always can. */
+  playersOpenDoors?: boolean
 }
 
 export interface SceneTransform {
@@ -152,6 +154,58 @@ export interface FogState {
   revealed: string[]
   /** The GM revealed the whole map (`fog.revealAll`); `revealed` is kept for when fog is reset. */
   revealAll?: boolean
+  /** Cells the GM painted back into fog (`fog.hide`) after revealing the whole map; only read while `revealAll` is set. */
+  hidden?: string[]
+}
+
+/**
+ * A wall or door drawn on the table, or accepted from wall detection. A segment on the XZ plane in
+ * world units; drawn walls join the scene's model, imported and prop walls for line of sight and
+ * movement. A closed door blocks like a wall, an open one is a gap.
+ */
+export interface Wall {
+  id: WallId
+  scene: SceneId
+  a: { x: number; z: number }
+  b: { x: number; z: number }
+  door?: { open: boolean; locked?: boolean }
+  /** Where the segment came from; detected walls can be told apart and cleared together. */
+  source?: 'drawn' | 'detected' | 'prefab'
+}
+
+/** A light the GM placed in a scene: a point light on the floor plan. Visual only. */
+export interface PlacedLight {
+  id: LightId
+  scene: SceneId
+  position: Vec3
+  /** Reach in cells. */
+  radius: number
+  color: string
+  /** 0..2, 1 = normal. */
+  intensity?: number
+}
+
+/** A prop as stored in a prefab: position relative to the prefab's footprint corner. */
+export type PrefabProp = Omit<Prop, 'id' | 'scene'>
+
+/** A wall as stored in a prefab, relative to the footprint corner. */
+export type PrefabWall = Pick<Wall, 'a' | 'b' | 'door'>
+
+/**
+ * A reusable build ("slab"): props and walls captured from a rectangle of the table, stamped back
+ * on any scene with its footprint corner snapped to the grid. Positions are meters from the
+ * footprint's minimum corner; `cellSize` is the grid they were captured on, so a stamp on another
+ * grid scales them.
+ */
+export interface Prefab {
+  id: PrefabId
+  name: string
+  /** Footprint size in meters along x and z. */
+  size: { x: number; z: number }
+  cellSize: number
+  props: PrefabProp[]
+  walls: PrefabWall[]
+  createdAt: number
 }
 
 /**
@@ -277,6 +331,10 @@ export interface GameDocShape {
   customSkills: Record<SkillId, SkillDef>
   /** Turn order; optional so documents from before the tracker existed still fit. */
   initiative?: InitiativeState
+  /** Drawn walls and doors, prefabs and placed lights; optional for documents from before they existed. */
+  walls?: Record<WallId, Wall>
+  prefabs?: Record<PrefabId, Prefab>
+  lights?: Record<LightId, PlacedLight>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights'] as const

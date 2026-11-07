@@ -4,8 +4,8 @@
  * optimistically and roll back if the GM's delta disagrees.
  */
 import type { Vec3 } from './geometry'
-import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary } from './doc'
+import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -69,6 +69,21 @@ export type Intent =
   | { type: 'initiative.declare'; action: Omit<DeclaredAction, 'at'> }
   /** GM only: the declared action is done or called off. */
   | { type: 'initiative.resolve'; token: TokenId }
+  /** GM fog brush: paint cells back into fog. Revealing goes through `fog.reveal`. */
+  | { type: 'fog.hide'; scene: SceneId; cells: string[] }
+  /** Walls and doors (GM only). `wall.add` and `wall.remove` take several so a stroke or a stamp is one change. */
+  | { type: 'wall.add'; walls: Wall[] }
+  | { type: 'wall.update'; wall: WallId; patch: Partial<Wall> }
+  | { type: 'wall.remove'; walls: WallId[] }
+  /** Open or close a door. The GM always; players when the scene allows it and the door is not locked. */
+  | { type: 'door.set'; wall: WallId; open: boolean }
+  /** Placed lights (GM only). */
+  | { type: 'light.add'; light: PlacedLight }
+  | { type: 'light.update'; light: LightId; patch: Partial<PlacedLight> }
+  | { type: 'light.remove'; light: LightId }
+  /** Prefabs (GM only). Stamping one is plain `prop.add` and `wall.add`. */
+  | { type: 'prefab.upsert'; prefab: Prefab }
+  | { type: 'prefab.remove'; prefab: PrefabId }
 
 export interface IntentEnvelope {
   id: string

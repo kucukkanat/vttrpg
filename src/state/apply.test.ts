@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { applyIntent, nextTurn, skillNumbers, sortInitiative, withOrder, withoutToken } from './apply'
-import type { Character, GameEvent, InitiativeState, Token } from '@/core/doc'
-import type { CharacterId, PlayerPubkey, SceneId, SkillId, TokenId } from '@/core/ids'
+import type { Character, GameEvent, InitiativeState, PlacedLight, Token, Wall } from '@/core/doc'
+import type { CharacterId, LightId, PlayerPubkey, PrefabId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 
 const from = 'aa'.repeat(32) as PlayerPubkey
 const env = (intent: Parameters<typeof applyIntent>[1]['intent']) => ({ id: crypto.randomUUID(), from, at: 1, intent })
@@ -37,6 +37,53 @@ describe('applyIntent', () => {
     expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: ['0,0', '1,0'], revealAll: true })
     applyIntent(doc, env({ type: 'fog.reset', scene }))
     expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: [] })
+  })
+  it('paints cells back into fog, also as exceptions to a fully revealed map', () => {
+    const doc = new Y.Doc()
+    const scene = 's1' as SceneId
+    applyIntent(doc, env({ type: 'fog.hide', scene, cells: ['0,0'] }))
+    expect(doc.getMap('fog').get(scene)).toBeUndefined()
+    applyIntent(doc, env({ type: 'fog.reveal', scene, cells: ['0,0', '1,0', '2,0'] }))
+    applyIntent(doc, env({ type: 'fog.hide', scene, cells: ['1,0'] }))
+    expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: ['0,0', '2,0'] })
+    applyIntent(doc, env({ type: 'fog.revealAll', scene }))
+    applyIntent(doc, env({ type: 'fog.hide', scene, cells: ['5,5', '6,5'] }))
+    expect(doc.getMap('fog').get(scene)).toEqual({ scene, revealed: ['0,0', '2,0'], revealAll: true, hidden: ['5,5', '6,5'] })
+    applyIntent(doc, env({ type: 'fog.reveal', scene, cells: ['5,5'] }))
+    expect(doc.getMap('fog').get(scene)).toMatchObject({ revealAll: true, hidden: ['6,5'] })
+    applyIntent(doc, env({ type: 'fog.revealAll', scene }))
+    expect(doc.getMap('fog').get(scene)).not.toHaveProperty('hidden')
+  })
+  it('adds, updates and removes walls, and opens and closes doors', () => {
+    const doc = new Y.Doc()
+    const scene = 's1' as SceneId
+    const wall = { id: 'w1' as WallId, scene, a: { x: 0, z: 0 }, b: { x: 1, z: 0 } }
+    const door = { id: 'd1' as WallId, scene, a: { x: 1, z: 0 }, b: { x: 2, z: 0 }, door: { open: false } }
+    applyIntent(doc, env({ type: 'wall.add', walls: [wall, door] }))
+    applyIntent(doc, env({ type: 'door.set', wall: door.id, open: true }))
+    expect(doc.getMap<Wall>('walls').get(door.id)?.door).toEqual({ open: true })
+    // A wall is not a door: nothing happens.
+    applyIntent(doc, env({ type: 'door.set', wall: wall.id, open: true }))
+    expect(doc.getMap<Wall>('walls').get(wall.id)).toEqual(wall)
+    applyIntent(doc, env({ type: 'wall.update', wall: door.id, patch: { door: { open: true, locked: true } } }))
+    expect(doc.getMap<Wall>('walls').get(door.id)?.door).toEqual({ open: true, locked: true })
+    applyIntent(doc, env({ type: 'wall.remove', walls: [wall.id, door.id] }))
+    expect(doc.getMap('walls').size).toBe(0)
+  })
+  it('keeps placed lights and prefabs', () => {
+    const doc = new Y.Doc()
+    const scene = 's1' as SceneId
+    const light = { id: 'l1' as LightId, scene, position: { x: 1, y: 0, z: 1 }, radius: 4, color: '#fff' }
+    applyIntent(doc, env({ type: 'light.add', light }))
+    applyIntent(doc, env({ type: 'light.update', light: light.id, patch: { radius: 6 } }))
+    expect(doc.getMap<PlacedLight>('lights').get(light.id)?.radius).toBe(6)
+    applyIntent(doc, env({ type: 'light.remove', light: light.id }))
+    expect(doc.getMap('lights').size).toBe(0)
+    const prefab = { id: 'pf1' as PrefabId, name: 'Hut', size: { x: 2, z: 2 }, cellSize: 1, props: [], walls: [], createdAt: 1 }
+    applyIntent(doc, env({ type: 'prefab.upsert', prefab }))
+    expect(doc.getMap('prefabs').get(prefab.id)).toEqual(prefab)
+    applyIntent(doc, env({ type: 'prefab.remove', prefab: prefab.id }))
+    expect(doc.getMap('prefabs').size).toBe(0)
   })
   it('removes a scene but never the live one, and leaves its tokens in place', () => {
     const doc = new Y.Doc()
