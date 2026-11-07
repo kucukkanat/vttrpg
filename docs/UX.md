@@ -165,6 +165,7 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `1`–`9` | toggle the n-th panel section (registry order) |
 | `Esc` | blur the focused field; cancel skill targeting / deselect (table) |
 | `G` / `F` / `C` | grid overlay / first person / camera mode (table, existing) |
+| `T` / `Q` / `E` | tactical top-down view / turn it 45° left / right (table) |
 | `Delete` | remove the selected token (GM, existing) |
 | `i` | on a focused skill chip: pin its tooltip (focus moves in; `Esc` closes and returns) |
 | arrows, `Home` / `End` | walk the token menu (list or radial); focus returns to the opener on close |
@@ -218,3 +219,36 @@ keyboards still reach the table's own keys.
 
 Known follow-ups outside this shell's files: `BuildTag` (fixed bottom-right) overlaps the Chat
 tab label on phones; it should sit above the tab bar or move into the overflow menu.
+
+## Layout presets, Zen and Display
+
+The top bar's ▣ menu holds Zen mode and a few layout presets (`src/ui/shell/layoutPresets.ts`),
+chosen per device, never a free-form editor:
+
+| Preset | For | What it does |
+|---|---|---|
+| Standard | everyone | Fits the screen size; your own widths and folds (picking it resets them) |
+| GM desk | GM, co-GMs | Scenes, tokens, turns and sound open on the left; chat and sheet on the right |
+| Player desk | players | Left column folded to its rail; sheet, skills and chat on the right |
+| Compact | any | Phone arrangement (tab bar and sheets) at any width |
+| Display | TV or shared screen | Table, turn order and roll toasts only; a corner button exits |
+
+Zen (Z, or the menu) hides every bit of chrome over the table for the session; Z, Esc or the
+corner "Show UI" button restores it. Both only change grid areas, so the canvas stays mounted.
+
+## Sound and cues
+
+The soundboard has a volume per pad (this device, sent with each play), stop per pad and "Stop
+all" (an `audio.stop` intent, so everyone stops hearing it), and a ring on pads that are
+playing. Everyone has a master volume in the Players panel settings, next to the optional
+"Your turn" and "Effect ended" cues: each can sound, speak or both, is off by default, and
+always shows a toast when on so no cue is audio-only.
+
+## Game files and third-party packs
+
+The GM exports the whole game from the ▣ menu as one `.vttgame.json` file: the document as plain
+JSON plus the bytes of every asset the device can fetch, each checked against its hash.
+New game, "Or import a game file", creates a new game from it with you as GM. The New game
+page also loads a pack by address (a folder with `pack.json`, served with CORS) or from a bundle
+file `{ "format": "vttrpg-pack", "files": { "pack.json": ..., "sheet.json": ... } }`, validated
+with the same loader the game uses before Create is allowed.

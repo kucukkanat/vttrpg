@@ -123,3 +123,11 @@ export async function loadIdentity(): Promise<Identity> {
   }
   return localIdentity(loadOrCreateSecret(secretStorageKey(null)))
 }
+
+/**
+ * A throwaway identity kept only in memory, for read-only viewers such as a table display: it
+ * never publishes, so nothing about it needs to survive the tab.
+ */
+export function ephemeralIdentity(): Identity {
+  return localIdentity(generateSecretKey())
+}

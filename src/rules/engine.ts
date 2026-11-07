@@ -3,12 +3,14 @@
  * against characters, intent validation, deterministic chargen and skill
  * resolution. Pure: no rendering, no networking, all randomness from a seed.
  */
-import type { Character, GameDocShape, RollResult } from '@/core/doc'
+import type { Character, GameDocShape, RollAdvantage, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
 import type { CharacterId } from '@/core/ids'
-import type { ChargenStep, Effect, RollResolution, SkillDef } from '@/core/pack'
+import type { ChargenStep, ConditionDuration, Effect, RollResolution, SkillDef } from '@/core/pack'
 import { parseFormula } from '@/dice/fair'
-import type { LoadedPack, RulesEngine } from './index'
+import type { LoadedPack, RulesEngine, SkillCondition, SkillDamage } from './index'
+import { adjustForTraits, damageTraits, heal, resourceRef, takeDamage } from './damage'
+import { advantageDie, naturalDie, withAdvantage } from './rollMode'
 import {
   DiceStream,
   ExprError,
@@ -35,6 +37,8 @@ interface RollInfo {
   target?: number
   success?: boolean
   critical: boolean
+  /** The resolution die as read for natural 1s and 20s: the kept die under advantage. */
+  natural?: number
 }
 
 const DEFAULT_RESOLUTION: RollResolution = { kind: 'd20-vs-dc' }
@@ -48,10 +52,12 @@ export function outcomeFor(
   total: number,
   target: number | undefined,
   explicit?: boolean,
+  formula?: string,
 ): Record<string, unknown> | undefined {
   if (!resolution) return explicit === undefined ? undefined : { success: explicit, critical: false }
   const sides = resolution.kind === 'roll-under' ? parseFormula(resolution.die).terms[0].sides : 20
-  const natural = dice.find((d) => d.sides === sides)?.value
+  // With advantage the formula holds `2d20kh1`: the kept die is the natural one.
+  const natural = formula ? naturalDie(formula, dice, sides) : dice.find((d) => d.sides === sides)?.value
   const out: Record<string, unknown> = { critical: natural === 1 || natural === sides }
   if (explicit !== undefined) out.success = explicit
   else if (target !== undefined) {
@@ -62,14 +68,13 @@ export function outcomeFor(
 }
 
 /**
- * Whether the roll's deciding die shows its best face for the roller: a natural 20 for
- * `d20-vs-dc`, a natural 1 for `roll-under`. Used to mark critical hits for the table's numbers.
+ * Whether a roll's natural resolution die (`RollInfo.natural`, the kept die under advantage)
+ * shows its best face for the roller: a natural 20 for `d20-vs-dc`, a natural 1 for `roll-under`.
+ * Used to mark critical hits for the table's numbers.
  */
-export function bestNatural(resolution: RollResolution | undefined, dice: readonly Die[]): boolean {
+export function bestNatural(resolution: RollResolution | undefined, natural: number | undefined): boolean {
   const r = resolution ?? DEFAULT_RESOLUTION
-  const sides = r.kind === 'roll-under' ? parseFormula(r.die).terms[0].sides : 20
-  const natural = dice.find((d) => d.sides === sides)?.value
-  return natural !== undefined && natural === (r.kind === 'roll-under' ? 1 : sides)
+  return natural !== undefined && natural === (r.kind === 'roll-under' ? 1 : advantageDie(r))
 }
 
 /** A `vs` roll the caster makes (an attack), not one the target makes (a save): its formula reads nothing of the target. */
@@ -97,25 +102,6 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
   const labelOf = (id: string): string =>
     pack.resources.find((r) => r.id === id)?.name ?? pack.attributes.find((a) => a.id === id)?.name ?? id
 
-  /** Where a cost/damage/heal `resource` lives in the sheet data. */
-  function resourceRef(data: Data, id: string): { path: string[]; current: number | undefined; max: number | undefined } {
-    if (id.includes('.')) {
-      const path = id.split('.')
-      const current = getPath(data, path)
-      const max = path[path.length - 1] === 'current' ? getPath(data, [...path.slice(0, -1), 'max']) : undefined
-      return { path, current: typeof current === 'number' ? current : undefined, max: typeof max === 'number' ? max : undefined }
-    }
-    const v = data[id]
-    if (typeof v === 'number') return { path: [id], current: v, max: undefined }
-    const current = getPath(v, ['current'])
-    const max = getPath(v, ['max'])
-    return {
-      path: [id, 'current'],
-      current: typeof current === 'number' ? current : undefined,
-      max: typeof max === 'number' ? max : undefined,
-    }
-  }
-
   /** Context entries that are characters become sub-scopes; the `character` entry is the base scope. */
   function contextScope(context: Data, base?: Character): Scope {
     const parts: Record<string, unknown> = {}
@@ -140,7 +126,10 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
   // ------------------------------------------------------------------ roll
 
-  async function roll(formula: string, seed: string, context: Data = {}): Promise<RollResult> {
+  async function roll(rawFormula: string, seed: string, context: Data = {}): Promise<RollResult> {
+    const mode = context.advantage === 'advantage' || context.advantage === 'disadvantage' ? (context.advantage as RollAdvantage) : undefined
+    const doubled = mode ? withAdvantage(rawFormula, mode, resolution) : null
+    const formula = doubled ?? rawFormula
     const stream = new DiceStream(seed)
     const scope = contextScope(context)
     const value = await evaluate(formula, scope, stream)
@@ -153,7 +142,8 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     else if (typeof context.vs === 'number') target = context.vs
     else if (typeof context.vs === 'string') target = toNumber(evaluateSync(context.vs, scope))
     const result: RollResult = { formula, seed, dice, total }
-    const outcome = outcomeFor(resolution, dice, total, target, typeof value === 'boolean' ? value : undefined)
+    if (doubled && mode) result.advantage = mode
+    const outcome = outcomeFor(resolution, dice, total, target, typeof value === 'boolean' ? value : undefined, formula)
     if (outcome) result.outcome = outcome
     return result
   }
@@ -232,13 +222,31 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         if (skill.target.kind === 'self' && intent.targets.some((t) => t !== intent.source)) return `${skill.name} only targets yourself`
         return costShortfall(skill, character)
       }
+      case 'damage.apply':
+      case 'concentration.save':
+      case 'concentration.end': {
+        // Owners may apply a card to, or roll and drop concentration for, their own tokens only.
+        const t = doc.tokens?.[intent.token]
+        if (!t) return 'unknown token'
+        if (t.owner !== actor.pubkey) return 'you do not own this token'
+        if (intent.type === 'concentration.end') return null
+        const m = doc.chat?.find((x) => x.id === intent.message)
+        if (!m) return 'unknown message'
+        if (intent.type === 'damage.apply') return m.damage || m.roll ? null : 'that message has nothing to apply'
+        return m.concentration?.token === intent.token && !m.concentration.result ? null : 'no open concentration save for that token'
+      }
       case 'initiative.next': {
         // A player ends their own turn: the token must be theirs and currently up.
         if (!intent.token) return 'only the GM runs initiative'
         const t = doc.tokens?.[intent.token]
         if (!t || t.owner !== actor.pubkey) return 'you do not control that token'
         const init = doc.initiative
-        if (!init?.active || init.order[init.turn]?.token !== intent.token) return 'it is not that token\'s turn'
+        if (!init?.active) return 'it is not that token\'s turn'
+        // Group initiative: any member of the group that is up may end the shared turn.
+        const cur = init.order[init.turn]
+        const mine = init.order.find((e) => e.token === intent.token)
+        const up = !!cur && !!mine && (cur.token === mine.token || (cur.group !== undefined && cur.group === mine.group))
+        if (!up) return 'it is not that token\'s turn'
         return null
       }
       case 'initiative.start':
@@ -246,6 +254,13 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       case 'initiative.remove':
       case 'initiative.end':
         return 'only the GM runs initiative'
+      case 'door.set': {
+        // Players work doors only where the GM allows it, and never a locked one.
+        const wall = doc.walls?.[intent.wall]
+        if (!wall?.door) return 'that is not a door'
+        if (!doc.scenes?.[wall.scene]?.playersOpenDoors) return 'only the GM opens doors here'
+        return wall.door.locked ? 'that door is locked' : null
+      }
       default:
         return 'only the GM may do that'
     }
@@ -328,7 +343,7 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
   // ---------------------------------------------------------------- skills
 
-  async function resolveSkill(skillRef: string | SkillDef, source: Character, targets: Character[], seed: string) {
+  async function resolveSkill(skillRef: string | SkillDef, source: Character, targets: Character[], seed: string, opts: { advantage?: RollAdvantage } = {}) {
     const skill = typeof skillRef === 'string' ? skillById.get(skillRef) : skillRef
     if (!skill) throw new Error(`unknown skill "${String(skillRef)}"`)
     const stream = new DiceStream(seed)
@@ -350,7 +365,12 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     let last: RollInfo | undefined
     const saves = new Map<string, RollInfo>()
     const crits = new Set<string>()
-    let lastBest = false
+    const damage: SkillDamage[] = []
+    const added: SkillCondition[] = []
+    const model = pack.manifest.damage
+    const indexOf = (t: Character) => tgts.indexOf(t)
+    /** The caster's own rolls take advantage; rows that read `target.*` are the targets' (saves) and do not. */
+    const mode = (formula: string) => (opts.advantage && !/\btarget\./.test(formula) ? withAdvantage(formula, opts.advantage, resolution) : null)
 
     const scopeFor = (target?: Character): Scope =>
       composeScope(
@@ -370,15 +390,17 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
       const value = await evaluate(formula, scope, stream)
       const dice = stream.dice.slice(before)
       const total = toNumber(value)
-      const outcome = outcomeFor(resolution ?? DEFAULT_RESOLUTION, dice, total, target, typeof value === 'boolean' ? value : undefined)
-      lastBest = bestNatural(resolution, dice)
-      return {
+      const outcome = outcomeFor(resolution ?? DEFAULT_RESOLUTION, dice, total, target, typeof value === 'boolean' ? value : undefined, formula)
+      const info: RollInfo = {
         total,
         dice: dice.map((d) => d.value),
         target,
         success: outcome?.success as boolean | undefined,
         critical: Boolean(outcome?.critical),
       }
+      const natural = naturalDie(formula, dice, advantageDie(resolution ?? DEFAULT_RESOLUTION))
+      if (natural !== undefined) info.natural = natural
+      return info
     }
     const diceText = (r: RollInfo) => (r.dice.length ? ` [${r.dice.join(', ')}]` : '')
 
@@ -396,52 +418,78 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     const areaShape = skill.target.kind === 'radius' || skill.target.kind === 'cone' || skill.target.kind === 'line'
     if (areaShape && tgts.length === 0) {
       messages.push(`${skill.name} hits no one.`)
-      return { patches: patchesFor(), messages, vfx: skill.vfx }
+      return { patches: patchesFor(), messages, vfx: skill.vfx, damage, conditions: added }
     }
 
     const applyEffect = async (e: Effect): Promise<void> => {
       switch (e.kind) {
         case 'roll': {
           const label = e.label ?? e.formula
+          const doubled = mode(e.formula)
+          const formula = doubled ?? e.formula
+          const adv = doubled ? ` with ${opts.advantage}` : ''
           if (!e.vs) {
-            const r = await rollInfo(e.formula, scopeFor())
+            const r = await rollInfo(formula, scopeFor())
             rolls[label] = r
             last = r
-            messages.push(`${src.name} rolls ${label}: ${r.total}${diceText(r)}.`)
+            messages.push(`${src.name} rolls ${label}${adv}: ${r.total}${diceText(r)}.`)
             return
           }
           for (const t of tgts.length ? tgts : [src]) {
             const tv = await evalNumber(e.vs, scopeFor(t), stream, `${label} target`)
-            const r = await rollInfo(e.formula, scopeFor(t), tv)
+            const r = await rollInfo(formula, scopeFor(t), tv)
             // The caster's natural best face is a critical hit whatever the total (a natural 20 always hits).
-            if (lastBest && rolledByCaster(e.formula) && t !== src) crits.add(t.id)
+            if (bestNatural(resolution, r.natural) && rolledByCaster(e.formula) && t !== src) crits.add(t.id)
             saves.set(t.id, r)
             rolls[label] = r
             last = r
             const verdict = r.success === undefined ? '' : r.success ? ' - success' : ' - failure'
-            messages.push(`${t.name} ${label}: ${r.total}${diceText(r)} vs ${tv}${verdict}${r.critical ? ' (critical)' : ''}.`)
+            messages.push(`${t.name} ${label}${adv}: ${r.total}${diceText(r)} vs ${tv}${verdict}${r.critical ? ' (critical)' : ''}.`)
           }
           return
         }
         case 'damage':
         case 'heal': {
           for (const t of tgts) {
-            const amount = Math.max(0, Math.floor(await evalNumber(e.formula, scopeFor(t), stream, `${e.kind} formula`)))
+            const raw = Math.max(0, Math.floor(await evalNumber(e.formula, scopeFor(t), stream, `${e.kind} formula`)))
             const ref = resourceRef(t.data, e.resource)
             const label = labelOf(e.resource)
+            const type = e.kind === 'damage' ? await damageType(e.type, scopeFor(t)) : undefined
             if (ref.current === undefined) {
               // Sheetless tokens (plain minis) take part in messages and vfx but track no resources.
-              messages.push(`${t.name} ${e.kind === 'damage' ? `takes ${amount} damage` : `would recover ${amount} ${label}`} (no ${label} tracked).`)
+              messages.push(`${t.name} ${e.kind === 'damage' ? `takes ${raw} damage` : `would recover ${raw} ${label}`} (no ${label} tracked).`)
+              const entry: SkillDamage = { target: indexOf(t), amount: raw, final: raw, changes: [] }
+              if (e.kind === 'heal') entry.heal = true
+              else if (type) entry.type = type
+              damage.push(entry)
               continue
             }
             if (e.kind === 'damage') {
-              const next = Math.max(0, ref.current - amount)
-              setPath(t.data, ref.path, next)
-              messages.push(`${t.name} takes ${amount} damage (${label} ${ref.current} to ${next})${next === 0 ? `, ${label} depleted` : ''}.`)
+              // Damage types and resistances apply when the pack has a damage model.
+              const typed = model ? adjustForTraits(raw, type, damageTraits(t.data, model, pack.conditions)) : { amount: raw }
+              const tempBefore = model?.temp ? resourceRef(t.data, model.temp).current ?? 0 : 0
+              const changes = takeDamage(t.data, e.resource, typed.amount, model)
+              const next = resourceRef(t.data, e.resource).current ?? 0
+              const tempAfter = model?.temp ? resourceRef(t.data, model.temp).current ?? 0 : 0
+              const kind = type ? `${typeName(type)} ` : ''
+              const note = typed.note ? `, ${typed.note}` : ''
+              const temp = tempBefore !== tempAfter ? `, ${tempBefore - tempAfter} absorbed by ${labelOf(model!.temp!)}` : ''
+              messages.push(`${t.name} takes ${typed.amount} ${kind}damage${note}${temp} (${label} ${ref.current} to ${next})${next === 0 ? `, ${label} depleted` : ''}.`)
+              const entry: SkillDamage = { target: indexOf(t), amount: raw, final: typed.amount, changes }
+              if (type) entry.type = type
+              if (typed.note) entry.note = typed.note
+              damage.push(entry)
             } else {
-              const next = ref.max === undefined ? ref.current + amount : Math.min(ref.max, ref.current + amount)
-              setPath(t.data, ref.path, next)
-              messages.push(`${t.name} recovers ${next - ref.current} ${label} (${ref.current} to ${next}).`)
+              const isTemp = !!model?.temp && e.resource === model.temp
+              const before = ref.current
+              const changes = heal(t.data, e.resource, raw, model)
+              const next = resourceRef(t.data, e.resource).current ?? 0
+              messages.push(isTemp
+                ? (next > before ? `${t.name} gains ${next} ${label} (was ${before}).` : `${t.name} keeps ${before} ${label} (${raw} does not stack).`)
+                : `${t.name} recovers ${next - before} ${label} (${before} to ${next}).`)
+              const entry: SkillDamage = { target: indexOf(t), amount: raw, final: next - before, heal: true, changes }
+              if (isTemp) entry.temp = true
+              damage.push(entry)
             }
           }
           return
@@ -453,10 +501,14 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
             for (const id of e.remove ?? []) if (next.delete(id)) messages.push(`${t.name} is no longer ${conditionName(id)}.`)
             for (const id of e.add ?? []) {
               if (!pack.conditions.some((c) => c.id === id)) throw new Error(`${skill.name}: unknown condition "${id}"`)
+              const lasts = e.duration ? ` for ${turnsText(e.duration)}` : ''
               if (!next.has(id)) {
                 next.add(id)
-                messages.push(`${t.name} is now ${conditionName(id)}.`)
+                messages.push(`${t.name} is now ${conditionName(id)}${lasts}.`)
               }
+              const entry: SkillCondition = { target: tgts.length ? indexOf(t) : -1, condition: id }
+              if (e.duration) entry.duration = e.duration
+              added.push(entry)
             }
             t.data.conditions = [...next]
           }
@@ -473,9 +525,21 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         }
       }
     }
+    /** A row's damage type: a literal id, or `{melee.type}` read from the sheet (missing = untyped). */
+    async function damageType(spec: string | undefined, scope: Scope): Promise<string | undefined> {
+      if (!spec) return undefined
+      if (!spec.includes('{')) return spec
+      try {
+        const v = (await interpolate(spec, scope, stream)).trim().toLowerCase()
+        return v && v !== 'undefined' ? v : undefined
+      } catch {
+        return undefined
+      }
+    }
+
     for (const e of skill.effects) await applyEffect(e)
 
-    return { patches: patchesFor(), messages, vfx: skill.vfx, ...(crits.size ? { crits: [...crits] } : {}) }
+    return { patches: patchesFor(), messages, vfx: skill.vfx, damage, conditions: added, ...(crits.size ? { crits: [...crits] } : {}) }
 
     /** Changed top-level sheet keys per touched character. */
     function patchesFor(): { character: string; data: Data }[] {
@@ -493,6 +557,14 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
 
   function conditionName(id: string): string {
     return pack.conditions.find((c) => c.id === id)?.name ?? id
+  }
+
+  function typeName(id: string): string {
+    return (pack.manifest.damage?.types?.find((t) => t.id === id)?.name ?? id).toLowerCase()
+  }
+
+  function turnsText(d: ConditionDuration): string {
+    return `${d.turns} ${d.turns === 1 ? 'turn' : 'turns'}`
   }
 
   async function interpolate(text: string, scope: Scope, stream: DiceStream): Promise<string> {

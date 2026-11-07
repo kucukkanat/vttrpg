@@ -22,6 +22,12 @@ export interface AudioEngine {
   setAmbientPreset(name: AmbientPreset | undefined, opts?: { volume?: number; fadeMs?: number }): void
   /** Play a one-shot. `at` is the shared timestamp from the GameEvent, used to skip stale events. */
   playOneShot(asset: AssetRef, opts?: { volume?: number; at?: number }): Promise<void>
+  /** Stop one-shots still sounding: those of one sound (`soundKey`), or all of them. Quick fade, no click. */
+  stopOneShots(key?: string): void
+  /** Keys (`soundKey`) of one-shots sounding right now. */
+  playing(): ReadonlySet<string>
+  /** Fires whenever a one-shot starts or ends. Returns unsubscribe. */
+  onPlaying(listener: () => void): () => void
   /** Synthesized dice click; strength 0..1. No asset needed. */
   diceImpact(strength: number): void
   /** Synthesized "your turn" chime. No asset needed. */
@@ -33,5 +39,5 @@ export interface AudioEngine {
 
 export { createAudioEngine, sharedAudioEngine, STALE_ONE_SHOT_MS, type AudioEngineOptions } from './impl'
 export { useGameAudio, useAudioUnlock, pickNewAudioEvents } from './useGameAudio'
-export { BUILTIN_SOUNDS, builtinRef, builtinName, isBuiltin, type BuiltinSound } from './builtin'
+export { BUILTIN_SOUNDS, builtinRef, builtinName, isBuiltin, soundKey, type BuiltinSound } from './builtin'
 export { AMBIENT_PRESETS } from './ambience'

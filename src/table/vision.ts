@@ -31,16 +31,23 @@ export function fogStrength(scene: Pick<Scene, 'darkness' | 'fogEnabled'>): numb
   return scene.fogEnabled === undefined ? d : Math.max(0.5, d)
 }
 
-/** The cells a viewer has explored according to the document: everything after `fog.revealAll`. */
+/**
+ * The cells a viewer has explored according to the document: everything after `fog.revealAll`
+ * (less any cells the GM's brush painted back into fog since).
+ */
 export function exploredCells(fog: FogState | undefined): CellSet {
-  if (fog?.revealAll) return ALL_CELLS
+  if (fog?.revealAll) {
+    if (!fog.hidden?.length) return ALL_CELLS
+    const hidden = new Set(fog.hidden)
+    return { has: (key) => !hidden.has(key) }
+  }
   return new Set(fog?.revealed ?? [])
 }
 
 /** One-line fog status for the Scenes panel: "fog off", "fog on · all revealed", "fog on · 42 cells explored". */
 export function fogStatus(scene: Pick<Scene, 'darkness' | 'fogEnabled'>, fog: FogState | undefined): string {
   if (!isFogEnabled(scene)) return 'fog off'
-  if (fog?.revealAll) return 'fog on · all revealed'
+  if (fog?.revealAll) return fog.hidden?.length ? `fog on · all revealed but ${fog.hidden.length} ${fog.hidden.length === 1 ? 'cell' : 'cells'}` : 'fog on · all revealed'
   const n = fog?.revealed.length ?? 0
   return `fog on · ${n} ${n === 1 ? 'cell' : 'cells'} explored`
 }

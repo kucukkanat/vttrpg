@@ -1,0 +1,14 @@
+{
+  "id": "false-life",
+  "name": "False Life",
+  "description": "1st-level necromancy, action, self, 1 hour. Bolstering itself with a necromantic facsimile of life, the caster gains 1d4 + 4 temporary hit points. Temporary hit points do not stack: the higher value is kept. Costs one 1st-level spell slot.",
+  "icon": "sparkles",
+  "cost": [{ "resource": "slots_1", "amount": "1" }],
+  "target": { "kind": "self", "range": 0 },
+  "effects": [
+    { "kind": "heal", "formula": "d4 + 4", "resource": "temp_hp" }
+  ],
+  "vfx": [
+    { "at": 0, "preset": "aura", "from": "source", "color": "#9a7be0", "duration": 900 }
+  ]
+}

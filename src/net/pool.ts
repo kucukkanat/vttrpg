@@ -28,7 +28,29 @@ export interface PoolLike {
   onOpen?(cb: (url: string) => void): () => void
   /** Retry every relay that is down right now, skipping the rest of its backoff. Optional for fakes. */
   reconnect?(): void
+  /** Per-relay health for the status popover and relay rotation. Optional for fakes. */
+  health?(): RelayHealth[]
+  /** Starts connecting to one more relay; open subscriptions follow it. False when it was known already. */
+  addRelay?(url: string): boolean
   destroy(): void
+}
+
+/** What the pool knows about one relay, for the UI and for `planRelayRotation`. */
+export interface RelayHealth {
+  url: string
+  state: 'idle' | 'connecting' | 'open' | 'down'
+  /** Failed connects (or drops) since the relay was last open. */
+  failures: number
+  /** Unix ms of the last successful open. */
+  lastOpenAt?: number
+  /** Last connect failure or drop reason. */
+  lastError?: string
+  /** Unix ms of the next scheduled connect attempt while down. */
+  nextRetryAt?: number
+  publishOk: number
+  publishFailed: number
+  /** Publishes refused in a row while open (rate limits, "blocked", kinds the relay does not keep). */
+  rejectStreak: number
 }
 
 // --- backoff ------------------------------------------------------------------
@@ -73,6 +95,8 @@ export interface RelayPoolOptions {
   /** Fire `oneose` for a subscription with no open relay at the latest after this long. */
   eoseFallbackMs?: number
   log?: (...args: unknown[]) => void
+  /** Clock for health timestamps; defaults to Date.now. */
+  now?: () => number
 }
 
 interface RelayRecord {
@@ -82,7 +106,15 @@ interface RelayRecord {
   attempts: number
   timer: ReturnType<typeof setTimeout> | undefined
   generation: number
+  lastOpenAt?: number
+  lastError?: string
+  nextRetryAt?: number
+  publishOk: number
+  publishFailed: number
+  rejectStreak: number
 }
+
+const newRecord = (url: string): RelayRecord => ({ url, relay: null, state: 'idle', attempts: 0, timer: undefined, generation: 0, publishOk: 0, publishFailed: 0, rejectStreak: 0 })
 
 interface SubRecord {
   id: number
@@ -113,6 +145,7 @@ export class RelayPool implements PoolLike {
   private readonly random: () => number
   private readonly eoseFallbackMs: number
   private readonly log: (...args: unknown[]) => void
+  private readonly now: () => number
 
   constructor(opts: RelayPoolOptions) {
     this.createRelay = opts.createRelay ?? createNostrRelay
@@ -122,11 +155,33 @@ export class RelayPool implements PoolLike {
     this.random = opts.random ?? Math.random
     this.eoseFallbackMs = opts.eoseFallbackMs ?? 10_000
     this.log = opts.log ?? (() => {})
+    this.now = opts.now ?? Date.now
     for (const raw of opts.relays) {
       const url = normalizeURL(raw)
-      if (!this.records.has(url)) this.records.set(url, { url, relay: null, state: 'idle', attempts: 0, timer: undefined, generation: 0 })
+      if (!this.records.has(url)) this.records.set(url, newRecord(url))
     }
     for (const rec of this.records.values()) this.connect(rec)
+  }
+
+  /**
+   * Adds a relay at runtime (relay rotation, a manifest that lists more relays). Every open
+   * subscription is extended to it and attached as soon as it opens, like a reconnect.
+   */
+  addRelay(raw: string): boolean {
+    if (this.destroyed) return false
+    let url: string
+    try {
+      url = normalizeURL(raw)
+    } catch {
+      return false
+    }
+    if (this.records.has(url)) return false
+    const rec = newRecord(url)
+    this.records.set(url, rec)
+    for (const sub of this.subs.values()) sub.relays.add(url)
+    this.log('net: relay added', url)
+    this.connect(rec)
+    return true
   }
 
   get urls(): string[] {
@@ -139,6 +194,7 @@ export class RelayPool implements PoolLike {
     if (this.destroyed || rec.state === 'connecting' || rec.state === 'open') return
     rec.state = 'connecting'
     rec.timer = undefined
+    rec.nextRetryAt = undefined
     const generation = ++rec.generation
     const relay = this.createRelay(rec.url)
     rec.relay = relay
@@ -151,6 +207,9 @@ export class RelayPool implements PoolLike {
         if (rec.generation !== generation || this.destroyed) return
         rec.state = 'open'
         rec.attempts = 0
+        rec.lastOpenAt = this.now()
+        rec.lastError = undefined
+        rec.rejectStreak = 0
         this.log('net: relay open', rec.url)
         for (const sub of this.subs.values()) this.attach(sub, rec, false)
         for (const cb of this.openListeners) cb(rec.url)
@@ -167,6 +226,7 @@ export class RelayPool implements PoolLike {
     const wasOpen = rec.state === 'open'
     rec.state = 'down'
     rec.relay = null
+    rec.lastError = reason
     for (const sub of this.subs.values()) {
       sub.per.delete(rec.url)
       if (sub.awaitingEose.delete(rec.url)) this.checkEose(sub)
@@ -178,7 +238,9 @@ export class RelayPool implements PoolLike {
     const jitter = 1 + (this.random() - 0.5) * 0.4
     rec.attempts++
     this.log('net: relay down', rec.url, reason, `retry in ${Math.round(delay / 1000)}s`)
-    rec.timer = setTimeout(() => this.connect(rec), Math.round(delay * jitter))
+    const wait = Math.round(delay * jitter)
+    rec.nextRetryAt = this.now() + wait
+    rec.timer = setTimeout(() => this.connect(rec), wait)
   }
 
   /**
@@ -297,7 +359,20 @@ export class RelayPool implements PoolLike {
       const url = normalizeURL(raw)
       const rec = this.records.get(url)
       if (!rec || rec.state !== 'open' || !rec.relay) return Promise.reject(new Error(`${url}: not connected`))
-      return rec.relay.publish(event)
+      const generation = rec.generation
+      return rec.relay.publish(event).then(
+        (ok) => {
+          rec.publishOk++
+          rec.rejectStreak = 0
+          return ok
+        },
+        (e: unknown) => {
+          rec.publishFailed++
+          // A drop mid-publish is the connection's problem, not a refusal by the relay.
+          if (rec.generation === generation && rec.state === 'open') rec.rejectStreak++
+          throw e
+        },
+      )
     })
   }
 
@@ -307,6 +382,20 @@ export class RelayPool implements PoolLike {
     const m = new Map<string, boolean>()
     for (const rec of this.records.values()) m.set(rec.url, rec.state === 'open')
     return m
+  }
+
+  health(): RelayHealth[] {
+    return [...this.records.values()].map((r) => ({
+      url: r.url,
+      state: r.state,
+      failures: r.attempts,
+      lastOpenAt: r.lastOpenAt,
+      lastError: r.lastError,
+      nextRetryAt: r.state === 'down' ? r.nextRetryAt : undefined,
+      publishOk: r.publishOk,
+      publishFailed: r.publishFailed,
+      rejectStreak: r.rejectStreak,
+    }))
   }
 
   get openCount(): number {

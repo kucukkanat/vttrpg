@@ -1,7 +1,7 @@
 import type { AssetRef } from '@/core/assets'
 import type { AmbientPreset, AudioEngine } from './index'
 import { AMBIENT_PRESETS, buildAmbience, type AmbienceGraph } from './ambience'
-import { builtinName } from './builtin'
+import { BUILTIN_DURATION_S, builtinName, soundKey } from './builtin'
 import { SYNTHS, diceImpact as synthDiceImpact, turnChime as synthTurnChime } from './synth'
 
 /** One-shots whose `at` is older than this are skipped (late joiners, replayed deltas). */
@@ -24,6 +24,17 @@ interface Ambient {
   output: GainNode
   stop(): void
 }
+
+/** One sounding one-shot: its own gain into the fx bus, so it can be faded out alone. */
+interface Voice {
+  key: string
+  output: GainNode
+  source?: AudioBufferSourceNode
+  timer: ReturnType<typeof setTimeout>
+}
+
+/** Fade applied by `stopOneShots`, seconds. */
+const STOP_FADE_S = 0.06
 
 function readVolume(storage: AudioEngineOptions['storage']): number {
   try {
@@ -65,6 +76,36 @@ export function createAudioEngine(opts: AudioEngineOptions): AudioEngine {
   const buffers = new Map<string, Promise<AudioBuffer>>()
   let disposed = false
   let lastImpact = -Infinity
+  const voices = new Set<Voice>()
+  const playingListeners = new Set<() => void>()
+  const emitPlaying = () => { for (const l of playingListeners) l() }
+
+  function endVoice(v: Voice) {
+    if (!voices.delete(v)) return
+    clearTimeout(v.timer)
+    emitPlaying()
+  }
+
+  /** Tracks a one-shot until `durationS` has passed (plus a little release). */
+  function startVoice(key: string, output: GainNode, durationS: number, source?: AudioBufferSourceNode) {
+    const v: Voice = { key, output, source, timer: setTimeout(() => endVoice(v), Math.max(50, durationS * 1000 + 100)) }
+    voices.add(v)
+    if (source) source.onended = () => endVoice(v)
+    emitPlaying()
+  }
+
+  function fadeOut(v: Voice) {
+    const t = ctx.currentTime
+    const g = v.output.gain
+    g.cancelScheduledValues(t)
+    g.setValueAtTime(g.value, t)
+    g.linearRampToValueAtTime(0, t + STOP_FADE_S)
+    setTimeout(() => {
+      try { v.source?.stop() } catch { /* already stopped */ }
+      v.output.disconnect()
+    }, STOP_FADE_S * 1000 + 30)
+    endVoice(v)
+  }
 
   async function decode(ref: AssetRef): Promise<AudioBuffer> {
     let p = buffers.get(ref.sha256)
@@ -187,7 +228,10 @@ export function createAudioEngine(opts: AudioEngineOptions): AudioEngine {
       const vol = Math.min(2, Math.max(0, o?.volume ?? 1))
       const builtin = builtinName(asset)
       if (builtin) {
-        SYNTHS[builtin](ctx, fxBus, ctx.currentTime, vol)
+        const out = ctx.createGain()
+        out.connect(fxBus)
+        SYNTHS[builtin](ctx, out, ctx.currentTime, vol)
+        startVoice(soundKey(asset), out, BUILTIN_DURATION_S[builtin])
         return
       }
       let buffer: AudioBuffer
@@ -205,6 +249,20 @@ export function createAudioEngine(opts: AudioEngineOptions): AudioEngine {
       g.gain.value = vol
       src.connect(g).connect(fxBus)
       src.start()
+      startVoice(soundKey(asset), g, buffer.duration, src)
+    },
+
+    stopOneShots(key) {
+      for (const v of [...voices]) if (key === undefined || v.key === key) fadeOut(v)
+    },
+
+    playing() {
+      return new Set([...voices].map((v) => v.key))
+    },
+
+    onPlaying(listener) {
+      playingListeners.add(listener)
+      return () => { playingListeners.delete(listener) }
     },
 
     diceImpact(strength) {
@@ -234,7 +292,9 @@ export function createAudioEngine(opts: AudioEngineOptions): AudioEngine {
       ctx.removeEventListener?.('statechange', onState)
       current?.stop()
       current = null
+      for (const v of [...voices]) fadeOut(v)
       listeners.clear()
+      playingListeners.clear()
       void ctx.close?.().catch(() => {})
     },
   }

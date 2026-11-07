@@ -16,16 +16,17 @@ import type { Token } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { firstOwnedToken, useGame } from '@/state/store'
-import { newSeed, rollFromSeed } from '@/dice/fair'
+import { newSeed } from '@/dice/fair'
+import { inCurrentSlot } from '@/state/initiative'
 import { useTableUi } from '@/table/tableState'
-import { conditionChips, readResource } from '@/table/tokenHud'
+import { conditionChips, defenseAbbr, defenseAttribute, readDefense, readResource } from '@/table/tokenHud'
 import { mergeHandlers, pinOnClick, tipTriggerProps } from '../tips/useTipTrigger'
 import { useMoveDraft } from '@/table/twoTapMove'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { requestSkillEditor } from '../skilleditor/requests'
 import { pushToast } from '../toasts'
-import { currentEntry, DEFAULT_INITIATIVE_FORMULA, combatants, rollInitiative, seedFor, withScore } from '../panels/initiative'
+import { combatants, lateJoin, rollInitiative, rollLateJoin } from '../panels/initiative'
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
 import { saveChipLabel, sheetSaves } from './tokenBar'
@@ -67,7 +68,10 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const primary = rules?.pack.resources[0]
   const hp = character && rules && primary ? readResource(character.data, primary, (e) => rules.evaluateNow(e, character)) : null
   const active = !!init?.active
-  const up = active && currentEntry(init)?.token === token.id
+  const up = active && inCurrentSlot(init, token.id)
+  // The pack's defense value (D&D 5e's AC), shown beside HP when the pack has one.
+  const defAttr = defenseAttribute(rules?.pack.attributes)
+  const defense = character && rules && defAttr ? readDefense(character.data, defAttr, (e) => rules.evaluateNow(e, character)) : null
   const mayEnd = up && (isGm || token.owner === me)
   const inOrder = !!init?.order.some((e) => e.token === token.id)
   // Statuses with their tap-to-pin explanations: the GM always, players on their own token or when HP is shown.
@@ -102,6 +106,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
               {isGm && <button type="button" className="icon" aria-label={`${primary?.name} plus 1`} onClick={() => changeHp(1)}>+</button>}
             </span>
           )}
+          {defAttr && defense !== null && <span className="token-bar-def" title={`${defAttr.name} ${defense}`}>{defenseAbbr(defAttr)} {defense}</span>}
           {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
           <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}>⋯</button>
         </div>
@@ -215,10 +220,11 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
         return
       }
       if (inOrder) { await controller.dispatch({ type: 'initiative.remove', token: token.id }); return }
+      // Late join: rolled like Start rolls it, and slotted in by score (or into its group).
       const order = s.initiative?.order ?? []
-      const r = await rollFromSeed(DEFAULT_INITIATIVE_FORMULA, seedFor(newSeed(), token.id))
-      await controller.dispatch({ type: 'initiative.set', order: withScore([...order, { token: token.id, score: r.total }], token.id, r.total) })
-      pushToast({ text: `${token.name} joins initiative (${r.total})`, key: 'initiative-add', ttl: 3000 })
+      const score = await rollLateJoin(token, s.characters, controller.rules, newSeed())
+      await controller.dispatch({ type: 'initiative.set', order: lateJoin(order, token, score) })
+      pushToast({ text: `${token.name} joins initiative (${score})`, key: 'initiative-add', ttl: 3000 })
     } finally {
       setBusy(false)
     }
@@ -233,21 +239,41 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
 /** GM: toggle the pack's conditions on the token. */
 function ConditionsCard({ controller, token, onClose }: { controller: GameController; token: Token; onClose(): void }) {
   const defs = controller.rules?.pack.conditions ?? []
-  const set = (ids: string[]) => void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions: ids } })
+  // Optional duration for the next condition switched on: whole turns of this token, ticking at the end (or start) of its turn.
+  const [turns, setTurns] = useState('')
+  const [tick, setTick] = useState<'end' | 'start'>('end')
+  const toggle = (id: string, on: boolean) => {
+    const conditions = on ? token.conditions.filter((x) => x !== id) : [...token.conditions, id]
+    const effects = { ...(token.effects ?? {}) }
+    const n = Math.floor(Number(turns))
+    if (on) delete effects[id]
+    else if (n >= 1) effects[id] = { remaining: n, ...(tick === 'start' ? { tick } : {}) }
+    void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions, effects } })
+  }
   return (
     <div className="dock-card" role="dialog" aria-label={`${token.name}'s conditions`}>
       <div className="token-skills-head"><strong>{token.name}'s conditions</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}>✕</button></div>
       {defs.length === 0 && <p className="muted small">This ruleset has no conditions.</p>}
+      {defs.length > 0 && (
+        <div className="condition-duration">
+          <label className="small">Lasts <input type="number" min={1} inputMode="numeric" value={turns} onChange={(e) => setTurns(e.target.value)} placeholder="∞" aria-label="Turns the next condition lasts" style={{ width: '4em' }} /> turns</label>
+          <select value={tick} onChange={(e) => setTick(e.target.value as 'end' | 'start')} aria-label="Count down at">
+            <option value="end">ends at end of turn</option>
+            <option value="start">ends at start of turn</option>
+          </select>
+        </div>
+      )}
       <div className="condition-chips">
         {defs.map((c) => {
           const on = token.conditions.includes(c.id)
           const { color, label } = conditionStyle(defs, c.id)
+          const left = token.effects?.[c.id]?.remaining
           return (
             <button key={c.id} type="button" className={`tiny condition-chip${on ? ' on' : ''}`} aria-pressed={on} title={c.description}
               style={{ '--cond': color } as CSSProperties}
-              onClick={() => set(on ? token.conditions.filter((x) => x !== c.id) : [...token.conditions, c.id])}>
+              onClick={() => toggle(c.id, on)}>
               <span className="condition-chip-badge" aria-hidden="true">{label}</span>
-              <span className="condition-chip-name">{c.name}</span>
+              <span className="condition-chip-name">{c.name}{left !== undefined && on ? ` · ${left}` : ''}</span>
             </button>
           )
         })}

@@ -118,7 +118,7 @@ describe('pack', () => {
       ]),
     )
     expect(pack.skills.map((s) => s.id).sort()).toEqual(
-      ['attack-melee', 'attack-ranged', 'burning-hands', 'cure-wounds', 'fire-bolt', 'healing-word', 'magic-missile', 'sacred-flame', 'shield-of-faith'],
+      ['attack-melee', 'attack-ranged', 'burning-hands', 'cure-wounds', 'false-life', 'fire-bolt', 'healing-word', 'magic-missile', 'sacred-flame', 'shield-of-faith'],
     )
     const presets = new Set(pack.skills.flatMap((s) => s.vfx.map((v) => v.preset)))
     for (const p of ['hit', 'projectile', 'ring', 'aura', 'beam']) expect(presets.has(p as never), p).toBe(true)
@@ -388,7 +388,7 @@ describe('magic missile', () => {
     expect(r.messages).toEqual([
       'Merlin spends 1 1st-level slot on Magic Missile.',
       `Merlin rolls darts: ${dmg} [${a}, ${b}, ${c}].`,
-      `Goblin goblin takes ${dmg} damage (Hit points 20 to ${20 - dmg}).`,
+      `Goblin goblin takes ${dmg} force damage (Hit points 20 to ${20 - dmg}).`,
       'Three darts of force from Merlin strike Goblin goblin.',
     ])
     expect(r.vfx.map((v) => v.preset)).toEqual(['beam', 'beam', 'beam', 'hit'])
@@ -496,7 +496,7 @@ describe('shield of faith', () => {
     expect(patchFor(r, 'cleric')).toEqual({ slots_1: { current: 1, max: 2 } })
     expect(r.messages).toEqual([
       'Mirabel spends 1 1st-level slot on Shield of Faith.',
-      'Bob is now Shield of Faith.',
+      'Bob is now Shield of Faith for 100 turns.',
       'A shimmering field surrounds Bob (AC 14).',
     ])
     expect(await engine.evaluate('ac', ally)).toBe(12)

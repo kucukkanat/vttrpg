@@ -1,0 +1,26 @@
+/* View menu, Zen mode and the Display preset. Zen and Display only re-arrange grid areas and
+   hide chrome with CSS, so the 3D canvas is never remounted. */
+.view-menu .menu-list { min-width: 260px; }
+.view-menu .menu-list button { gap: var(--sp-2); text-align: left; align-items: flex-start; }
+.view-check { width: 1em; flex: none; color: var(--accent); }
+.view-item { display: grid; gap: 1px; min-width: 0; }
+
+.game.game--zen, .game.game--display {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "table";
+}
+.game--zen .topbar, .game--zen .col-left, .game--zen .col-right, .game--zen .drawer, .game--zen .tabbar,
+.game--zen .sheet-area, .game--zen .hud, .game--zen .dock, .game--zen .toasts,
+.game--display .topbar, .game--display .col-left, .game--display .col-right, .game--display .drawer,
+.game--display .tabbar, .game--display .sheet-area, .game--display .dock { display: none !important; }
+
+.chrome-restore {
+  position: absolute; z-index: 50; top: calc(var(--sp-2) + var(--sat)); right: calc(var(--sp-2) + var(--sar));
+  min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; gap: var(--sp-1);
+  border-radius: 999px; background: rgba(23, 23, 27, .55); border: 1px solid var(--border); color: var(--fg);
+  opacity: .45; transition: opacity .2s;
+}
+.chrome-restore:hover, .chrome-restore:focus-visible { opacity: 1; }
+.chrome-restore-word { font-size: var(--fs-sm); }
+@media (pointer: coarse) { .chrome-restore { opacity: .7; } }

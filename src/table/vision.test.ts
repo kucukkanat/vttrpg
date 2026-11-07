@@ -72,4 +72,14 @@ describe('fog enablement', () => {
     const r = rasterizeFog(grid, layout, new Set(['0,0']), ALL_CELLS)
     expect(Array.from(r.data)).toEqual([FOG_VISIBLE, FOG_EXPLORED])
   })
+  it('keeps cells the brush painted back into fog hidden on a fully revealed map', () => {
+    const scene = 's' as SceneId
+    const explored = exploredCells({ scene, revealed: [], revealAll: true, hidden: ['1,0'] })
+    expect(explored).not.toBe(ALL_CELLS)
+    expect(explored.has('0,0')).toBe(true)
+    expect(explored.has('1,0')).toBe(false)
+    expect(fogStatus({ darkness: 0.8 }, { scene, revealed: [], revealAll: true, hidden: ['1,0'] })).toBe('fog on · all revealed but 1 cell')
+    const layout = fogRasterLayout(grid, { minX: -0.5, minZ: -0.5, maxX: 1.5, maxZ: 0.5 }, 1)
+    expect(Array.from(rasterizeFog(grid, layout, new Set(), explored).data)).toEqual([FOG_EXPLORED, FOG_UNEXPLORED])
+  })
 })

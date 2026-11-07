@@ -4,8 +4,8 @@
  * optimistically and roll back if the GM's delta disagrees.
  */
 import type { Vec3 } from './geometry'
-import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry } from './doc'
+import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DeclaredAction, EncounterSummary, Wall, PlacedLight, Prefab, DamageFactor, RollAdvantage, RollVisibility } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -26,8 +26,27 @@ export type Intent =
   | { type: 'character.upsert'; character: Character }
   | { type: 'character.remove'; character: CharacterId }
   | { type: 'chat.say'; text: string; to?: PlayerPubkey[] }
-  | { type: 'roll'; formula: string; seed: string; label?: string; character?: CharacterId }
-  | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string }
+  /**
+   * `advantage` turns the formula's first d20 (the pack's resolution die) into two dice, keeping
+   * the better or worse. `visibility` hides the result from others (`gm`) or from the roller too (`blind`).
+   */
+  | { type: 'roll'; formula: string; seed: string; label?: string; character?: CharacterId; advantage?: RollAdvantage; visibility?: RollVisibility }
+  /** GM only: show a hidden roll to everyone. */
+  | { type: 'roll.reveal'; message: string }
+  /** `advantage` applies to the skill's own rolls (rows that do not read `target.*`, so not the targets' saves). */
+  | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string; advantage?: RollAdvantage }
+  /**
+   * Apply-damage card: apply chat message `message`'s amount to `token` scaled by `factor`
+   * (`-1` heals, `0` undoes the previous choice). The GM reads the amount from the document.
+   * GM, or a player for a token they own. `damageType` sets the type on a roll's card.
+   */
+  | { type: 'damage.apply'; message: string; token: TokenId; factor: DamageFactor | 0; damageType?: string }
+  /** Roll the concentration save prompted by chat message `message` (GM or the token's owner). */
+  | { type: 'concentration.save'; message: string; token: TokenId; seed: string; advantage?: RollAdvantage }
+  /** End a token's concentration and every condition held by it (GM or the token's owner). */
+  | { type: 'concentration.end'; token: TokenId }
+  /** GM only: close a concentration prompt without a save (the damage did not count). */
+  | { type: 'concentration.dismiss'; message: string }
   | { type: 'fog.reveal'; scene: SceneId; cells: string[] }
   | { type: 'fog.reset'; scene: SceneId }
   /** GM only: mark the whole scene explored (sets `FogState.revealAll`); `fog.reset` clears it again. */
@@ -36,6 +55,8 @@ export type Intent =
   | { type: 'token.claim'; token: TokenId; owner?: PlayerPubkey }
   /** GM soundboard: one-shot sound for everyone. */
   | { type: 'audio.play'; asset: AssetRef; volume?: number }
+  /** GM soundboard: stop one sound for everyone (`asset`), or every one-shot still sounding. */
+  | { type: 'audio.stop'; asset?: AssetRef }
   /** GM housekeeping: drop events older than `before`. */
   | { type: 'event.prune'; before: number }
   /** Standalone props (GM only). */
@@ -63,7 +84,27 @@ export type Intent =
    */
   | { type: 'initiative.next'; token?: TokenId }
   | { type: 'initiative.remove'; token: TokenId }
-  | { type: 'initiative.end' }
+  /** GM only: end the encounter; with `summary` a combat report goes to the chat log. */
+  | { type: 'initiative.end'; summary?: EncounterSummary }
+  /** GM only: declare what a combatant will do next (shown to everyone until resolved). */
+  | { type: 'initiative.declare'; action: Omit<DeclaredAction, 'at'> }
+  /** GM only: the declared action is done or called off. */
+  | { type: 'initiative.resolve'; token: TokenId }
+  /** GM fog brush: paint cells back into fog. Revealing goes through `fog.reveal`. */
+  | { type: 'fog.hide'; scene: SceneId; cells: string[] }
+  /** Walls and doors (GM only). `wall.add` and `wall.remove` take several so a stroke or a stamp is one change. */
+  | { type: 'wall.add'; walls: Wall[] }
+  | { type: 'wall.update'; wall: WallId; patch: Partial<Wall> }
+  | { type: 'wall.remove'; walls: WallId[] }
+  /** Open or close a door. The GM always; players when the scene allows it and the door is not locked. */
+  | { type: 'door.set'; wall: WallId; open: boolean }
+  /** Placed lights (GM only). */
+  | { type: 'light.add'; light: PlacedLight }
+  | { type: 'light.update'; light: LightId; patch: Partial<PlacedLight> }
+  | { type: 'light.remove'; light: LightId }
+  /** Prefabs (GM only). Stamping one is plain `prop.add` and `wall.add`. */
+  | { type: 'prefab.upsert'; prefab: Prefab }
+  | { type: 'prefab.remove'; prefab: PrefabId }
 
 export interface IntentEnvelope {
   id: string

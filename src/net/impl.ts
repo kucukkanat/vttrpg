@@ -8,6 +8,7 @@ import { decodeInvite, randomGameKey, type Manifest } from './codec'
 import { fetchManifest, openConnection } from './connection'
 import { createPool, type PoolLike } from './pool'
 import { localGameStore } from './localStore'
+import { authorityOf, isWriter } from './authority'
 
 export { loadIdentity } from './identity'
 
@@ -49,7 +50,7 @@ export async function createGame(opts: Omit<GameConnectionOptions, 'gameId' | 'g
 async function findManifest(pool: PoolLike, opts: GameConnectionOptions): Promise<Manifest> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return (await fetchManifest(pool, opts.relays, opts.gameKey, opts.gameId, MANIFEST_TIMEOUT_MS)).manifest
+      return (await fetchManifest(pool, opts.relays, opts.gameKey, opts.gameId, MANIFEST_TIMEOUT_MS, opts.gm)).manifest
     } catch (e) {
       if (attempt >= 1) throw e
       log('net: manifest not found on the first pass, retrying once', e)
@@ -66,7 +67,9 @@ export async function joinGame(opts: GameConnectionOptions): Promise<GameConnect
     // The local manifest makes the GM device self-sufficient (a GM never waits on a relay that may have
     // dropped the manifest) and lets players rejoin at once; a player with none asks the relays.
     let manifest = saved?.manifest
-    if (manifest && opts.isGm && manifest.gm !== opts.identity.pubkey) manifest = undefined
+    // A local manifest from another founder than the invite names is not this game's.
+    if (manifest && opts.gm && manifest.gm !== opts.gm) manifest = undefined
+    if (manifest && opts.isGm && !isWriter(authorityOf(manifest), opts.identity.pubkey)) manifest = undefined
     if (manifest) log('net: using the local manifest for', opts.gameId)
     else manifest = await findManifest(pool, opts)
     return await openConnection({ ...opts, pool, tracker, manifest, local, log })

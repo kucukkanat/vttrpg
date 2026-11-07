@@ -14,7 +14,19 @@ export interface Presence {
   rollCommit?: string
   /** A ping on the table (see table/ping.ts); clients play each distinct `at` once. */
   ping?: PresencePing
+  /** GM sharing their view: where their camera is, for table displays that follow it (see table/view.ts). */
+  camera?: PresenceView
+  /** GM "pull everyone to my view": every client glides to this pose once per distinct `at`. */
+  pull?: PresenceView
   lastSeen: number
+}
+
+/** A camera pose on a scene: eye position, the point looked at, and the sender's clock in ms. */
+export interface PresenceView {
+  scene: SceneId
+  pos: Vec3
+  target: Vec3
+  at: number
 }
 
 /** "Look here": a floor point in a scene, when it was pinged and the pinger's colour. */

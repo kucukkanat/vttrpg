@@ -9,6 +9,7 @@ import { useEffect } from 'react'
 import type { InitiativeState, Token } from '@/core/doc'
 import { sharedAudioEngine } from '@/audio'
 import { useGame } from '@/state/store'
+import { useCuePrefs } from '../cues'
 import { useSession } from '../session'
 import { haptic } from './haptics'
 import { readPref } from './prefs'
@@ -42,6 +43,8 @@ export function TurnCue() {
       prev = key
       if (!cue || !readPref('turnCue')) return
       haptic('turn')
+      // The "Your turn" sound cue (ui/cues.ts) plays its own sound when on: never two at once.
+      if (useCuePrefs.getState().prefs.turn.sound) return
       try { sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).turnChime() } catch { /* no audio context */ }
     })
   }, [controller])

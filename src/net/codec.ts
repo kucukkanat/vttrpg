@@ -33,11 +33,25 @@ export interface SnapshotPointer {
   at: number
 }
 
+/** A co-GM the founder granted write access; `until` set once revoked (unix seconds). */
+export interface CoGmGrant {
+  pubkey: PlayerPubkey
+  since: number
+  until?: number
+}
+
 export interface Manifest {
   name: string
+  /** The founder: author of the manifest and root of trust. Never changes for a game. */
   gm: PlayerPubkey
   relays: string[]
   snapshot?: SnapshotPointer
+  /** Co-GMs who may also write deltas (see `authority.ts`). */
+  coGms?: CoGmGrant[]
+  /** Writer that processes player intents first; the founder when absent. */
+  host?: PlayerPubkey
+  /** Unix seconds the founder last published this manifest; newer wins between relays and the local copy. */
+  updatedAt?: number
 }
 
 // --- bytes -----------------------------------------------------------------

@@ -1,0 +1,21 @@
+/* Roll mode bar, roll extras, apply-damage cards and concentration prompts (panels/RollCards.tsx).
+   Layout only; colours come from the global tokens. */
+
+.roll-mode { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); min-width: 0; }
+.roll-mode button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.roll-mode-vis { display: inline-flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.roll-mode-vis select { min-width: 0; max-width: 100%; }
+
+.chat .roll-extras { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); }
+.chat .roll-tag.mode { color: var(--muted); }
+.chat .roll-hidden { color: var(--muted); font-style: italic; }
+
+.damage-card { display: grid; gap: var(--sp-1); margin-top: var(--sp-1); padding: var(--sp-1) var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-sm); min-width: 0; }
+.damage-card .damage-type { justify-self: start; }
+.damage-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); min-width: 0; }
+.damage-who { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.damage-done { font-variant-numeric: tabular-nums; color: var(--bad); }
+.damage-done.heal { color: var(--ok); }
+.damage-actions { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); }
+.damage-open { justify-self: start; margin-top: var(--sp-1); }
+.chat .roll-wrap { display: grid; gap: 2px; min-width: 0; }

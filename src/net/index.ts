@@ -7,6 +7,7 @@ import type { GameId, PlayerPubkey } from '@/core/ids'
 import type { IntentEnvelope } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import type { LocalGameStore } from './localStore'
+import type { RelayHealth } from './pool'
 
 export interface Identity {
   pubkey: PlayerPubkey
@@ -23,15 +24,49 @@ export interface GameConnectionOptions {
   /** 32-byte symmetric game key from the invite link. */
   gameKey: Uint8Array
   isGm: boolean
+  /**
+   * The founder named by the invite (its naddr pubkey). When given, only a manifest signed by
+   * this key counts, so a player holding the game key cannot pass themselves off as the GM.
+   */
+  gm?: PlayerPubkey
   /** Local copy store; defaults to the app-wide IndexedDB store. */
   local?: LocalGameStore
+}
+
+/** Who runs a game, from the founder's signed manifest. */
+export interface GameAuthority {
+  /** The founding GM; never changes. */
+  founder: PlayerPubkey
+  /** Co-GMs who may write right now. */
+  coGms: PlayerPubkey[]
+  /** The writer that processes player intents first (the founder unless handed over). */
+  host: PlayerPubkey
 }
 
 export interface GameConnection {
   doc: Y.Doc
   gameId: GameId
+  /** The founding GM (manifest author). */
   gm: PlayerPubkey
+  /** This connection writes the doc: the founder, or a co-GM opened as GM. Fixed for the connection's life. */
   isGm: boolean
+  /** This identity's role per the latest manifest; differs from `isGm` after a grant or revocation until reopened. */
+  role: 'gm' | 'co-gm' | 'player'
+  authority: GameAuthority
+  /** Founder or active co-GM (validation treats them as GM). */
+  isWriter(pubkey: string): boolean
+  /** True while this client is the one applying player intents. */
+  processing: boolean
+  /** Fires when the manifest changes who runs the game. */
+  onAuthority(cb: () => void): () => void
+  /** Founder only: let another player write the game as co-GM. */
+  grantCoGm(pubkey: string): Promise<void>
+  /** Founder only: end a co-GM's access (their earlier edits stay). */
+  revokeCoGm(pubkey: string): Promise<void>
+  /** Founder only: hand intent processing to an active co-GM (null: take it back). */
+  setHost(pubkey: string | null): Promise<void>
+  /** Per-relay health for the relay status list. */
+  relayHealth(): RelayHealth[]
   status: 'connecting' | 'connected' | 'offline'
   /** Relays this connection was opened with. */
   relays: string[]
@@ -83,11 +118,14 @@ export interface InviteInfo {
 }
 
 export { parseInvite, createGame, joinGame, loadIdentity, DEFAULT_RELAYS } from './impl'
-export { currentProfile, profileSuffix } from './identity'
+export { currentProfile, profileSuffix, ephemeralIdentity } from './identity'
 export { IntentQueue, INTENT_QUEUE_TTL_MS, QUEUEABLE_INTENTS } from './connection'
 export type { QueueOutcome } from './connection'
 export { GM_AWAY_AFTER_MS } from '@/core/presence'
 export { startSnapshotLoop, createSnapshotLoop, SNAPSHOT_INTERVAL_MS, SNAPSHOT_MAX_DELTAS, EVENT_PRUNE_AFTER_MS } from './snapshots'
 export type { SnapshotLoop, SnapshotLoopOptions } from './snapshots'
-export { localGameStore, openLocalGameStore, createMemoryGameStore } from './localStore'
+export { localGameStore, openLocalGameStore, createMemoryGameStore, readOnlyGameStore } from './localStore'
 export type { LocalGameStore, LocalGameRecord } from './localStore'
+export type { RelayHealth } from './pool'
+export { gradeRelay, isHealthy, planRelayRotation, RESERVE_RELAYS, MIN_HEALTHY_RELAYS, MAX_GAME_RELAYS, type RelayGrade } from './relays'
+export { PROCESS_GRACE_MS } from './authority'

@@ -19,6 +19,8 @@ import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatP
 import { useSession } from '../session'
 import { newSeed } from '@/dice'
 import { DICE_SETTLED_EVENT } from '@/dice/choreography'
+import { RollModeBar } from '../panels/RollCards'
+import { useRollMode } from '../rollMode'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -91,6 +93,7 @@ export function CameraPill() {
           <kbd aria-hidden>F</kbd>
         </button>
       </div>
+      <TacticalButtons orbit={active.mode === 'orbit'} />
       <DicePad />
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}
@@ -118,6 +121,39 @@ export function CameraPill() {
           <Icon name="pin" className="cam-icon" />
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Tactical view: top-down camera (T), turned in 45° steps (Q / E) while it is on. Also entered by
+ * zooming out past the orbit limit (CameraRig). Only with the orbit camera.
+ */
+function TacticalButtons({ orbit }: { orbit: boolean }) {
+  const tactical = useTableUi((s) => s.tactical)
+  const set = useTableUi((s) => s.set)
+  const turn = (by: number) => set({ tacticalTurn: useTableUi.getState().tacticalTurn + by })
+  const on = tactical && orbit
+  return (
+    <div className="cam-group" role="group" aria-label="Tactical view">
+      <button type="button" className={`cam-btn cam-tactical${on ? ' on' : ''}`} aria-pressed={on} disabled={!orbit && !tactical}
+        title={on ? 'Back to the angled camera (T)' : 'Top-down tactical view (T)'} onClick={() => set({ tactical: !on, firstPerson: false })}>
+        <Icon name="map" className="cam-icon" />
+        <span className="cam-label">Top</span>
+        <kbd aria-hidden>T</kbd>
+      </button>
+      {on && (
+        <>
+          <button type="button" className="cam-btn" aria-label="Turn the view left 45°" title="Turn left 45° (Q)" onClick={() => turn(-1)}>
+            <Icon name="chevron-left" className="cam-icon" />
+            <kbd aria-hidden>Q</kbd>
+          </button>
+          <button type="button" className="cam-btn" aria-label="Turn the view right 45°" title="Turn right 45° (E)" onClick={() => turn(1)}>
+            <Icon name="chevron-right" className="cam-icon" />
+            <kbd aria-hidden>E</kbd>
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -178,6 +214,7 @@ function DicePad() {
   const [open, setOpen] = useState(false)
   const [formula, setFormula] = useState('')
   const [last, setLast] = useState(lastRollFormula)
+  const armed = useRollMode((s) => s.advantage)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -197,8 +234,9 @@ function DicePad() {
   }
   return (
     <div className="cam-group cam-dice-group">
-      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label="Roll dice" title="Roll dice" onClick={() => setOpen(!open)}>
+      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label={armed ? `Roll dice (next d20 with ${armed})` : 'Roll dice'} title={armed ? `Next d20 roll with ${armed}` : 'Roll dice'} onClick={() => setOpen(!open)}>
         <Icon name="dice" className="cam-icon" />
+        {armed && <kbd aria-hidden>{armed === 'advantage' ? 'ADV' : 'DIS'}</kbd>}
       </button>
       {open && (
         <div className="dice-pad" role="dialog" aria-label="Roll dice">
@@ -206,6 +244,7 @@ function DicePad() {
             {quickDice(pack).map((f) => <button key={f} type="button" className="die-chip" onClick={() => roll(f)} aria-label={`Roll ${f}`}>{f}</button>)}
             <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) roll(last) }} title={last ? `Roll ${last} again` : 'Nothing rolled yet'}>Last</button>
           </div>
+          <RollModeBar />
           <form className="dice-pad-form" onSubmit={(e) => { e.preventDefault(); roll(formula); setFormula('') }}>
             <input value={formula} onChange={(e) => setFormula(e.target.value)} placeholder="2d6+1" aria-label="Dice formula" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
             <button type="submit" className="primary" disabled={!formula.trim()}>Roll</button>
