@@ -1,9 +1,9 @@
 {
   "id": "dnd5e",
   "name": "D&D 5e (SRD)",
-  "version": "0.1.0",
-  "description": "Fifth edition fantasy from the System Reference Document 5.1: six abilities, proficiency bonus, d20 attacks against Armor Class, saving throws against a DC, spell slots and 4d6-drop-lowest character creation.",
-  "license": "Mechanics and content from the SRD 5.1 by Wizards of the Coast LLC under CC-BY-4.0; see LICENSE.md for the attribution notice. No Player's Handbook-only content.",
+  "version": "0.3.0",
+  "description": "Fifth edition fantasy from the System Reference Document 5.1: six abilities, proficiency bonus, d20 attacks against Armor Class, saving throws against a DC, spell slots, damage types with resistances, temporary hit points, concentration and 4d6-drop-lowest character creation. Includes the SRD 5.2.1 and SRD 5.1 creature stat blocks with an NPC sheet and the SRD 5.2.1 encounter XP budget.",
+  "license": "Mechanics and content from the SRD 5.1 and the SRD 5.2.1 by Wizards of the Coast LLC under CC-BY-4.0; see LICENSE.md for the attribution notices. No Player's Handbook-only content.",
   "grid": { "type": "square", "cellSize": 1.5 },
   "resolution": { "kind": "d20-vs-dc" },
   "damage": {
@@ -50,6 +50,20 @@
       "skills/healing-word.json",
       "skills/shield-of-faith.json",
       "skills/false-life.json"
-    ]
+    ],
+    "sheets": { "npc": "npc-sheet.json" },
+    "creatureActions": "creature-actions.json",
+    "encounter": "encounter.json"
+  },
+  "creatures": {
+    "files": ["creatures/srd-2024.json", "creatures/srd-2014.json"],
+    "sheet": "npc",
+    "hp": "hp",
+    "hpFormula": "hp_dice",
+    "ac": "armor_base",
+    "xp": "xp",
+    "cr": "cr",
+    "crText": "cr_text",
+    "notes": "notes"
   }
 }

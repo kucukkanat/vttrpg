@@ -84,4 +84,19 @@ describe('game file', () => {
     expect(gameFileName('The Cave: Part 2!', Date.UTC(2026, 10, 7))).toBe('the-cave-part-2-2026-11-07.vttgame.json')
     expect(gameFileName('  ', 0)).toBe('game-1970-01-01.vttgame.json')
   })
+
+  it('carries encounters and game creature templates through export and import', () => {
+    const doc = new Y.Doc()
+    const encounter = { id: 'e1', name: 'Ambush', rows: [{ id: 'r1', creatureRef: 'game:c1', count: 3, color: '#fff' }], placed: [] }
+    const creature = { id: 'c1', name: 'Swamp Goblin', from: 'srd-2024_goblin-warrior', data: { xp: 50 }, updatedAt: 1 }
+    doc.getMap('encounters').set('e1', encounter)
+    doc.getMap('creatures').set('c1', creature)
+    const json = docToJson(doc)
+    expect(json.encounters).toEqual({ e1: encounter })
+    expect(json.creatures).toEqual({ c1: creature })
+    const copy = new Y.Doc()
+    writeImportedDoc(copy, { format: 'vttrpg-game', version: 1, exportedAt: 0, doc: json, assets: {}, missingAssets: [] } as never, 'aa'.repeat(32) as PlayerPubkey)
+    expect(copy.getMap('encounters').toJSON()).toEqual({ e1: encounter })
+    expect(copy.getMap('creatures').toJSON()).toEqual({ c1: creature })
+  })
 })

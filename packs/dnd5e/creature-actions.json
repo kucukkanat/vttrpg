@@ -1,0 +1,66 @@
+{
+  "list": "actions",
+  "kindField": "kind",
+  "templates": {
+    "melee": {
+      "requires": ["bonus", "damage", "dice"],
+      "icon": "sword",
+      "target": { "kind": "single", "range": "${cells|1}" },
+      "effects": [
+        { "kind": "message", "text": "{source.name} uses {$.name} on {target.name}." },
+        { "kind": "roll", "formula": "d20 + $.bonus", "vs": "target.ac", "label": "attack" },
+        {
+          "kind": "damage",
+          "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll($.damage) + (save.dice.0 == 20 ? roll($.dice) : 0) : 0",
+          "resource": "hp",
+          "type": "{$.damage_type}"
+        }
+      ],
+      "vfx": [{ "at": 0, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 250 }]
+    },
+    "ranged": {
+      "requires": ["bonus", "damage", "dice"],
+      "icon": "bow",
+      "target": { "kind": "single", "range": "${cells|6}" },
+      "effects": [
+        { "kind": "message", "text": "{source.name} uses {$.name} on {target.name}." },
+        { "kind": "roll", "formula": "d20 + $.bonus", "vs": "target.ac", "label": "attack" },
+        {
+          "kind": "damage",
+          "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll($.damage) + (save.dice.0 == 20 ? roll($.dice) : 0) : 0",
+          "resource": "hp",
+          "type": "{$.damage_type}"
+        }
+      ],
+      "vfx": [
+        { "at": 0, "preset": "projectile", "from": "source", "to": "target", "color": "#d9c9a3", "duration": 300 },
+        { "at": 300, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 200 }
+      ]
+    },
+    "save": {
+      "requires": ["ability", "dc", "damage"],
+      "icon": "flame",
+      "target": { "kind": "${shape|single}", "range": "${cells|1}", "radius": "${size|1}", "angle": 53, "width": 1 },
+      "effects": [
+        { "kind": "message", "text": "{source.name} uses {$.name}." },
+        { "kind": "roll", "formula": "roll($.damage)", "label": "damage" },
+        { "kind": "roll", "formula": "d20 + target.${ability}_mod + target.save_prof.${ability} * target.pb", "vs": "$.dc", "label": "save" },
+        { "kind": "damage", "formula": "save.success ? (${half|0} == 1 ? floor(rolls.damage.total / 2) : 0) : rolls.damage.total", "resource": "hp", "type": "{$.damage_type}" }
+      ],
+      "vfx": [
+        { "at": 0, "preset": "ring", "from": "source", "color": "#ff9f43", "duration": 450 },
+        { "at": 250, "preset": "hit", "from": "target", "color": "#ffb347", "duration": 300 }
+      ]
+    },
+    "save-only": {
+      "requires": ["ability", "dc"],
+      "icon": "sparkles",
+      "target": { "kind": "${shape|single}", "range": "${cells|1}", "radius": "${size|1}", "angle": 53, "width": 1 },
+      "effects": [
+        { "kind": "message", "text": "{source.name} uses {$.name}." },
+        { "kind": "roll", "formula": "d20 + target.${ability}_mod + target.save_prof.${ability} * target.pb", "vs": "$.dc", "label": "save" }
+      ],
+      "vfx": [{ "at": 0, "preset": "aura", "from": "target", "color": "#b48cff", "duration": 500 }]
+    }
+  }
+}

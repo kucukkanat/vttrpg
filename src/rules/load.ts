@@ -6,7 +6,9 @@ import type {
   AttributeDef,
   ChargenSchema,
   ConditionDef,
+  CreatureActionTemplates,
   Effect,
+  EncounterRules,
   PackManifest,
   ResourceDef,
   RollResolution,
@@ -75,6 +77,12 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   ])
   const skills = await Promise.all((f.skills ?? []).map((file) => read(file).then((v) => guardSkill(v, file))))
   const chargen = f.chargen ? guardChargen(await read(f.chargen), f.chargen) : undefined
+  const sheets: Record<string, SheetSchema> = {}
+  for (const [id, file] of Object.entries(f.sheets ?? {})) sheets[id] = guardSheet(await read(file), file)
+  const creatureActions = f.creatureActions ? guardCreatureActions(await read(f.creatureActions), f.creatureActions) : undefined
+  const encounter = f.encounter ? guardEncounter(await read(f.encounter), f.encounter) : undefined
+  if (manifest.creatures?.sheet && !sheets[manifest.creatures.sheet])
+    throw new PackError('pack.json', `creatures.sheet "${manifest.creatures.sheet}" is not in files.sheets`)
 
   const ids = new Set<string>()
   for (const s of skills) {
@@ -83,7 +91,11 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   }
   if (manifest.resolution?.kind === 'roll-under') expr(manifest.resolution.die, 'pack.json', 'resolution.die')
 
-  return { manifest, attributes, resources, conditions, sheet, skills, chargen }
+  const pack: LoadedPack = { manifest, attributes, resources, conditions, sheet, skills, chargen, baseUrl }
+  if (Object.keys(sheets).length) pack.sheets = sheets
+  if (creatureActions) pack.creatureActions = creatureActions
+  if (encounter) pack.encounter = encounter
+  return pack
 }
 
 // ------------------------------------------------------------------- guards
@@ -138,6 +150,15 @@ export function guardManifest(v: unknown): PackManifest {
     if (!isStr(files[k])) throw new PackError(file, `files.${k} required`)
   if (!opt(files.chargen, isStr)) throw new PackError(file, 'files.chargen must be a string')
   if (!opt(files.skills, isStrArr)) throw new PackError(file, 'files.skills must be a list of paths')
+  if (files.sheets !== undefined && !(isRec(files.sheets) && Object.values(files.sheets).every(isStr)))
+    throw new PackError(file, 'files.sheets must map layout ids to paths')
+  if (!opt(files.creatureActions, isStr) || !opt(files.encounter, isStr)) throw new PackError(file, 'files.creatureActions/encounter must be strings')
+  if (v.creatures !== undefined) {
+    const c = v.creatures
+    if (!isRec(c) || !isStrArr(c.files) || !isStr(c.hp)) throw new PackError(file, '"creatures" needs files (paths) and hp')
+    for (const k of ['sheet', 'hpFormula', 'ac', 'xp', 'cr', 'crText', 'notes'])
+      if (!opt(c[k], isStr)) throw new PackError(file, `creatures.${k} must be a string`)
+  }
   return v as unknown as PackManifest
 }
 
@@ -350,11 +371,37 @@ export function guardSkill(v: unknown, file: string): SkillDef {
     })
   }
   guardTarget(v.target, file)
+  if (!opt(v.onlyListed, isBool)) throw new PackError(file, 'onlyListed must be boolean')
   if (!Array.isArray(v.effects)) throw new PackError(file, '"effects" must be a list')
   v.effects.forEach((e, i) => guardEffect(e, file, i))
   if (!Array.isArray(v.vfx)) throw new PackError(file, '"vfx" must be a list')
   v.vfx.forEach((c, i) => guardVfx(c, file, i))
   return v as unknown as SkillDef
+}
+
+/**
+ * Action templates are checked by compiling a sample action through each one, so a typo in a
+ * formula fails at load like any other pack expression.
+ */
+export function guardCreatureActions(v: unknown, file: string): CreatureActionTemplates {
+  if (!isRec(v) || !isStr(v.list) || !isStr(v.kindField) || !isRec(v.templates)) throw new PackError(file, 'needs list, kindField and templates')
+  for (const [id, t] of Object.entries(v.templates)) {
+    if (!isRec(t) || !isRec(t.target) || !Array.isArray(t.effects) || !Array.isArray(t.vfx)) throw new PackError(file, `template "${id}": target, effects and vfx required`)
+    if (!opt(t.requires, isStrArr) || !opt(t.icon, isStr)) throw new PackError(file, `template "${id}": bad requires/icon`)
+  }
+  return v as unknown as CreatureActionTemplates
+}
+
+export function guardEncounter(v: unknown, file: string): EncounterRules {
+  if (!isRec(v) || !isStr(v.source) || !isStr(v.level) || !isStr(v.xp)) throw new PackError(file, 'needs source, level and xp')
+  if (!Array.isArray(v.bands) || !v.bands.length || !v.bands.every((b) => isRec(b) && isStr(b.id) && isStr(b.name))) throw new PackError(file, '"bands" must list { id, name }')
+  if (!isRec(v.budget)) throw new PackError(file, '"budget" must map levels to budgets')
+  const n = v.bands.length
+  for (const [level, row] of Object.entries(v.budget)) {
+    if (!/^\d+$/.test(level)) throw new PackError(file, `budget key "${level}" must be a level number`)
+    if (!Array.isArray(row) || row.length !== n || !row.every(isNum)) throw new PackError(file, `budget ${level}: ${n} numbers required`)
+  }
+  return v as unknown as EncounterRules
 }
 
 export function guardChargen(v: unknown, file: string): ChargenSchema {

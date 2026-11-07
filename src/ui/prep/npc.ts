@@ -17,6 +17,10 @@ export interface SpawnSpec {
   name: string
   color: string
   generateSheet: boolean
+  /** A ready sheet (a creature stat block copy) instead of chargen: its layout id and data. */
+  sheet?: { layout?: string; data: Record<string, unknown> }
+  /** Skill ids for the token's bar (compiled stat-block actions). */
+  skills?: string[]
 }
 
 export interface Spawned {
@@ -42,7 +46,10 @@ export async function spawnNpcs(controller: GameController, specs: SpawnSpec[], 
     const spec = specs[i]!
     const position = spots[i] ?? spots[spots.length - 1] ?? { x: 0, y: 0, z: 0 }
     let character: Character | undefined
-    if (spec.generateSheet && rules?.pack.chargen) {
+    if (spec.sheet) {
+      character = { id: newId<'CharacterId'>(), name: spec.name, data: spec.sheet.data, ...(spec.sheet.layout ? { sheet: spec.sheet.layout } : {}) }
+      await controller.dispatch({ type: 'character.upsert', character })
+    } else if (spec.generateSheet && rules?.pack.chargen) {
       const c = await rules.generateCharacter(newSeed(), spec.name)
       character = { ...c, id: newId<'CharacterId'>(), owner: undefined }
       await controller.dispatch({ type: 'character.upsert', character })
@@ -61,6 +68,7 @@ export async function spawnNpcs(controller: GameController, specs: SpawnSpec[], 
       light: 0,
       hidden: opts.hidden ?? true,
       conditions: [],
+      ...(spec.skills ? { skills: spec.skills } : {}),
     }
     await controller.dispatch({ type: 'token.add', token })
     out.push({ token, character })
