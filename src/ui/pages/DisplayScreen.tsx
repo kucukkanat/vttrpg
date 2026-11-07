@@ -32,7 +32,7 @@ export function DisplayScreen({ href }: { href: string }) {
     return () => { live = false; started?.dispose() }
   }, [link])
 
-  if (!link) return <div className="display display--msg"><p>This is not a display link. Copy it again from the Build panel.</p></div>
+  if (!link) return <div className="display display--msg"><p>This is not a display link. Copy it again from the scene card (the scene title).</p></div>
   if (error) return <div className="display display--msg"><p>Could not open the table: {error}</p></div>
   if (!controller) return <div className="display display--msg"><p className="muted">Connecting the table display…</p></div>
   return <DisplayTable controller={controller} initialFollow={link.view === 'follow'} initialGrid={link.grid} />

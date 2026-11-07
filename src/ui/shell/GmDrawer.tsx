@@ -1,5 +1,5 @@
 /**
- * The GM drawer on the plaque (Play): one button that fans out the table-time references, each
+ * The GM drawer on the plaque: one button that fans out the table-time references, each
  * with its live state (drawerItems.ts), each opening as the one card. Players never see it.
  */
 import { useMemo, useRef, useState } from 'react'
@@ -31,6 +31,7 @@ export function GmDrawer({ me, playing, journalNew }: { me: string; playing: num
       <button type="button" className={`t-drawer-btn${open ? ' on' : ''}`} aria-haspopup="menu" aria-expanded={open}
         aria-label={drawerButtonLabel(items)} title="GM drawer: sound, players, journal, tables, NPC, encounters, credits" onClick={() => setOpen((o) => !o)}>
         <Icon name="toolbox" size={18} />
+        <span className="t-drawer-word">Drawer</span>
         {waiting && <span className="t-drawer-dot" aria-hidden />}
       </button>
       {open && (

@@ -45,7 +45,7 @@ function targetOf(id: TipId): Element | null {
     case 'build-putdown':
     case 'build-undo':
     case 'build-paste': return document.querySelector('.table canvas')
-    case 'build-pickup': return document.querySelector('.t-tray .lib-grid, .t-screen-sheet .lib-grid')
+    case 'build-pickup': return document.querySelector('.lib-dock .lib-grid, .lib-phone .lib-grid')
     case 'dice': return document.querySelector('.cam-dice')
   }
 }
@@ -204,7 +204,7 @@ export function OnboardingTips({ controller }: { controller: GameController }) {
   const propSelected = useGame((s) => s.propSelection.length > 0)
   const propCount = useGame((s) => Object.keys(s.props).length)
   const keyboard = useMemo(() => typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches, [])
-  // Placed something during this Build visit: more props than when Build opened.
+  // Placed something while editing: more props than when Edit turned on.
   const [buildStart, setBuildStart] = useState<number | null>(null)
   useEffect(() => { setBuildStart(building ? propCount : null) }, [building]) // eslint-disable-line react-hooks/exhaustive-deps
   const placed = buildStart !== null && propCount > buildStart
@@ -219,7 +219,7 @@ export function OnboardingTips({ controller }: { controller: GameController }) {
   useEffect(() => { if (menuOpen) retire('long-press') }, [menuOpen, retire])
   useEffect(() => { if (editMode) retire('edit-gesture') }, [editMode, retire])
   useEffect(() => { if (aiming) retire('token-bar') }, [aiming, retire])
-  // Build: picking up, turning, putting down, undoing and pasting retire their tips.
+  // Editing: picking up, turning, putting down, undoing and pasting retire their tips.
   useEffect(() => { if (holding) retire('build-pickup') }, [holding, retire])
   useEffect(() => useBuildUi.subscribe((s, prev) => {
     const held = prev.tool === 'place' && prev.held

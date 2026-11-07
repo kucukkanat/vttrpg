@@ -1,13 +1,17 @@
 /**
  * Pointer handling for props, shared by the standalone PropMesh and the instanced PropBatch:
  *
- * - tap selects (in Build or edit mode it keeps the prop selected; otherwise it toggles), double tap
+ * - tap selects (with Edit on or in edit mode it keeps the prop selected; otherwise it toggles), double tap
  *   enters or leaves edit mode; Shift-click (GM) adds the prop to the selection or drops it
  * - drag (GM, unlocked) moves the whole selection on the floor when the prop is part of it, else
  *   just this prop; snapped to half cells unless Snap is off or Alt is pressed during the drag
  * - Alt held when the press starts duplicates: the copies land where the drag ends, the originals stay
  * - right-click, or a still long-press on touch, opens the prop menu (GM; players just select)
  * - a finger on a selected prop arms the two-finger twist / pinch (build/PropEditor.tsx)
+ * - GM with the Edit toggle off (`tableState.buildMode` false): props are not there for the pointer,
+ *   so presses fall through to the board and the tokens beneath; only props with a click handler
+ *   (a door, propClick.ts) keep the press, and a tap runs the handler. The handler runs on a tap
+ *   with Edit on too, and for players.
  *
  * Drags preview through `tableState.propPreview` and commit one intent on release (one undo step).
  *
@@ -26,6 +30,7 @@ import { useTable } from './context'
 import { snapTranslation } from './editing'
 import { doubleTapEdit, tapTwice } from './editTap'
 import { useTableUi } from './tableState'
+import { propClickFor } from './propClick'
 import { capture, DRAG_THRESHOLD_PX, LONG_PRESS_MS } from './TokenMesh'
 import { editRuntime } from './build/editRuntime'
 import { eyedrop, wantsEyedrop } from './build/eyedrop'
@@ -69,6 +74,10 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const gm = !viewer || viewer.isGm
   const drag = useRef<DragState | null>(null)
+  /** A press on a clickable prop (a door) while the GM's Edit toggle is off: a tap runs its handler. */
+  const tap = useRef<{ id: PropId; pointerId: number; x: number; y: number } | null>(null)
+  /** GM with Edit off: props ignore the pointer (doors still answer a click). */
+  const passive = () => gm && !useTableUi.getState().buildMode
   const hit = useMemo(() => new Vector3(), [])
 
   const select = (id: PropId) => useGame.getState().setSelection({ kind: 'prop', id })
@@ -107,6 +116,14 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     const id = resolve(e)
     const prop = id ? useGame.getState().props[id] : undefined
     if (!id || !prop) return
+    const clicker = propClickFor(prop, gm)
+    if (passive()) {
+      // Not stopped: the press reaches the board and the tokens beneath, unless a door wants it.
+      if (!clicker || e.button !== 0) return
+      e.stopPropagation()
+      tap.current = { id, pointerId: e.pointerId, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
+      return
+    }
     e.stopPropagation()
     // A second finger while a twist / pinch runs belongs to the gesture.
     if (editRuntime.gestureActive || (e.pointerType === 'touch' && drag.current)) return
@@ -120,8 +137,9 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     // Shift-click: add to or drop from the selection (GM building with several props).
     if (gm && ne.shiftKey) { useGame.getState().togglePropSelected(id); return }
     if (!(gm && !prop.locked)) {
-      // Build: Alt-click is the eyedropper (pick this model up again); a locked prop cannot be dragged.
+      // Alt-click is the eyedropper (pick this model up again); a locked prop cannot be dragged.
       if (gm && wantsEyedrop(ne)) { eyedrop(prop); return }
+      if (clicker) clicker.click(prop, gm)
       const twice = tapTwice(`prop:${id}`, ne.clientX, ne.clientY)
       if (twice && doubleTapEdit(gm ? { kind: 'prop', id } : null)) return
       select(id)
@@ -185,6 +203,15 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
   }
 
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    const t = tap.current
+    if (t && e.pointerId === t.pointerId) {
+      tap.current = null
+      e.stopPropagation()
+      const prop = useGame.getState().props[t.id]
+      const still = Math.hypot(e.nativeEvent.clientX - t.x, e.nativeEvent.clientY - t.y) < DRAG_THRESHOLD_PX
+      if (prop && still) propClickFor(prop, gm)?.click(prop, gm)
+      return
+    }
     const d = drag.current
     if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
@@ -195,11 +222,14 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     endDrag(true)
     if (!wasClick) return
     const ne = e.nativeEvent
-    // Build: Alt-click without a drag is the eyedropper (Alt-drag duplicates).
+    // Alt-click without a drag is the eyedropper (Alt-drag duplicates).
     const dropped = d.duplicate && gm && wantsEyedrop({ altKey: true, button: 0 }) ? useGame.getState().props[id] : undefined
     if (dropped) { eyedrop(dropped); return }
+    const clicked = useGame.getState().props[id]
+    const clicker = clicked ? propClickFor(clicked, gm) : undefined
+    if (clicked && clicker) clicker.click(clicked, gm)
     if (tapTwice(`prop:${id}`, ne.clientX, ne.clientY) && doubleTapEdit({ kind: 'prop', id })) return
-    // In Build or edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
+    // With Edit on or edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
     const ui = useTableUi.getState()
     if (ui.editMode || ui.buildMode) select(id)
     else useGame.getState().setSelection(isSelected(id) ? null : { kind: 'prop', id })
@@ -209,18 +239,22 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     onPointerDown,
     onPointerMove,
     onPointerUp,
-    onPointerCancel: () => endDrag(false),
+    onPointerCancel: () => { tap.current = null; endDrag(false) },
     onLostPointerCapture: () => endDrag(false),
     onContextMenu: (e) => {
-      if (targeting) return
+      if (targeting || passive()) return
       if (!resolve(e)) return
       e.stopPropagation()
       e.nativeEvent.preventDefault()
     },
     onPointerOver: (e) => {
       if (targeting) return
+      const id = resolve(e)
+      const prop = id ? useGame.getState().props[id] : undefined
+      // Edit off: only a clickable prop (a door) lights up under the pointer.
+      if (passive() && !(prop && propClickFor(prop, gm))) { onHover(null); return }
       e.stopPropagation()
-      onHover(resolve(e) ?? null)
+      onHover(id ?? null)
     },
     onPointerOut: () => onHover(null),
   }

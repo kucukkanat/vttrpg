@@ -37,13 +37,10 @@ describe('GM drawer live states', () => {
   })
 })
 
-describe('the fog brush on the Play rail', () => {
-  it('is offered to the GM in Play only', () => {
-    expect(fogToolAvailable(true, 'play')).toBe(true)
-    expect(fogToolAvailable(false, 'play')).toBe(false)
-    // Build has its own fog tool in the tool strip.
-    expect(fogToolAvailable(true, 'build')).toBe(false)
-    expect(fogToolAvailable(false, 'build')).toBe(false)
+describe('the fog brush on the tool rail', () => {
+  it('is offered to the GM only', () => {
+    expect(fogToolAvailable(true)).toBe(true)
+    expect(fogToolAvailable(false)).toBe(false)
   })
 
   it('knows the fog tools and says what the brush does', () => {

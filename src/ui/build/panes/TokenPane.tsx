@@ -1,5 +1,5 @@
 /**
- * The one token editor: the Build Inspector's token context, and the Tokens card for players on
+ * The one token editor: the Inspector's token context, and the Tokens card for players on
  * their own tokens. Identity (name, colour), owner, size, vision and light, hidden, a link to the
  * full sheet (the character card), skills (the skill editor card) and initiative. Sheet-heavy
  * packs stay out of it: the card holds the sheet.

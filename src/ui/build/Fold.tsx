@@ -1,6 +1,7 @@
 /** One Inspector section: a disclosure that starts folded and remembers its state per device (folds.ts). */
 import type { ReactNode } from 'react'
 import { useFolds } from './folds'
+import './inspector.css'
 
 export function Fold({ id, title, summary, children }: { id: string; title: string; summary?: ReactNode; children: ReactNode }) {
   const open = useFolds((s) => !!s.open[id])

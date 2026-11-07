@@ -1,7 +1,7 @@
 /**
  * Encounters at the table (Play, GM drawer): the saved encounters with Run, which places the
  * creatures on the live scene (hidden or visible) and then asks "Roll initiative for N
- * creatures?". Building encounters in depth is Build's (Library › Saved); a quick one (one
+ * creatures?". Building encounters in depth is the Library's (the Saved shelf); a quick one (one
  * creature × count) can still be saved here while improvising.
  */
 import { useMemo, useState } from 'react'
@@ -56,7 +56,7 @@ export function EncounterRun({ controller }: { controller: GameController }) {
         <input type="checkbox" checked={prefs.visible} onChange={(ev) => setPrefs({ visible: ev.target.checked })} />
         Place visible <span className="muted small">(off: hidden until you reveal them)</span>
       </label>
-      {list.length === 0 && !adding && <p className="muted small">No saved encounters yet. Save creature groups in Build (Library › Saved), or a quick one here.</p>}
+      {list.length === 0 && !adding && <p className="muted small">No saved encounters yet. Save creature groups on the Library’s Saved shelf, or a quick one here.</p>}
       <ul className="list">
         {list.map((e) => {
           const n = encounterSize(e)

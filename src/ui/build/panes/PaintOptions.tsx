@@ -1,8 +1,8 @@
 /**
- * The Inspector while Paint is out: the grid kit's tools (floor, wall, door, window, stairs, roof,
+ * The Inspector while a kit piece is in hand (a Kit card): the grid kit's tools (floor, wall, door, window, stairs, roof,
  * pillar, erase, pick), the kit, the piece in hand and its turn, and the room outline. Alt erases
  * while it is held. The piece palette is folded here until the Library's Kit shelf takes it in
- * hand; the level and cutaway live in the scene bar.
+ * hand; the level and cutaway live on the board's level control.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { BUILTIN_KITS, type KitManifest, type KitPiece, type KitSlot } from '@/core/kits'

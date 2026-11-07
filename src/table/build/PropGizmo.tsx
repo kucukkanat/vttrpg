@@ -1,5 +1,5 @@
 /**
- * The prop gizmo, on the prop selection (GM, Build or edit mode). Everything acts on the whole
+ * The prop gizmo, on the prop selection (GM, with Edit on or in edit mode). Everything acts on the whole
  * selection about its centre (floor centre of the positions, lowest height) and commits one
  * `props.update` on release, so one drag is one undo step.
  *

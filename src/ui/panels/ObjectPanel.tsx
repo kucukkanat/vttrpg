@@ -1,7 +1,7 @@
 /**
  * Numeric editors for whatever is being edited on the table (token, prop, scene node or the whole
  * scene), shown under "Details" in the edit bar (shell/EditBar.tsx) and, for scene parts and the
- * scene's fit, in the Build Inspector. Every change goes through `controller.dispatch`;
+ * scene's fit, in the Inspector. Every change goes through `controller.dispatch`;
  * players only get controls for tokens they own and a read-only summary otherwise.
  * Built for thumbs: big +/- steppers, direct input, no hover-only affordances.
  */
@@ -255,7 +255,7 @@ function NodeEditor({ controller, sceneId, scene, name, override, base, cell, ed
   )
 }
 
-/** The whole scene model's fit: scale, turn and offset (the Build Inspector's scene context uses it too). */
+/** The whole scene model's fit: scale, turn and offset (the scene card's settings use it too). */
 export function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }: { controller: GameController; sceneId: SceneId; scene: Scene; cell: number; editable: boolean; onDeselect?(): void }) {
   const t: SceneTransform = scene.transform ?? IDENTITY_TRANSFORM
   const set = (next: SceneTransform) => void controller.dispatch({ type: 'scene.update', scene: sceneId, patch: { transform: next } })

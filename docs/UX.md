@@ -11,85 +11,95 @@ each thing has exactly one home (research and audit: `research_notes/UI redesign
 
 | Piece | Where | What it holds |
 |---|---|---|
-| Top rail | wood, along the top | the game's plaque (name, connection, role), the live scene (GM: opens the scene switcher, the list and Go live; settings are Build's), the combat control (GM: Roll initiative; in combat Next turn and End), who is here (opens Players), Invite (GM), the bell, Search (Ctrl/⌘-K), the ⋯ menu |
+| Top rail | wood, along the top | the game's plaque (name, connection, role), the live scene (GM: opens the scene card, the switcher and the scene and map settings), the combat control (GM: Roll initiative; in combat Next turn and End), who is here (opens Players), Invite (GM), the bell, Search (Ctrl/⌘-K), the ⋯ menu |
 | Standees | top edge of the board | turn order, only in combat; tap for the tracker card |
-| Tool rail | left edge | Eyes, Top (with Q/E turns), grid, ruler, ping, Select (touch), Fog (GM in Play: a pop-out with the Reveal / Hide brush, its size, Reveal all and Hide all; the same build fog tools, Esc puts the brush away), and the Journal book with a "new" ribbon |
+| Tool rail | left edge | Eyes, Top (with Q/E turns), grid, ruler, ping, Select (touch), Fog (GM: a pop-out with the Reveal / Hide brush, its size, Reveal all and Hide all; Esc puts the brush away), and the Journal book with a "new" ribbon |
 | The hand | bottom centre | the selected token (a player's own when nothing is selected): name (opens the character card), find-on-table, HP, saves and skills as cards, End turn; GM adds −/+, Conditions, the skill list and combat join/leave. Hide, Assign and Remove live in the token menu (⋯, right-click, long-press) |
 | The scroll | right edge | chat. Rolled up it is a rod with the unread count; `]` or a tap unrolls it. The composer has one seal control for the whisper target and the roll mode (advantage, who sees rolls) and a log filter |
 | Dice well | bottom right | dice roll inside the well, never over the board; the result reads out on a paper slip beside it; the brass Roll coin opens the dice pad |
-| GM screen | bottom left, GM only | a leather plaque with **Play / Build** and a live line (sounds playing, the round). Play runs the table; **Build** makes the world and opens the Build workspace around the board (see "Build" below). The board's frame takes the mode's colour: brass, blue |
-| GM drawer | on the plaque, GM in Play | a button beside Play \| Build fans out Sound ("2 playing"), Players ("3 here"), Journal ("1 new"), Tables, NPC, Encounters ("Ambush ready") and Credits; each opens as the one card. NPC places its result near the camera, hidden, selects it, closes and offers Undo. Encounters › Run places the creatures (hidden, or visible by a toggle) and asks "Roll initiative for N creatures?": out of combat it starts combat with them included, in combat their rows join as groups |
+| GM screen | bottom left, GM only | a leather plaque with the GM drawer and a live line (sounds playing, the round) |
+| Library | left edge, GM only | a slim rail ("Library" and the Edit pencil) that opens into the Library dock; see "Library and Inspector" below |
+| Inspector | right, GM only | a slim card while something is selected; see "Library and Inspector" below |
+| GM drawer | on the plaque, GM | the Drawer button fans out Sound ("2 playing"), Players ("3 here"), Journal ("1 new"), Tables, NPC, Encounters ("Ambush ready") and Credits; each opens as the one card. NPC places its result near the camera, hidden, selects it, closes and offers Undo. Encounters › Run places the creatures (hidden, or visible by a toggle) and asks "Roll initiative for N creatures?": out of combat it starts combat with them included, in combat their rows join as groups |
 | One card | over the board's left side | any other panel (Character, Skills, Initiative, Journal, Players, Sound, Scenes, Credits, the Skill editor…): one at a time, Esc or ✕ puts it away |
 | Command palette | Ctrl/⌘-K or Search | every action, panel, token and scene, with where it lives and its key |
 | The bell | top rail | whispers, handouts and anything else with an action, kept until handled (toasts still flash; `ui/attention.ts`) |
 
-`shell/tableLayout.ts` holds this state (mode, card, scroll, palette, bell, phone sheet, and the
-Build docks' fold state, remembered per device) and `routePanel(id)` decides where any registry
+`shell/tableLayout.ts` holds this state (card, scroll, palette, bell, phone sheet, and whether the
+Library dock is open, remembered per device) and `routePanel(id)` decides where any registry
 panel opens, so `openPanel(id)` from shortcuts, toasts and panels needs no knowledge of the layout:
 
 | Asked for | GM | Player |
 |---|---|---|
 | chat | the scroll | the scroll |
-| library | Build, Library on Models | card |
-| kit | Build, Library on Kit | – |
-| prep (old name) | Build, Library on Creatures | – |
-| tokens | Build, Library filtered to In this scene | card |
-| build | Build, Inspector on the scene (no tool, nothing selected) | – |
+| library | the Library dock on Models | card |
+| kit | the Library dock on Kit | – |
+| prep (old name) | the Library dock on Creatures | – |
+| tokens | the Library dock filtered to In this scene | card |
+| build (old name) | the Library dock as it stands | – |
+| scene-switcher | the scene card | – |
 | anything else | the one card | the one card |
 
-There are two modes, `'play'` and `'build'`; an old `'prep'` (stored or in memory) opens Build.
+There is one mode. The GM runs the table and changes props, walls, doors, lights, the scene and
+the map at any moment from the Library, which is always on the left edge. Stored or in-memory
+`'build'` and `'prep'` modes from older versions mean nothing now.
 
-## Build
+## Library and Inspector
 
-The GM's Build workspace (`src/ui/build/`, loaded the first time Build opens). One rule: the
-Library adds, the Inspector edits, the tool strip draws, the scene bar switches scenes and levels.
+The GM's editing pieces (`shell/GmHosts.tsx` hosts them; `src/ui/build/` holds them, loaded on
+first use). One rule: the Library adds, the Inspector edits what is selected, the scene title
+holds the scene.
 
 ```
-┌ Scene ▾ · ▼ Level 0 ▲ · ✂ auto · ↶ ↷ · budget · [Done] ┐
-│ Library │                                   │ Inspector │
-│ (rail)  │              BOARD                │           │
-│         │  [Select V][Paint P][Walls W][Light L][Fog B]  │
+┌ plaque · scene title ▾ (switch, scene & map settings) · combat · …         ┐
+│┌Library ✎ ‹┐                                        ┌ Inspector ↶ ↷ ✕ ┐  │
+││Models Kit …│   tool rail                             │ name · solid …  │  │
+││[cards…]    │                BOARD                    └──────────────────┘  │
+││budget ▮▮▯  │                                                              │
+│└────────────┘   GM screen (drawer)       the hand          dice well       │
 ```
 
 | Piece | Where | What it holds |
 |---|---|---|
-| Scene bar | top centre | the scene switcher (the live scene's name: the scene list with Live, Switch, Preview, rename and remove, and + Add: library scenes, GLB, map image, UVTT / Foundry import), the level being built ▲ ▼ (PgUp / PgDn) and the cutaway (✂ auto follows the selected token, or cut at the level), undo and redo, the compact budget meter (hover for the breakdown), **Done** back to Play |
-| Library dock | left | the shelf row (Models · Kit · Creatures · Saved, `library/libraryView.ts`) over the Library panel (search, filters, cards; picking a card is "place"). Folds to a narrow rail; on a first visit it starts folded, and asking for anything it holds opens it |
-| Inspector dock | right | one context at a time (`build/inspectorContext.ts`): the selection, else the active tool's options, else the scene. Folds to a rail |
-| Tool strip | bottom centre | Select (V), Paint (P, the grid kit), Walls (W), Light (L), Fog (B). Each sets the build tool state, so the prop keys and box select stand down as before; the active tool again goes back to Select |
+| Library rail | left edge, folded | "Library" (opens the dock) and the Edit pencil |
+| Library dock | left edge, open | the Edit pencil and the fold button; the shelf row (`LIBRARY_SHELVES` in `library/libraryView.ts`: Models, Kit, Creatures, Saved, and the shelves added there) over the Library panel (search, filters All · Recent · Favourites · In this scene · Mine, cards; picking a card is "place"); the scene budget meter in the footer (hover for the breakdown). Esc folds it once nothing is selected or in hand; open or folded is remembered per device, and a first visit starts folded. The tool rail and the card move right to make room |
+| Edit toggle | the pencil, on the rail and in the dock | `shell/editMode.ts`, per device, off at first. **Off:** props, walls, doors and lights ignore the GM's pointer (`table/propPointer.ts`): no selection, drag, menu, gizmo, box select or prop keys, and clicks reach the board and the tokens beneath; a prop with a click handler (`table/propClick.ts`, doors) still answers a click. **On:** everything is editable. Picking any Library card (or anything that hands the board a model, kit piece, creatures or a group) turns it on; turning it off lets go of the props and of whatever came from the Library. Tokens behave the same either way; Esc never toggles it |
+| Inspector | right, a slim card | shown while something is selected or a kit piece or creatures are in hand (`build/inspectorContext.ts`), closed on deselect (✕ or Esc); nothing shows otherwise. Undo and redo in its header. Beside the scroll when the scroll is unrolled; the board's level control steps left of it |
+| Scene card | the scene title (GM) | the scene switcher (Live, Switch, Preview, rename, remove, + Add: library scenes, GLB, map image, UVTT / Foundry import) over the live scene's settings: name and map, grid (cells, offset; fit the model), light and weather (darkness, weather, ambience), starting fog, table display (open, copy link, share my view, pull everyone) and Credits ›. Players' scene title opens the Scenes card |
+| Level control | the board, top right | the level being worked on ▲ ▼ (PgUp / PgDn) and the cutaway (✂ auto follows the selected token, or cut at the level); shown whenever the scene has storeys or a kit tool is out |
 
 The Inspector's contexts:
 
-- **Prop:** name, solid, locked, Save as group, Delete; position, rotation and scale (expressions
-  such as `1.5*2`) in a folded section. **Several props:** what is selected, Save as group, Delete,
-  the group transform. **Token:** name, Sheet › (the character card), Skills › (the skill editor
-  card), Start / Join / Leave combat; colour and size, vision and light, owner and visibility
-  (with Remove) folded. This is the one token editor; players get it in the Tokens card for their
-  own tokens. **Scene part:** the node editor.
-- **Paint:** the kit tool (floor, wall, door, window, stairs, roof, pillar, erase, pick), the
-  piece in hand and its turn, room outline, the kit, the pieces (folded). Hold Alt to erase.
-  **Walls:** Wall / Door / Erase, show walls, players may open doors, detect walls from a map
-  image (folded), remove drawn walls. **Light:** reach and colour for new lights, the placed
-  lights (folded). **Fog:** Reveal / Hide, brush size, Reveal all, Hide all, Reset.
-- **Scene:** name and map, grid (cells, offset; fit the model), light and weather (darkness,
-  weather, ambience), starting fog, table display (open, copy link, share my view, pull everyone),
-  and Credits ›.
+- **Prop:** name, solid, locked, then the prop's kind (a light, a wall, a door:
+  `build/panes/PropKindPanes.tsx`), Save as group, Delete; position, rotation and scale
+  (expressions such as `1.5*2`) in a folded section. **Several props:** what is selected, Save as
+  group, Delete, the group transform.
+- **Token:** name, Sheet › (the character card), Skills › (the skill editor card), Start / Join /
+  Leave combat; colour and size, vision and light, owner and visibility (with Remove) folded. This
+  is the one token editor; players get it in the Tokens card for their own tokens. The hand stays
+  up as well.
+- **Scene part** (edit mode): the node editor.
+- **Paint** (a Kit card in hand): the kit tool (floor, wall, door, window, stairs, roof, pillar,
+  erase, pick), the piece in hand and its turn, room outline, the kit, the pieces (folded). Hold
+  Alt to erase.
+- **Placing creatures:** whether they land visible to players.
 
 Placing from the Library: a card picks the model up (a ghost on the cursor; click stamps, R or
 the wheel turns, Alt is free, Esc puts it down), Alt-click on a prop is the eyedropper, and My
-models cards have a menu (Rename, Remove from library) and show the upload status. Co-GMs in Build
-see each other's cursor ring and name, a faint ghost of what they hold and an outline on their
-selection, in their colour; it clears when they leave Build or idle for 30 s, and players never
-see it. A first Build visit gets one-time tips (pick up, turn, put down, undo, paste).
+models cards have a menu (Rename, Remove from library) and show the upload status. A Kit card arms
+the paint tool: drag a run or a room, a single click places one. Co-GMs with Edit on see each
+other's cursor ring and name, a faint ghost of what they hold and an outline on their selection,
+in their colour; it clears when they turn Edit off or idle for 30 s, and players never see it.
+The first time editing gets one-time tips (pick up, turn, put down, undo, paste).
 
 Sections start folded and remember being opened per device (`build/folds.ts`). Prefab capture is
-"Save as group" on a selection; stamping saved groups lives in the Library's Saved shelf. In Build
-the hand steps back (the Inspector edits tokens), the edit bar keeps Snap, the gizmo mode and
-Deselect, and Roll initiative, Ping and the Journal leave the screen until Play.
+"Save as group" on a selection; stamping saved groups lives in the Library's Saved shelf. With
+props selected the edit bar keeps Snap, the gizmo mode and Deselect. The fog brush stays on the
+tool rail.
 
-Visible controls at 1440 × 900 (buttons, fields, tabs on screen and not covered): Build idle 30,
-with a tool 31–40 (Paint is the most), with a prop 39, with a token 34; with the Library dock
-open the Library panel adds about 28. Play idle stays at 18 (19 with the getting-started callout).
+Visible controls at 1440 × 900 (buttons, fields, tabs and links on screen and not covered): GM
+idle with the Library folded 20; with the Library open 50; with a prop selected (Library open) 63;
+painting a kit floor (Library open) 73.
 
 ## Breakpoints
 
@@ -110,20 +120,20 @@ in landscape (812 × 375) is treated as a tablet.
 │        BOARD         │  the dice well appears bottom-right only while dice roll
 │ ┌ the hand ────────┐ │  the selected (or own) token's cards
 ├──────────────────────┤
-│ ═══ one sheet ═══    │  the scroll, the card, the dice pad, the GM screen or Tools
+│ ═══ one sheet ═══    │  the scroll, the card, the dice pad, the Library, the Inspector or Tools
 ├──────────────────────┤
-│ Dice Scroll Sheet Screen|Journal Tools │  56 px + safe area
+│ Dice Scroll Sheet Library|Journal Tools │  56 px + safe area
 └──────────────────────┘
 ```
 
-In Build the GM's bar is **Library · Tools · Inspector · Scene · Done**, one sheet at a time:
-the Library (shelf row and cards; picking a card closes the sheet so the next tap places), the
-build tools (Select, Walls, Light, Fog; picking one closes the sheet), the Inspector, and the
-scene (level, cutaway, undo, redo, budget, the scene list). Kit painting and imports stay on
+The GM's Library is a sheet (the shelf row, the Edit pencil and the cards; picking a card closes
+the sheet so the next tap places), and the Inspector is a sheet that opens with a selection and
+closes with it. The GM drawer's panels head the Tools sheet. Kit painting and imports stay on
 tablets and desktops.
 
-- Five targets: Dice (the pad), Scroll (badge), Sheet (character card), Screen for the GM (Play /
-  Build) or Journal for players (badge), Tools (camera and table tools, Search, every other panel).
+- Five targets: Dice (the pad), Scroll (badge), Sheet (character card), Library for the GM or
+  Journal for players (badge), Tools (camera and table tools, Search, the GM drawer, every other
+  panel).
 - One sheet at a time: opening any place closes the others (`open(id, isGm, phone)`).
 - Sheets keep the half/full drag, Esc and the keyboard inset as before (`BottomSheet.tsx`).
 - Aiming a skill closes the sheet; the table's own aim bar has Cancel.
@@ -284,7 +294,7 @@ Conditions on tokens, in the token bar's GM toggles and on the character card sh
   `prefers-color-scheme`; the Players panel or the palette switches by hand (`vtt.theme`).
 - The table's materials do not change with the theme: the wooden rail, the leather GM screen,
   brass fittings and the felt well (`--wood`, `--leather`, `--brass*`, `--felt` in global.css).
-  Cards, the scroll, the Build docks and the palette are paper in every theme: `.skin-paper`
+  Cards, the scroll, the Library, the Inspector and the palette are paper in every theme: `.skin-paper`
   re-declares the colour tokens locally, so any panel mounted on paper reads as ink on parchment
   without changes of its own. `palette.test.ts` checks AA contrast for dark, daylight and paper.
 - Body text is Alegreya Sans, names and numbers Alegreya (both bundled, SIL OFL).
@@ -321,8 +331,8 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 ## GM-only controls
 
 - `PanelDef.scope: 'gm'` panels are filtered out for players everywhere, the palette included.
-- The GM screen (the plaque and the Build workspace), the combat control and Invite exist only for
-  the GM; players only ever have Play. A GM demoted mid-session drops back to Play.
+- The GM screen (the plaque), the Library, the Inspector, the combat control and Invite exist only
+  for the GM. A GM demoted mid-session loses them at once.
 - Inside panels the GM checks `controller.connection.isGm` (unchanged).
 
 ## Keyboard shortcuts (desktop, ignored while typing in a field)
@@ -335,21 +345,20 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `[` / `]` | put the card away / unroll or roll up the scroll |
 | `/` | write in the scroll (unrolls it) |
 | `1`–`9` | open the n-th panel as the card (again to put it away) |
-| `Esc` | close a tip, card or menu; cancel aiming; put a build tool away; deselect |
+| `Esc` | close a tip, card or menu; cancel aiming; put down what is in hand; deselect; then fold the Library |
 | `G` / `F` / `T` / `M` | grid / first person / top-down / ruler (table) |
 | `Q` / `E` | turn the top-down view 45° |
 | `Enter` | cast the staged aim |
 | `Delete` / `Backspace` | remove the selected props (GM, one undo step) |
-| `Z` | Zen (with props selected in Build or edit mode it constrains to Z instead) |
+| `Z` | Zen (with props selected with Edit on or in edit mode it constrains to Z instead) |
 | `i` | on a focused skill chip: pin its tooltip |
 
 The shell never binds a key the table uses.
 
-Build tools (GM in Build; `ui/build/buildTools.ts`): `V` Select, `P` Paint, `W` Walls, `L` Light,
-`B` Fog. Fog is `B` (brush) because `F` is first person and `G` the grid in both modes; plain
-letters only, so Cmd/Ctrl+V still pastes.
+There are no tool letters: the Library's cards are the tools (a model, a kit piece, creatures, a
+group), the fog brush is on the tool rail, and selecting is what the board does by default.
 
-Build keys, with props selected in Build or edit mode (GM; `table/build/transformKeys.ts`):
+Editing keys, with props selected with Edit on or in edit mode (GM; `table/build/transformKeys.ts`):
 
 | Key | Action |
 |---|---|
@@ -376,12 +385,12 @@ Kit keys, while a Kit tool is out (GM; `table/kits/`):
 | drag | Floor: a rectangle of floor. Wall: walls along the grid lines (corners, tees and crossings join by themselves); Shift or "Room outline" draws the four walls of a room. Roof: a roof over the room. Erase: everything in the rectangle |
 | click | Door / Window: put one in the wall under the pointer. Stairs: stairs up to the next level. Pillar: on the grid corner. Pick: take the piece under the pointer in hand |
 | `R` / `Shift+R` | turn the piece in hand a quarter |
-| `PgUp` / `PgDn` | build one level up or down (also ▲ ▼ in Build's scene bar; in Play the board's own control at the top right) |
+| `PgUp` / `PgDn` | one level up or down (also ▲ ▼ on the board's level control at the top right) |
 | `Alt` (hold) | erase with any tool while held |
 | `Esc` | put the tool away |
 
 Every tool shows a ghost (blue: what it adds, red: what gives way) and every stroke is one
-`tiles.place`, so one undo step. The cutaway (✂ in the scene bar, or on the board in Play) hides every
+`tiles.place`, so one undo step. The cutaway (✂ on the board's level control) hides every
 level above the cut, props and tokens included; on "auto" it follows the selected token's level,
 or the level being built while a Kit tool is out. Kits need a tablet or a desktop.
 
@@ -414,7 +423,7 @@ keyboards still reach the table's own keys.
 - [x] Table layout: top rail, standees, tool rail, the hand, the scroll, dice well, GM screen, one card
 - [x] Every panel has one home (`routePanel`, tested) and is reachable from the command palette
 - [x] Dice roll inside the well only
-- [x] GM screen: Play / Build (the Build workspace: scene bar, Library and Inspector docks, tool strip), mode-coloured board frame
+- [x] One mode: the GM screen (drawer), the Library rail and dock with the Edit pencil, the Inspector on selection, the scene card from the scene title
 - [x] One home each for the roll mode (the scroll's seal), Hide / Assign / Remove (token menu), turn order (standees)
 - [x] The bell keeps actionable notices until handled
 - [x] Phone: five-target bar, one sheet at a time, the hand above the bar, safe areas, keyboard inset
@@ -423,7 +432,7 @@ keyboards still reach the table's own keys.
 - [x] Verified in the browser at 390 × 844 and 1440 × 900 as GM and player, with screenshots
 
 Visible controls in idle play, counted in the browser (buttons, fields and tabs on screen, not
-covered): GM desktop 19 (76 before), player desktop 22–24 with the own token's hand up (35 before),
+covered): GM desktop 20 with the Library folded (76 before), player desktop 22–24 with the own token's hand up (35 before),
 GM phone 10 (17 before).
 
 ## Layout presets, Zen and Display

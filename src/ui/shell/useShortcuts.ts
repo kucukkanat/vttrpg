@@ -21,7 +21,7 @@ export interface ShortcutHandlers {
   openPanel?(id: string): void
 }
 
-export type ShortcutGroup = 'Table' | 'Build' | 'Panels' | 'Chat'
+export type ShortcutGroup = 'Table' | 'Editing' | 'Panels' | 'Chat'
 
 export interface Shortcut {
   /** Human-readable key, "Cmd/Ctrl+Z"; several alternatives joined with " / ". */
@@ -33,7 +33,8 @@ export interface Shortcut {
 /**
  * Every keyboard shortcut in the game screen, for the shortcuts overlay. Panels and Chat are bound
  * here (desktop only); Table keys live in the table itself and work on every layout with a keyboard;
- * Build keys (props selected in Build or edit mode) live in src/table/build/PropEditor.tsx.
+ * Editing keys (props selected with the GM's Edit toggle on, or in edit mode) live in
+ * src/table/build/PropEditor.tsx; PgUp / PgDn in src/table/kits/KitLayer.tsx.
  * Keep in step with docs/UX.md.
  */
 export const SHORTCUTS: readonly Shortcut[] = [
@@ -49,24 +50,24 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Delete / Backspace', what: 'Remove the selected props (GM; one undo step)', group: 'Table' },
   { keys: 'Esc', what: 'Close a tip, card or menu; cancel aiming; deselect', group: 'Table' },
   { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores; not while editing props)', group: 'Table' },
-  { keys: 'Cmd/Ctrl+Z', what: 'Undo your last build edit or removal (GM)', group: 'Table' },
+  { keys: 'Cmd/Ctrl+Z', what: 'Undo your last edit or removal (GM)', group: 'Table' },
   { keys: 'Cmd/Ctrl+Shift+Z, Ctrl+Y', what: 'Redo what you undid (GM)', group: 'Table' },
   { keys: 'i', what: 'On a focused skill chip: pin its explanation (Esc closes it)', group: 'Table' },
   { keys: 'Arrows', what: 'Move through the token menu or the search results', group: 'Table' },
-  { keys: 'V / P / W / L / B', what: 'Build tools: Select, Paint (kit), Walls, Light, Fog brush', group: 'Build' },
-  { keys: 'PgUp / PgDn', what: 'Build one level up or down', group: 'Build' },
-  { keys: 'Shift+click', what: 'Add a prop to the selection, or drop it from it', group: 'Build' },
-  { keys: 'Drag', what: 'On empty board in Build: select every prop in the box (Shift adds; Alt-drag moves the camera)', group: 'Build' },
-  { keys: 'Alt+drag', what: 'On a prop: drag copies of the selection, the originals stay', group: 'Build' },
-  { keys: 'Tab', what: 'With props selected: cycle move, turn, scale', group: 'Build' },
-  { keys: 'X / Y / Z', what: 'Pick an axis, type a number (1.5*2 works), Enter applies, Esc cancels', group: 'Build' },
-  { keys: 'R / Shift+R', what: 'Turn the selected props (or the stamp) 15° / 90°', group: 'Build' },
-  { keys: 'End', what: 'Drop the selected props onto the surface below', group: 'Build' },
-  { keys: 'A', what: 'Advanced gizmo: tilt on every axis, stretch per axis, exact values', group: 'Build' },
-  { keys: 'Cmd/Ctrl+C', what: 'Copy the selected props (also as text, to paste in another game)', group: 'Build' },
-  { keys: 'Cmd/Ctrl+V', what: 'Paste props under the pointer', group: 'Build' },
-  { keys: 'Cmd/Ctrl+D', what: 'Duplicate the selected props, one cell over', group: 'Build' },
-  { keys: 'Esc', what: 'Let go of the selected props', group: 'Build' },
+  { keys: 'PgUp / PgDn', what: 'Work one level up or down (GM; the board’s level control)', group: 'Table' },
+  { keys: 'Esc', what: 'Fold the Library (GM) once nothing is selected or in hand', group: 'Panels' },
+  { keys: 'Shift+click', what: 'Add a prop to the selection, or drop it from it', group: 'Editing' },
+  { keys: 'Drag', what: 'On empty board: select every prop in the box (Shift adds; Alt-drag moves the camera)', group: 'Editing' },
+  { keys: 'Alt+drag', what: 'On a prop: drag copies of the selection, the originals stay', group: 'Editing' },
+  { keys: 'Tab', what: 'With props selected: cycle move, turn, scale', group: 'Editing' },
+  { keys: 'X / Y / Z', what: 'Pick an axis, type a number (1.5*2 works), Enter applies, Esc cancels', group: 'Editing' },
+  { keys: 'R / Shift+R', what: 'Turn the selected props (or the stamp) 15° / 90°', group: 'Editing' },
+  { keys: 'End', what: 'Drop the selected props onto the surface below', group: 'Editing' },
+  { keys: 'A', what: 'Advanced gizmo: tilt on every axis, stretch per axis, exact values', group: 'Editing' },
+  { keys: 'Cmd/Ctrl+C', what: 'Copy the selected props (also as text, to paste in another game)', group: 'Editing' },
+  { keys: 'Cmd/Ctrl+V', what: 'Paste props under the pointer', group: 'Editing' },
+  { keys: 'Cmd/Ctrl+D', what: 'Duplicate the selected props, one cell over', group: 'Editing' },
+  { keys: 'Esc', what: 'Let go of the selected props', group: 'Editing' },
   { keys: '[', what: 'Put the card away', group: 'Panels' },
   { keys: ']', what: 'Unroll or roll up the scroll (chat)', group: 'Panels' },
   { keys: '1 – 9', what: 'Open the n-th panel as the card (again to put it away)', group: 'Panels' },
@@ -76,7 +77,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'Esc', what: 'Leave the chat input', group: 'Chat' },
 ]
 
-export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Build', 'Panels', 'Chat']
+export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = ['Table', 'Editing', 'Panels', 'Chat']
 
 /** Window event panels use to ask the shell for another panel (the skill bar opens the Skill editor). */
 export const OPEN_PANEL_EVENT = 'vtt:open-panel'

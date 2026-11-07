@@ -2,8 +2,8 @@
    The table layout (shell/GameShell.tsx, TableChrome.tsx, PhoneBar.tsx; docs/UX.md "Table layout").
    The board fills the screen; the chrome is made of materials: a wooden top rail, a leather GM
    screen, brass fittings, paper cards and the scroll, a felt dice well. Positions are relative to
-   .table. Order over the board: canvas < dock (3) < HUD (4) < cards, scroll, screen, well and the
-   Build workspace (5) < palette (60).
+   .table. Order over the board: canvas < dock (3) < HUD (4) < cards, scroll, screen, well, the
+   Library and the Inspector (5) < palette (60).
    ============================================================================================= */
 
 .game.game--table {
@@ -19,7 +19,7 @@
   --card-w: 380px;
   background: var(--wood-dk);
 }
-.game.game--table.game--gm { --plaque-h: 132px; }
+.game.game--table.game--gm { --plaque-h: 96px; }
 .game.game--table.game--phone {
   grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
   grid-template-areas: "top" "table" "tabs";
@@ -28,13 +28,12 @@
 }
 @media (max-width: 1099px) { .game.game--table:not(.game--phone) { --scroll-w: 320px; --card-w: 340px; --well-size: 144px; } }
 
-/* The board: wood around it, a thin frame in the mode's colour (brass Play, blue Build). */
+/* The board: wood around it, a thin brass frame. */
 .game--table .table { background: var(--wood-dk) var(--grain); }
 .game--table .table::after {
   content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mode-play) 55%, transparent), inset 0 0 60px rgba(0, 0, 0, .45);
 }
-.game--table.game--mode-build .table::after { box-shadow: inset 0 0 0 3px var(--mode-build), inset 0 0 60px rgba(0, 0, 0, .45); }
 
 /* ---------------------------------------------------------------------------------------------
    Top rail: wood with a brass edge
@@ -300,7 +299,7 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 @keyframes t-pop { 40% { transform: scale(1.25); } }
 
 /* ---------------------------------------------------------------------------------------------
-   The GM screen: a leather plaque at the bottom left with Play / Build (src/ui/build/ is Build)
+   The GM screen: a leather plaque at the bottom left with the GM drawer and the live line
    --------------------------------------------------------------------------------------------- */
 .t-plaque {
   position: absolute; z-index: 5; left: calc(var(--edge) + var(--sal)); bottom: calc(var(--edge) + var(--sab)); width: var(--plaque-w);
@@ -308,20 +307,38 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
   background: linear-gradient(180deg, #5a2f1f, #3a1e14); border: 1px solid #22100a; border-radius: 10px 10px 6px 6px;
   box-shadow: inset 0 0 0 2px rgba(201, 154, 68, .35), 0 12px 28px rgba(0, 0, 0, .55); color: var(--paper);
 }
-.t-plaque--build { box-shadow: inset 0 0 0 2px var(--mode-build), 0 12px 28px rgba(0, 0, 0, .55); }
 .t-plaque-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
 .t-plaque-head strong { font-family: var(--font-display); font-size: var(--fs-lg); }
-.t-plaque-state { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #d9c49b; }
-.t-modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; border-radius: 8px; background: rgba(0, 0, 0, .35); }
-.t-mode { min-height: 34px; border: 0; border-radius: 6px; background: transparent; color: #e8d7b0; font-weight: 700; }
-.t-mode.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; }
-.game--mode-build .t-mode.on { background: linear-gradient(180deg, #9fd0ea, var(--mode-build)); }
 .t-plaque-live {
-  justify-content: flex-start; min-height: 30px; gap: var(--sp-1); padding: 0 var(--sp-2); font-size: var(--fs-xs);
+  flex: 1 1 auto; min-width: 0; justify-content: flex-start; min-height: 30px; gap: var(--sp-1); padding: 0 var(--sp-2); font-size: var(--fs-xs);
   background: transparent; color: #e8d7b0; border: 1px dashed rgba(241, 213, 142, .4); border-radius: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.t-screen-sheet .t-modes { background: var(--panel-2); }
-.t-screen-sheet .t-mode { color: var(--fg); }
+
+/* ---------------------------------------------------------------------------------------------
+   The GM's Library rail (GmHosts.tsx): folded, a slim strip on the left edge with "Library" and
+   the Edit pencil. The open dock and the Inspector card are src/ui/build/inspector.css.
+   --------------------------------------------------------------------------------------------- */
+.game--table { --lib-rail-w: 40px; }
+.lib-rail {
+  position: absolute; z-index: 5; top: var(--edge); left: calc(var(--edge) + var(--sal)); width: var(--lib-rail-w);
+  display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-1); padding: 3px;
+  background: var(--panel) var(--paper-tex); border: 1px solid #b59a6c; border-radius: 6px; box-shadow: 0 8px 20px rgba(0, 0, 0, .4); color: var(--ink);
+}
+.lib-rail-open { flex-direction: column; gap: var(--sp-2); min-height: 120px; padding: var(--sp-2) 0; border: 0; border-radius: 4px; background: transparent; color: inherit; }
+.lib-rail-open:hover { background: rgba(0, 0, 0, .06); border: 0; }
+.lib-rail-word { writing-mode: vertical-rl; font-family: var(--font-display); font-size: var(--fs-sm); }
+.edit-toggle { min-width: 32px; min-height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); }
+.edit-toggle.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+/* The tool rail and the card make room for the rail or the open dock. */
+.game--gm:not(.game--phone):has(.lib-rail) .t-rail { left: calc(var(--edge) + var(--lib-rail-w) + var(--sp-3)); }
+.game--gm:not(.game--phone):has(.lib-rail) .t-card { left: calc(var(--edge) + var(--lib-rail-w) + var(--rail-w) + 2 * var(--sp-3)); }
+.game--gm:not(.game--phone):has(.lib-dock) .t-rail { left: calc(var(--edge) + var(--lib-w, 320px) + var(--sp-3)); }
+.game--gm:not(.game--phone):has(.lib-dock) .t-card { left: calc(var(--edge) + var(--lib-w, 320px) + var(--rail-w) + 2 * var(--sp-3)); }
+/* The board's level control (top right) steps left of the Inspector. */
+.game--table:has(.insp) [data-testid="kit-levels"] { right: calc(var(--edge) + var(--insp-w, 300px) + var(--sp-3)) !important; }
+.game--table:has(.t-scroll):has(.insp) [data-testid="kit-levels"] { right: calc(var(--edge) + var(--insp-w, 300px) + min(var(--scroll-w), 40%) + 2 * var(--sp-3)) !important; }
+.game--zen .lib-rail, .game--display .lib-rail { display: none !important; }
 
 /* ---------------------------------------------------------------------------------------------
    Command palette
@@ -362,7 +379,6 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
   background: transparent; color: #e8d7b0; font-size: var(--fs-xs);
 }
 .t-phonebar-btn.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; font-weight: 800; }
-.t-phonebar--build { border-top-color: var(--mode-build); }
 .t-phonebar-btn .badge { top: 2px; right: calc(50% - 22px); }
 .game--phone .bsheet { background: var(--panel) var(--paper-tex); }
 .game--phone .t-standees { position: absolute; top: calc(var(--edge) + var(--control) + var(--sp-2)); width: calc(100% - 2 * var(--edge)); }
@@ -377,7 +393,7 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 .t-tools-sheet .cam-group { flex-direction: row; }
 .t-tools-sheet .cam-btn { color: var(--paper); flex-direction: column; min-width: 56px; }
 .t-tools-search { justify-content: flex-start; gap: var(--sp-2); }
-.t-screen-sheet { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+.t-tools-head { margin: var(--sp-2) 0 0; font-size: var(--fs-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .game--phone .bsheet > .dice-pad { padding: var(--sp-2) var(--sp-4) var(--sp-4); }
 
 /* ---------------------------------------------------------------------------------------------

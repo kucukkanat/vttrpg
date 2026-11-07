@@ -1,7 +1,7 @@
 /**
  * The Fog pop-out beside the Play tool rail (GM): Reveal / Hide brush, its size, Reveal all and
  * Hide all. It drives the build fog tools (`toggleBuildTool`, `useBuildUi.brush`), so the brush
- * paints exactly as it does in Build. Loaded the first time the GM opens it.
+ * paints with the build fog tools. Loaded the first time the GM opens it.
  */
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'

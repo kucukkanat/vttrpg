@@ -21,7 +21,7 @@ async function rulesFor(packId: string) {
 
 export async function startDisplay(link: DisplayLink): Promise<GameController> {
   const info = parseInvite(link.invite)
-  if (!info) throw new Error('This display link is not valid. Copy it again from the Build panel.')
+  if (!info) throw new Error('This display link is not valid. Copy it again from the scene card (the scene title).')
   const identity = ephemeralIdentity()
   const assets = createAssetResolver({ libraryBase: import.meta.env.BASE_URL + 'library/' })
   const connection = await joinGame({

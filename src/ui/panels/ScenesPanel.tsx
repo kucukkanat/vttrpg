@@ -34,8 +34,8 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /**
  * Scenes: the list (Live badge on the active one, Switch and Preview on the others, rename and
- * remove), and ways to add a scene. The GM's scene switcher in Build's scene bar and the scene
- * card in Play both show it; the live scene's settings are the Build Inspector's scene context.
+ * remove), and ways to add a scene. The GM's scene card (the scene title) shows it over the live
+ * scene's settings (SceneSwitcher.tsx).
  * Preview shows a scene on the GM's table only (`tableState.previewScene`); the bar over the table offers the switch from there.
  * Adding stages the scene without switching; the GM switches when ready (a toast offers it). The
  * first scene of a game goes live at once, since there is nothing to interrupt.
