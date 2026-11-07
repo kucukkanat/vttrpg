@@ -7,6 +7,7 @@ import type { Character, GameDocShape, RollAdvantage, RollResult } from '@/core/
 import type { Intent } from '@/core/intents'
 import type { CharacterId } from '@/core/ids'
 import { validatePropsIntent } from '@/core/props'
+import { badCatalogueEntry } from '@/core/catalogue'
 import type { ChargenStep, ConditionDuration, Effect, RollResolution, SkillDef } from '@/core/pack'
 import { parseFormula } from '@/dice/fair'
 import type { LoadedPack, RulesEngine, SkillCondition, SkillDamage } from './index'
@@ -185,6 +186,9 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
     // co-GMs may send them at all (the fall-through below refuses players).
     const badProps = validatePropsIntent(intent, doc)
     if (badProps) return badProps
+    // "My models": only shareable licences, never a built-in; the GM-only rule is the fall-through.
+    if (intent.type === 'catalogue.add') { const bad = badCatalogueEntry(intent.entry); if (bad) return bad }
+    if (intent.type === 'catalogue.remove' && (typeof intent.id !== 'string' || !intent.id)) return 'catalogue entry without an id'
     if (actor.isGm) return null
     switch (intent.type) {
       case 'roll':

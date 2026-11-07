@@ -1,0 +1,13 @@
+/* Holding a model: the bar over the board. */
+.held-bar {
+  position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); top: calc(var(--edge, 12px) + 52px);
+  display: flex; align-items: center; gap: var(--sp-2); padding: 4px 6px 4px 12px; max-width: calc(100% - 24px);
+  background: var(--glass-strong); color: var(--on-glass); border: 1px solid var(--glass-edge); border-radius: 999px;
+  box-shadow: var(--shadow); font-size: var(--fs-sm); backdrop-filter: var(--glass-blur);
+}
+.held-bar-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.held-bar-keys { color: var(--muted); white-space: nowrap; }
+.held-bar button { min-height: 30px; }
+.game--phone .held-bar { top: auto; bottom: calc(var(--tabbar-h, 56px) + var(--sab, 0px) + 96px); }
+@media (pointer: coarse) { .held-bar button { min-height: 44px; min-width: 44px; } }
+@media (max-width: 900px) { .held-bar-keys { display: none; } }

@@ -105,6 +105,10 @@ const ICONS = {
   'chevron-right': <path d="M9 6l6 6-6 6" />,
   'chevron-down': <path d="M6 9l6 6 6-6" />,
   'chevron-up': <path d="M6 15l6-6 6 6" />,
+  /** The model library: a crate seen from a corner. */
+  cube: <><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z" /><path d="M4 7.5 12 12l8-4.5M12 12v9" /></>,
+  /** Credits: a rosette with ribbons. */
+  ribbon: <><circle cx="12" cy="9" r="5" /><path d="m9 13.5-2 7 3-1.5 2 2.5M15 13.5l2 7-3-1.5-2 2.5" /></>,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS

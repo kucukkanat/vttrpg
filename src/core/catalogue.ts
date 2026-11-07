@@ -62,3 +62,28 @@ export function isShareable(id: string): id is LicenceId {
 export function needsCredit(l: Licence): boolean {
   return l.id === 'cc-by' || l.id === 'cc-by-sa'
 }
+
+const ORIGINS: readonly CatalogueOrigin[] = ['polyhaven', 'sketchfab', 'upload']
+
+const isText = (v: unknown, max = 300): v is string => typeof v === 'string' && v.length <= max
+const optText = (v: unknown, max?: number) => v === undefined || isText(v, max)
+const isRef = (v: unknown): v is AssetRef =>
+  !!v && typeof (v as AssetRef).sha256 === 'string' && Array.isArray((v as AssetRef).sources) && (v as AssetRef).sources.every((s) => typeof s === 'string')
+
+/**
+ * Why `e` may not be saved in a game's own catalogue (`catalogue.add`, the GM's "My models"), or
+ * null. Only imported or uploaded entries are stored (built-ins ship with the app); the licence
+ * must be one that may be re-hosted for players (`isShareable`), and CC-BY / CC-BY-SA need an
+ * author for the credits.
+ */
+export function badCatalogueEntry(e: unknown): string | null {
+  const x = e as CatalogueEntry
+  if (!x || typeof x !== 'object' || !isText(x.id) || !x.id || !isText(x.title) || !x.title.trim() || !isText(x.category)) return 'not a catalogue entry'
+  if (!ORIGINS.includes(x.origin)) return 'only imported models are saved in the game'
+  if (!Array.isArray(x.tags) || x.tags.length > 64 || !x.tags.every((t) => isText(t)) || !optText(x.theme) || !optText(x.kit)) return 'bad tags'
+  if (!isRef(x.model) || (x.thumbnail !== undefined && !isText(x.thumbnail, 2000) && !isRef(x.thumbnail))) return 'bad model or thumbnail'
+  if (!Array.isArray(x.size) || x.size.length !== 3 || !x.size.every((n) => typeof n === 'number' && n > 0 && n < 1e4) || !(x.triangles >= 0)) return 'bad size'
+  const l = x.licence
+  if (!l || !isShareable(l.id) || ![l.author, l.authorUrl, l.source, l.sourceUrl].every((v) => optText(v, 2000))) return 'that licence cannot be shared with players'
+  return needsCredit(l) && !l.author?.trim() ? 'CC BY and CC BY-SA models need an author' : null
+}

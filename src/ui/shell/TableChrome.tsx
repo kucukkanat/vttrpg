@@ -11,7 +11,7 @@ import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
 import { useBuildUi } from '@/table/build/buildState'
 import { PanelHost } from './PanelHost'
-import { BUILD_TABS, LEAVES, useTableLayout, type LeafId, type TableMode } from './tableLayout'
+import { BUILD_TAB_LABELS, BUILD_TABS, LEAVES, useTableLayout, type LeafId, type TableMode } from './tableLayout'
 import { DicePad, WellReadout } from './Hud'
 import { isTypingTarget } from './useShortcuts'
 import { useAttention, handleAttention } from '../attention'
@@ -133,7 +133,7 @@ export function DiceWell({ dice, roll, who, compact = false }: { dice: ReactNode
 const MODES: { id: TableMode; label: string; hint: string }[] = [
   { id: 'play', label: 'Play', hint: 'The board and the hand; the screen folded away' },
   { id: 'prep', label: 'Prep', hint: 'Raise the screen: scenes, encounters, cast, reference' },
-  { id: 'build', label: 'Build', hint: 'The tool tray: walls, doors, fog, lights, props, scene settings' },
+  { id: 'build', label: 'Build', hint: 'The tool tray: the model library, walls, doors, fog, lights, scene settings' },
 ]
 
 /** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
@@ -177,7 +177,7 @@ export function GmScreen({ controller, panels, live, onLive }: { controller: Gam
       {mode === 'build' && buildDef && (
         <div className="t-tray skin-paper" role="region" aria-label="Build tools">
           <PaperHead title="Build" glyph="wall" onClose={() => setTableMode('play')} closeLabel="Fold the tray: back to Play">
-            <LeafTabs ids={BUILD_TABS} active={buildDef.id} panels={panels} labels={{ build: 'Tools', scenes: 'Scene' }} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />
+            <LeafTabs ids={BUILD_TABS} active={buildDef.id} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />
           </PaperHead>
           <PanelHost key={buildDef.id} def={buildDef} controller={controller} className="t-tray-body" />
         </div>
@@ -238,7 +238,7 @@ export function GmScreenSheet({ controller, panels }: { controller: GameControll
         </div>
       )}
       {mode === 'prep' && <LeafTabs ids={current.panels} active={def?.id ?? ''} panels={panels} onPick={(id) => set({ leafTabs: { ...leafTabs, [current.id]: id } })} />}
-      {mode === 'build' && <LeafTabs ids={BUILD_TABS} active={def?.id ?? ''} panels={panels} labels={{ build: 'Tools', scenes: 'Scene' }} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />}
+      {mode === 'build' && <LeafTabs ids={BUILD_TABS} active={def?.id ?? ''} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />}
       {def && <PanelHost key={def.id} def={def} controller={controller} className="t-screen-body" />}
     </div>
   )

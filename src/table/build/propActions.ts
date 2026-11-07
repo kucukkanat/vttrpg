@@ -14,6 +14,8 @@ import { knownLegacyFit } from '../propMigration'
 import { tableRuntime, useTableUi } from '../tableState'
 import { editRuntime, propObjects } from './editRuntime'
 import { applyGroupOp, poseOf, selectionCentre, updatesFrom, type GroupOp, type Poses } from './groupTransform'
+import { pickUpModel } from './buildState'
+import type { HeldModel, HeldPart } from './placement'
 import { clipFromProps, decodeClip, duplicateOffset, duplicateProps, encodeClip, propsFromClip, type PropClip } from './propClipboard'
 
 type Dispatch = (intent: Intent) => void
@@ -116,6 +118,40 @@ export function copySelection(): string | null {
 export function pastePoint(): Vec3 {
   const p = tableRuntime.cursorFloor ?? tableRuntime.cameraTarget ?? tableRuntime.sceneCenter ?? { x: 0, y: tableRuntime.floorY, z: 0 }
   return { x: p.x, y: tableRuntime.floorY, z: p.z }
+}
+
+/** A clip as the held model of the stamp ghost: one model keeps its own turn, a group its layout. */
+export function heldFromClip(clip: PropClip): { held: HeldModel; yaw: number } | null {
+  const items = clip.items
+  if (!items.length) return null
+  if (items.length === 1) {
+    const it = items[0]!
+    return {
+      held: { ...(it.catalogue ? { catalogue: it.catalogue } : {}), title: it.name, model: it.model, tilt: { x: it.rotation.x, z: it.rotation.z }, scale: { ...it.scale } },
+      yaw: it.rotation.y,
+    }
+  }
+  const parts: HeldPart[] = items.map((it) => ({
+    title: it.name, model: it.model, offset: { ...it.position }, rotation: { ...it.rotation }, scale: { ...it.scale },
+    ...(it.catalogue ? { catalogue: it.catalogue } : {}), ...(it.tags ? { tags: [...it.tags] } : {}),
+    ...(it.solid ? { solid: true } : {}), ...(it.locked ? { locked: true } : {}),
+  }))
+  return { held: { title: `${items.length} pasted props`, model: items[0]!.model, scale: { x: 1, y: 1, z: 1 }, parts }, yaw: 0 }
+}
+
+/**
+ * Paste into the hand: the clip (`text` when it is prop clipboard text, else the internal
+ * clipboard) becomes the stamp ghost, so it follows the cursor, turns with R and stamps with each
+ * click (one `props.place` per click) until Esc.
+ */
+export function pasteToHand(text?: string | null): boolean {
+  const clip = decodeClip(text) ?? internalClip
+  if (!clip || !shownScene()) return false
+  if (text && decodeClip(text)) internalClip = clip
+  const h = heldFromClip(clip)
+  if (!h) return false
+  pickUpModel(h.held, h.yaw)
+  return true
 }
 
 /**
