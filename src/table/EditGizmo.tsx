@@ -21,6 +21,8 @@ import {
   TOKEN_SIZE_LIMITS,
 } from './editing'
 import { baseOf } from './SceneModel'
+import { propScale, scaleBy, uniformScale } from '@/core/props'
+import { knownLegacyFit } from './propMigration'
 import { useTableUi, type EditPreview } from './tableState'
 import { SELECT } from '@/ui/theme/palette'
 
@@ -79,11 +81,22 @@ export function EditGizmo() {
       }
       case 'prop': {
         if (!prop || prop.scene !== sceneId) return null
+        // The handle is a uniform factor on the prop's current per-axis scale (1 = as it is), so
+        // a stretched prop keeps its proportions and a plain move never snaps the size. The
+        // factor's limits keep the largest axis inside SCALE_LIMITS (or where it already is).
+        const base = propScale(prop, knownLegacyFit(prop.id))
+        const handle = uniformScale(base) || 1
+        const vecFor = (factor: number) => scaleBy(base, factor)
+        const limits = { min: Math.min(SCALE_LIMITS.min, handle) / handle, max: Math.max(SCALE_LIMITS.max, handle) / handle }
         return {
-          selection, scale: prop.scale, parentWorld: identity, parentInv: identity, scaleLimits: SCALE_LIMITS, minY: floorY,
+          selection, scale: 1, parentWorld: identity, parentInv: identity, scaleLimits: limits, minY: floorY,
           world: pose(prop.position, prop.rotation.y),
-          toPreview: (l, rotationY, scale) => ({ target: selection, position: l, rotationY, scale }),
-          commit: (p) => ({ type: 'prop.update', prop: prop.id, patch: { position: p.position, rotation: { ...prop.rotation, y: p.rotationY }, scale: p.scale } }),
+          toPreview: (l, rotationY, scale) => ({ target: selection, position: l, rotationY, scale, scaleVec: vecFor(scale) }),
+          // One intent on release: one undo step for the whole drag.
+          commit: (p) => ({
+            type: 'props.update',
+            updates: [{ id: prop.id, patch: { position: p.position, rotation: { ...prop.rotation, y: p.rotationY }, scale: p.scaleVec ?? vecFor(p.scale) } }],
+          }),
         }
       }
       case 'node': {

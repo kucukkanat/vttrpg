@@ -12,6 +12,9 @@ import { newId } from '@/core/ids'
 import type { PropId, SceneId } from '@/core/ids'
 import type { NodeOverride, Prop, Scene, SceneTransform, Token } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
+import type { PropPatch } from '@/core/intents'
+import { isUniform, ONE_SCALE, propScale, scaleBy, uniformScale } from '@/core/props'
+import { knownLegacyFit } from '@/table/propMigration'
 import type { LibraryEntry } from '@/assets'
 import {
   clamp, degToRad, displayDeg, effectiveNodeTransform, IDENTITY_TRANSFORM, mergeOverride, placementPoint, resetOverride, roundTo,
@@ -168,7 +171,11 @@ const TOKEN_KINDS: LibraryCategory[] = ['mini', 'prop']
 const PROP_KINDS: LibraryCategory[] = ['prop', 'mini']
 
 function PropEditor({ controller, prop, cell, editable, onDeselect }: { controller: GameController; prop: Prop; cell: number; editable: boolean; onDeselect(): void }) {
-  const patch = (p: Partial<Prop>) => void controller.dispatch({ type: 'prop.update', prop: prop.id, patch: p })
+  const patch = (p: PropPatch) => void controller.dispatch({ type: 'props.update', updates: [{ id: prop.id, patch: p }] })
+  // Size: one uniform factor over the per-axis scale (the largest axis), proportions kept.
+  const scale = propScale(prop, knownLegacyFit(prop.id))
+  const handle = uniformScale(scale) || 1
+  const scaleText = isUniform(scale, 1e-6) ? `×${fmt(handle)}` : `×${fmt(scale.x)} × ${fmt(scale.y)} × ${fmt(scale.z)}`
   const setSelection = useGame((s) => s.setSelection)
   const [name, setName] = useState(prop.name)
   useEffect(() => setName(prop.name), [prop.name])
@@ -176,7 +183,7 @@ function PropEditor({ controller, prop, cell, editable, onDeselect }: { controll
     return (
       <div className="props">
         <Header kind="Prop" name={prop.name} onDeselect={onDeselect} />
-        <Summary rows={[['Position', vec(prop.position)], ['Rotation', `${displayDeg(prop.rotation.y)}°`], ['Scale', `×${fmt(prop.scale)}`], ['Solid', prop.solid ? 'blocks sight' : 'no']]} />
+        <Summary rows={[['Position', vec(prop.position)], ['Rotation', `${displayDeg(prop.rotation.y)}°`], ['Scale', scaleText], ['Solid', prop.solid ? 'blocks sight' : 'no']]} />
       </div>
     )
   }
@@ -201,12 +208,12 @@ function PropEditor({ controller, prop, cell, editable, onDeselect }: { controll
         <Stepper label="Tilt Z" value={displayDeg(prop.rotation.z)} step={15} decimals={1} wrap onChange={rot('z')} />
       </div>
       <div style={sectionTitle}>Size</div>
-      <Stepper label="Scale" value={prop.scale} step={0.05} min={SCALE_LIMITS.min} max={SCALE_LIMITS.max} unit="×" onChange={(v) => patch({ scale: v })} />
+      <Stepper label="Scale" value={handle} step={0.05} min={Math.min(SCALE_LIMITS.min, handle)} max={Math.max(SCALE_LIMITS.max, handle)} unit="×" onChange={(v) => patch({ scale: scaleBy(scale, v / handle) })} />
       <div className="row" style={{ marginTop: 4 }}>
         <Check label="Locked (no table drag)" checked={!!prop.locked} onChange={(v) => patch({ locked: v })} />
         <Check label="Solid (blocks sight)" checked={!!prop.solid} onChange={(v) => patch({ solid: v })} />
       </div>
-      <button type="button" className="danger wide" style={{ minHeight: TOUCH }} onClick={() => { void controller.dispatch({ type: 'prop.remove', prop: prop.id }); setSelection(null) }}>
+      <button type="button" className="danger wide" style={{ minHeight: TOUCH }} onClick={() => { void controller.dispatch({ type: 'props.remove', ids: [prop.id] }); setSelection(null) }}>
         Remove prop
       </button>
       <p className="muted small">Delete key removes the selected prop. Drag it on the table to move it; Alt while dragging skips snapping.</p>
@@ -356,7 +363,8 @@ export function AddProp({ controller, sceneId, scene }: { controller: GameContro
     const position = g && g.type !== 'none'
       ? { x: Math.round((at.x - g.origin.x) / g.cellSize) * g.cellSize + g.origin.x, y: at.y, z: Math.round((at.z - g.origin.z) / g.cellSize) * g.cellSize + g.origin.z }
       : at
-    void controller.dispatch({ type: 'prop.add', prop: { id, scene: sceneId, name, model, position, rotation: { x: 0, y: 0, z: 0 }, scale: 1 } })
+    // Real size: the model as authored, no fit to the cell.
+    void controller.dispatch({ type: 'props.place', props: [{ id, scene: sceneId, name, model, position, rotation: { x: 0, y: 0, z: 0 }, scale: { ...ONE_SCALE } }] })
     setSelection({ kind: 'prop', id })
     uiSet({ editMode: true })
   }

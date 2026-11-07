@@ -68,6 +68,8 @@ export interface EditPreview {
   position: Vec3
   rotationY: number
   scale: number
+  /** Props: the per-axis scale the preview shows (`scale` is its uniform handle value). */
+  scaleVec?: Vec3
   elevation?: number
 }
 

@@ -59,9 +59,25 @@ export type Intent =
   | { type: 'audio.stop'; asset?: AssetRef }
   /** GM housekeeping: drop events older than `before`. */
   | { type: 'event.prune'; before: number }
-  /** Standalone props (GM only). */
+  /**
+   * Standalone props (GM and co-GMs). Each takes a batch and is applied in one transaction, so a
+   * stamp, a paste or a multi-select edit is one change and one network message. Validated by
+   * `validatePropsIntent` (src/core/props.ts). `props.place` may carry the walls of a stamped
+   * prefab so the whole stamp stays one intent.
+   */
+  | { type: 'props.place'; props: Prop[]; walls?: Wall[] }
+  | { type: 'props.update'; updates: PropUpdate[] }
+  | { type: 'props.remove'; ids: PropId[] }
+  /**
+   * Fold the one-cell fit of version 1 props into a per-axis scale (see `LegacyPropScale`). Sent by
+   * a GM client once a legacy prop's model has loaded; props already migrated are left alone.
+   */
+  | { type: 'props.migrate'; items: { id: PropId; fit: number }[] }
+  /** @deprecated Single-prop forms kept for older clients; applied as a batch of one. */
   | { type: 'prop.add'; prop: Prop }
+  /** @deprecated See `props.update`. */
   | { type: 'prop.update'; prop: PropId; patch: Partial<Prop> }
+  /** @deprecated See `props.remove`. */
   | { type: 'prop.remove'; prop: PropId }
   /** Journal and handouts (GM only). */
   | { type: 'note.upsert'; note: Note }
@@ -107,9 +123,24 @@ export type Intent =
   | { type: 'light.add'; light: PlacedLight }
   | { type: 'light.update'; light: LightId; patch: Partial<PlacedLight> }
   | { type: 'light.remove'; light: LightId }
-  /** Prefabs (GM only). Stamping one is plain `prop.add` and `wall.add`. */
+  /** Prefabs (GM only). Stamping one is a single `props.place` carrying the walls. */
   | { type: 'prefab.upsert'; prefab: Prefab }
   | { type: 'prefab.remove'; prefab: PrefabId }
+
+/** The fields of a prop `props.update` may change. Scale is always per-axis here. */
+export interface PropPatch {
+  position?: Vec3
+  rotation?: Vec3
+  scale?: Vec3
+  name?: string
+  solid?: boolean
+  locked?: boolean
+}
+
+export interface PropUpdate {
+  id: PropId
+  patch: PropPatch
+}
 
 export interface IntentEnvelope {
   id: string
