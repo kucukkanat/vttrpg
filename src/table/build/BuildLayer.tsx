@@ -28,6 +28,7 @@ import { exploredCells } from '../vision'
 import type { Pt2, WallSegment } from '../walls'
 import { useBuildUi, type BuildTool } from './buildState'
 import { CardDrop, PlaceLayer } from './PlaceLayer'
+import { CreatureLayer } from './CreatureLayer'
 import { capturePrefab, snapRectToCells, stampCorner, stampPrefab, stampSize } from './prefab'
 import { blockingSegments, cleanPoint, endpointsOf, isDrawable, pointSegmentDistance, sceneWalls, segmentsNear, snapWallPoint, wallsNear } from './wallEdit'
 import { BUILD } from '@/ui/theme/palette'
@@ -92,8 +93,9 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
     <>
       <Doors />
       <Lights />
-      {gm && ((active && active !== 'place' && active !== 'eyedropper' && active !== 'kit') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
-      {active && active !== 'kit' && (active === 'place' || active === 'eyedropper'
+      {gm && ((active && active !== 'place' && active !== 'eyedropper' && active !== 'kit' && active !== 'creature') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
+      {active === 'creature' && <CreatureLayer bounds={bounds} />}
+      {active && active !== 'kit' && active !== 'creature' && (active === 'place' || active === 'eyedropper'
         ? <PlaceLayer tool={active} bounds={bounds} />
         : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
       {gm && !viewer?.display && <CardDrop />}

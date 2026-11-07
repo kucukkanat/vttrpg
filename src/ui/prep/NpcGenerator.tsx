@@ -1,78 +1,30 @@
 /**
- * GM prep: generate NPCs near the camera (hidden until revealed), browse the pack's creature
- * compendium and the game's own stat blocks, build and place encounters (saved in the game),
- * roll on the pack's random tables into chat, and add props to the scene.
+ * The NPC generator: names and stat blocks for quick NPCs, placed near the camera and hidden
+ * until revealed. Used from Build (the Library's creatures) and from Play (the GM drawer).
  */
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
-import { newSeed } from '@/dice'
 import type { TokenId } from '@/core/ids'
-import { randomName, randomNames } from '../prep/names'
-import { spawnNpcs, setHidden, removeTokens, statBlock } from '../prep/npc'
-import { ENCOUNTER_COLORS, newEncounter, newRow } from '../prep/encounters'
-import { placeRows } from '../prep/placeCreatures'
-import { formatTableRoll, rollTable, tableTitle } from '../prep/tables'
+import { randomName, randomNames } from './names'
+import { spawnNpcs, setHidden, removeTokens, statBlock } from './npc'
+import { ENCOUNTER_COLORS, newEncounter, newRow } from './encounters'
+import { placeRows } from './placeCreatures'
 import { pushToast } from '../toasts'
-import { AddProp } from './ObjectPanel'
 import { Icon } from '@/ui/icons'
-import { CreatureBrowser, CreaturePicker, creatureSummary, StatBlockEditor, useCompendium, type Compendium } from './CreaturesPrep'
-import { Encounters } from './EncountersPrep'
-
-export function PrepPanel({ controller }: { controller: GameController }) {
-  const meta = useGame((s) => s.meta)
-  const noScene = !meta?.activeScene
-  const scene = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene] : undefined))
-  const compendium = useCompendium(controller.rules)
-  const hasCreatures = compendium.status !== 'none'
-  const [openEncounter, setOpenEncounter] = useState<string | null>(null)
-  const [editing, setEditing] = useState<string | null>(null)
-
-  /** "Add" in the browser: into the open encounter, else a new one. */
-  const addToEncounter = (ref: string, name: string) => {
-    const s = useGame.getState()
-    let e = openEncounter ? s.encounters[openEncounter] : undefined
-    if (!e) {
-      e = newEncounter(Object.keys(s.encounters).length)
-      setOpenEncounter(e.id)
-    }
-    const next = { ...e, rows: [...e.rows, newRow(e.rows.length, { creatureRef: ref })] }
-    void controller.dispatch({ type: 'encounter.upsert', encounter: next })
-    pushToast({ text: `Added ${name} to ${next.name}`, ttl: 2500 })
-  }
-
-  return (
-    <div className="panel">
-      <h3>Prep</h3>
-      {noScene && <p className="muted small">Activate a scene to place NPCs and encounters.</p>}
-      {editing && <StatBlockEditor controller={controller} templateId={editing} compendium={compendium} onClose={() => setEditing(null)} />}
-      <Section title="NPC generator" open><NpcGenerator controller={controller} disabled={noScene} compendium={compendium} /></Section>
-      {hasCreatures && <Section title="Creatures"><CreatureBrowser controller={controller} compendium={compendium} onEdit={setEditing} onAdd={addToEncounter} /></Section>}
-      <Section title="Encounters" open={!!openEncounter}>
-        <Encounters controller={controller} disabled={noScene} compendium={compendium} open={openEncounter} setOpen={setOpenEncounter} onEditTemplate={setEditing} />
-      </Section>
-      <Section title="Random tables"><RandomTables controller={controller} /></Section>
-      {meta?.activeScene && <Section title="Props"><AddProp controller={controller} sceneId={meta.activeScene} scene={scene} /></Section>}
-    </div>
-  )
-}
-
-function Section({ title, open, children }: { title: string; open?: boolean; children: ReactNode }) {
-  return (
-    <details open={open} style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--sp-1)', marginTop: 'var(--sp-2)' }}>
-      <summary className="disclosure" style={{ fontWeight: 600 }}>{title}</summary>
-      {children}
-    </details>
-  )
-}
-
-// ------------------------------------------------------------------------------- NPC generator
+import { CreaturePicker, creatureSummary, type Compendium } from '../panels/CreaturesPrep'
 
 /**
  * Packs with a compendium place NPCs from a stat block ("Use stat block"); packs that roll NPCs
  * like characters (Mausritter) keep "Roll a character sheet" with the pack's chargen.
  */
-function NpcGenerator({ controller, disabled, compendium }: { controller: GameController; disabled: boolean; compendium: Compendium }) {
+export function NpcGenerator({ controller, disabled, compendium, onPlaced }: {
+  controller: GameController
+  disabled: boolean
+  compendium: Compendium
+  /** Called with the new tokens once they are on the board (the Play card closes itself here). */
+  onPlaced?(ids: TokenId[]): void
+}) {
   const rules = controller.rules
   const packId = rules?.pack.manifest.id
   const hasChargen = !!rules?.pack.chargen
@@ -99,12 +51,16 @@ function NpcGenerator({ controller, disabled, compendium }: { controller: GameCo
         if (!creature) { setPicking(true); return }
         const row = newRow(Object.keys(tokens).length, { creatureRef: creature.ref, count: n, ...(name.trim() ? { overrides: { name: name.trim() } } : {}) })
         const { placed } = await placeRows(controller, [row], compendium.creatures, useGame.getState().creatures)
-        setLast(placed.flatMap((p) => p.tokens))
+        const ids = placed.flatMap((p) => p.tokens)
+        setLast(ids)
+        if (ids.length) onPlaced?.(ids)
         return
       }
       const names = name.trim() ? (n === 1 ? [name.trim()] : Array.from({ length: n }, (_, i) => `${name.trim()} ${i + 1}`)) : randomNames(packId, n)
       const specs = names.map((nm, i) => ({ name: nm, color: ENCOUNTER_COLORS[(Object.keys(tokens).length + i) % ENCOUNTER_COLORS.length]!, generateSheet: sheet && hasChargen }))
-      setLast((await spawnNpcs(controller, specs, { hidden: true })).map((s) => s.token.id))
+      const ids = (await spawnNpcs(controller, specs, { hidden: true })).map((s) => s.token.id)
+      setLast(ids)
+      if (ids.length) onPlaced?.(ids)
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
   }
   const alive = last.filter((id) => tokens[id])
@@ -189,35 +145,3 @@ function StatRow({ label, value }: { label: string; value: string }) {
 
 // ------------------------------------------------------------------------------- Random tables
 
-function RandomTables({ controller }: { controller: GameController }) {
-  const rules = controller.rules
-  const tables = useMemo(() => Object.keys(rules?.pack.chargen?.tables ?? {}), [rules])
-  const [table, setTable] = useState(tables[0] ?? '')
-  const [toChat, setToChat] = useState(true)
-  const [last, setLast] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  if (!rules || tables.length === 0) return <p className="muted small">This pack has no random tables.</p>
-
-  const roll = async () => {
-    const id = table || tables[0]!
-    setBusy(true)
-    try {
-      const text = formatTableRoll(await rollTable(rules, id, newSeed()))
-      setLast(text)
-      if (toChat) await controller.dispatch({ type: 'chat.say', text })
-    } catch (e) { setLast(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
-  }
-
-  return (
-    <div className="props" style={{ borderTop: 'none', paddingTop: 0 }}>
-      <label>Table
-        <select value={table || tables[0]} onChange={(e) => setTable(e.target.value)}>
-          {tables.map((t) => <option key={t} value={t}>{tableTitle(t)} ({rules.pack.chargen!.tables[t]!.die})</option>)}
-        </select>
-      </label>
-      <label className="check"><input type="checkbox" checked={toChat} onChange={(e) => setToChat(e.target.checked)} /> Post the result to chat</label>
-      <button className="primary wide" disabled={busy} onClick={() => void roll()}>{busy ? 'Rolling…' : 'Roll'}</button>
-      {last && <p className="small" style={{ margin: 0, padding: 'var(--sp-2)', background: 'var(--panel-2)', borderRadius: 'var(--r-sm)', overflowWrap: 'anywhere' }}>{last}</p>}
-    </div>
-  )
-}

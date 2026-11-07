@@ -107,3 +107,71 @@
 .lib-preview-canvas { background: radial-gradient(circle at 50% 45%, #fffaf0, #e5d3a8 80%); }
 .lib-preview-meta { display: flex; flex-direction: column; padding: 4px 8px 6px; font-size: var(--fs-sm); line-height: 1.25; }
 .lib-preview-meta strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The shelf switcher (drawn here unless the Build dock hosts it), and the non-model shelves. */
+.lib-shelfbar { gap: 0; border-bottom: 1px solid var(--border); }
+.lib-tab {
+  flex: 1 1 0; min-height: 30px; padding: 0 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  background: transparent; font-size: var(--fs-sm); font-weight: 600; color: var(--muted);
+}
+.lib-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+.lib-shelf { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1 1 auto; min-height: 0; }
+.lib-scroll { flex: 1 1 auto; min-height: 120px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--sp-2); }
+.lib-section { display: flex; flex-direction: column; gap: 4px; }
+.lib-section-title { margin: 0; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
+.lib-hint { margin: 0; }
+
+/* Kit cards: a thumbnail grid. */
+.lib-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.lib-tile { position: relative; }
+.lib-tile-pick {
+  width: 100%; padding: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; min-height: 0;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; text-align: left;
+}
+.lib-tile-pick:hover { border-color: var(--accent); }
+.lib-tile.held .lib-tile-pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.lib-tile .lib-title { padding-bottom: 4px; font-size: var(--fs-xs); }
+
+/* Creature, group and encounter rows. */
+.lib-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lib-crit {
+  position: relative; display: flex; align-items: center; gap: 4px; padding-right: 4px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+}
+.lib-crit:hover { border-color: var(--accent); }
+.lib-crit.held { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.lib-crit-pick {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); padding: 4px 6px; min-height: 40px;
+  background: transparent; border: 0; text-align: left; color: inherit;
+}
+.lib-crit-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; text-align: left; }
+.lib-crit-text .lib-title, .lib-crit-text .lib-size { padding: 0; }
+.lib-disc {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800;
+  background: var(--paper-2); color: var(--text); border: 1px solid var(--border);
+}
+.lib-disc--new { background: var(--accent); color: var(--accent-fg); font-size: 18px; border-color: var(--accent); }
+.lib-crit--new.open { border-color: var(--accent); }
+.lib-crit-edit { flex: none; }
+.lib-star--row { position: static; flex: none; opacity: .7; }
+.lib-row-act { flex: none; width: 28px; height: 28px; min-width: 28px; min-height: 28px; padding: 0; }
+.lib-row-act.on { color: var(--accent); }
+.lib-npc { padding: var(--sp-2); border: 1px dashed var(--accent); border-radius: var(--r-sm); }
+.lib-crit--edit { padding: 4px 6px; flex-wrap: wrap; }
+.lib-rename { display: flex; gap: 4px; flex: 1; margin: 0; }
+.lib-rename input { flex: 1; min-width: 0; min-height: 28px; }
+.lib-confirm { flex: 1; min-width: 0; }
+
+/* The outliner. */
+.lib-outline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lib-orow { display: flex; align-items: center; gap: 2px; border-radius: var(--r-sm); }
+.lib-orow:hover { background: var(--row-hover, rgba(0, 0, 0, .04)); }
+.lib-orow.on { background: var(--row-on); }
+.lib-orow.hidden-token .lib-orow-name { opacity: .6; font-style: italic; }
+.lib-orow-pick {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-1); padding: 3px 6px; min-height: 30px;
+  background: transparent; border: 0; text-align: left; color: inherit;
+}
+.lib-orow-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-sm); }
+.lib-orow-meta { margin-left: auto; flex: none; font-size: var(--fs-xs); white-space: nowrap; }
+@media (pointer: coarse) { .lib-orow-pick, .lib-crit-pick { min-height: 44px; } .lib-row-act { width: 36px; height: 36px; } }

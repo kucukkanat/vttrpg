@@ -1,4 +1,4 @@
-/* Scenes panel: scene rows with Live / Switch, camera and remove controls, and the fog block. */
+/* Scenes panel: scene rows with Live / Switch, Preview, rename and remove, and the add row. */
 
 .scenes-list li { cursor: default; }
 @media (hover: hover) { .scenes-list li:not(.selected):hover { background: transparent; } }
@@ -19,16 +19,8 @@
 .scene-switch { flex: none; min-height: 44px; min-width: 44px; }
 .scene-remove:disabled { opacity: .35; }
 
-.fog-block { margin-top: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-1); }
-.fog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
-.fog-block .row { margin-top: 0; }
-
 /* Add-scene buttons, shown from the header's "+ Add". */
 .scene-add { margin-top: var(--sp-2); }
 
-/* Live scene settings: one closed row with a summary of what is on, opened when the GM needs it. */
-.scene-settings { margin-top: var(--sp-2); border-top: 1px solid var(--border); }
-.scene-settings > summary { font-weight: 600; }
-.scene-settings-sum { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
-.scene-settings > .grid2 { margin-top: var(--sp-1); }
-.scene-settings > summary > span:first-of-type { flex: none; white-space: nowrap; }
+/* Rename in place (GM). */
+.scene-rename { flex: 1; min-width: 0; min-height: 32px; padding: 2px 6px; }

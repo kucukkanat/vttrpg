@@ -5,8 +5,9 @@
  * the other build tools stand down.
  */
 import { create } from 'zustand'
-import type { KitSlot } from '@/core/kits'
+import type { KitManifest, KitPiece, KitSlot } from '@/core/kits'
 import { useBuildUi } from '../build/buildState'
+import { isPlainWall } from './autoJoin'
 
 export type KitTool =
   /** Drag a rectangle of floor. */
@@ -87,4 +88,42 @@ export function setKitTool(tool: KitTool | null): void {
 /** True while a kit tool owns the board. */
 export function kitToolActive(): boolean {
   return useBuildUi.getState().tool === 'kit' && useKitUi.getState().tool !== null
+}
+
+/** The kit tool a piece arms: its slot's tool; a plain corner joins walls, so it arms the wall tool. */
+export function toolForPiece(manifest: KitManifest, piece: KitPiece): KitTool {
+  return piece.slot === 'corner' && isPlainWall({ piece, manifest }) ? 'wall' : toolForSlot(piece.slot)
+}
+
+/**
+ * Arm the kit paint tool with `piece` (a Library kit card or the Kit palette): the kit and the
+ * piece go in hand and the slot's tool is picked, never toggled off. A decor wall is placed one
+ * edge at a time; a plain wall paints joined runs.
+ */
+export function armKitPiece(manifest: KitManifest, piece: KitPiece): KitTool {
+  const s = useKitUi.getState()
+  const plain = isPlainWall({ piece, manifest })
+  const sameKit = s.kit === manifest.id
+  const pieces = { ...(sameKit ? s.pieces : {}), [piece.slot]: piece.id }
+  const wallPiece = piece.slot === 'wall' ? (plain ? null : piece.id) : sameKit ? s.wallPiece : null
+  const tool = toolForPiece(manifest, piece)
+  s.set({ kit: manifest.id, pieces, wallPiece, tool })
+  useBuildUi.getState().set({ tool: 'kit' })
+  return tool
+}
+
+/** True when `piece` is what the active kit tool places. */
+export function pieceInHand(s: Pick<KitUiState, 'kit' | 'pieces' | 'wallPiece'>, active: KitTool | null, manifest: KitManifest, piece: KitPiece): boolean {
+  if (!active || s.kit !== manifest.id) return false
+  if (active === 'wall') return s.wallPiece ? s.wallPiece === piece.id : false
+  const slot = TOOL_SLOT[active]
+  if (!slot || (piece.slot !== slot && !(active === 'pillar' && piece.slot === 'corner'))) return false
+  return (s.pieces[piece.slot] ?? '') === piece.id
+}
+
+/** Build one level up or down (PgUp / PgDn, the scene bar's ▲ ▼); a cutaway set by hand follows. */
+export function stepLevel(by: number): void {
+  const s = useKitUi.getState()
+  const level = Math.max(0, Math.min(31, s.level + by))
+  s.set({ level, ...(s.cutaway !== null ? { cutaway: level } : {}) })
 }

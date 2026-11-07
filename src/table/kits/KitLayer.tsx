@@ -31,7 +31,7 @@ import { useTableUi } from '../tableState'
 import { useBuildUi } from '../build/buildState'
 import { edgesAlong, edgesAround, EMPTY_PLAN, planWalls, type TilePlan } from './autoJoin'
 import { KIT_MATERIAL, kitPieceGeometry, useKitGeometryVersion } from './kitGeometry'
-import { setKitTool, TOOL_SLOT, toolForSlot, useKitUi, type KitTool } from './kitState'
+import { setKitTool, stepLevel, TOOL_SLOT, toolForSlot, useKitUi, type KitTool } from './kitState'
 import type { KitDoor } from './kitWalls'
 import { levelCellKey } from './levels'
 import { pieceIndex, useKitManifests, type PieceLookup } from './manifests'
@@ -51,7 +51,10 @@ export function KitLayer({ kit, bounds }: { kit: KitScene; bounds: Bounds2 }) {
   const kitTool = useKitUi((s) => s.tool)
   const tableTool = useTableUi((s) => s.tool)
   const targeting = useTableUi((s) => s.targeting !== null)
-  const active = gm && buildTool === 'kit' && kitTool && !tableTool && !targeting ? kitTool : null
+  const alt = useAltHeld(gm && buildTool === 'kit')
+  const picked = gm && buildTool === 'kit' && kitTool && !tableTool && !targeting ? kitTool : null
+  // Alt held: any painting tool erases until it is let go.
+  const active = picked && alt && picked !== 'pick' ? 'erase' : picked
   useLevelKeys(gm)
   useDevProbe()
   return (
@@ -93,6 +96,21 @@ function useDevProbe() {
   }, [camera, gl])
 }
 
+/** True while Alt is held (and `on`); a lost focus lets go. */
+function useAltHeld(on: boolean): boolean {
+  const [alt, setAlt] = useState(false)
+  useEffect(() => {
+    if (!on) { setAlt(false); return }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Alt') setAlt(e.type === 'keydown') }
+    const blur = () => setAlt(false)
+    window.addEventListener('keydown', key)
+    window.addEventListener('keyup', key)
+    window.addEventListener('blur', blur)
+    return () => { window.removeEventListener('keydown', key); window.removeEventListener('keyup', key); window.removeEventListener('blur', blur) }
+  }, [on])
+  return alt
+}
+
 /** PgUp / PgDn: the level the GM builds on (and the cutaway, when it is set by hand). */
 function useLevelKeys(gm: boolean) {
   useEffect(() => {
@@ -109,11 +127,7 @@ function useLevelKeys(gm: boolean) {
   }, [gm])
 }
 
-export function stepLevel(by: number): void {
-  const s = useKitUi.getState()
-  const level = Math.max(0, Math.min(31, s.level + by))
-  s.set({ level, ...(s.cutaway !== null ? { cutaway: level } : {}) })
-}
+export { stepLevel }
 
 // ------------------------------------------------------------------ tiles
 

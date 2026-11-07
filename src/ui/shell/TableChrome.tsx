@@ -1,27 +1,25 @@
 /**
  * The pieces of the table layout around the board (docs/UX.md "Table layout"): the one paper card,
- * the scroll (chat), the dice well, the GM screen (Play / Prep / Build), the presence row, the bell
- * and the combat control. Each reads `useTableLayout` and hosts registry panels through PanelHost,
- * so the panels themselves do not know where they are.
+ * the scroll (chat), the dice well, the GM screen's plaque (Play / Build), the presence row, the
+ * bell and the combat control. Each reads `useTableLayout` and hosts registry panels through
+ * PanelHost, so the panels themselves do not know where they are. The Build workspace is
+ * `src/ui/build/`.
  */
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GameController } from '../controller'
 import type { ChatMessage } from '@/core/doc'
 import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
-import { useBuildUi } from '@/table/build/buildState'
 import { PanelHost } from './PanelHost'
-import { BUILD_TAB_LABELS, BUILD_TABS, LEAVES, useTableLayout, type LeafId, type TableMode } from './tableLayout'
+import { setTableMode, useTableLayout, type TableMode } from './tableLayout'
 import { DicePad, WellReadout } from './Hud'
 import { isTypingTarget } from './useShortcuts'
 import { useAttention, handleAttention } from '../attention'
 import { endCombat, startCombat } from '../panels/InitiativePanel'
 import { Icon, type IconName } from '../icons'
 
-const BudgetMeter = lazy(() => import('../library/BudgetMeter'))
-
 /** Esc (outside a field) runs `onClose` while `active`. Capture phase, so it wins over table keys. */
-function useEscape(active: boolean, onClose: () => void) {
+export function useEscape(active: boolean, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -36,7 +34,7 @@ function useEscape(active: boolean, onClose: () => void) {
 }
 
 /** Closes on a pointer-down outside `ref` (deferred a tick so the opening tap does not close it). */
-function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+export function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -133,98 +131,40 @@ export function DiceWell({ dice, roll, who, compact = false }: { dice: ReactNode
 }
 
 const MODES: { id: TableMode; label: string; hint: string }[] = [
-  { id: 'play', label: 'Play', hint: 'The board and the hand; the screen folded away' },
-  { id: 'prep', label: 'Prep', hint: 'Raise the screen: scenes, encounters, cast, reference' },
-  { id: 'build', label: 'Build', hint: 'The tool tray: the model library, walls, doors, fog, lights, scene settings' },
+  { id: 'play', label: 'Play', hint: 'Run the table: the board, the hand and the GM drawer' },
+  { id: 'build', label: 'Build', hint: 'Make the world: the Library, the Inspector, the tools and the scene bar' },
 ]
 
-/** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
-export function setTableMode(mode: TableMode) {
-  const s = useTableLayout.getState()
-  if (s.mode === mode) return
-  if (s.mode === 'build') useBuildUi.getState().set({ tool: null })
-  s.set({ mode })
-}
+export { setTableMode }
 
 /**
- * The GM screen. Folded, a leather plaque (bottom left) with the mode and a live line (sounds
- * playing, the round). Prep raises three leaves over the board; Build folds into the tool tray.
+ * The GM screen's plaque (bottom left): the mode and a live line (sounds playing, the round).
+ * Build mounts the Build workspace around the board (GameShell).
  */
-export function GmScreen({ controller, panels, live, onLive }: { controller: GameController; panels: PanelDef[]; live: string; onLive(): void }) {
+export function GmScreen({ live, onLive, drawer }: { live: string; onLive(): void; drawer?: ReactNode }) {
   const mode = useTableLayout((s) => s.mode)
-  const leafTabs = useTableLayout((s) => s.leafTabs)
-  const buildTab = useTableLayout((s) => s.buildTab)
-  const set = useTableLayout((s) => s.set)
-  const byId = (id: string) => panels.find((p) => p.id === id)
-  useEscape(mode === 'prep', () => setTableMode('play'))
-  const buildDef = byId(buildTab)
   return (
-    <>
-      {mode === 'prep' && (
-        <div className="t-leaves" role="region" aria-label="GM screen">
-          {LEAVES.map((leaf, i) => {
-            const def = byId(leafTabs[leaf.id]) ?? byId(leaf.panels[0])
-            if (!def) return null
-            return (
-              <section key={leaf.id} className={`t-leaf skin-paper t-leaf--${i}`} aria-label={leaf.title}>
-                <PaperHead title={leaf.title}>
-                  <LeafTabs ids={leaf.panels} active={def.id} panels={panels} onPick={(id) => set({ leafTabs: { ...leafTabs, [leaf.id]: id } })} />
-                </PaperHead>
-                <PanelHost key={def.id} def={def} controller={controller} className="t-leaf-body" />
-              </section>
-            )
-          })}
-        </div>
-      )}
-      {mode === 'build' && buildDef && (
-        <div className="t-tray skin-paper" role="region" aria-label="Build tools">
-          <PaperHead title="Build" glyph="wall" onClose={() => setTableMode('play')} closeLabel="Fold the tray: back to Play">
-            <LeafTabs ids={BUILD_TABS} active={buildDef.id} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />
-          </PaperHead>
-          <PanelHost key={buildDef.id} def={buildDef} controller={controller} className="t-tray-body" />
-          <Suspense fallback={null}><BudgetMeter /></Suspense>
-        </div>
-      )}
-      <div className={`t-plaque t-plaque--${mode}`} role="group" aria-label="GM screen">
-        <div className="t-plaque-head">
-          <strong>GM screen</strong>
-          <span className="t-plaque-state">{mode === 'play' ? 'folded' : mode === 'prep' ? 'raised' : 'tray'}</span>
-        </div>
+    <div className={`t-plaque t-plaque--${mode}`} role="group" aria-label="GM screen">
+      <div className="t-plaque-head">
+        <strong>GM screen</strong>
+        <span className="t-plaque-state">{mode === 'play' ? 'play' : 'build'}</span>
+      </div>
+      <div className="t-plaque-row">
         <div className="t-modes" role="radiogroup" aria-label="Mode">
           {MODES.map((m) => (
             <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
           ))}
         </div>
-        {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
+        {mode !== 'build' && drawer}
       </div>
-    </>
-  )
-}
-
-function LeafTabs({ ids, active, panels, labels, onPick }: { ids: readonly string[]; active: string; panels: PanelDef[]; labels?: Record<string, string>; onPick(id: string): void }) {
-  const shown = ids.map((id) => panels.find((p) => p.id === id)).filter((p): p is PanelDef => !!p)
-  if (shown.length < 2) return null
-  return (
-    <div className="t-leaf-tabs" role="tablist">
-      {shown.map((p) => (
-        <button key={p.id} type="button" role="tab" aria-selected={p.id === active} className={`t-leaf-tab${p.id === active ? ' on' : ''}`} onClick={() => onPick(p.id)}>
-          {labels?.[p.id] ?? p.title}
-        </button>
-      ))}
+      {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
     </div>
   )
 }
 
-/** The phone version of the GM screen: the mode switch, then the leaf or tray as tabs, in one sheet. */
-export function GmScreenSheet({ controller, panels }: { controller: GameController; panels: PanelDef[] }) {
+/** The phone version of the GM screen in Play: the mode switch. */
+export function GmScreenSheet() {
   const mode = useTableLayout((s) => s.mode)
-  const leaf = useTableLayout((s) => s.leaf)
-  const leafTabs = useTableLayout((s) => s.leafTabs)
-  const buildTab = useTableLayout((s) => s.buildTab)
-  const set = useTableLayout((s) => s.set)
-  const byId = (id: string) => panels.find((p) => p.id === id)
-  const current = LEAVES.find((l) => l.id === leaf) ?? LEAVES[0]
-  const def = mode === 'build' ? byId(buildTab) : mode === 'prep' ? byId(leafTabs[current.id]) : undefined
   return (
     <div className="t-screen-sheet">
       <div className="t-modes" role="radiogroup" aria-label="Mode">
@@ -232,18 +172,7 @@ export function GmScreenSheet({ controller, panels }: { controller: GameControll
           <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} onClick={() => setTableMode(m.id)}>{m.label}</button>
         ))}
       </div>
-      {mode === 'play' && <p className="muted small">Play: the screen is folded. Prep raises scenes, encounters, the cast and reference; Build opens the tool tray.</p>}
-      {mode === 'prep' && (
-        <div className="t-leaf-tabs t-leaf-tabs--leaves" role="tablist" aria-label="Leaf">
-          {LEAVES.map((l) => (
-            <button key={l.id} type="button" role="tab" aria-selected={l.id === leaf} className={`t-leaf-tab${l.id === leaf ? ' on' : ''}`} onClick={() => set({ leaf: l.id as LeafId })}>{l.title}</button>
-          ))}
-        </div>
-      )}
-      {mode === 'prep' && <LeafTabs ids={current.panels} active={def?.id ?? ''} panels={panels} onPick={(id) => set({ leafTabs: { ...leafTabs, [current.id]: id } })} />}
-      {mode === 'build' && <LeafTabs ids={BUILD_TABS} active={def?.id ?? ''} panels={panels} labels={BUILD_TAB_LABELS} onPick={(id) => set({ buildTab: id as (typeof BUILD_TABS)[number] })} />}
-      {def && <PanelHost key={def.id} def={def} controller={controller} className="t-screen-body" />}
-      {mode === 'build' && <Suspense fallback={null}><BudgetMeter /></Suspense>}
+      <p className="muted small">Play runs the table. Build makes the world: the Library, the Inspector, the tools and the scene; the bar below changes to them.</p>
     </div>
   )
 }

@@ -1,23 +1,22 @@
 /**
  * Numeric editors for whatever is being edited on the table (token, prop, scene node or the whole
- * scene), shown under "Details" in the edit bar (shell/EditBar.tsx), and adding props from the
- * library or an uploaded GLB (Prep panel and the edit bar). Every change goes through `controller.dispatch`;
+ * scene), shown under "Details" in the edit bar (shell/EditBar.tsx) and, for scene parts and the
+ * scene's fit, in the Build Inspector. Every change goes through `controller.dispatch`;
  * players only get controls for tokens they own and a read-only summary otherwise.
  * Built for thumbs: big +/- steppers, direct input, no hover-only affordances.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { GameController } from '../controller'
 import { useGame, type Selection } from '@/state/store'
-import { newId } from '@/core/ids'
-import type { PropId, SceneId } from '@/core/ids'
+import type { SceneId } from '@/core/ids'
 import type { NodeOverride, Prop, Scene, SceneTransform, Token } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import type { PropPatch } from '@/core/intents'
-import { isUniform, ONE_SCALE, propScale, scaleBy, uniformScale } from '@/core/props'
+import { isUniform, propScale, scaleBy, uniformScale } from '@/core/props'
 import { knownLegacyFit } from '@/table/propMigration'
 import type { LibraryEntry } from '@/assets'
 import {
-  clamp, degToRad, displayDeg, effectiveNodeTransform, IDENTITY_TRANSFORM, mergeOverride, placementPoint, resetOverride, roundTo,
+  clamp, degToRad, displayDeg, effectiveNodeTransform, IDENTITY_TRANSFORM, mergeOverride, resetOverride, roundTo,
   SCALE_LIMITS, TOKEN_SIZE_LIMITS, useTableUi,
 } from '@/table'
 import { CATEGORY_LABEL, libraryModels, libraryRef, loadLibraryIndex, type LibraryCategory } from '../library'
@@ -101,12 +100,12 @@ function Summary({ rows }: { rows: [string, ReactNode][] }) {
 const fmt = (v: number) => roundTo(v, 0.01)
 const vec = (v: Vec3) => `${fmt(v.x)}, ${fmt(v.y)}, ${fmt(v.z)}`
 
-function Header({ kind, name, onDeselect }: { kind: string; name: string; onDeselect(): void }) {
+function Header({ kind, name, onDeselect }: { kind: string; name: string; onDeselect?(): void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
       <span className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '.06em' }}>{kind}</span>
       <strong style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</strong>
-      <button type="button" className="tiny" style={{ minHeight: 32, touchAction: 'manipulation' }} onClick={onDeselect}>Done</button>
+      {onDeselect && <button type="button" className="tiny" style={{ minHeight: 32, touchAction: 'manipulation' }} onClick={onDeselect}>Done</button>}
     </div>
   )
 }
@@ -168,7 +167,6 @@ function TokenEditor({ controller, token, editable, onDeselect }: { controller: 
 
 /** What each picker offers; whole scenes never show up here (the Scenes panel owns those). */
 const TOKEN_KINDS: LibraryCategory[] = ['mini', 'prop']
-const PROP_KINDS: LibraryCategory[] = ['prop', 'mini']
 
 function PropEditor({ controller, prop, cell, editable, onDeselect }: { controller: GameController; prop: Prop; cell: number; editable: boolean; onDeselect(): void }) {
   const patch = (p: PropPatch) => void controller.dispatch({ type: 'props.update', updates: [{ id: prop.id, patch: p }] })
@@ -257,7 +255,8 @@ function NodeEditor({ controller, sceneId, scene, name, override, base, cell, ed
   )
 }
 
-function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }: { controller: GameController; sceneId: SceneId; scene: Scene; cell: number; editable: boolean; onDeselect(): void }) {
+/** The whole scene model's fit: scale, turn and offset (the Build Inspector's scene context uses it too). */
+export function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }: { controller: GameController; sceneId: SceneId; scene: Scene; cell: number; editable: boolean; onDeselect?(): void }) {
   const t: SceneTransform = scene.transform ?? IDENTITY_TRANSFORM
   const set = (next: SceneTransform) => void controller.dispatch({ type: 'scene.update', scene: sceneId, patch: { transform: next } })
   const changed = t.scale !== 1 || t.rotationY !== 0 || t.offset.x !== 0 || t.offset.y !== 0 || t.offset.z !== 0
@@ -282,7 +281,7 @@ function SceneEditor({ controller, sceneId, scene, cell, editable, onDeselect }:
       </div>
       <Stepper label="Height (Y)" value={t.offset.y} step={0.1} unit="m" onChange={off('y')} />
       <button type="button" className="wide" style={{ minHeight: TOUCH }} disabled={!changed} onClick={() => set({ ...IDENTITY_TRANSFORM, offset: { x: 0, y: 0, z: 0 } })}>Reset scene transform</button>
-      <p className="muted small">The grid is not moved with the scene; adjust it in the Scenes panel if cells drift.</p>
+      <p className="muted small">The grid is not moved with the scene; adjust it under Grid if cells drift.</p>
     </div>
   )
 }
@@ -350,32 +349,5 @@ export function ModelPicker({ controller, title, actionLabel, kinds, hint, curre
       </label>
       {hint && <p className="muted small">{hint}</p>}
     </div>
-  )
-}
-
-export function AddProp({ controller, sceneId, scene }: { controller: GameController; sceneId: SceneId; scene: Scene | undefined }) {
-  const setSelection = useGame((s) => s.setSelection)
-  const uiSet = useTableUi((s) => s.set)
-  const add = (model: ReturnType<typeof libraryRef>, name: string) => {
-    const id = newId<'PropId'>() as PropId
-    const at = placementPoint()
-    const g = scene?.grid
-    const position = g && g.type !== 'none'
-      ? { x: Math.round((at.x - g.origin.x) / g.cellSize) * g.cellSize + g.origin.x, y: at.y, z: Math.round((at.z - g.origin.z) / g.cellSize) * g.cellSize + g.origin.z }
-      : at
-    // Real size: the model as authored, no fit to the cell.
-    void controller.dispatch({ type: 'props.place', props: [{ id, scene: sceneId, name, model, position, rotation: { x: 0, y: 0, z: 0 }, scale: { ...ONE_SCALE } }] })
-    setSelection({ kind: 'prop', id })
-    uiSet({ editMode: true })
-  }
-  return (
-    <ModelPicker
-      controller={controller}
-      title="Add a prop"
-      actionLabel="Add"
-      kinds={PROP_KINDS}
-      hint="Props are scenery, not tokens. They land where the camera looks; double-tap one on the table to move, turn and resize it."
-      onPick={add}
-    />
   )
 }

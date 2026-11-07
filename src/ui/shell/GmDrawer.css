@@ -1,0 +1,36 @@
+/* The GM drawer on the plaque (GmDrawer.tsx): a brass button beside Play | Build, and a fan of
+   leather tiles rising over the board above the plaque. */
+.t-plaque-row { display: flex; align-items: stretch; gap: var(--sp-2); }
+.t-plaque-row > .t-modes { flex: 1; }
+/* Two modes now: Play and Build. */
+.t-plaque .t-modes, .t-screen-sheet .t-modes { grid-template-columns: repeat(2, 1fr); }
+.t-drawer { display: flex; }
+.t-drawer-btn {
+  position: relative; min-width: 42px; min-height: 38px; padding: 0 var(--sp-2); border-radius: 8px;
+  background: rgba(0, 0, 0, .35); border: 1px solid rgba(241, 213, 142, .35); color: #e8d7b0;
+}
+.t-drawer-btn.on, .t-drawer-btn:hover { border-color: var(--brass-hi); color: var(--brass-hi); }
+.t-drawer-btn.on { background: linear-gradient(180deg, var(--brass-hi), var(--brass)); color: #2a1c10; }
+.t-drawer-dot {
+  position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px #3a1e14;
+}
+.t-drawer-fan {
+  position: absolute; left: 0; bottom: calc(100% + var(--sp-2)); z-index: 6;
+  display: grid; grid-template-columns: repeat(4, 76px); gap: var(--sp-1); padding: var(--sp-2);
+  background: linear-gradient(180deg, #5a2f1f, #3a1e14); border: 1px solid #22100a; border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgba(201, 154, 68, .35), 0 12px 28px rgba(0, 0, 0, .55);
+  transform-origin: bottom left; animation: t-drawer-in .14s ease-out;
+}
+.t-drawer-item {
+  display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 68px; padding: 6px 2px;
+  background: rgba(0, 0, 0, .25); border: 1px solid rgba(241, 213, 142, .25); border-radius: 8px; color: var(--paper);
+  animation: t-drawer-tile .18s ease-out backwards; animation-delay: calc(var(--i, 0) * 18ms);
+}
+.t-drawer-item:hover, .t-drawer-item:focus-visible { border-color: var(--brass-hi); background: rgba(0, 0, 0, .4); }
+.t-drawer-label { font-size: var(--fs-xs); font-weight: 700; }
+.t-drawer-state { font-size: 10px; line-height: 1.1; color: #d9c49b; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-drawer-item.has .t-drawer-state { color: var(--brass-hi); font-weight: 700; }
+@keyframes t-drawer-in { from { opacity: 0; transform: scale(.92) translateY(6px); } }
+@keyframes t-drawer-tile { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .t-drawer-fan, .t-drawer-item { animation: none; } }

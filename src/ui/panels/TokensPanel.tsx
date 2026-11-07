@@ -1,20 +1,21 @@
 /**
- * Tokens panel: the list (with a filter once it gets long), ownership, visibility and removal.
- * Size, rotation, elevation and the model live in the Edit panel; the row's pencil and the
- * "Edit size and model" button send the selection there.
+ * Tokens card (players; the GM's tokens are the Build Library's "In this scene" filter and the
+ * Inspector): the list (with a filter once it gets long), claiming, and the token editor on the
+ * player's own tokens. Rotation, elevation and the model live in edit mode's Details; the row's
+ * pencil and "Edit rotation and model" send the selection there.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { newId } from '@/core/ids'
-import type { PlayerPubkey, TokenId } from '@/core/ids'
+import type { TokenId } from '@/core/ids'
 import type { Token } from '@/core/doc'
 import { isTypingTarget } from '../shell/useShortcuts'
 import { startEditing } from '@/table/editTap'
+import { TOKEN_COLORS as COLORS, TokenEditor } from '../build/panes/TokenPane'
 import './tokens.css'
 import { Icon } from '@/ui/icons'
 
-const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
 /** Above this many rows the list gets a filter box and scrolls on its own. */
 export const FILTER_THRESHOLD = 15
 
@@ -113,9 +114,6 @@ export function TokensPanel({ controller }: { controller: GameController }) {
 function TokenProps({ controller, token, onEdit }: { controller: GameController; token: Token; onEdit(): void }) {
   const isGm = controller.connection.isGm
   const mine = token.owner === controller.pubkey
-  const presence = useGame((s) => s.presence)
-  const patch = (p: Partial<Token>) => void controller.dispatch({ type: 'token.update', token: token.id, patch: p })
-
   if (!isGm && !mine) {
     return (
       <div className="props">
@@ -124,30 +122,11 @@ function TokenProps({ controller, token, onEdit }: { controller: GameController;
       </div>
     )
   }
-
+  // The same editor as the Build Inspector's token context.
   return (
     <div className="props">
-      <label>Name<input value={token.name} onChange={(e) => patch({ name: e.target.value })} /></label>
-      <div className="swatches">
-        {COLORS.map((c) => <button key={c} className={`swatch ${c === token.color ? 'on' : ''}`} style={{ background: c }} aria-label={c} onClick={() => patch({ color: c })} />)}
-      </div>
-      <div className="grid2">
-        <label>Vision<input type="number" min={0} max={30} value={token.vision} onChange={(e) => patch({ vision: Number(e.target.value) })} /></label>
-        <label>Light<input type="number" min={0} max={30} value={token.light} onChange={(e) => patch({ light: Number(e.target.value) })} /></label>
-        {isGm && <label className="check"><input type="checkbox" checked={token.hidden} onChange={(e) => patch({ hidden: e.target.checked })} /> Hidden</label>}
-      </div>
-      {isGm && (
-        <label>Owner
-          <select value={token.owner ?? ''} onChange={(e) => void controller.dispatch({ type: 'token.claim', token: token.id, owner: (e.target.value || controller.pubkey) as PlayerPubkey })}>
-            <option value="">GM</option>
-            {Object.values(presence).filter((p) => p.pubkey !== controller.pubkey).map((p) => <option key={p.pubkey} value={p.pubkey}>{p.name}</option>)}
-            {token.owner && token.owner !== controller.pubkey && !presence[token.owner] && <option value={token.owner}>{token.owner.slice(0, 8)} (offline)</option>}
-          </select>
-        </label>
-      )}
-      <button className="wide" onClick={onEdit}>Edit size, rotation and model ›</button>
-      {isGm && <button className="danger wide" onClick={() => void controller.dispatch({ type: 'token.remove', token: token.id })}>Remove token</button>}
-      <p className="muted small">Tip: Delete removes the selected token; Cmd/Ctrl+Z brings it back.</p>
+      <TokenEditor controller={controller} token={token} />
+      <button className="wide" onClick={onEdit}>Edit rotation and model ›</button>
     </div>
   )
 }

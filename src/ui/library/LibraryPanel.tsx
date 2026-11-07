@@ -1,13 +1,17 @@
 /**
- * The Library: the Build tray's first tab (reports/Level design plan.md, Phase 1 item 3). Search
- * over titles and tags, category chips, shelves (Recently placed, Favourites, In this scene,
- * Built-in, My models), a thumbnail grid of cards with a size and licence badge, a hover preview
- * that slowly spins the model (desktop), and Import… for the GM's own models.
+ * The Library: everything the GM can add, behind one search (reports/Play and Build plan.md,
+ * phase 4). Four shelves (`useLibraryView`): Models (the prop catalogue: pick up and stamp), Kit
+ * (grid kit pieces: a card arms the kit paint tool), Creatures (the compendium and the game's stat
+ * blocks: pick up and place as tokens, hidden by default) and Saved (groups and encounters: pick
+ * up and stamp the whole group). The filter chips (Recent, Favourites, In this scene, My models)
+ * apply to the active shelf; "In this scene" is the scene's outliner.
  *
- * Clicking a card picks the model up (`pickUpEntry`); the table's `PlaceLayer` stamps it. Cards can
- * also be dragged onto the board. The grid is windowed, so 300+ cards scroll smoothly.
+ * The Build workspace hosts this panel and may draw the shelf switcher itself (`bare`).
+ *
+ * Model cards: clicking picks the model up (`pickUpEntry`) and the table's `PlaceLayer` stamps it;
+ * cards can also be dragged onto the board. The grid is windowed, so 300+ cards scroll smoothly.
  */
-import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject } from 'react'
 import type { GameController } from '../controller'
 import type { AssetRef } from '@/core/assets'
 import type { CatalogueEntry } from '@/core/catalogue'
@@ -18,16 +22,22 @@ import { catalogueCategories } from '../catalogue'
 import { Icon } from '../icons'
 import { LibIcon } from './libraryIcons'
 import { useBreakpoint } from '../shell/useBreakpoint'
-import { useTableLayout } from '../shell/tableLayout'
+import { closePhoneSheet } from './sheet'
 import { pushToast } from '../toasts'
-import { DEFAULT_CELL_M, libraryResults, licenceBadge, MAX_TITLE, placedCopies, removalNote, renamedEntry, sceneCatalogueIds, SHELVES, sizeBadge, type ShelfId } from './libraryLogic'
+import { DEFAULT_CELL_M, libraryResults, licenceBadge, MAX_TITLE, placedCopies, removalNote, renamedEntry, sceneCatalogueIds, sizeBadge } from './libraryLogic'
 import { AssetStatusBadge } from '../AssetStatusBadge'
 import { toggleFavouriteModel, useLibraryPrefs } from './libraryPrefs'
+import { LIBRARY_SHELVES, useLibraryView, type LibraryFilter, type LibraryShelf } from './libraryView'
+import { modelShelfFor } from './shelves'
 import { heldFromEntry, pickUpEntry, useBuiltinCatalogue, useMyModels, useThumbnail } from './useCatalogue'
 import './LibraryPanel.css'
 
 const ImportDialog = lazy(() => import('../import/ImportDialog'))
 const HoverPreview = lazy(() => import('./HoverPreview'))
+const KitShelf = lazy(() => import('./KitShelf'))
+const CreatureShelf = lazy(() => import('./CreatureShelf'))
+const SavedShelf = lazy(() => import('./SavedShelf'))
+const Outliner = lazy(() => import('./Outliner'))
 
 /** Hover this long before the 3D preview appears. */
 const PREVIEW_DELAY_MS = 400
@@ -37,7 +47,99 @@ const GAP = 8
 
 const snapLabel = (c: number) => (c === 0 ? 'Free' : c === 0.25 ? '¼ cell' : c === 0.5 ? '½ cell' : `${c} cell`)
 
-export function LibraryPanel({ controller }: { controller: GameController }) {
+const SEARCH_HINT: Record<LibraryShelf, string> = {
+  models: 'Search models and tags',
+  kit: 'Search kit pieces',
+  creatures: 'Search creatures (goblin, undead…)',
+  saved: 'Search groups and encounters',
+}
+
+/** The filter chips a shelf offers ('mine' reads per shelf; kits and saved groups have no imports). */
+export function filtersFor(shelf: LibraryShelf): { id: LibraryFilter; label: string }[] {
+  const base: { id: LibraryFilter; label: string }[] = [
+    { id: 'all', label: 'All' }, { id: 'recent', label: 'Recent' }, { id: 'favourites', label: 'Favourites' }, { id: 'in-scene', label: 'In this scene' },
+  ]
+  if (shelf === 'models') base.push({ id: 'mine', label: 'My models' })
+  if (shelf === 'creatures') base.push({ id: 'mine', label: 'This game' })
+  return base
+}
+
+export function LibraryPanel({ controller, bare = false }: {
+  controller: GameController
+  /** The host draws the shelf switcher (the Build workspace's Library dock). */
+  bare?: boolean
+}) {
+  const shelf = useLibraryView((s) => s.shelf)
+  const filter = useLibraryView((s) => s.filter)
+  const query = useLibraryView((s) => s.query)
+  const setView = useLibraryView((s) => s.set)
+  const phone = useBreakpoint() === 'phone'
+  const [importing, setImporting] = useState(false)
+  const firstPick = useRef<(() => void) | null>(null)
+
+  if (!controller.connection.isGm) return <div className="panel"><p className="muted small">The GM places models.</p></div>
+
+  const filters = filtersFor(shelf)
+  const activeFilter = filters.some((f) => f.id === filter) ? filter : 'all'
+  const onImported = (entry: CatalogueEntry) => {
+    setImporting(false)
+    void controller.dispatch({ type: 'catalogue.add', entry })
+    setView({ shelf: 'models', filter: 'mine' })
+    pickUpEntry(entry)
+    pushToast({ text: `${entry.title} is in My models; click the board to place it`, ttl: 3500 })
+  }
+
+  return (
+    <div className="panel library-panel" data-shelf={shelf}>
+      <div className="lib-top">
+        <label className="lib-search">
+          <Icon name="search" size={16} />
+          <input type="search" value={query} onChange={(e) => setView({ query: e.target.value })} placeholder={activeFilter === 'in-scene' ? 'Search this scene' : SEARCH_HINT[shelf]}
+            aria-label="Search the library" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+            onKeyDown={(e) => { if (e.key === 'Enter') firstPick.current?.() }} />
+        </label>
+        {!phone && shelf === 'models' && (
+          <button type="button" className="tiny" onClick={() => setImporting(true)} title="Upload a model, or import from Poly Haven or Sketchfab">
+            <Icon name="plus" size={14} /> Import…
+          </button>
+        )}
+      </div>
+      {!bare && (
+        <div className="lib-chips lib-shelfbar" role="tablist" aria-label="Shelf">
+          {LIBRARY_SHELVES.map((s) => (
+            <button key={s.id} type="button" role="tab" aria-selected={shelf === s.id} className={`lib-tab${shelf === s.id ? ' on' : ''}`}
+              onClick={() => setView({ shelf: s.id })}>{s.label}</button>
+          ))}
+        </div>
+      )}
+      <div className="lib-chips lib-shelves" role="group" aria-label="Filter">
+        {filters.map((f) => (
+          <button key={f.id} type="button" aria-pressed={activeFilter === f.id} className={`lib-chip${activeFilter === f.id ? ' on' : ''}`} onClick={() => setView({ filter: f.id })}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <Suspense fallback={<p className="muted small lib-empty">Loading…</p>}>
+        {activeFilter === 'in-scene'
+          ? <Outliner controller={controller} query={query} />
+          : shelf === 'models' ? <ModelsShelf controller={controller} filter={activeFilter} query={query} phone={phone} firstPick={firstPick} />
+            : shelf === 'kit' ? <KitShelf filter={activeFilter} query={query} phone={phone} />
+              : shelf === 'creatures' ? <CreatureShelf controller={controller} filter={activeFilter} query={query} phone={phone} />
+                : <SavedShelf controller={controller} filter={activeFilter} query={query} phone={phone} />}
+      </Suspense>
+      {importing && (
+        <Suspense fallback={null}>
+          <ImportDialog open onClose={() => setImporting(false)} onImported={onImported} assets={controller.assets} />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+
+/** The Models shelf: category chips, placement options and the windowed card grid. */
+function ModelsShelf({ controller, filter, query, phone, firstPick }: {
+  controller: GameController; filter: LibraryFilter; query: string; phone: boolean; firstPick: MutableRefObject<(() => void) | null>
+}) {
   const builtin = useBuiltinCatalogue()
   const mine = useMyModels()
   const recent = useLibraryPrefs((s) => s.recent)
@@ -45,15 +147,11 @@ export function LibraryPanel({ controller }: { controller: GameController }) {
   const props = useGame((s) => s.props)
   const sceneId = useGame((s) => s.meta?.activeScene ?? null)
   const cell = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene]?.grid.cellSize : undefined)) ?? DEFAULT_CELL_M
-  const phone = useBreakpoint() === 'phone'
-  const [query, setQuery] = useState('')
-  const [shelf, setShelf] = useState<ShelfId>('all')
   const [category, setCategory] = useState<string | null>(null)
-  const [kit, setKit] = useState(false)
-  const [importing, setImporting] = useState(false)
+  const shelf = modelShelfFor(filter)
   const scene = useMemo(() => sceneCatalogueIds(props, sceneId), [props, sceneId])
   const src = useMemo(() => ({ builtin: builtin ?? [], mine, recent, favourites, scene }), [builtin, mine, recent, favourites, scene])
-  const results = useMemo(() => libraryResults(src, { shelf, query, category, kit }), [src, shelf, query, category, kit])
+  const results = useMemo(() => libraryResults(src, { shelf, query, category, kit: false }), [src, shelf, query, category])
   const categories = useMemo(() => catalogueCategories([...mine, ...(builtin ?? [])].filter((e) => !e.kit)), [builtin, mine])
   const resolve = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
   const manage = useMemo<Manage>(() => ({
@@ -67,69 +165,31 @@ export function LibraryPanel({ controller }: { controller: GameController }) {
       pushToast({ text: `${e.title} is no longer in My models`, ttl: 2500 })
     },
   }), [controller])
-
-  if (!controller.connection.isGm) return <div className="panel"><p className="muted small">The GM places models.</p></div>
-
   const pick = (e: CatalogueEntry) => {
     pickUpEntry(e)
     // On a phone the sheet covers the board: put it away so the next tap places.
-    if (phone) useTableLayout.getState().set({ phone: null })
+    closePhoneSheet(phone)
   }
-  const onImported = (entry: CatalogueEntry) => {
-    setImporting(false)
-    void controller.dispatch({ type: 'catalogue.add', entry })
-    setShelf('mine')
-    pickUpEntry(entry)
-    pushToast({ text: `${entry.title} is in My models; click the board to place it`, ttl: 3500 })
-  }
+  useEffect(() => { firstPick.current = results[0] ? () => pick(results[0]!) : null })
   const emptyText = builtin === null ? 'Loading the library…'
-    : shelf === 'recent' && !recent.length ? 'Models you place show up here.'
-      : shelf === 'favourites' && !favourites.length ? 'Star a card to keep it here.'
-        : shelf === 'scene' && !scene.length ? 'Nothing from the library is in this scene yet.'
-          : shelf === 'mine' && !mine.length ? 'Import a model (Upload, Poly Haven, Sketchfab) and it lands here for every GM of this game.'
-            : `Nothing matches${query ? ` “${query}”` : ''}.`
-
+    : shelf === 'recent' && !query ? 'Models you place show up here.'
+      : shelf === 'favourites' && !query ? 'Star a card to keep it here.'
+        : shelf === 'mine' && !mine.length ? 'Import a model (Upload, Poly Haven, Sketchfab) and it lands here for every GM of this game.'
+          : `Nothing matches${query ? ` “${query}”` : ''}.`
   return (
-    <div className="panel library-panel">
-      <div className="lib-top">
-        <label className="lib-search">
-          <Icon name="search" size={16} />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search models and tags"
-            aria-label="Search the library" autoCapitalize="off" autoCorrect="off" spellCheck={false}
-            onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) pick(results[0]) }} />
-        </label>
-        {!phone && (
-          <button type="button" className="tiny" onClick={() => setImporting(true)} title="Upload a model, or import from Poly Haven or Sketchfab">
-            <Icon name="plus" size={14} /> Import…
-          </button>
-        )}
-      </div>
-      <div className="lib-chips lib-shelves" role="tablist" aria-label="Shelf">
-        {SHELVES.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={shelf === s.id} className={`lib-chip${shelf === s.id ? ' on' : ''}`} onClick={() => setShelf(s.id)}>
-            {s.label}{s.id === 'mine' && mine.length ? <span className="lib-count"> · {mine.length}</span> : null}
-          </button>
-        ))}
-      </div>
+    <>
       <div className="lib-chips lib-cats" role="group" aria-label="Category">
-        <button type="button" className={`lib-chip lib-chip--cat${!category && !kit ? ' on' : ''}`} aria-pressed={!category && !kit} onClick={() => { setCategory(null); setKit(false) }}>Any</button>
+        <button type="button" className={`lib-chip lib-chip--cat${!category ? ' on' : ''}`} aria-pressed={!category} onClick={() => setCategory(null)}>Any</button>
         {categories.map((c) => (
           <button key={c.category} type="button" aria-pressed={category === c.category} className={`lib-chip lib-chip--cat${category === c.category ? ' on' : ''}`}
-            onClick={() => { setCategory(category === c.category ? null : c.category); setKit(false) }}>{c.category}</button>
+            onClick={() => setCategory(category === c.category ? null : c.category)}>{c.category}</button>
         ))}
-        <button type="button" aria-pressed={kit} className={`lib-chip lib-chip--cat${kit ? ' on' : ''}`} title="Grid kit pieces: floors, walls, stairs"
-          onClick={() => { setKit(!kit); setCategory(null) }}>Kit pieces</button>
       </div>
       <PlacementOptions phone={phone} />
       {results.length === 0
         ? <p className="muted small lib-empty">{emptyText}</p>
         : <CardGrid entries={results} cell={cell} resolve={resolve} onPick={pick} phone={phone} favourites={favourites} mine={mine} manage={manage} />}
-      {importing && (
-        <Suspense fallback={null}>
-          <ImportDialog open onClose={() => setImporting(false)} onImported={onImported} assets={controller.assets} />
-        </Suspense>
-      )}
-    </div>
+    </>
   )
 }
 

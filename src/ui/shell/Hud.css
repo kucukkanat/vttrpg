@@ -81,3 +81,19 @@
 }
 .dice-pad-form { display: flex; gap: var(--sp-1); }
 .dice-pad-form input { flex: 1; min-width: 0; }
+
+/* GM in Play: Fog on the rail and its pop-out (FogPopout.tsx), beside the rail on wide screens and
+   inline in the phone Tools sheet. */
+.cam-group--fog { position: relative; }
+.t-fog-pop {
+  position: absolute; left: calc(100% + var(--sp-2)); top: 0; z-index: 4; width: 228px;
+  display: grid; gap: var(--sp-2); padding: 0 var(--sp-3) var(--sp-3); border-radius: 10px;
+  background: var(--panel) var(--paper-tex); border: 1px solid var(--border); box-shadow: 0 12px 28px rgba(0, 0, 0, .5);
+}
+.t-fog-pop .paper-head { margin: 0 calc(-1 * var(--sp-3)); }
+.t-fog-modes, .t-fog-all { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-1); }
+.t-fog-size { display: grid; gap: 2px; margin: 0; }
+.t-fog-size input { width: 100%; }
+.t-fog-off, .t-fog-hint { margin: 0; }
+.game--phone .t-fog-pop, .t-tools-sheet .t-fog-pop { position: static; width: auto; box-shadow: none; }
+.t-fog-pop .tiny.on { font-weight: 700; }

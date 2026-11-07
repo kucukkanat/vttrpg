@@ -188,6 +188,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   const uiSet = useTableUi((s) => s.set)
   const gridOn = useTableUi((s) => s.showGrid)
   const propWalls = useTableUi((s) => s.propWalls)
+  // In Build the scene bar holds the level and the cutaway; the board's own control is for Play.
+  const building = useTableUi((s) => s.buildMode)
   const setSelection = useGame((s) => s.setSelection)
   const gm = !viewer || viewer.isGm
 
@@ -409,7 +411,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {targeting && <TargetingBar targeting={targeting} />}
       {!targeting && <MoveBar onIntent={onIntent} grid={grid} floorY={floorY} viewer={viewer ?? null} />}
       <PropEditOverlay gm={gm} />
-      {gm && !viewer?.display && <KitBoardControl kit={kits} />}
+      {gm && !viewer?.display && !building && <KitBoardControl kit={kits} />}
       {glLost && <ContextLostNotice onReload={remountCanvas} />}
     </div>
   )
