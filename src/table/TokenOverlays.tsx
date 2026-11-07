@@ -16,6 +16,8 @@ import { prefersReducedMotion, readPref } from '@/ui/feedback/prefs'
 import { cellToWorld, hexRadius } from './grid'
 import { moveMeasure, pathCells } from './moveDistance'
 import { flareAt } from './turnFlare'
+import type { OwnerShape } from './ownerShape'
+import { OwnerShapeGlyph } from './OwnerShapeGlyph'
 import type { RulerPoint } from './ruler'
 import { FloorLabel } from './RulerLayer'
 
@@ -72,9 +74,10 @@ export function TurnRing({ radius }: { radius: number }) {
 
 /**
  * The token's name above it. `accent` outlines the label (owner colour, or the turn colour);
- * `mine` adds a small "you" tag so the viewer's own token reads at a glance.
+ * `mine` adds a small "you" tag so the viewer's own token reads at a glance; `shape` repeats the
+ * owner's ring shape before the name (a colour-blind-safe backup for the accent colour).
  */
-export function Nameplate({ name, y, accent, mine, current }: { name: string; y: number; accent: string | null; mine: boolean; current: boolean }) {
+export function Nameplate({ name, y, accent, mine, current, shape = null }: { name: string; y: number; accent: string | null; mine: boolean; current: boolean; shape?: OwnerShape | null }) {
   return (
     <Html position={[0, y, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }} pointerEvents="none">
       <div style={{
@@ -84,6 +87,7 @@ export function Nameplate({ name, y, accent, mine, current }: { name: string; y:
         background: 'rgba(14,14,16,0.78)', border: `1px solid ${current ? TURN_COLOR : accent ?? 'rgba(255,255,255,0.18)'}`,
         boxShadow: '0 1px 4px rgba(0,0,0,0.45)', userSelect: 'none', WebkitUserSelect: 'none', pointerEvents: 'none',
       }}>
+        {shape && accent && <OwnerShapeGlyph shape={shape} color={accent} size={11} />}
         {mine && <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: accent ?? '#7cc4ff' }}>you</span>}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
       </div>

@@ -17,6 +17,8 @@ import { ListRow } from '../components'
 import { colorName } from '../colorName'
 import { setSkipDice, useSkipDicePreference } from '@/dice/skipDice'
 import { FeelPrefs } from '../feedback/FeelPrefs'
+import { ownerShapeIn, type OwnerShape } from '@/table/ownerShape'
+import { OwnerShapeGlyph } from '@/table/OwnerShapeGlyph'
 import './invite.css'
 
 /** A player whose presence is older than this is shown as away. */
@@ -98,6 +100,12 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
   }
 
   const skipDice = useSkipDicePreference()
+  // The shape each player's tokens carry on their owner ring, shown beside the colour.
+  const shapes = useMemo(() => {
+    const m = new Map<string, OwnerShape>()
+    for (const r of rows) { const sh = ownerShapeIn({ tokens, meta: { gm } }, r.pubkey); if (sh) m.set(r.pubkey, sh) }
+    return m
+  }, [rows, tokens, gm])
   // GM-only meta flag, written straight to the doc like `meta.names` (the GM is the doc's authority).
   const setShowHp = (on: boolean) => {
     if (!isGm) return
@@ -138,6 +146,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
               trailing={assignBox}
             >
               <span className="dot" style={{ background: r.color }} role="img" aria-label={colorName(r.color)} />
+              {!r.isGm && shapes.get(r.pubkey) && <OwnerShapeGlyph shape={shapes.get(r.pubkey)!} color={r.color} size={14} title={`${shapes.get(r.pubkey)} marker on their tokens`} />}
               <div className="players-who">
                 <div className="players-name">
                   <strong>{r.name}</strong>
