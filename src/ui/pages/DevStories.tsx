@@ -1,7 +1,10 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 
 /** Dev stories live in their module folders (`src/<module>/devStory.tsx`); discovered at build time. */
-const modules = import.meta.glob<{ default?: ComponentType; DevStory?: ComponentType }>('../../**/devStory.tsx')
+// Dev builds only: the router never shows a story in production, so the build drops the list.
+const modules = import.meta.env.DEV
+  ? import.meta.glob<{ default?: ComponentType; DevStory?: ComponentType }>('../../**/devStory.tsx')
+  : {}
 const stories: Record<string, React.LazyExoticComponent<ComponentType>> = {}
 for (const [file, load] of Object.entries(modules)) {
   const name = file.replace(/^(\.\.\/)+/, '').replace(/\/devStory\.tsx$/, '').replace(/\//g, '-')
