@@ -38,6 +38,11 @@ const BuildPanel = lazyPanel(() => import('./BuildPanel').then((m) => m.BuildPan
 const LibraryPanel = lazyPanel(() => import('../library/LibraryPanel').then((m) => m.LibraryPanel))
 const CreditsPanel = lazyPanel(() => import('../library/CreditsPanel').then((m) => m.CreditsPanel))
 const KitPanel = lazyPanel(() => import('./KitPanel').then((m) => m.KitPanel))
+// Play (GM drawer): the table-time quick tools, and the scene title's switcher.
+const RandomTablesPanel = lazyPanel(() => import('../prep/RandomTables').then((m) => m.RandomTablesPanel))
+const NpcCard = lazyPanel(() => import('../prep/NpcCard').then((m) => m.NpcCard))
+const EncounterRun = lazyPanel(() => import('../prep/EncounterRun').then((m) => m.EncounterRun))
+const SceneSwitcher = lazyPanel(() => import('./SceneSwitcher').then((m) => m.SceneSwitcher))
 
 export interface PanelDef {
   id: string
@@ -67,4 +72,8 @@ export const PANELS: PanelDef[] = [
   { id: 'kit', title: 'Kit', short: 'Kit', glyph: 'wall', component: KitPanel, scope: 'gm' },
   { id: 'prep', title: 'Prep', short: 'Prep', glyph: 'toolbox', component: PrepPanel, scope: 'gm' },
   { id: 'skills-editor', title: 'Skill editor', short: 'Editor', glyph: 'wrench', component: SkillEditorPanel, scope: 'gm' },
+  { id: 'tables', title: 'Random tables', short: 'Tables', glyph: 'dice', component: RandomTablesPanel, scope: 'gm' },
+  { id: 'npc', title: 'NPC', short: 'NPC', glyph: 'pawn', component: NpcCard, scope: 'gm' },
+  { id: 'encounters', title: 'Encounters', short: 'Encounters', glyph: 'swords', component: EncounterRun, scope: 'gm' },
+  { id: 'scene-switcher', title: 'Scenes', short: 'Switch scene', glyph: 'map', component: SceneSwitcher, scope: 'gm' },
 ]

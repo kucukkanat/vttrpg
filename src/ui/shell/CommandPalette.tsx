@@ -22,8 +22,22 @@ import { requestInvite } from '../panels/TopBar'
 import { focusChatInput, toggleShortcutsOverlay } from './useShortcuts'
 import { useTableLayout } from './tableLayout'
 import { setTableMode } from './TableChrome'
+import { openDrawerCard } from './GmDrawer'
 import { filterCommands, GROUP_ORDER, isPaletteKey, type Command, type CommandGroup } from './commands'
 import { Icon } from '../icons'
+
+/** Panels the GM drawer holds (they open as the one card). */
+const DRAWER_PANELS = new Set(['sound', 'players', 'journal', 'tables', 'npc', 'encounters', 'credits', 'scene-switcher'])
+
+/** Old names that should still find a panel ("prep", "cast" from before Play and Build). */
+const PANEL_ALIASES: Record<string, string> = {
+  encounters: 'prep fight ambush run',
+  npc: 'prep generator cast',
+  tables: 'prep random oracle',
+  tokens: 'cast',
+  'skills-editor': 'cast',
+  'scene-switcher': 'scenes go live switch',
+}
 
 export interface PaletteActions {
   openPanel(id: string): void
@@ -48,15 +62,22 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
 
     // Open: every panel, wherever it lives.
     for (const p of panels) {
-      const where = p.id === 'chat' ? 'The scroll' : p.id === 'build' ? 'GM screen · Build' : ['scenes', 'prep', 'tokens', 'skills-editor'].includes(p.id) && isGm ? 'GM screen · Prep' : 'Card'
-      add('Open', { id: `open:${p.id}`, title: p.id === 'chat' ? 'Open the scroll (chat)' : `Open ${p.title}`, words: `${p.short} panel show`, where, run: () => actions.openPanel(p.id) })
+      const where = p.id === 'chat' ? 'The scroll' : p.id === 'build' ? 'GM screen · Build' : isGm && DRAWER_PANELS.has(p.id) ? 'GM drawer' : ['scenes', 'prep', 'tokens', 'skills-editor'].includes(p.id) && isGm ? 'GM screen · Prep' : 'Card'
+      // Drawer items open as the one card in Play, whatever the old Prep route says.
+      const open = isGm && DRAWER_PANELS.has(p.id) ? () => openDrawerCard(p.id) : () => actions.openPanel(p.id)
+      add('Open', { id: `open:${p.id}`, title: p.id === 'chat' ? 'Open the scroll (chat)' : `Open ${p.title}`, words: `${p.short} panel show ${PANEL_ALIASES[p.id] ?? ''}`, where, run: open })
     }
     add('Open', { id: 'chat:focus', title: 'Write in the scroll', words: 'chat say message whisper type', keys: '/', where: 'The scroll', run: () => { actions.openPanel('chat'); requestAnimationFrame(() => focusChatInput()) } })
 
     if (isGm) {
-      add('GM screen', { id: 'mode:play', title: 'Play mode: fold the screen', words: 'mode', run: () => setTableMode('play') })
-      add('GM screen', { id: 'mode:prep', title: 'Prep mode: raise the screen', words: 'mode scenes encounters cast creatures npc', run: () => setTableMode('prep') })
-      add('GM screen', { id: 'mode:build', title: 'Build mode: the tool tray', words: 'mode walls doors fog lights props', run: () => setTableMode('build') })
+      add('GM screen', { id: 'mode:play', title: 'Play mode: run the table', words: 'mode drawer', run: () => setTableMode('play') })
+      // "prep" and "cast" still find Build, where scenes, creatures and the cast now live.
+      add('GM screen', { id: 'mode:build', title: 'Build mode: make the world', words: 'mode prep cast scenes creatures walls doors fog lights props', run: () => setTableMode('build') })
+      add('GM screen', { id: 'drawer:tables', title: 'Roll on a random table', words: 'tables random oracle prep', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('tables') } })
+      add('GM screen', { id: 'drawer:npc', title: 'New NPC', words: 'npc generator name stat block creature prep cast', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('npc') } })
+      add('GM screen', { id: 'drawer:encounters', title: 'Run an encounter', words: 'encounters run fight ambush creatures prep place', where: 'GM drawer', run: () => { setTableMode('play'); openDrawerCard('encounters') } })
+      add('GM screen', { id: 'drawer:fog', title: 'Fog brush: reveal', words: 'fog of war reveal paint brush explored play', where: 'Tool rail', run: () => { setTableMode('play'); toggleBuildTool('fog-reveal') } })
+      add('GM screen', { id: 'drawer:fog-hide', title: 'Fog brush: hide', words: 'fog of war hide cover paint brush play', where: 'Tool rail', run: () => { setTableMode('play'); toggleBuildTool('fog-hide') } })
       const tools: [BuildTool, string, string][] = [
         ['wall', 'Draw walls', 'line of sight'], ['door', 'Draw doors', 'open close lock'], ['erase', 'Erase walls and doors', 'delete remove'],
         ['fog-reveal', 'Reveal fog', 'brush paint explored'], ['fog-hide', 'Hide under fog', 'brush paint'], ['light', 'Place a light', 'lamp torch colour'],
@@ -119,7 +140,7 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
     // Game.
     if (isGm) add('Game', { id: 'game:invite', title: 'Invite players', words: 'link share join', where: 'Top bar', run: requestInvite })
     if (actions.exportGame) add('Game', { id: 'game:export', title: 'Export the game file', words: 'save backup download', run: actions.exportGame })
-    add('Game', { id: 'game:credits', title: 'Scene credits', words: 'licence attribution authors models cc by', where: isGm ? 'Reference' : 'Card', run: () => actions.openPanel('credits') })
+    add('Game', { id: 'game:credits', title: 'Scene credits', words: 'licence attribution authors models cc by', where: isGm ? 'GM drawer' : 'Card', run: () => (isGm ? openDrawerCard('credits') : actions.openPanel('credits')) })
     add('Game', { id: 'game:keys', title: 'Keyboard shortcuts', words: 'keys help', keys: '?', run: () => toggleShortcutsOverlay(true) })
     add('Game', { id: 'theme:dark', title: 'Theme: lamplight (dark)', words: 'appearance colour', run: () => setThemePref('dark') })
     add('Game', { id: 'theme:daylight', title: 'Theme: parchment (light)', words: 'appearance colour bright daylight', run: () => setThemePref('daylight') })
@@ -153,7 +174,7 @@ function useLibraryCommands(isGm: boolean, query: string): Command[] {
 function suggested(all: Command[], isGm: boolean, combat: boolean): Command[] {
   const ids = combat
     ? (isGm ? ['combat:next', 'combat:order', 'chat:focus', 'roll:1d20'] : ['combat:order', 'open:character', 'chat:focus', 'roll:1d20'])
-    : (isGm ? ['combat:start', 'mode:prep', 'mode:build', 'game:invite'] : ['open:character', 'open:journal', 'chat:focus', 'roll:1d20'])
+    : (isGm ? ['combat:start', 'drawer:encounters', 'mode:build', 'game:invite'] : ['open:character', 'open:journal', 'chat:focus', 'roll:1d20'])
   return ids.map((id) => all.find((c) => c.id === id)).filter((c): c is Command => !!c).map((c) => ({ ...c, group: 'Suggested' as const }))
 }
 

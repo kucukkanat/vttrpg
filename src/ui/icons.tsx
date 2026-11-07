@@ -107,6 +107,8 @@ const ICONS = {
   'chevron-up': <path d="M6 15l6-6 6 6" />,
   /** The model library: a crate seen from a corner. */
   cube: <><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z" /><path d="M4 7.5 12 12l8-4.5M12 12v9" /></>,
+  /** Fog of war: a cloud trailing mist. */
+  fog: <><path d="M6.5 12.5a4 4 0 0 1 .8-7.4A5.5 5.5 0 0 1 17.6 6.5a3.5 3.5 0 0 1 1.2 6" /><path d="M4 13.5h12M7 17h13M4 20.5h10" /></>,
   /** Credits: a rosette with ribbons. */
   ribbon: <><circle cx="12" cy="9" r="5" /><path d="m9 13.5-2 7 3-1.5 2 2.5M15 13.5l2 7-3-1.5-2 2.5" /></>,
 } satisfies Record<string, ReactNode>
