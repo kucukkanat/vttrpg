@@ -7,7 +7,7 @@
  *   startGame({ mode: 'rejoin', gameId, displayName? })  // from the registry, with the saved role
  */
 import { createGame, joinGame, loadIdentity, parseInvite, createSnapshotLoop, DEFAULT_RELAYS, type GameConnection, type Identity } from '@/net'
-import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, putBlobWithRetry, type AssetResolver } from '@/assets'
+import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, putBlobWithRetry, trackUnshared, type AssetResolver } from '@/assets'
 import { sha256Hex } from '@/assets/hash'
 import { createController, type GameController } from './controller'
 import { games, decideRejoin } from './games'
@@ -78,8 +78,14 @@ export function snapshotUploader(identity: Pick<Identity, 'sign'>, servers: stri
   }
 }
 
-/** The game's asset resolver: uploads are signed by this identity, encrypted, and retried. */
+let trackingUnshared = false
+
+/**
+ * The game's asset resolver: uploads are signed by this identity, encrypted, and retried.
+ * Unfinished uploads are remembered across reloads so the GM's next start sends them again.
+ */
 export function gameAssets(identity: Pick<Identity, 'sign'>): AssetResolver {
+  if (!trackingUnshared) { trackingUnshared = true; trackUnshared() }
   return createAssetResolver({
     libraryBase: import.meta.env.BASE_URL + 'library/',
     blossomServers: blossomList(),

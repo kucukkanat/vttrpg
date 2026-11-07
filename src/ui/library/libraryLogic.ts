@@ -156,3 +156,31 @@ export function sceneCredits(props: Record<string, Prop>, scene: SceneId | null,
   const credits = entries.filter(wantsCredit).sort((a, b) => a.title.localeCompare(b.title))
   return { credits, models: entries.length }
 }
+
+// ------------------------------------------------------------------ My models: rename, remove
+
+/** Longest title a renamed model keeps. */
+export const MAX_TITLE = 80
+
+/**
+ * The entry with a new title for `catalogue.add` (which replaces by id), or null when the text is
+ * blank or unchanged. Whitespace is collapsed and the title capped.
+ */
+export function renamedEntry(entry: CatalogueEntry, raw: string): CatalogueEntry | null {
+  const title = raw.replace(/\s+/g, ' ').trim().slice(0, MAX_TITLE).trim()
+  if (!title || title === entry.title) return null
+  return { ...entry, title }
+}
+
+/** How many props on any scene came from this catalogue entry. */
+export function placedCopies(props: Readonly<Record<string, Prop>>, catalogueId: string): number {
+  let n = 0
+  for (const p of Object.values(props)) if (p.catalogue === catalogueId) n++
+  return n
+}
+
+/** The line under "Remove from library?": what happens to copies already on the board. */
+export function removalNote(copies: number): string {
+  if (copies === 0) return 'It is not placed anywhere.'
+  return copies === 1 ? 'The one placed copy stays on the board.' : `The ${copies} placed copies stay on the board.`
+}
