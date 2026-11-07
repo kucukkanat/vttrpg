@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>library thumbnails</title>
+<script type="importmap">
+  { "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+  // Renders one library GLB to a square WebP: a 3/4 view from the front right, a warm key light,
+  // a cool rim, transparent background, framed to the model's bounds. Driven by thumbs.mjs.
+  import * as THREE from 'three'
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+  import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+
+  const RENDER = 512
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+  renderer.setSize(RENDER, RENDER)
+  renderer.setClearColor(0x000000, 0)
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  document.body.appendChild(renderer.domElement)
+
+  const scene = new THREE.Scene()
+  scene.add(new THREE.HemisphereLight(0xffe2bd, 0x2e241c, 1.6))
+  const key = new THREE.DirectionalLight(0xffc68a, 3.2)
+  key.position.set(-2, 4, 3)
+  scene.add(key)
+  const rim = new THREE.DirectionalLight(0x9db4ff, 1.1)
+  rim.position.set(3, 2, -4)
+  scene.add(rim)
+  const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 1000)
+
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
+  const out = document.createElement('canvas')
+  const ctx = out.getContext('2d')
+
+  /** Direction from the target to the camera: 35° right of front, 28° above the horizon. */
+  const AZIMUTH = THREE.MathUtils.degToRad(35)
+  const ELEVATION = THREE.MathUtils.degToRad(28)
+  const DIR = new THREE.Vector3(Math.sin(AZIMUTH) * Math.cos(ELEVATION), Math.sin(ELEVATION), Math.cos(AZIMUTH) * Math.cos(ELEVATION))
+
+  window.renderThumb = async (url, size) => {
+    const gltf = await loader.loadAsync(url)
+    const root = gltf.scene
+    root.traverse((o) => {
+      if (o.isMesh && o.material?.name === 'flame') o.material.emissiveIntensity = 1.4
+    })
+    scene.add(root)
+    const box = new THREE.Box3().setFromObject(root, true)
+    const centre = box.getCenter(new THREE.Vector3())
+    // Fit the eight box corners in view: project them onto the camera plane and size the frame.
+    camera.position.copy(centre).addScaledVector(DIR, 100)
+    camera.lookAt(centre)
+    camera.updateMatrixWorld()
+    const inv = camera.matrixWorldInverse
+    let half = 0
+    for (let i = 0; i < 8; i++) {
+      const p = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).applyMatrix4(inv)
+      half = Math.max(half, Math.abs(p.x), Math.abs(p.y))
+    }
+    const fov = THREE.MathUtils.degToRad(camera.fov / 2)
+    const radius = box.getBoundingSphere(new THREE.Sphere()).radius
+    const dist = (half * 1.08) / Math.tan(fov) + radius
+    camera.position.copy(centre).addScaledVector(DIR, dist)
+    camera.near = Math.max(0.01, dist - radius * 2)
+    camera.far = dist + radius * 2
+    camera.lookAt(centre)
+    camera.updateProjectionMatrix()
+    renderer.render(scene, camera)
+    scene.remove(root)
+    out.width = size
+    out.height = size
+    ctx.clearRect(0, 0, size, size)
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(renderer.domElement, 0, 0, size, size)
+    return out.toDataURL('image/webp', 0.86)
+  }
+  window.ready = true
+</script>

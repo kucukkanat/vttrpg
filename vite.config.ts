@@ -97,7 +97,8 @@ export default defineConfig(({ command }) => ({
           {
             urlPattern: ({ url }) => url.pathname.includes('/library/'),
             handler: 'CacheFirst',
-            options: { cacheName: 'library', expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+            // The curated library alone is about 300 models plus a thumbnail each.
+            options: { cacheName: 'library', expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 30 } },
           },
           {
             urlPattern: ({ url }) => url.pathname.includes('/packs/') && url.pathname.includes('/creatures/'),
