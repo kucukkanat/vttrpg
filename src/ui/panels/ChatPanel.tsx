@@ -9,6 +9,8 @@ import { formatDay, formatTime, groupMessages, isChatMessage } from './chatGroup
 import { DiceRow } from '../dice/DiceFace'
 import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
+import { canSeeRoll, hiddenRollText } from '../rollMode'
+import { ConcentrationPrompt, DamageCardView, RollExtras, RollModeBar } from './RollCards'
 import './ChatPanel.css'
 
 const HELP = [
@@ -108,21 +110,26 @@ export function ChatPanel({ controller }: { controller: GameController }) {
 
   const body = (m: ChatMessage) => {
     if (m.kind !== 'roll' || !m.roll) return m.text
+    // GM-only and blind rolls: the result is not shown to those who may not read it (see docs/ROLLS.md).
+    if (!canSeeRoll(m, me, gm)) return <span className="roll-hidden">{hiddenRollText(m, me)}</span>
     const r = m.roll
     const label = rollLabel(m.text, r.formula)
     const outcome = rollOutcome(r.outcome)
     // The visual card is hidden from screen readers; the role="img" label speaks the full result.
     return (
-      <span className="roll-card" role="img" aria-label={rollSummary(r, m.text)}>
-        <span className="roll-head" aria-hidden="true">
-          {label && <span className="roll-label">{label}</span>}
-          <span className="roll-formula">{r.formula}</span>
+      <span className="roll-wrap">
+        <span className="roll-card" role="img" aria-label={rollSummary(r, m.text)}>
+          <span className="roll-head" aria-hidden="true">
+            {label && <span className="roll-label">{label}</span>}
+            <span className="roll-formula">{r.formula}</span>
+          </span>
+          <span className="roll-line" aria-hidden="true">
+            <DiceRow dice={dieViews(r.formula, r.dice)} />
+            <span className="roll-total">{r.total}</span>
+            {outcome && <span className={`roll-tag ${outcome.success ? 'ok' : 'bad'}${outcome.critical ? ' crit' : ''}`}>{outcomeText(outcome)}</span>}
+          </span>
         </span>
-        <span className="roll-line" aria-hidden="true">
-          <DiceRow dice={dieViews(r.formula, r.dice)} />
-          <span className="roll-total">{r.total}</span>
-          {outcome && <span className={`roll-tag ${outcome.success ? 'ok' : 'bad'}${outcome.critical ? ' crit' : ''}`}>{outcomeText(outcome)}</span>}
-        </span>
+        <RollExtras m={m} controller={controller} />
       </span>
     )
   }
@@ -140,7 +147,11 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           if (b.kind === 'line') {
             // System lines (skill messages) and local notices keep their plain single-line form.
             return isChatMessage(b.line) ? (
-              <div key={b.key} className={`msg ${b.line.kind}`}><span className="who">{name(b.line.author)}</span> {b.line.text}</div>
+              <div key={b.key} className={`msg ${b.line.kind}`}>
+                <span className="who">{name(b.line.author)}</span> {b.line.text}
+                {b.line.damage && <DamageCardView m={b.line} controller={controller} />}
+                {b.line.concentration && <> <ConcentrationPrompt m={b.line} controller={controller} /></>}
+              </div>
             ) : (
               <div key={b.key} className="msg system notice">{b.line.text}</div>
             )
@@ -163,6 +174,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           </div>
         )}
       </div>
+      <RollModeBar compact />
       <form className="chatform" onSubmit={(e) => { e.preventDefault(); void send() }}>
         <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Whisper to">
           <option value="">All</option>

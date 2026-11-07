@@ -222,21 +222,41 @@ function InitiativeButton({ controller, token, active, inOrder }: { controller: 
 /** GM: toggle the pack's conditions on the token. */
 function ConditionsCard({ controller, token, onClose }: { controller: GameController; token: Token; onClose(): void }) {
   const defs = controller.rules?.pack.conditions ?? []
-  const set = (ids: string[]) => void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions: ids } })
+  // Optional duration for the next condition switched on: whole turns of this token, ticking at the end (or start) of its turn.
+  const [turns, setTurns] = useState('')
+  const [tick, setTick] = useState<'end' | 'start'>('end')
+  const toggle = (id: string, on: boolean) => {
+    const conditions = on ? token.conditions.filter((x) => x !== id) : [...token.conditions, id]
+    const effects = { ...(token.effects ?? {}) }
+    const n = Math.floor(Number(turns))
+    if (on) delete effects[id]
+    else if (n >= 1) effects[id] = { remaining: n, ...(tick === 'start' ? { tick } : {}) }
+    void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions, effects } })
+  }
   return (
     <div className="dock-card" role="dialog" aria-label={`${token.name}'s conditions`}>
       <div className="token-skills-head"><strong>{token.name}'s conditions</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}>✕</button></div>
       {defs.length === 0 && <p className="muted small">This ruleset has no conditions.</p>}
+      {defs.length > 0 && (
+        <div className="condition-duration">
+          <label className="small">Lasts <input type="number" min={1} inputMode="numeric" value={turns} onChange={(e) => setTurns(e.target.value)} placeholder="∞" aria-label="Turns the next condition lasts" style={{ width: '4em' }} /> turns</label>
+          <select value={tick} onChange={(e) => setTick(e.target.value as 'end' | 'start')} aria-label="Count down at">
+            <option value="end">ends at end of turn</option>
+            <option value="start">ends at start of turn</option>
+          </select>
+        </div>
+      )}
       <div className="condition-chips">
         {defs.map((c) => {
           const on = token.conditions.includes(c.id)
           const { color, label } = conditionStyle(defs, c.id)
+          const left = token.effects?.[c.id]?.remaining
           return (
             <button key={c.id} type="button" className={`tiny condition-chip${on ? ' on' : ''}`} aria-pressed={on} title={c.description}
               style={{ '--cond': color } as CSSProperties}
-              onClick={() => set(on ? token.conditions.filter((x) => x !== c.id) : [...token.conditions, c.id])}>
+              onClick={() => toggle(c.id, on)}>
               <span className="condition-chip-badge" aria-hidden="true">{label}</span>
-              <span className="condition-chip-name">{c.name}</span>
+              <span className="condition-chip-name">{c.name}{left !== undefined && on ? ` · ${left}` : ''}</span>
             </button>
           )
         })}

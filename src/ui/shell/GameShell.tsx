@@ -30,6 +30,7 @@ import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
+import { canSeeRoll } from '../rollMode'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
 // the shell's chrome renders before it downloads. Both are module-level so the components keep
@@ -105,7 +106,8 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   // Dice: animate the most recent roll once; clear the tray a few seconds after it settles.
   const [shownRoll, setShownRoll] = useState<string | null>(null)
-  const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length) ?? null, [chat])
+  // Hidden rolls (GM only, blind) neither animate nor toast for those who may not read them.
+  const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length && canSeeRoll(m, controller.pubkey, controller.connection.gm)) ?? null, [chat, controller])
   useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
   const dice = shownRoll ? (
     <Suspense fallback={null}>
