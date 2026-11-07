@@ -3,7 +3,7 @@ import type { Character, CreatureTemplate, Token } from '@/core/doc'
 import type { CreatureConfig, CreatureEntry, EncounterRules } from '@/core/pack'
 import type { CharacterId, TokenId } from '@/core/ids'
 import {
-  budgetFor, creatureSheetData, detectParty, difficultyArithmetic, difficultyLabel, encounterDifficulty, hpFormula, averageHp, mergeGroupInitiative,
+  budgetFor, creatureSheetData, detectParty, difficultyArithmetic, difficultyLabel, encounterDifficulty, hpFormula, averageHp, mergeGroupInitiative, placedGroups, rowGroup,
   migrateLegacyEncounters, resolveCreature, rowName, sortEncounters, templateFrom, tokenNames, newRow,
 } from './encounters'
 
@@ -100,9 +100,16 @@ describe('group initiative', () => {
   it('gives a group one score, replaces its old entries and keeps it together', () => {
     const t = (s: string) => s as TokenId
     const order = [{ token: t('pc1'), score: 15 }, { token: t('g1'), score: 3 }, { token: t('pc2'), score: 8 }]
-    expect(mergeGroupInitiative(order, [{ tokens: [t('g1'), t('g2'), t('g3')], score: 12 }])).toEqual([
-      { token: 'pc1', score: 15 }, { token: 'g1', score: 12 }, { token: 'g2', score: 12 }, { token: 'g3', score: 12 }, { token: 'pc2', score: 8 },
+    expect(mergeGroupInitiative(order, [{ id: 'enc', tokens: [t('g1'), t('g2'), t('g3')], score: 12 }, { id: 'boss', tokens: [t('b')], score: 8 }])).toEqual([
+      { token: 'pc1', score: 15 }, { token: 'g1', score: 12, group: 'enc' }, { token: 'g2', score: 12, group: 'enc' }, { token: 'g3', score: 12, group: 'enc' },
+      { token: 'pc2', score: 8 }, { token: 'b', score: 8 },
     ])
+  })
+  it('makes one group per placed row, dropping tokens that left the table', () => {
+    const t = (s: string) => s as TokenId
+    const e = { id: 'e1', placed: [t('a'), t('b'), t('c')], placedRows: { r1: [t('a'), t('b')], r2: [t('c')] } }
+    expect(placedGroups(e, (id) => id !== 'b')).toEqual([{ id: rowGroup('e1', 'r1'), tokens: ['a'] }, { id: rowGroup('e1', 'r2'), tokens: ['c'] }])
+    expect(placedGroups({ id: 'e1', placed: [t('a'), t('x')] }, (id) => id === 'a')).toEqual([{ id: rowGroup('e1', 'placed'), tokens: ['a'] }])
   })
 })
 

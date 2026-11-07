@@ -14,7 +14,7 @@ import { Swatch } from '../components'
 import { setHidden, removeTokens } from '../prep/npc'
 import {
   clearLegacyEncounters, detectParty, difficultyArithmetic, difficultyLabel, encounterDifficulty, encounterSize, ENCOUNTER_COLORS, FRIENDLY_COLOR,
-  loadLegacyEncounters, newEncounter, newRow, resolveCreature, rowName, sortEncounters,
+  loadLegacyEncounters, newEncounter, newRow, placedGroups, resolveCreature, rowName, sortEncounters,
 } from '../prep/encounters'
 import { groupInitiative, placeRows } from '../prep/placeCreatures'
 import { getPath } from '@/rules/expr'
@@ -59,25 +59,21 @@ export function Encounters({ controller, disabled, compendium, open, setOpen, on
       const { placed, missing } = await placeRows(controller, e.rows, compendium.creatures, templates)
       if (missing.length) pushToast({ text: `Skipped ${missing.join(', ')}: stat block not found` })
       const fresh = useGame.getState().encounters[e.id] ?? e
-      save({ ...fresh, placed: [...alive(fresh), ...placed.flatMap((p) => p.tokens)] })
+      const placedRows: Record<string, TokenId[]> = {}
+      for (const p of placed) placedRows[p.row.id] = [...(placedRows[p.row.id] ?? []), ...p.tokens]
+      // A new placement is what Join initiative groups; tokens of earlier ones stay in `placed`.
+      save({ ...fresh, placed: [...alive(fresh), ...placed.flatMap((p) => p.tokens)], placedRows })
     } catch (err) {
       pushToast({ text: `Place failed: ${err instanceof Error ? err.message : String(err)}` })
     } finally { setBusy(null) }
   }
 
-  /** Each row of the last placement rolls once and joins the turn order together. */
+  /** Each row of the last placement rolls once and joins the turn order as one initiative group. */
   const joinInitiative = async (e: Encounter) => {
     const s = useGame.getState()
-    const ids = alive(e)
-    const groups = new Map<string, TokenId[]>()
-    for (const id of ids) {
-      const t = s.tokens[id]!
-      // Tokens of one row share name stem, colour and sheet layout; group by colour + stem.
-      const key = `${t.color}|${t.name.replace(/\s+\d+$/, '')}`
-      groups.set(key, [...(groups.get(key) ?? []), id])
-    }
-    const n = await groupInitiative(controller, [...groups.values()])
-    if (n) pushToast({ text: `${n} token${n === 1 ? '' : 's'} joined initiative in ${groups.size} group${groups.size === 1 ? '' : 's'}`, key: 'initiative' })
+    const groups = placedGroups(e, (id) => !!s.tokens[id])
+    const n = await groupInitiative(controller, groups)
+    if (n) pushToast({ text: `${n} token${n === 1 ? '' : 's'} joined initiative in ${groups.length} group${groups.length === 1 ? '' : 's'}`, key: 'initiative' })
   }
 
   const add = () => {
@@ -105,7 +101,7 @@ export function Encounters({ controller, disabled, compendium, open, setOpen, on
                 {live.length > 0 && <>
                   <button onClick={() => void setHidden(controller, live, !anyHidden)}>{anyHidden ? 'Reveal all' : 'Hide all'}</button>
                   <button onClick={() => void joinInitiative(e)} title="One roll per row; the group shares it">Join initiative</button>
-                  <button className="danger" onClick={() => { void removeTokens(controller, live); save({ ...e, placed: [] }) }}>Remove</button>
+                  <button className="danger" onClick={() => { void removeTokens(controller, live); save({ ...e, placed: [], placedRows: {} }) }}>Remove</button>
                 </>}
               </div>
               {!isOpen && <DifficultyMeter controller={controller} encounter={e} compendium={compendium} compact />}

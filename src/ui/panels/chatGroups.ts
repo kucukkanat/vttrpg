@@ -74,3 +74,29 @@ export function formatDay(at: number, now = Date.now(), locale?: string): string
   const sameYear = d.getFullYear() === new Date(now).getFullYear()
   return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) }).format(d)
 }
+
+// ------------------------------------------------------------------ channels
+
+/** Log filters: everything, conversation, dice, combat results, and system lines. */
+export type ChatChannel = 'all' | 'chat' | 'rolls' | 'combat' | 'system'
+
+export const CHAT_CHANNELS: { id: ChatChannel; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'chat', label: 'Chat' },
+  { id: 'rolls', label: 'Rolls' },
+  { id: 'combat', label: 'Combat' },
+  { id: 'system', label: 'System' },
+]
+
+/** The channel a line belongs to. Skill results and encounter summaries are combat; local notices are system. */
+export function channelOf(line: ChatLine): Exclude<ChatChannel, 'all'> {
+  if (!isChatMessage(line)) return 'system'
+  if (line.kind === 'say' || line.kind === 'whisper') return 'chat'
+  if (line.kind === 'roll') return 'rolls'
+  return line.channel === 'combat' || line.summary ? 'combat' : 'system'
+}
+
+/** The lines shown under `channel`. */
+export function filterChannel<T extends ChatLine>(lines: readonly T[], channel: ChatChannel): T[] {
+  return channel === 'all' ? [...lines] : lines.filter((l) => channelOf(l) === channel)
+}

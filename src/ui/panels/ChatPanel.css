@@ -39,3 +39,22 @@
 .chat .roll-tag.crit { font-weight: 800; }
 .chat .roll-tag.crit.ok { background: var(--ok); color: var(--accent-fg); border-color: var(--ok); }
 .chat .roll-tag.crit.bad { background: var(--bad); color: var(--accent-fg); border-color: var(--bad); }
+
+/* Channel filter row above the log (chatGroups.ts CHAT_CHANNELS): one pill per channel. */
+.chat-channels { display: flex; gap: var(--sp-1); overflow-x: auto; scrollbar-width: none; padding-bottom: var(--sp-1); flex: none; }
+.chat-channels::-webkit-scrollbar { display: none; }
+.chat-channel {
+  flex: none; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600;
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+}
+.chat-channel.on { background: var(--panel-2); color: var(--fg); border-color: var(--accent); }
+@media (pointer: coarse) { .chat-channel { min-height: 44px; } }
+
+/* End-of-encounter summary card. */
+.chat .encounter-summary { display: grid; gap: var(--sp-1); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); color: var(--fg); }
+.chat .encounter-summary-head { font-weight: 700; color: var(--accent); }
+.chat .encounter-summary table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.chat .encounter-summary th, .chat .encounter-summary td { padding: 2px 4px; text-align: right; }
+.chat .encounter-summary thead th { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.chat .encounter-summary tbody th, .chat .encounter-summary thead th:first-child { text-align: left; font-weight: 600; overflow-wrap: anywhere; }
+.chat .encounter-summary tr.down th { color: var(--muted); }

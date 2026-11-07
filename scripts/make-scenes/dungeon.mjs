@@ -12,10 +12,10 @@
  *   SPAWN_enemy_brute  ( 0,    0, -6.75)  pillar hall
  */
 import {
-  CELL, block, box, collider, cylinder, fog, floorCollider, grid, group, mat, newScene, paint, spawn, torch,
+  CELL, block, box, collider, cylinder, fog, floorCollider, grid, group, mat, newScene, paint, palette, planeGeometry, spawn, torch,
   vertexMaterial, writeGlb,
 } from './lib.mjs'
-import { CylinderGeometry, Mesh, PlaneGeometry } from 'three'
+import { CylinderGeometry, Mesh } from 'three'
 
 // '#' floor, '.' solid rock. Columns are x (west to east), rows are z (north to south).
 const MAP = [
@@ -40,8 +40,8 @@ const cx = (i) => (i - (COLS - 1) / 2) * CELL // col 4 -> x 0
 const cz = (j) => (j - (ROWS - 1) / 2) * CELL // row 5.5 -> z 0
 const isFloor = (i, j) => i >= 0 && j >= 0 && i < COLS && j < ROWS && MAP[j][i] === '#'
 
-const rock = mat('#5b5650')
-const flagstone = mat('#444039', { roughness: 1 })
+const rock = mat(palette.rock)
+const flagstone = mat(palette.flagstone)
 
 const scene = newScene('dungeon', { ambient_preset: 'cave' })
 
@@ -54,7 +54,7 @@ for (let j = 0; j < ROWS; j++) {
     let k = i
     while (isFloor(k + 1, j)) k++
     const n = k - i + 1
-    const m = new Mesh(new PlaneGeometry(n * CELL, CELL), flagstone)
+    const m = new Mesh(planeGeometry(n * CELL, CELL, 0.75), flagstone)
     m.name = 'floor_strip'
     m.rotation.x = -Math.PI / 2
     m.position.set((cx(i) + cx(k)) / 2, 0, cz(j))
@@ -106,7 +106,7 @@ scene.add(walls, cols)
 // Pillars in the hall (cells stay walkable around them).
 const pillars = group('pillars')
 for (const [i, j] of [[2, 1], [6, 1], [2, 2], [6, 2]]) {
-  const p = new Mesh(paint(new CylinderGeometry(0.28, 0.34, H, 8), '#6a655e', '#8c877f'), vertexMaterial())
+  const p = new Mesh(paint(new CylinderGeometry(0.28, 0.34, H, 8), palette.stone, palette.stoneLight), vertexMaterial())
   p.name = 'pillar'
   p.position.set(cx(i), H / 2, cz(j))
   pillars.add(p)
@@ -115,17 +115,17 @@ for (const [i, j] of [[2, 1], [6, 1], [2, 2], [6, 2]]) {
 scene.add(pillars)
 
 // Dressing: an altar in the hall, a chest in the east room, rubble in the west room, a door at the entrance.
-scene.add(block('altar', [1.6, 0.9, 0.8], [cx(4), cz(0) + 0.1], mat('#3a3630')))
+scene.add(block('altar', [1.6, 0.9, 0.8], [cx(4), cz(0) + 0.1], mat(palette.altar)))
 scene.add(collider('altar', [1.6, 0.9, 0.8], [cx(4), cz(0) + 0.1]))
-scene.add(block('chest', [0.7, 0.5, 0.45], [cx(7), cz(6)], mat('#6b4a2e')))
-scene.add(box('chest_lid', [0.72, 0.12, 0.47], [cx(7), 0.56, cz(6)], mat('#8a6a3e')))
+scene.add(block('chest', [0.7, 0.5, 0.45], [cx(7), cz(6)], mat(palette.barkLight)))
+scene.add(box('chest_lid', [0.72, 0.12, 0.47], [cx(7), 0.56, cz(6)], mat(palette.counterTop)))
 for (const [dx, dz, r] of [[-0.4, 0.3, 0.25], [0.2, -0.4, 0.2], [0.5, 0.4, 0.18]]) {
-  const rubble = new Mesh(paint(new CylinderGeometry(r * 0.7, r, r * 0.8, 6), '#4a4640', '#75706a'), vertexMaterial())
+  const rubble = new Mesh(paint(new CylinderGeometry(r * 0.7, r, r * 0.8, 6), palette.rubble, palette.rubbleLight), vertexMaterial())
   rubble.name = 'rubble'
   rubble.position.set(cx(1) + dx, r * 0.4, cz(8) + dz)
   scene.add(rubble)
 }
-scene.add(box('entrance_door', [CELL - 0.1, 2.3, 0.1], [cx(4), 1.15, cz(11) + CELL / 2 - 0.2], mat('#3d2a17')))
+scene.add(box('entrance_door', [CELL - 0.1, 2.3, 0.1], [cx(4), 1.15, cz(11) + CELL / 2 - 0.2], mat(palette.charred)))
 
 // Two torches: one over the entrance corridor, one in the hall.
 for (const [name, pos] of [
@@ -149,4 +149,5 @@ scene.add(spawn('SPAWN_enemy_rat', [cx(1), cz(7)]))
 scene.add(spawn('SPAWN_enemy_brute', [cx(4), cz(1)]))
 scene.add(grid([cx(0), cz(0)], CELL, 'square'))
 
-await writeGlb(scene, 'dungeon.glb')
+// Floor strips and pillars are folded into one mesh per group.
+await writeGlb(scene, 'dungeon.glb', { merge: [floors, pillars] })

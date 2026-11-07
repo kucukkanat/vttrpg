@@ -33,6 +33,7 @@ function lazyPanel(load: () => Promise<PanelComponent>): PanelComponent {
 
 const PrepPanel = lazyPanel(() => import('./PrepPanel').then((m) => m.PrepPanel))
 const SkillEditorPanel = lazyPanel(() => import('./SkillEditorPanel').then((m) => m.SkillEditorPanel))
+const BuildPanel = lazyPanel(() => import('./BuildPanel').then((m) => m.BuildPanel))
 
 export interface PanelDef {
   id: string
@@ -67,6 +68,7 @@ export const PANELS: PanelDef[] = [
   { id: 'skills', title: 'Skills', short: 'Skills', glyph: 'spark', component: SkillsPanel, scope: 'all', side: 'right' },
   { id: 'chat', title: 'Chat', short: 'Chat', glyph: 'chat', component: ChatPanel, scope: 'all', side: 'right', fill: true, phoneSlot: 4, playerSlot: 2 },
   { id: 'journal', title: 'Journal', short: 'Journal', glyph: 'book', component: JournalPanel, scope: 'all', side: 'right', playerSlot: 3 },
+  { id: 'build', title: 'Build', short: 'Build', glyph: 'wall', component: BuildPanel, scope: 'gm', side: 'left' },
   { id: 'prep', title: 'Prep', short: 'Prep', glyph: 'toolbox', component: PrepPanel, scope: 'gm', side: 'left' },
   { id: 'skills-editor', title: 'Skill editor', short: 'Editor', glyph: 'wrench', component: SkillEditorPanel, scope: 'gm', side: 'right' },
 ]

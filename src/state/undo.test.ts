@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Intent } from '@/core/intents'
 import type { FogState, Note, Prop, Token } from '@/core/doc'
-import type { NoteId, PropId, SceneId, TokenId } from '@/core/ids'
+import type { LightId, NoteId, PrefabId, PropId, SceneId, TokenId, WallId } from '@/core/ids'
 import { bindUndoDispatcher, captureUndo, MAX_UNDO, recordUndo, undoLast, useUndo, type UndoSnapshot } from './undo'
 
 const scene = 'scene-1' as SceneId
@@ -26,6 +26,20 @@ const snapshot = (over: Partial<UndoSnapshot> = {}): UndoSnapshot => ({
 })
 
 describe('captureUndo', () => {
+  it('brings removed walls and doors, lights and prefabs back', () => {
+    const wall = { id: 'w1' as WallId, scene, a: { x: 0, z: 0 }, b: { x: 1, z: 0 } }
+    const door = { id: 'd1' as WallId, scene, a: { x: 1, z: 0 }, b: { x: 2, z: 0 }, door: { open: true } }
+    const light = { id: 'l1' as LightId, scene, position: { x: 0, y: 0, z: 0 }, radius: 3, color: '#fff' }
+    const prefab = { id: 'pf' as PrefabId, name: 'Hut', size: { x: 1, z: 1 }, cellSize: 1, props: [], walls: [], createdAt: 1 }
+    const s = snapshot({ walls: { [wall.id]: wall, [door.id]: door }, lights: { [light.id]: light }, prefabs: { [prefab.id]: prefab } })
+    const w = captureUndo({ type: 'wall.remove', walls: [wall.id, door.id, 'gone' as WallId] }, s, 1)
+    expect(w?.inverse).toEqual([{ type: 'wall.add', walls: [wall, door] }])
+    expect(w?.label).toBe('Removed 2 walls and doors')
+    expect(captureUndo({ type: 'wall.remove', walls: [door.id] }, s)?.label).toBe('Removed 1 door')
+    expect(captureUndo({ type: 'wall.remove', walls: ['gone' as WallId] }, s)).toBeNull()
+    expect(captureUndo({ type: 'light.remove', light: light.id }, s)?.inverse).toEqual([{ type: 'light.add', light }])
+    expect(captureUndo({ type: 'prefab.remove', prefab: prefab.id }, s)?.inverse).toEqual([{ type: 'prefab.upsert', prefab }])
+  })
   it('inverts token.remove into token.add with the same data', () => {
     const e = captureUndo({ type: 'token.remove', token: token.id }, snapshot(), 123)
     expect(e).toEqual({ label: 'Removed Rat Guard', subject: 'Rat Guard', inverse: [{ type: 'token.add', token }], at: 123 })

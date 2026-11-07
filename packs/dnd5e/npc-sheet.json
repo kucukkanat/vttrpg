@@ -66,6 +66,11 @@
           "label": "Hit points"
         },
         {
+          "kind": "number",
+          "bind": "temp_hp",
+          "label": "Temporary hit points"
+        },
+        {
           "kind": "text",
           "bind": "hp_dice",
           "label": "Hit dice"
@@ -350,23 +355,59 @@
         },
         {
           "kind": "text",
-          "bind": "vulnerabilities",
-          "label": "Vulnerabilities"
+          "bind": "vulnerabilities_text",
+          "label": "Vulnerabilities (stat block)"
         },
         {
           "kind": "text",
-          "bind": "resistances",
-          "label": "Resistances"
+          "bind": "resistances_text",
+          "label": "Resistances (stat block)"
         },
         {
           "kind": "text",
-          "bind": "immunities",
-          "label": "Immunities"
+          "bind": "immunities_text",
+          "label": "Immunities (stat block)"
         },
         {
           "kind": "text",
           "bind": "condition_immunities",
           "label": "Condition immunities"
+        },
+        {
+          "kind": "list",
+          "bind": "resistances",
+          "label": "Resistances (damage types, or all)",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Type"
+            }
+          ]
+        },
+        {
+          "kind": "list",
+          "bind": "vulnerabilities",
+          "label": "Vulnerabilities",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Type"
+            }
+          ]
+        },
+        {
+          "kind": "list",
+          "bind": "immunities",
+          "label": "Immunities",
+          "item": [
+            {
+              "kind": "text",
+              "bind": ".",
+              "label": "Type"
+            }
+          ]
         }
       ]
     },

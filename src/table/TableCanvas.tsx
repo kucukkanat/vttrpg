@@ -3,8 +3,8 @@
  * lighting and fog of war. Emits intents and presence through callbacks; never touches
  * networking or rules.
  *
- * Keys: G grid, C camera mode (local override), F first person (token mode), Esc deselect,
- * Delete removes the selected tokens (GM).
+ * Keys: G grid, C camera mode (local override), F first person (token mode), T tactical view
+ * (top-down; Q / E turn it 45°), Esc deselect, Delete removes the selected tokens (GM).
  * Mouse: drag a token to move it (snaps to cells; a selected token drags the whole selection), click
  * selects, Shift/Cmd-click adds to the selection, right-click opens the token menu, drag empty
  * space to orbit, wheel to zoom, right-drag to pan. Touch: one finger drags a token or orbits,
@@ -14,10 +14,13 @@
  * spot for every client (PingLayer; also a double-tap or a long touch on empty floor).
  * Edit mode (`tableState.editMode`, GM): the selection gets a gizmo (EditGizmo), scene nodes are
  * selectable, G / R / S pick translate / rotate / scale, Delete removes the selected prop.
+ * Rendering follows the device's graphics preset (graphics.ts): resolution, shadows, antialiasing
+ * and an idle frame-rate cap. A lost WebGL context pauses the table behind a notice and remounts
+ * the canvas once the browser gives the GPU back (or on Reload).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Box3, Vector3 } from 'three'
+import { Box3, Color, Fog, NeutralToneMapping, SRGBColorSpace, Vector3 } from 'three'
 import type { AssetRef } from '@/core/assets'
 import type { CameraMode, Scene, Token } from '@/core/doc'
 import type { GridSpec } from '@/core/geometry'
@@ -26,17 +29,21 @@ import type { Intent } from '@/core/intents'
 import type { Presence } from '@/core/presence'
 import { useGame } from '@/state/store'
 import { CameraRig } from './CameraRig'
+import { ambientLevels, fogColor, fogRange } from './atmosphere'
 import { canControl, defaultResolveAsset, TableContext, useTable, type TableContextValue, type ViewerInfo } from './context'
+import { BuildLayer, useDrawnBlocking } from './build/BuildLayer'
 import { EditGizmo } from './EditGizmo'
 import { sceneTransformMatrix, transformWalls } from './editing'
 import { FogOverlay } from './FogOverlay'
 import { cellKey, worldToCell, type Bounds2 } from './grid'
+import { frameDue, useGraphics, type GraphicsPreset } from './graphics'
 import { GridOverlay } from './GridOverlay'
 import { ImageFloor, type ImageFloorStatus } from './ImageFloor'
 import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
 import { Props } from './PropMesh'
 import { RangePreview } from './RangePreview'
+import { DeclaredActions } from './DeclaredActions'
 import { RulerLayer } from './RulerLayer'
 import { describeLoadError, disposeScene, loadSceneModel, type LoadedScene, type SceneValidationReport } from './sceneLoader'
 import { SceneModel } from './SceneModel'
@@ -45,6 +52,7 @@ import { clearSceneTransition, sceneTransitionEvent, setPreviewScene, setSceneEr
 import { stagedSummary, stageTargeting } from './targeting'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import './TargetingBar.css'
+import { toonMaterial } from './stylize'
 import { DragGhostMesh, TokenMesh } from './TokenMesh'
 import * as vfx from './vfx'
 import type { WallSegment } from './walls'
@@ -76,8 +84,17 @@ export interface TableCanvasProps {
 
 // Stable objects: R3F re-applies `camera` / `gl` props whenever the object identity changes.
 const CAMERA_OPTS = { fov: 50, near: 0.05, far: 500, position: [8, 8, 8] as [number, number, number] }
-const GL_OPTS = { antialias: true, powerPreference: 'high-performance' as const }
 const CANVAS_STYLE = { touchAction: 'none' } as const
+/**
+ * Renderer options per antialias setting. Tone mapping is chosen explicitly: Khronos PBR Neutral
+ * keeps the flat palette's hues and values (ACES, R3F's default, darkens and desaturates them).
+ */
+const GL_OPTS = {
+  on: { antialias: true, powerPreference: 'high-performance', toneMapping: NeutralToneMapping, toneMappingExposure: 1, outputColorSpace: SRGBColorSpace },
+  off: { antialias: false, powerPreference: 'default', toneMapping: NeutralToneMapping, toneMappingExposure: 1, outputColorSpace: SRGBColorSpace },
+} as const
+/** After the last input or table change, frames keep coming at the active rate this long. */
+const ACTIVE_MS = 2500
 
 /**
  * Picks the scene to show (the GM's preview, else the live scene) and runs the fade between scenes:
@@ -204,6 +221,9 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       switch (e.key) {
         case 'g': case 'G': ui.set({ showGrid: !ui.showGrid }); break
         case 'f': case 'F': ui.set({ firstPerson: !ui.firstPerson }); break
+        case 't': case 'T': ui.set({ tactical: !ui.tactical, firstPerson: false }); break
+        case 'q': case 'Q': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn - 1 }); break
+        case 'e': case 'E': if (ui.tactical) ui.set({ tacticalTurn: ui.tacticalTurn + 1 }); break
         case 'Delete': case 'Backspace': {
           const sel = useGame.getState().selection
           if (sel?.kind === 'prop' && gm) { e.preventDefault(); onIntent({ type: 'prop.remove', prop: sel.id }); setSelection(null) }
@@ -271,10 +291,13 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
   const sceneWallsKey = scene.walls ? JSON.stringify(scene.walls) : ''
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sceneWalls = useMemo<WallSegment[]>(() => scene.walls ?? [], [sceneWallsKey])
-  const walls = useMemo(
+  const baseWalls = useMemo(
     () => [...transformWalls(loaded?.walls ?? [], transform), ...sceneWalls, ...Object.values(propWalls).flat()],
     [loaded, transform, sceneWalls, propWalls],
   )
+  // Walls and doors drawn on the table (build tools); a closed door blocks like a wall.
+  const drawnWalls = useDrawnBlocking(sceneId)
+  const walls = useMemo(() => (drawnWalls.length ? [...baseWalls, ...drawnWalls] : baseWalls), [baseWalls, drawnWalls])
   useEffect(() => {
     const c = bounds3.getCenter(new Vector3())
     tableRuntime.sceneCenter = { x: c.x, y: floorY, z: c.z }
@@ -285,42 +308,62 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
     [bounds3],
   )
 
-  const ctx: TableContextValue = useMemo(
-    () => ({ sceneId, scene, grid, floorY, loaded, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve }),
-    [sceneId, scene, grid, floorY, loaded, viewer, onIntent, onPresence, resolve],
+  // The floor's own extent: the grid stops there.
+  const floorRect: Bounds2 = useMemo(
+    () => ({ minX: bounds3.min.x, minZ: bounds3.min.z, maxX: bounds3.max.x, maxZ: bounds3.max.z }),
+    [bounds3],
   )
+
+  const graphics = useGraphics()
+  const ctx: TableContextValue = useMemo(
+    () => ({ sceneId, scene, grid, floorY, loaded, walls, viewer: viewer ?? null, onIntent, onPresence, resolveAsset: resolve, graphics }),
+    [sceneId, scene, grid, floorY, loaded, walls, viewer, onIntent, onPresence, resolve, graphics],
+  )
+  // WebGL context loss (app switch on a phone, a GPU reset): notice while lost, then a fresh canvas.
+  const [glLost, setGlLost] = useState(false)
+  const [canvasKey, setCanvasKey] = useState(0)
+  const onContextLost = useCallback(() => setGlLost(true), [])
+  const remountCanvas = useCallback(() => { setGlLost(false); setCanvasKey((n) => n + 1) }, [])
+  const uncapped = graphics.idleFps === 0 && graphics.activeFps === 0
+  const background = fogColor(scene.darkness)
 
   // Orbit, or Eyes (first person from the followed token); a `cameraMode` prop pins it (dev stories).
   const firstPerson = useTableUi((s) => s.firstPerson)
   const mode: CameraMode = cameraMode ?? (firstPerson ? 'token' : 'orbit')
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background: '#0b0b10' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320, background }}>
       <Canvas
-        shadows="percentage"
-        dpr={[1, 1.5]}
+        key={`${canvasKey}:${graphics.antialias ? 'aa' : 'no-aa'}`}
+        shadows={graphics.shadows}
+        dpr={graphics.dpr}
+        frameloop={uncapped ? 'always' : 'demand'}
         camera={CAMERA_OPTS}
-        gl={GL_OPTS}
+        gl={graphics.antialias ? GL_OPTS.on : GL_OPTS.off}
         style={CANVAS_STYLE}
         onPointerMissed={(e) => { if (e.button === 0 && !targeting && performance.now() > ignoreMissUntil.current) setSelection(null); if (!targeting) pingMissed(e) }}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <color attach="background" args={['#0b0b10']} />
+        <Atmosphere darkness={scene.darkness} bounds={bounds3} />
+        {!uncapped && <FramePacer graphics={graphics} />}
+        <ContextGuard onLost={onContextLost} onRestored={remountCanvas} />
         <TableContext.Provider value={ctx}>
           {url && <SceneLoaderBridge key={modelRetry} url={url} onLoaded={handleLoaded} onError={handleLoadError} />}
           <Lighting darkness={scene.darkness} />
           {loaded ? <SceneModel loaded={loaded} /> : !image && <PlaceholderFloor bounds={bounds2} />}
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
-          {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} />}
+          {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} clip={floorRect} />}
           <Props sceneId={sceneId} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />
           {targeting && <TargetingLayer key={`${targeting.source}:${targeting.shape.kind}`} targeting={targeting} bounds={bounds2} />}
           {!targeting && <RulerLayer bounds={bounds2} />}
           {!targeting && <RangePreview />}
+          <DeclaredActions />
           <PingLayer bounds={bounds2} />
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
+          <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
           <EditGizmo />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />
           <CameraShake cellSize={grid.cellSize} />
@@ -331,6 +374,100 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
       {image && imageStatus?.kind === 'loading' && <Overlay>Loading map…</Overlay>}
       {image && imageStatus?.kind === 'error' && <MapImageError status={imageStatus} onRetry={retryImage} />}
       {targeting && <TargetingBar targeting={targeting} />}
+      {glLost && <ContextLostNotice onReload={remountCanvas} />}
+    </div>
+  )
+}
+
+/**
+ * Scene fog in the ambient tint, doubling as the background: it starts just past what the camera
+ * looks at and swallows the void beyond the diorama's far edge.
+ */
+function Atmosphere({ darkness, bounds }: { darkness: number; bounds: Box3 }) {
+  const scene = useThree((s) => s.scene)
+  const color = fogColor(darkness)
+  const fog = useMemo(() => new Fog(color, 30, 90), [color])
+  const radius = useMemo(() => {
+    const size = bounds.getSize(new Vector3())
+    return Math.hypot(size.x, size.z) / 2
+  }, [bounds])
+  useEffect(() => {
+    const bg = new Color(color)
+    scene.fog = fog
+    scene.background = bg
+    return () => { if (scene.fog === fog) scene.fog = null; if (scene.background === bg) scene.background = null }
+  }, [scene, fog, color])
+  useFrame(({ camera }) => {
+    const t = tableRuntime.cameraTarget
+    const d = t ? Math.hypot(camera.position.x - t.x, camera.position.y - t.y, camera.position.z - t.z) : 20
+    const r = fogRange(d, radius)
+    fog.near = r.near
+    fog.far = r.far
+  })
+  return null
+}
+
+/**
+ * Frame pacing for the `demand` frame loop: renders at the preset's active rate for a moment after
+ * any input or table change, then drops to the idle rate (flames still flicker, just slower).
+ */
+function FramePacer({ graphics }: { graphics: GraphicsPreset }) {
+  const invalidate = useThree((s) => s.invalidate)
+  const gl = useThree((s) => s.gl)
+  useEffect(() => {
+    let lastInput = performance.now()
+    let lastFrame = 0
+    let raf = 0
+    const poke = () => { lastInput = performance.now() }
+    const tick = (now: number) => {
+      const fps = now - lastInput < ACTIVE_MS ? graphics.activeFps : graphics.idleFps
+      if (frameDue(now, lastFrame, fps)) { lastFrame = now; invalidate() }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    const el = gl.domElement
+    const opts = { passive: true } as const
+    for (const type of ['pointerdown', 'pointermove', 'wheel'] as const) el.addEventListener(type, poke, opts)
+    window.addEventListener('keydown', poke)
+    const offGame = useGame.subscribe(poke)
+    const offUi = useTableUi.subscribe(poke)
+    return () => {
+      cancelAnimationFrame(raf)
+      for (const type of ['pointerdown', 'pointermove', 'wheel'] as const) el.removeEventListener(type, poke)
+      window.removeEventListener('keydown', poke)
+      offGame()
+      offUi()
+    }
+  }, [graphics, invalidate, gl])
+  return null
+}
+
+/** Reports WebGL context loss and restore. `preventDefault` tells the browser we want it back. */
+function ContextGuard({ onLost, onRestored }: { onLost(): void; onRestored(): void }) {
+  const gl = useThree((s) => s.gl)
+  useEffect(() => {
+    const el = gl.domElement
+    const lost = (e: Event) => { e.preventDefault(); onLost() }
+    const restored = () => onRestored()
+    el.addEventListener('webglcontextlost', lost)
+    el.addEventListener('webglcontextrestored', restored)
+    return () => { el.removeEventListener('webglcontextlost', lost); el.removeEventListener('webglcontextrestored', restored) }
+  }, [gl, onLost, onRestored])
+  return null
+}
+
+function ContextLostNotice({ onReload }: { onReload(): void }) {
+  return (
+    <div role="alert" style={{
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+      background: 'rgba(8,8,12,0.82)', color: '#f3ead8', fontSize: 14, textAlign: 'center', padding: 16,
+    }}>
+      <strong style={{ fontSize: 16 }}>The table paused</strong>
+      <span style={{ maxWidth: 360, opacity: 0.85 }}>The browser took the graphics back, which happens after switching apps. It should come back by itself.</span>
+      <button type="button" onClick={onReload} style={{
+        minHeight: 44, padding: '0 18px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
+        color: '#f3ead8', fontSize: 14, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+      }}>Reload the table</button>
     </div>
   )
 }
@@ -458,15 +595,18 @@ function SceneLoaderBridge({ url, onLoaded, onError }: { url: string; onLoaded(s
   return null
 }
 
+/** Cool ambient plus a warm-sky hemisphere, both scaled by darkness above a readable floor (atmosphere.ts). */
 function Lighting({ darkness }: { darkness: number }) {
-  const d = Math.min(1, Math.max(0, darkness))
+  const { ambient, hemisphere } = ambientLevels(darkness)
   return (
     <>
-      <ambientLight intensity={0.12 + 0.9 * (1 - d)} color="#cfd6ff" />
-      <hemisphereLight intensity={0.1 + 0.6 * (1 - d)} color="#f3ead8" groundColor="#2b241c" />
+      <ambientLight intensity={ambient} color="#cfd6ff" />
+      <hemisphereLight intensity={hemisphere} color="#f3ead8" groundColor="#2b241c" />
     </>
   )
 }
+
+const PLACEHOLDER_FLOOR = toonMaterial({ color: '#3a3630' })
 
 function PlaceholderFloor({ bounds }: { bounds: Bounds2 }) {
   const w = bounds.maxX - bounds.minX
@@ -474,7 +614,7 @@ function PlaceholderFloor({ bounds }: { bounds: Bounds2 }) {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[(bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2]} receiveShadow>
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial color="#3a3630" roughness={1} />
+      <primitive object={PLACEHOLDER_FLOOR} attach="material" />
     </mesh>
   )
 }

@@ -4,9 +4,9 @@
  */
 import { create } from 'zustand'
 import type * as Y from 'yjs'
-import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, Prop, Scene, Token } from '@/core/doc'
+import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
-import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from '@/core/ids'
+import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 
 /** What the local user has selected on the table. Tokens stay mirrored in `selectedToken`. */
@@ -47,6 +47,10 @@ export interface GameState {
   creatures: Record<string, CreatureTemplate>
   /** Prepared encounters. */
   encounters: Record<string, Encounter>
+  /** Drawn walls and doors of every scene (filter by `scene`). */
+  walls: Record<WallId, Wall>
+  prefabs: Record<PrefabId, Prefab>
+  lights: Record<LightId, PlacedLight>
   presence: Record<string, Presence>
   notices: LocalNotice[]
   pushNotice(text: string, at?: number): LocalNotice
@@ -65,7 +69,7 @@ export interface GameState {
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'creatures' | 'encounters'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters'>>): void
 }
 
 let noticeSeq = 0
@@ -84,6 +88,9 @@ export const useGame = create<GameState>((set) => ({
   initiative: null,
   creatures: {},
   encounters: {},
+  walls: {} as Record<WallId, Wall>,
+  prefabs: {} as Record<PrefabId, Prefab>,
+  lights: {} as Record<LightId, PlacedLight>,
   presence: {},
   notices: [],
   pushNotice: (text, at = Date.now()) => {
@@ -165,7 +172,10 @@ export function useEffectiveToken(pubkey: PlayerPubkey | string | null | undefin
 export function readInitiative(doc: Y.Doc): InitiativeState | null {
   const raw = doc.getMap('initiative').toJSON() as Partial<InitiativeState>
   if (!Array.isArray(raw.order)) return null
-  return { active: raw.active === true, round: raw.round ?? 0, turn: raw.turn ?? 0, order: raw.order }
+  const s: InitiativeState = { active: raw.active === true, round: raw.round ?? 0, turn: raw.turn ?? 0, order: raw.order }
+  if (raw.declared) s.declared = raw.declared
+  if (raw.log) s.log = raw.log
+  return s
 }
 
 /** Mirror a Y.Doc into the store. Returns an unsubscribe. */
@@ -185,6 +195,9 @@ export function bindDoc(doc: Y.Doc): () => void {
       initiative: readInitiative(doc),
       creatures: doc.getMap('creatures').toJSON() as Record<string, CreatureTemplate>,
       encounters: doc.getMap('encounters').toJSON() as Record<string, Encounter>,
+      walls: doc.getMap('walls').toJSON() as Record<WallId, Wall>,
+      prefabs: doc.getMap('prefabs').toJSON() as Record<PrefabId, Prefab>,
+      lights: doc.getMap('lights').toJSON() as Record<LightId, PlacedLight>,
     })
   }
   sync()

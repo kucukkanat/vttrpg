@@ -3,16 +3,22 @@
  *  - orbit: drei OrbitControls, clamped so the camera never goes under the floor
  *  - token: third-person shoulder camera following a token; F toggles first person.
  * In token mode a drag on empty space turns the camera, the wheel / pinch changes distance.
+ * Orbit has a tactical view (`tableState.tactical`, tactical.ts): the camera looks straight down,
+ * a drag pans, and the heading turns in 45° steps (Q / E, HUD). It starts from the HUD or T, or
+ * when the player keeps zooming out at the orbit limit; T or the HUD button ends it.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { Box3, MathUtils, MOUSE, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
+import { Box3, MathUtils, MOUSE, Spherical, TOUCH, Vector3, type Camera, type PerspectiveCamera } from 'three'
 import type { CameraMode, Token } from '@/core/doc'
 import { useGame } from '@/state/store'
 import { tableRuntime, useTableUi } from './tableState'
 import { castRay, type WallSegment } from './walls'
+import {
+  atZoomLimit, EXIT_PHI, nearestEquivalent, nearestTurn, orbitMaxDistance, TACTICAL_PHI, tacticalTheta, topDownDistance, wrapAngle,
+} from './tactical'
 
 export interface CameraRigProps {
   mode: CameraMode
@@ -34,11 +40,24 @@ interface RigState {
   settled: boolean
   lastMode: CameraMode | null
   lastFollow: string | null
+  /**
+   * Tactical view in progress: the angles the orbit controls are pinned to this frame, and while
+   * entering, the distance being eased towards. `exiting` tilts back up, then lets go.
+   */
+  pin: { phi: number; theta: number; dist: number | null; exiting: boolean } | null
 }
 
 const tmpDest = new Vector3()
 const tmpLook = new Vector3()
 const tmpDir = new Vector3()
+const tmpOffset = new Vector3()
+const ORBIT_MOUSE = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
+const ORBIT_TOUCH = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }
+// Tactical: dragging pans the map; the heading turns only in steps.
+const TACTICAL_MOUSE = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
+const TACTICAL_TOUCH = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }
+const tmpSpherical = new Spherical()
+const DEFAULT_MAX_POLAR = Math.PI / 2 - 0.08
 
 /** Frames the whole floor from ~50° above, far enough for both the vertical and horizontal FOV. */
 function overviewPose(bounds: Box3, floorY: number, camera?: Camera): { pos: Vector3; target: Vector3 } {
@@ -76,8 +95,18 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
   const [orbitReady, setOrbitReady] = useState(false)
 
   const rig = useRef<RigState>({
-    target: new Vector3(), yaw: 0, pitch: 0.42, dist: 3 * cellSize, orbitPose: null, settled: false, lastMode: null, lastFollow: null,
+    target: new Vector3(), yaw: 0, pitch: 0.42, dist: 3 * cellSize, orbitPose: null, settled: false, lastMode: null, lastFollow: null, pin: null,
   })
+  const tacticalWanted = useTableUi((s) => s.tactical)
+  const turn = useTableUi((s) => s.tacticalTurn)
+  const tactical = tacticalWanted && effectiveMode === 'orbit'
+  // Zoom limit relative to the scene: some room past the overview framing.
+  const sizeKey = `${bounds.min.x},${bounds.min.z},${bounds.max.x},${bounds.max.z}`
+  const maxDistance = useMemo(() => {
+    const pose = overviewPose(bounds, floorY, camera)
+    return orbitMaxDistance(pose.pos.distanceTo(pose.target), cellSize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizeKey, floorY, cellSize, camera])
 
   // Tell the HUD what the rig is doing (the pill highlights the effective mode, not the request).
   useEffect(() => {
@@ -109,6 +138,20 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     setOrbitReady(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest])
+
+  // A shared view (GM pull, a display following the GM): glide there in orbit mode; null frames the scene.
+  const viewRequest = useTableUi((s) => s.viewRequest)
+  useEffect(() => {
+    if (!viewRequest) return
+    useTableUi.getState().set({ viewRequest: undefined })
+    if (effectiveMode !== 'orbit') return
+    const r = rig.current
+    const p = viewRequest.pose
+    r.orbitPose = p ? { pos: new Vector3(p.pos.x, p.pos.y, p.pos.z), target: new Vector3(p.target.x, p.target.y, p.target.z) } : null
+    r.settled = false
+    setOrbitReady(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewRequest])
 
   // Mode / follow-target changes start a transition.
   useEffect(() => {
@@ -158,6 +201,77 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     controls.current?.update()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bounds, floorY])
+
+  // Tactical view on / off: pin the controls' angles and ease them (see the frame loop).
+  useEffect(() => {
+    const r = rig.current
+    const c = controls.current
+    if (tactical) {
+      const cur = c ? tmpSpherical.setFromVector3(tmpOffset.copy(camera.position).sub(c.target)) : null
+      const theta = cur ? cur.theta : 0
+      // Start at the 45° heading nearest the current one, so the view does not spin on entry.
+      const start = nearestTurn(theta)
+      if (useTableUi.getState().tacticalTurn !== start) useTableUi.getState().set({ tacticalTurn: start })
+      const size = bounds.getSize(new Vector3())
+      const pc = camera as PerspectiveCamera
+      const fit = pc.isPerspectiveCamera ? topDownDistance(size.x, size.z, (pc.fov * Math.PI) / 180, pc.aspect) : Math.max(size.x, size.z)
+      r.pin = { phi: cur?.phi ?? EXIT_PHI, theta, dist: Math.min(maxDistance, Math.max(cur?.radius ?? fit, fit)), exiting: false }
+    } else if (r.pin) {
+      r.pin.exiting = true
+      r.pin.dist = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tactical])
+
+  // Keep zooming out at the limit (wheel, or a pinch that keeps closing) and the view goes tactical.
+  useEffect(() => {
+    if (effectiveMode !== 'orbit') return
+    const el = gl.domElement
+    const atLimit = () => {
+      const c = controls.current
+      return !!c && atZoomLimit(camera.position.distanceTo(c.target), maxDistance)
+    }
+    const enter = () => {
+      const ui = useTableUi.getState()
+      if (!ui.tactical && !ui.drag && !ui.editDrag) ui.set({ tactical: true })
+    }
+    const onWheel = (e: WheelEvent) => { if (e.deltaY > 0 && atLimit()) enter() }
+    const touches = new Map<number, { x: number; y: number }>()
+    let spread = 0
+    const measure = () => {
+      const [a, b] = [...touches.values()]
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
+    }
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      spread = touches.size === 2 ? measure() : 0
+    }
+    const onMove = (e: PointerEvent) => {
+      const p = touches.get(e.pointerId)
+      if (!p) return
+      p.x = e.clientX; p.y = e.clientY
+      if (touches.size !== 2 || spread <= 0) return
+      const now = measure()
+      if (now < spread * 0.85) {
+        if (atLimit()) enter()
+        spread = now
+      } else if (now > spread) spread = now
+    }
+    const onUp = (e: PointerEvent) => { touches.delete(e.pointerId); spread = 0 }
+    el.addEventListener('wheel', onWheel, { passive: true })
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onUp)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onUp)
+    }
+  }, [effectiveMode, gl, camera, maxDistance])
 
   // Token-mode input: drag on empty space turns the camera; wheel / pinch zooms.
   useEffect(() => {
@@ -209,6 +323,37 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     }
   }, [effectiveMode, gl, cellSize])
 
+  /**
+   * Eases the pinned angles towards the tactical pose (or back up when exiting) and pins the
+   * controls to them; OrbitControls clamps the camera to the pin on its next update. While
+   * entering, the distance is eased too, by moving the camera along its offset.
+   */
+  const stepTactical = (r: RigState, c: OrbitControlsImpl, step: number) => {
+    const pin = r.pin!
+    const goalPhi = pin.exiting ? EXIT_PHI : TACTICAL_PHI
+    const goalTheta = nearestEquivalent(pin.theta, tacticalTheta(turn))
+    pin.phi += (goalPhi - pin.phi) * step
+    if (!pin.exiting) pin.theta += (goalTheta - pin.theta) * step
+    if (pin.exiting && Math.abs(pin.phi - goalPhi) < 0.01) { releasePin(r, c); return }
+    pin.theta = wrapAngle(pin.theta)
+    c.minPolarAngle = c.maxPolarAngle = pin.phi
+    c.minAzimuthAngle = c.maxAzimuthAngle = pin.theta
+    if (pin.dist !== null) {
+      tmpOffset.copy(camera.position).sub(c.target)
+      const d = tmpOffset.length()
+      const next = d + (pin.dist - d) * step
+      camera.position.copy(c.target).addScaledVector(tmpOffset.normalize(), next)
+      if (Math.abs(next - pin.dist) < 0.02 * cellSize) pin.dist = null
+    }
+  }
+  const releasePin = (r: RigState, c: OrbitControlsImpl) => {
+    r.pin = null
+    c.minPolarAngle = 0
+    c.maxPolarAngle = DEFAULT_MAX_POLAR
+    c.minAzimuthAngle = -Infinity
+    c.maxAzimuthAngle = Infinity
+  }
+
   const controlsEnabled = effectiveMode === 'orbit' && orbitReady && !dragging
   useFrame((_, dt) => {
     const r = rig.current
@@ -217,6 +362,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
     if (c && c.enabled !== controlsEnabled && !dragging) c.enabled = controlsEnabled
     const look = c && effectiveMode === 'orbit' ? c.target : r.target
     tableRuntime.cameraTarget = { x: look.x, y: look.y, z: look.z }
+    tableRuntime.cameraPosition = { x: camera.position.x, y: camera.position.y, z: camera.position.z }
     const step = 1 - Math.exp(-dt * (r.settled ? 10 : 4))
     if (effectiveMode === 'orbit') {
       if (!r.settled) {
@@ -232,6 +378,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
           setOrbitReady(true)
         }
       } else if (c) {
+        if (r.pin) stepTactical(r, c, step)
         // never under the floor
         const minY = floorY + 0.25 * cellSize
         if (camera.position.y < minY) camera.position.y = minY
@@ -239,6 +386,7 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
       }
       return
     }
+    if (r.pin && c) releasePin(r, c)
     if (!follow) return
     const base = tmpLook.set(follow.position.x, floorY, follow.position.z)
     const eye = 1.1 * cellSize * Math.max(0.5, follow.scale)
@@ -275,11 +423,12 @@ export function CameraRig({ mode, follow, bounds, floorY, cellSize, walls }: Cam
       enabled={controlsEnabled}
       enableDamping
       dampingFactor={0.12}
-      maxPolarAngle={Math.PI / 2 - 0.08}
+      maxPolarAngle={DEFAULT_MAX_POLAR}
       minDistance={cellSize}
-      maxDistance={80}
-      mouseButtons={{ LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }}
-      touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
+      maxDistance={maxDistance}
+      enableRotate={!tactical}
+      mouseButtons={tactical ? TACTICAL_MOUSE : ORBIT_MOUSE}
+      touches={tactical ? TACTICAL_TOUCH : ORBIT_TOUCH}
     />
   )
 }

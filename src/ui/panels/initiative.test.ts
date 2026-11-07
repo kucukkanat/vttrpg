@@ -5,7 +5,8 @@ import { createRulesEngine, loadPack, type LoadedPack } from '@/rules'
 import { fileFetch, loadMausritter, mouse } from '@/rules/test-helpers'
 import { rollFromSeed } from '@/dice/fair'
 import {
-  combatantName, combatants, concernsViewer, currentEntry, initiativeFormula, moveEntry, rollInitiative, seedFor, turnLabel, withScore,
+  combatantName, combatants, concernsViewer, currentEntry, encounterSummary, groupKey, initiativeFormula, joinAbove, lateJoin, leaveGroup, moveEntry, nameStem,
+  recentSheetInitiative, rollInitiative, seedFor, sheetInitiativeRoll, slotName, summaryHasNews, turnLabel, withScore, withSheetInitiative,
 } from './initiative'
 
 const me = 'me'.padEnd(64, '0') as PlayerPubkey
@@ -108,5 +109,106 @@ describe('labels', () => {
     expect(concernsViewer(pip, other, false)).toBe(false)
     expect(concernsViewer(pip, other, true)).toBe(true)
     expect(concernsViewer(undefined, me, false)).toBe(false)
+  })
+})
+
+describe('group initiative helpers', () => {
+  const g = (id: string, score: number, group: string) => ({ token: id as TokenId, score, group })
+  it('groups unowned copies of a creature by name stem', () => {
+    expect(nameStem('Goblin 3')).toBe('Goblin')
+    expect(nameStem('Goblin #12')).toBe('Goblin')
+    expect(nameStem('7')).toBe('7')
+    expect(groupKey({ name: 'Goblin 2' })).toBe('npc:goblin')
+    expect(groupKey({ name: 'Pip', owner: me })).toBeNull()
+  })
+  it('rolls once per group and shares the score', async () => {
+    const list = [t('Goblin 1'), t('Pip', { owner: me }), t('Goblin 2'), t('Rat')]
+    const order = await rollInitiative(list, {}, null, 'seed', { group: true })
+    expect(order[0]).toMatchObject({ group: 'npc:goblin' })
+    expect(order[2]).toMatchObject({ group: 'npc:goblin', score: order[0]!.score })
+    expect(order[1]!.group).toBeUndefined()
+    // A lone rat is no group.
+    expect(order[3]!.group).toBeUndefined()
+    const known = await rollInitiative([t('Pip', { owner: me })], {}, null, 'seed', { known: new Map([['Pip' as TokenId, 19]]) })
+    expect(known).toEqual([e('Pip', 19)])
+  })
+  it('a late joiner slots in by score or joins its group', () => {
+    const order = [e('pip', 18), g('Goblin 1', 12, 'npc:goblin'), g('Goblin 2', 12, 'npc:goblin'), e('rat', 4)]
+    expect(lateJoin(order, t('bat'), 10).map((x) => x.token)).toEqual(['pip', 'Goblin 1', 'Goblin 2', 'bat', 'rat'])
+    expect(lateJoin(order, t('Goblin 3'), 1)[3]).toEqual(g('Goblin 3', 12, 'npc:goblin'))
+    expect(lateJoin(order, t('pip'), 1)).toBe(order)
+  })
+  it('joins the slot above and leaves it again', () => {
+    const order = [e('a', 18), e('b', 12), e('c', 4)]
+    const joined = joinAbove(order, 2)
+    expect(joined).toEqual([e('a', 18), g('b', 12, 'g:b'), g('c', 12, 'g:b')])
+    expect(joinAbove(joined, 2)).toBe(joined)
+    expect(joinAbove(order, 0)).toBe(order)
+    expect(leaveGroup(joined, 'b' as TokenId)).toEqual([e('a', 18), e('c', 12), e('b', 12)])
+    expect(leaveGroup(order, 'a' as TokenId)).toBe(order)
+  })
+  it('scores a whole group at once and names its slot', () => {
+    const order = [e('pip', 18), g('g1', 12, 'x'), g('g2', 12, 'x')]
+    expect(withScore(order, 'g2' as TokenId, 20)).toEqual([g('g1', 20, 'x'), g('g2', 20, 'x'), e('pip', 18)])
+    const tokens = byId(t('g1', { name: 'Goblin 1' }), t('g2', { name: 'Goblin 2', hidden: true }))
+    expect(slotName(order.slice(1), tokens, true)).toBe('Goblin ×2')
+    expect(slotName(order.slice(1), tokens, false)).toBe('Goblin 1')
+    const s: InitiativeState = { active: true, round: 3, turn: 1, order }
+    expect(turnLabel(s, tokens, true)).toBe("Round 3 · Goblin ×2's turn")
+  })
+})
+
+describe('initiative from sheets', () => {
+  const pip = t('pip', { character: 'c1' as CharacterId, owner: me })
+  const pip2 = t('pip2', { character: 'c1' as CharacterId, scene: 'elsewhere' as SceneId })
+  const rat = t('rat', { character: 'c2' as CharacterId })
+  const tokens = byId(pip, pip2, rat)
+  const roll = (character: string, total: number, at = 100, text = 'Pip · Initiative') =>
+    ({ id: `${at}`, author: me, at, kind: 'roll' as const, text, character: character as CharacterId, roll: { formula: 'd20', seed: 's', dice: [], total } })
+  it('recognises an initiative roll made from a sheet', () => {
+    expect(sheetInitiativeRoll(roll('c1', 15))).toEqual({ character: 'c1', total: 15 })
+    expect(sheetInitiativeRoll(roll('c1', 15, 100, 'Pip · Stealth'))).toBeNull()
+    expect(sheetInitiativeRoll({ ...roll('c1', 15), character: undefined })).toBeNull()
+  })
+  it('collects recent rolls by token in the scene', () => {
+    const recent = recentSheetInitiative([roll('c1', 3, 10), roll('c1', 15, 100), roll('c2', 9, -1_000_000)], tokens, scene, 200)
+    expect([...recent]).toEqual([['pip', 15]])
+  })
+  it('updates a listed combatant or adds a late joiner', () => {
+    const s: InitiativeState = { active: true, round: 1, turn: 0, order: [e('rat', 10)] }
+    expect(withSheetInitiative(s, tokens, scene, 'c1' as CharacterId, 14)).toEqual({ order: [e('pip', 14), e('rat', 10)], joined: 'pip', updated: [] })
+    const listed: InitiativeState = { ...s, order: [e('rat', 10), e('pip', 3)] }
+    expect(withSheetInitiative(listed, tokens, scene, 'c1' as CharacterId, 12)).toEqual({ order: [e('pip', 12), e('rat', 10)], updated: ['pip'] })
+    expect(withSheetInitiative(listed, tokens, scene, 'c1' as CharacterId, 3)).toBeNull()
+    expect(withSheetInitiative({ ...s, active: false }, tokens, scene, 'c1' as CharacterId, 3)).toBeNull()
+    expect(withSheetInitiative(s, tokens, scene, 'zz' as CharacterId, 3)).toBeNull()
+  })
+})
+
+describe('encounterSummary', () => {
+  const tokens = byId(t('pip', { name: 'Pip' }), t('rat', { name: 'Rat', hidden: true }))
+  const s: InitiativeState = {
+    active: true, round: 3, turn: 0, order: [e('pip', 10), e('rat', 5)],
+    log: [
+      { source: 'pip' as TokenId, target: 'rat' as TokenId, resource: 'hp', delta: -4, round: 1 },
+      { source: 'rat' as TokenId, target: 'pip' as TokenId, resource: 'hp', delta: -2, round: 1 },
+      { source: 'pip' as TokenId, target: 'pip' as TokenId, resource: 'hp', delta: 1, round: 2 },
+      { source: 'pip' as TokenId, target: 'pip' as TokenId, resource: 'slots', delta: -1, round: 2 },
+      { source: 'pip' as TokenId, target: 'rat' as TokenId, resource: 'hp', delta: -3, ko: true, round: 3 },
+      { target: 'rat' as TokenId, resource: 'hp', delta: 2, round: 3 },
+    ],
+  }
+  it('adds up damage, healing and knockouts on the primary resource', () => {
+    const out = encounterSummary(s, tokens, 'hp', (id) => id === 'rat')!
+    expect(out.rounds).toBe(3)
+    expect(out.rows).toEqual([
+      { token: 'pip', name: 'Pip', dealt: 7, taken: 2, healed: 1, kos: 1 },
+      { token: 'rat', name: 'Rat', hidden: true, dealt: 2, taken: 7, healed: 2, kos: 0, down: true },
+    ])
+    expect(summaryHasNews(out)).toBe(true)
+  })
+  it('is null between encounters and quiet without a log', () => {
+    expect(encounterSummary({ ...s, active: false }, tokens)).toBeNull()
+    expect(summaryHasNews(encounterSummary({ ...s, log: undefined }, tokens))).toBe(false)
   })
 })

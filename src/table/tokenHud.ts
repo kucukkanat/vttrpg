@@ -4,7 +4,7 @@
  * around the disc. No three.js here so it stays testable.
  */
 import type { Character, Token } from '@/core/doc'
-import type { ConditionDef, ResourceDef } from '@/core/pack'
+import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
 
 export interface ResourceReading {
   current: number
@@ -53,6 +53,65 @@ export function hpBand(current: number, max: number): HpBand {
 
 export const HP_BAND_COLORS: Record<HpBand, string> = { high: '#5fd36b', mid: '#f2b33d', low: '#e0453a' }
 
+/**
+ * Glanceable combat state beyond the colour band: `bloodied` at half or less, `dead` at zero
+ * (the pack's primary resource; D&D Beyond's 50 % / 0 % rule). Null above half. It doubles as the
+ * non-colour backup for the HP band.
+ */
+export type VitalState = 'bloodied' | 'dead'
+
+export function vitalState(reading: ResourceReading | null | undefined): VitalState | null {
+  if (!reading || reading.max <= 0) return null
+  if (reading.current <= 0) return 'dead'
+  return reading.current / reading.max <= 0.5 ? 'bloodied' : null
+}
+
+/** Words for screen readers and tooltips. */
+export const VITAL_LABELS: Record<VitalState, string> = { bloodied: 'Bloodied', dead: 'Down' }
+
+/**
+ * The pack's armour-class-like attribute: id `ac`, an abbreviation `AC`, or a name such as
+ * "Armor Class" or "Defense". Undefined for packs without one (Mausritter), so nothing is shown.
+ */
+export function defenseAttribute(attributes: readonly AttributeDef[] | undefined): AttributeDef | undefined {
+  if (!attributes) return undefined
+  return (
+    attributes.find((a) => a.id === 'ac') ??
+    attributes.find((a) => a.abbr?.toUpperCase() === 'AC') ??
+    attributes.find((a) => /^(armou?r class|defen[cs]e)$/i.test(a.name))
+  )
+}
+
+/**
+ * The defense value on a sheet: the evaluated attribute (derived ones run through `evaluate`),
+ * else a stored number or `{ current }`. Null when unknown, so the badge is hidden.
+ */
+export function readDefense(
+  data: Record<string, unknown>,
+  attr: AttributeDef | undefined,
+  evaluate?: (expr: string) => unknown,
+): number | null {
+  if (!attr) return null
+  if (evaluate) {
+    try {
+      const v = evaluate(attr.derived ?? attr.id)
+      if (typeof v === 'number' && Number.isFinite(v)) return v
+    } catch { /* unknown identifiers on this sheet: fall back to the stored value */ }
+  }
+  const v = data[attr.id]
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (v && typeof v === 'object') {
+    const c = (v as { current?: unknown }).current
+    if (typeof c === 'number' && Number.isFinite(c)) return c
+  }
+  return null
+}
+
+/** Short badge text: the attribute's abbreviation, else "AC". */
+export function defenseAbbr(attr: AttributeDef): string {
+  return attr.abbr ?? (attr.id.length <= 3 ? attr.id.toUpperCase() : 'AC')
+}
+
 /** Bars up to this many points are split into pips; longer ones are a continuous fill. */
 export const MAX_PIPS = 12
 
@@ -66,6 +125,12 @@ export interface ConditionChip {
   label: string
   name: string
   color: string
+  /** Turns left when the condition has a duration (`Token.effects`). */
+  remaining?: number
+  /** The pack's category, for styling buffs and debuffs apart. */
+  category?: 'buff' | 'debuff' | 'neutral'
+  /** Held by someone's concentration. */
+  concentration?: boolean
 }
 
 /** "Shield of Faith" -> "SF", "Injured" -> "IN". */
@@ -82,7 +147,7 @@ export function chipLabel(name: string): string {
  * grey chip so nothing is silently dropped.
  */
 export function conditionChips(
-  token: Pick<Token, 'conditions'>,
+  token: Pick<Token, 'conditions'> & Partial<Pick<Token, 'effects'>>,
   character: Pick<Character, 'data'> | undefined,
   defs: readonly ConditionDef[],
 ): ConditionChip[] {
@@ -96,12 +161,17 @@ export function conditionChips(
   return ids.map((id) => {
     const i = defs.findIndex((d) => d.id === id)
     const def = i >= 0 ? defs[i]! : undefined
-    return {
+    const chip: ConditionChip = {
       id,
       label: chipLabel(def?.name ?? id),
       name: def?.name ?? id,
       color: i >= 0 ? CONDITION_PALETTE[i % CONDITION_PALETTE.length]! : UNKNOWN_CONDITION_COLOR,
     }
+    const effect = token.effects?.[id]
+    if (effect?.remaining !== undefined) chip.remaining = effect.remaining
+    if (effect?.concentration) chip.concentration = true
+    if (def?.category) chip.category = def.category
+    return chip
   })
 }
 

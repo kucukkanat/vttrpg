@@ -9,6 +9,10 @@
 export type { TableCanvasProps, TargetingProps, ViewerInfo } from './TableCanvas'
 export { resolveShape, tokensInShape, tokensInRange, cellsInShape, pointInShape } from './targeting'
 export type { ResolvedShape } from './targeting'
+export {
+  autoTier, GRAPHICS_LABELS, GRAPHICS_PRESETS, GRAPHICS_TIERS, readDeviceHints, resolveTier, setGraphicsSetting, useGraphics, useGraphicsSetting,
+} from './graphics'
+export type { GraphicsPreset, GraphicsSetting, GraphicsTier } from './graphics'
 export { loadSceneModel } from './sceneLoader'
 export type { LoadedScene, SceneValidationReport, WallSegment } from './sceneLoader'
 export { useTableUi, placementPoint, tableRuntime } from './tableState'

@@ -65,6 +65,25 @@ function sensesText(c) {
   return parts.join(', ')
 }
 
+/** Damage type ids of the pack's damage model (`pack.json` `damage.types`). */
+export const DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder']
+const PHYSICAL = new Set(['bludgeoning', 'piercing', 'slashing'])
+
+/**
+ * Damage type ids from a stat block's resistance, immunity or vulnerability text, for the pack's
+ * damage model. Physical types qualified by a clause ("from nonmagical attacks", "that aren't
+ * silvered") are left out, since the engine cannot tell magical attacks apart; the text keeps them.
+ * Open5e's structured lists are not used: they disagree with the text on several creatures.
+ */
+export function damageTypeList(display) {
+  const out = new Set()
+  for (const clause of String(display ?? '').toLowerCase().split(';')) {
+    const qualified = /nonmagical|non-magical|magic|silvered|adamantine|aren't|that is not|except/.test(clause)
+    for (const t of DAMAGE_TYPES) if (new RegExp(`\\b${t}\\b`).test(clause) && !(qualified && PHYSICAL.has(t))) out.add(t)
+  }
+  return DAMAGE_TYPES.filter((t) => out.has(t))
+}
+
 const ACTION_TYPES = { ACTION: 'action', BONUS_ACTION: 'bonus', REACTION: 'reaction', LEGENDARY_ACTION: 'legendary', LAIR_ACTION: 'lair' }
 
 const cells = (feet) => Math.max(1, Math.round(feet / 5))
@@ -95,7 +114,8 @@ export function parseDamage(text) {
     parts.push(normFormula(plus[2]))
     types.push(plus[3].toLowerCase())
   }
-  return { damage: parts.join('+'), type: [...new Set(types)].join(', ') }
+  // The damage model gives a row one type: the first (main) one; riders of another type share it.
+  return { damage: parts.join('+'), type: DAMAGE_TYPES.includes(types[0]) ? types[0] : undefined, types: [...new Set(types)] }
 }
 
 /** Area of effect named in a save action, in grid cells. */
@@ -133,7 +153,7 @@ export function parseAction(a) {
       out.cells = melee ? cells(reach ? Number(reach[1]) : 5) : cells(range ? Number(range[1]) : reach ? Number(reach[1]) : 5)
       out.damage = dmg.damage
       out.dice = diceOnly(dmg.damage) || dmg.damage
-      out.damage_type = dmg.type
+      if (dmg.type) out.damage_type = dmg.type
       return out
     }
   }
@@ -158,7 +178,7 @@ export function parseAction(a) {
     if (dmg) {
       out.kind = 'save'
       out.damage = dmg.damage
-      out.damage_type = dmg.type
+      if (dmg.type) out.damage_type = dmg.type
       out.half = /half (?:as much )?damage|Success:\s*Half/i.test(desc) ? 1 : 0
     } else out.kind = 'save-only'
     return out
@@ -210,9 +230,14 @@ export function creatureData(c) {
     speed_text: speedText(c.speed_all ?? c.speed),
     senses: sensesText(c),
     languages: String(c.languages?.as_string ?? '') || '—',
-    vulnerabilities: String(ri.damage_vulnerabilities_display ?? ''),
-    resistances: String(ri.damage_resistances_display ?? ''),
-    immunities: String(ri.damage_immunities_display ?? ''),
+    // Lists for the damage model; the stat block's wording stays in the *_text fields.
+    vulnerabilities: damageTypeList(ri.damage_vulnerabilities_display),
+    resistances: damageTypeList(ri.damage_resistances_display),
+    immunities: damageTypeList(ri.damage_immunities_display),
+    vulnerabilities_text: String(ri.damage_vulnerabilities_display ?? ''),
+    resistances_text: String(ri.damage_resistances_display ?? ''),
+    immunities_text: String(ri.damage_immunities_display ?? ''),
+    temp_hp: 0,
     condition_immunities: String(ri.condition_immunities_display ?? ''),
     traits: (c.traits ?? []).map((t) => ({ name: String(t.name ?? ''), desc: cleanText(t.desc) })),
     actions,

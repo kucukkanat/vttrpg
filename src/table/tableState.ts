@@ -107,6 +107,13 @@ export interface TableUiState {
   pending: Record<TokenId, PendingMove>
   /** Eyes: first person from the selected (or own) token; otherwise the camera orbits the table. */
   firstPerson: boolean
+  /**
+   * Tactical view: the orbit camera looks straight down and turns in 45° steps (`tacticalTurn`).
+   * Toggled by the HUD, the T key, or by zooming out against the orbit camera's limit.
+   */
+  tactical: boolean
+  /** Tactical view heading in 45° steps from the default (south) heading; Q / E turn it. */
+  tacticalTurn: number
   showGrid: boolean
   /** Cells the local viewer can currently see; null when fog is off (everything visible). */
   visible: ReadonlySet<string> | null
@@ -132,6 +139,11 @@ export interface TableUiState {
    */
   focusRequest?: { id: TokenId; n: number }
   focusToken(id: TokenId): void
+  /**
+   * One-shot request to glide the orbit camera to a pose (GM "pull everyone", a display following
+   * the GM); `pose` null frames the whole scene. The camera rig clears it once handled.
+   */
+  viewRequest?: { n: number; pose: { pos: Vec3; target: Vec3 } | null }
   /**
    * What the camera rig is actually doing, for the HUD: `mode` is the effective mode (token mode
    * falls back to orbit without a token to follow), `canFollow` whether a follow target exists.
@@ -163,6 +175,8 @@ export const useTableUi = create<TableUiState>((set) => ({
   multiSelect: false,
   pending: {} as Record<TokenId, PendingMove>,
   firstPerson: false,
+  tactical: false,
+  tacticalTurn: 0,
   showGrid: true,
   visible: null,
   targeting: null,
@@ -261,6 +275,11 @@ export function focusToken(id: TokenId): void {
   useTableUi.getState().focusToken(id)
 }
 
+/** Ask the camera rig to glide to `pose` (null: frame the whole scene). Leaves first person first. */
+export function requestView(pose: { pos: Vec3; target: Vec3 } | null): void {
+  useTableUi.setState((s) => ({ firstPerson: false, viewRequest: { n: (s.viewRequest?.n ?? 0) + 1, pose } }))
+}
+
 /** Marks `token` as moved-but-waiting; the controller calls this after the connection queued the move. */
 export function setPendingMove(token: TokenId, move: PendingMove): void {
   useTableUi.setState((s) => ({ pending: { ...s.pending, [token]: move } }))
@@ -290,8 +309,9 @@ export function setSceneError(scene: SceneId, error: string | null): void {
  * Non-reactive values the canvas publishes for hosts (where the camera looks, where the scene
  * is), so a panel can place a new prop somewhere sensible without subscribing to the render loop.
  */
-export const tableRuntime: { cameraTarget: Vec3 | null; sceneCenter: Vec3 | null; floorY: number } = {
+export const tableRuntime: { cameraTarget: Vec3 | null; cameraPosition: Vec3 | null; sceneCenter: Vec3 | null; floorY: number } = {
   cameraTarget: null,
+  cameraPosition: null,
   sceneCenter: null,
   floorY: 0,
 }

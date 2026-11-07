@@ -9,7 +9,7 @@ import { DataTexture, LinearFilter, NoColorSpace, RedFormat, ShaderMaterial, Uns
 import { useGame } from '@/state/store'
 import type { Token } from '@/core/doc'
 import type { Bounds2 } from './grid'
-import { revealsFor, useTable } from './context'
+import { revealsFor, seesThrough, useTable } from './context'
 import { useTableUi } from './tableState'
 import { ALL_CELLS, computeVisibleCells, exploredCells, fogRasterLayout, fogStrength, isFogEnabled, rasterizeFog, type CellSet, type Viewer2D } from './vision'
 import type { WallSegment } from './walls'
@@ -63,16 +63,14 @@ export function FogOverlay({ bounds, walls, brightFloor = false }: { bounds: Bou
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [grid, revealTokens, walls, drag],
   )
-  // What this viewer sees: GM sees through every token; players only through their own.
+  // What this viewer sees: GM sees through every token, a table display through every player's,
+  // players only through their own (see `seesThrough`).
   const visibleDisplay = useMemo(() => {
-    if (!viewer || viewer.isGm) {
-      const others = sceneTokens.filter((t) => !revealsFor(viewer, t))
-      if (others.length === 0) return visibleReveal
-      const out = new Set(visibleReveal)
-      for (const k of computeVisibleCells(grid, others.map(position), walls)) out.add(k)
-      return out
-    }
-    return visibleReveal
+    const others = sceneTokens.filter((t) => seesThrough(viewer, t) && !revealsFor(viewer, t))
+    if (others.length === 0) return visibleReveal
+    const out = new Set(visibleReveal)
+    for (const k of computeVisibleCells(grid, others.map(position), walls)) out.add(k)
+    return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, sceneTokens, viewer, visibleReveal, walls, drag])
 

@@ -1,4 +1,7 @@
-/** Square or hex grid lines drawn just above the floor. */
+/**
+ * Square or hex grid lines drawn just above the floor, clipped to the scene's floor so the grid
+ * stops where the diorama ends instead of running on into the void.
+ */
 import { useEffect, useMemo } from 'react'
 import { BufferGeometry, Float32BufferAttribute } from 'three'
 import type { GridSpec } from '@/core/geometry'
@@ -6,7 +9,26 @@ import { cellsInBounds, hexCorners, worldToCell, type Bounds2 } from './grid'
 
 const noRaycast = () => undefined
 
-export function buildGridGeometry(grid: GridSpec, bounds: Bounds2): BufferGeometry {
+/**
+ * Clips the segment (ax, az)-(bx, bz) to the rectangle (Liang-Barsky). Returns the clipped end
+ * points, or null when nothing of it is inside.
+ */
+export function clipSegment(ax: number, az: number, bx: number, bz: number, r: Bounds2): [number, number, number, number] | null {
+  const dx = bx - ax, dz = bz - az
+  let t0 = 0, t1 = 1
+  const edges: [number, number][] = [[-dx, ax - r.minX], [dx, r.maxX - ax], [-dz, az - r.minZ], [dz, r.maxZ - az]]
+  for (const [p, q] of edges) {
+    if (Math.abs(p) < 1e-12) { if (q < 0) return null; continue }
+    const t = q / p
+    if (p < 0) { if (t > t1) return null; if (t > t0) t0 = t }
+    else { if (t < t0) return null; if (t < t1) t1 = t }
+  }
+  if (t1 - t0 < 1e-9) return null
+  return [ax + dx * t0, az + dz * t0, ax + dx * t1, az + dz * t1]
+}
+
+/** Grid lines covering `bounds`; with `clip`, every line is cut to that rectangle. */
+export function buildGridGeometry(grid: GridSpec, bounds: Bounds2, clip?: Bounds2): BufferGeometry {
   const pts: number[] = []
   if (grid.type === 'square') {
     const s = grid.cellSize
@@ -39,13 +61,22 @@ export function buildGridGeometry(grid: GridSpec, bounds: Bounds2): BufferGeomet
       }
     }
   }
+  let out = pts
+  if (clip) {
+    out = []
+    for (let i = 0; i < pts.length; i += 6) {
+      const c = clipSegment(pts[i]!, pts[i + 2]!, pts[i + 3]!, pts[i + 5]!, clip)
+      if (c) out.push(c[0], 0, c[1], c[2], 0, c[3])
+    }
+  }
   const geo = new BufferGeometry()
-  geo.setAttribute('position', new Float32BufferAttribute(pts, 3))
+  geo.setAttribute('position', new Float32BufferAttribute(out, 3))
   return geo
 }
 
-export function GridOverlay({ grid, bounds, floorY }: { grid: GridSpec; bounds: Bounds2; floorY: number }) {
-  const geometry = useMemo(() => buildGridGeometry(grid, bounds), [grid, bounds])
+/** `clip`: the floor's extent; lines stop at it. Without one they cover whole cells of `bounds`. */
+export function GridOverlay({ grid, bounds, floorY, clip }: { grid: GridSpec; bounds: Bounds2; floorY: number; clip?: Bounds2 }) {
+  const geometry = useMemo(() => buildGridGeometry(grid, bounds, clip), [grid, bounds, clip])
   useEffect(() => () => geometry.dispose(), [geometry])
   if (grid.type === 'none') return null
   return (

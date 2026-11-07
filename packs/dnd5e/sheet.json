@@ -373,6 +373,11 @@
           "label": "Hit points"
         },
         {
+          "kind": "number",
+          "bind": "temp_hp",
+          "label": "Temporary hit points"
+        },
+        {
           "kind": "resource",
           "bind": "hit_dice",
           "label": "Hit dice"
@@ -621,6 +626,30 @@
               "label": "Feature"
             }
           ]
+        }
+      ]
+    },
+    {
+      "title": "Defenses",
+      "columns": 3,
+      "fields": [
+        {
+          "kind": "list",
+          "bind": "resistances",
+          "label": "Resistances (damage types, or all)",
+          "item": [{ "kind": "text", "bind": ".", "label": "Type" }]
+        },
+        {
+          "kind": "list",
+          "bind": "vulnerabilities",
+          "label": "Vulnerabilities",
+          "item": [{ "kind": "text", "bind": ".", "label": "Type" }]
+        },
+        {
+          "kind": "list",
+          "bind": "immunities",
+          "label": "Immunities",
+          "item": [{ "kind": "text", "bind": ".", "label": "Type" }]
         }
       ]
     },

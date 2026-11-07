@@ -1,6 +1,6 @@
 /** The Open5e to pack conversion behind `npm run creatures` (scripts/build-creatures). */
 import { describe, expect, it } from 'vitest'
-import { cleanText, creatureData, diceOnly, parseAction, parseDamage, pbForCr } from './convert.mjs'
+import { cleanText, creatureData, damageTypeList, diceOnly, parseAction, parseDamage, pbForCr } from './convert.mjs'
 
 describe('Open5e creature conversion', () => {
   it('proficiency bonus follows challenge rating', () => {
@@ -8,10 +8,11 @@ describe('Open5e creature conversion', () => {
   })
 
   it('reads damage with riders, skipping conditional ones', () => {
-    expect(parseDamage('Hit: 5 (1d6 + 2) slashing damage.')).toEqual({ damage: '1d6+2', type: 'slashing' })
-    expect(parseDamage('13 (1d10 + 8) Slashing damage plus 5 (2d4) Fire damage.')).toEqual({ damage: '1d10+8+2d4', type: 'slashing, fire' })
-    expect(parseDamage('5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage.')).toEqual({ damage: '1d6+2', type: 'slashing' })
-    expect(parseDamage('Hit: 1 piercing damage.')).toEqual({ damage: '1', type: 'piercing' })
+    expect(parseDamage('Hit: 5 (1d6 + 2) slashing damage.')).toEqual({ damage: '1d6+2', type: 'slashing', types: ['slashing'] })
+    // One type per damage row: the main one; the rider's type is kept in `types`.
+    expect(parseDamage('13 (1d10 + 8) Slashing damage plus 5 (2d4) Fire damage.')).toEqual({ damage: '1d10+8+2d4', type: 'slashing', types: ['slashing', 'fire'] })
+    expect(parseDamage('5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage.')).toMatchObject({ damage: '1d6+2', type: 'slashing' })
+    expect(parseDamage('Hit: 1 piercing damage.')).toMatchObject({ damage: '1', type: 'piercing' })
     expect(diceOnly('1d10+8+2d4')).toBe('1d10+2d4')
   })
 
@@ -30,6 +31,14 @@ describe('Open5e creature conversion', () => {
       .toMatchObject({ kind: 'save', ability: 'dex', dc: 11, shape: 'line', cells: 6, half: 1 })
     expect(parseAction({ name: 'Gaze', action_type: 'REACTION', desc: 'Wisdom Saving Throw: DC 15, one creature within 30 feet. Failure: The target has the Frightened condition.' }))
       .toMatchObject({ kind: 'save-only', type: 'reaction', ability: 'wis', shape: 'single', cells: 6 })
+  })
+
+  it('turns resistance and immunity text into damage type ids, leaving out qualified physical damage', () => {
+    expect(damageTypeList('necrotic, poison')).toEqual(['necrotic', 'poison'])
+    expect(damageTypeList('cold; bludgeoning, piercing, and slashing from nonmagical attacks')).toEqual(['cold'])
+    expect(damageTypeList("bludgeoning, piercing, and slashing from nonmagical attacks that aren't silvered")).toEqual([])
+    expect(damageTypeList('Bludgeoning, Fire')).toEqual(['bludgeoning', 'fire'])
+    expect(damageTypeList('')).toEqual([])
   })
 
   it('strips markup left over from cross-references', () => {

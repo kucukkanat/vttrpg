@@ -6,8 +6,10 @@
  */
 import type { Character, CreatureTemplate, Encounter, EncounterRow, Token } from '@/core/doc'
 import type { CreatureConfig, CreatureEntry, EncounterRules } from '@/core/pack'
+import type { InitiativeEntry } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import { getPath, setPath } from '@/rules/expr'
+import { sortInitiative } from '@/state/initiative'
 
 export type { Encounter, EncounterRow }
 
@@ -240,15 +242,27 @@ export function difficultyArithmetic(d: Difficulty): string {
 
 // ----------------------------------------------------------------- initiative
 
+/** Initiative group id of one encounter row: its tokens share a score and a slot. */
+export const rowGroup = (encounter: string, row: string): string => `encounter:${encounter}:${row}`
+
 /**
- * A group joining the turn order: every token in `groups` gets its group's single score, the
- * tokens already listed are replaced, and the order is sorted highest first (ties keep order,
- * so a group stays together).
+ * Rows joining the turn order: every token of a group gets the group's single score and its
+ * `group` id (a lone token acts alone), tokens already listed are replaced, and the order is
+ * sorted the way `initiative.start` sorts it, which keeps each group in one slot.
  */
-export function mergeGroupInitiative(order: { token: TokenId; score: number }[], groups: { tokens: TokenId[]; score: number }[]): { token: TokenId; score: number }[] {
+export function mergeGroupInitiative(order: InitiativeEntry[], groups: { id: string; tokens: TokenId[]; score: number }[]): InitiativeEntry[] {
   const joining = new Set(groups.flatMap((g) => g.tokens))
-  const next = [...order.filter((e) => !joining.has(e.token)), ...groups.flatMap((g) => g.tokens.map((token) => ({ token, score: g.score })))]
-  return next.map((e, i) => ({ e, i })).sort((a, b) => b.e.score - a.e.score || a.i - b.i).map(({ e }) => e)
+  const added = groups.flatMap((g) => g.tokens.map((token): InitiativeEntry => (g.tokens.length > 1 ? { token, score: g.score, group: g.id } : { token, score: g.score })))
+  return sortInitiative([...order.filter((e) => !joining.has(e.token)), ...added])
+}
+
+/**
+ * The groups of an encounter's last placement that are still on the table: one per row
+ * (`placedRows`); encounters placed before rows were recorded form one group of everything.
+ */
+export function placedGroups(e: Pick<Encounter, 'id' | 'placed' | 'placedRows'>, alive: (id: TokenId) => boolean): { id: string; tokens: TokenId[] }[] {
+  const rows = e.placedRows ? Object.entries(e.placedRows) : [['placed', e.placed] as [string, TokenId[]]]
+  return rows.map(([row, ids]) => ({ id: rowGroup(e.id, row), tokens: ids.filter(alive) })).filter((g) => g.tokens.length)
 }
 
 // ----------------------------------------------------------------- legacy localStorage

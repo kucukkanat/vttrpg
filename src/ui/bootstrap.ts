@@ -8,14 +8,14 @@
  */
 import { createGame, joinGame, loadIdentity, parseInvite, createSnapshotLoop, DEFAULT_RELAYS, type GameConnection, type Identity } from '@/net'
 import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, type AssetResolver } from '@/assets'
-import { createRulesEngine, loadPack, BUILTIN_PACKS } from '@/rules'
 import { createController, type GameController } from './controller'
 import { games, decideRejoin } from './games'
 import type { GameMeta } from '@/core/doc'
 import type { GameId, PackId } from '@/core/ids'
+import { packChoiceOf, rulesForChoice, type PackChoice } from './packSource'
 
 export type Start =
-  | { mode: 'create'; name: string; packId: string; displayName: string }
+  | { mode: 'create'; name: string; packId: string; displayName: string; packSource?: string; packAsset?: GameMeta['packAsset'] }
   | { mode: 'join'; invite: string; displayName: string }
   | { mode: 'rejoin'; gameId: GameId; displayName?: string }
 
@@ -35,18 +35,6 @@ function relayList(): string[] {
   return DEFAULT_RELAYS
 }
 
-const packUrl = (id: string) =>
-  BUILTIN_PACKS.find((p) => p.id === id)?.url ?? `packs/${id}/`
-
-async function tryRules(packId: string) {
-  try {
-    const pack = await loadPack(import.meta.env.BASE_URL + packUrl(packId))
-    return createRulesEngine(pack)
-  } catch (e) {
-    console.warn('rules engine unavailable:', e)
-    return null
-  }
-}
 
 const metaOf = (connection: GameConnection) => connection.doc.getMap('meta')
 
@@ -83,13 +71,18 @@ function finish(opts: {
   identity: Identity
   assets: AssetResolver
   displayName: string
-  packId: string
+  pack: PackChoice
   notice?: string
 }): Promise<StartedGame> {
-  return tryRules(opts.packId).then((rules) => {
+  return rulesForChoice(opts.pack, opts.assets, import.meta.env.BASE_URL).then(({ rules, error }) => {
+    // A third-party pack that fails to load leaves the table usable without rules; say why.
+    const packNotice = error && (opts.pack.source || opts.pack.asset) ? `The game's system pack could not load, so sheets and skills are off. ${error}` : undefined
+    if (packNotice) opts.notice = opts.notice ? `${opts.notice} ${packNotice}` : packNotice
     const controller = createController({ connection: opts.connection, rules, assets: opts.assets, displayName: opts.displayName, pubkey: opts.identity.pubkey })
     let stopSnapshots = () => {}
-    if (opts.connection.isGm) {
+    // Snapshot pointers live in the founder's manifest, so only the founder runs the loop; a co-GM's
+    // edits reach late joiners as deltas on top of the founder's latest snapshot.
+    if (opts.connection.isGm && opts.connection.role === 'gm') {
       const loop = createSnapshotLoop(opts.connection, {
         upload: snapshotUploader(opts.assets, opts.identity),
         prune: (intent) => controller.dispatch(intent),
@@ -119,21 +112,23 @@ export async function startGame(start: Start): Promise<StartedGame> {
       pack: start.packId as PackId,
       activeScene: null,
       createdAt: Date.now(),
+      ...(start.packSource ? { packSource: start.packSource } : {}),
+      ...(start.packAsset ? { packAsset: start.packAsset } : {}),
     }
     const m = metaOf(connection)
     connection.doc.transact(() => { for (const [k, v] of Object.entries(meta)) m.set(k, v) })
     remember(connection, { name: start.name, pack: start.packId, displayName: start.displayName })
-    return finish({ connection, identity, assets, displayName: start.displayName, packId: start.packId })
+    return finish({ connection, identity, assets, displayName: start.displayName, pack: packChoiceOf(meta, start.packId) })
   }
 
   if (start.mode === 'join') {
     const info = parseInvite(start.invite)
     if (!info) throw new Error('That is not a valid invite link.')
-    const connection = await joinGame({ relays: info.relays.length ? info.relays : relayList(), identity, gameId: info.gameId, gameKey: info.gameKey, isGm: false })
+    const connection = await joinGame({ relays: info.relays.length ? info.relays : relayList(), identity, gameId: info.gameId, gameKey: info.gameKey, gm: info.gm, isGm: false })
     const m = metaOf(connection)
     const packId = (m.get('pack') as string | undefined) ?? 'mausritter'
     remember(connection, { name: (m.get('name') as string | undefined) ?? '', pack: packId, displayName: start.displayName })
-    return finish({ connection, identity, assets, displayName: start.displayName, packId })
+    return finish({ connection, identity, assets, displayName: start.displayName, pack: packChoiceOf(m.toJSON() as Partial<GameMeta>, packId) })
   }
 
   // rejoin
@@ -147,10 +142,10 @@ export async function startGame(start: Start): Promise<StartedGame> {
   const displayName = start.displayName ?? saved.displayName ?? (saved.isGm ? 'GM' : 'Player')
   const relays = info.relays.length ? info.relays : saved.relays.length ? saved.relays : relayList()
   // joinGame replays snapshot + deltas before resolving, for GMs too; the doc is complete when we read meta.
-  const connection = await joinGame({ relays, identity, gameId: info.gameId, gameKey: info.gameKey, isGm: saved.isGm })
+  const connection = await joinGame({ relays, identity, gameId: info.gameId, gameKey: info.gameKey, gm: info.gm, isGm: saved.isGm })
   const m = metaOf(connection)
   const metaGm = m.get('gm') as string | undefined
-  const decision = decideRejoin({ saved, pubkey: identity.pubkey, connectionIsGm: connection.isGm, metaGm })
+  const decision = decideRejoin({ saved, pubkey: identity.pubkey, connectionIsGm: connection.isGm, connectionRole: connection.role, metaGm })
   if (decision.role === 'error') {
     connection.close()
     throw new Error(decision.message)
@@ -169,5 +164,5 @@ export async function startGame(start: Start): Promise<StartedGame> {
   console.log(`rejoin: ${decision.role === 'gm' ? 'GM' : 'player'} restored ${saved.name || saved.gameId} from relays`)
   const packId = (m.get('pack') as string | undefined) ?? saved.pack ?? 'mausritter'
   games.touch(start.gameId, { isGm: connection.isGm, name: (m.get('name') as string | undefined) ?? saved.name, pack: packId, displayName, relays: connection.relays })
-  return finish({ connection, identity, assets, displayName, packId, notice })
+  return finish({ connection, identity, assets, displayName, pack: packChoiceOf(m.toJSON() as Partial<GameMeta>, packId), notice })
 }

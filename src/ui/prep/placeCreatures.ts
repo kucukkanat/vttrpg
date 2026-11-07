@@ -97,23 +97,23 @@ export async function placeRows(
  * shared by the whole row. A running order gets them merged in; otherwise a new order starts with
  * them plus the scene's visible tokens that have a sheet (the players), rolled as usual.
  */
-export async function groupInitiative(controller: GameController, groups: TokenId[][]): Promise<number> {
+export async function groupInitiative(controller: GameController, groups: { id: string; tokens: TokenId[] }[]): Promise<number> {
   const s = useGame.getState()
-  const live = groups.map((g) => g.filter((id) => s.tokens[id])).filter((g) => g.length)
+  const live = groups.map((g) => ({ ...g, tokens: g.tokens.filter((id) => s.tokens[id]) })).filter((g) => g.tokens.length)
   if (!live.length) return 0
   const seed = newSeed()
-  const leaders = live.map((g) => s.tokens[g[0]!]!) as Token[]
+  const leaders = live.map((g) => s.tokens[g.tokens[0]!]!) as Token[]
   const rolled = await rollInitiative(leaders, s.characters, controller.rules, seed)
-  const entries = live.map((tokens, i) => ({ tokens, score: rolled[i]?.score ?? 0 }))
+  const entries = live.map((g, i) => ({ ...g, score: rolled[i]?.score ?? 0 }))
   const init = s.initiative
   if (init?.active) {
     await controller.dispatch({ type: 'initiative.set', order: mergeGroupInitiative(init.order, entries) })
   } else {
-    const joining = new Set(live.flat())
+    const joining = new Set(live.flatMap((g) => g.tokens))
     const scene = s.meta?.activeScene
     const others = Object.values(s.tokens).filter((t) => t.scene === scene && !!t.character && !t.hidden && !joining.has(t.id))
     const base = await rollInitiative(others, s.characters, controller.rules, seed)
     await controller.dispatch({ type: 'initiative.start', order: mergeGroupInitiative(base, entries), seed })
   }
-  return live.flat().length
+  return live.reduce((n, g) => n + g.tokens.length, 0)
 }

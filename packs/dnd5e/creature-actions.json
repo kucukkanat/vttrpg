@@ -12,7 +12,8 @@
         {
           "kind": "damage",
           "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll($.damage) + (save.dice.0 == 20 ? roll($.dice) : 0) : 0",
-          "resource": "hp"
+          "resource": "hp",
+          "type": "{$.damage_type}"
         }
       ],
       "vfx": [{ "at": 0, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 250 }]
@@ -27,7 +28,8 @@
         {
           "kind": "damage",
           "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll($.damage) + (save.dice.0 == 20 ? roll($.dice) : 0) : 0",
-          "resource": "hp"
+          "resource": "hp",
+          "type": "{$.damage_type}"
         }
       ],
       "vfx": [
@@ -43,7 +45,7 @@
         { "kind": "message", "text": "{source.name} uses {$.name}." },
         { "kind": "roll", "formula": "roll($.damage)", "label": "damage" },
         { "kind": "roll", "formula": "d20 + target.${ability}_mod + target.save_prof.${ability} * target.pb", "vs": "$.dc", "label": "save" },
-        { "kind": "damage", "formula": "save.success ? (${half|0} == 1 ? floor(rolls.damage.total / 2) : 0) : rolls.damage.total", "resource": "hp" }
+        { "kind": "damage", "formula": "save.success ? (${half|0} == 1 ? floor(rolls.damage.total / 2) : 0) : rolls.damage.total", "resource": "hp", "type": "{$.damage_type}" }
       ],
       "vfx": [
         { "at": 0, "preset": "ring", "from": "source", "color": "#ff9f43", "duration": 450 },

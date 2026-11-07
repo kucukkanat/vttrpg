@@ -124,6 +124,18 @@ describe('dnd5e creature compendium', () => {
     expect([rolled, Math.floor(rolled / 2)].map((n) => Math.min(40, n))).toContain(taken)
   })
 
+  it('compiled attacks carry the damage type and creature resistances apply', async () => {
+    const dragon = creature('Adult Red Dragon')
+    expect(dragon.data.immunities).toEqual(['fire'])
+    const breath = compileActionSkills(pack, 'pack:red', dragon.data).find((s) => s.name.startsWith('Fire Breath'))!
+    expect(breath.effects.find((e) => e.kind === 'damage')).toMatchObject({ type: '{actions.2.damage_type}' })
+    // A fire breath against another red dragon does nothing: it is immune to fire.
+    const r = await engine.resolveSkill(breath, dragon, [{ ...creature('Adult Red Dragon'), id: 'other' as CharacterId }], seeds[0]!)
+    const hp = r.patches.find((p) => p.character === 'other')?.data.hp as { current: number } | undefined
+    expect(hp?.current ?? (dragon.data.hp as { max: number }).max).toBe((dragon.data.hp as { max: number }).max)
+    expect(r.damage?.[0]).toMatchObject({ type: 'fire', final: 0 })
+  })
+
   it('every compendium action with a template compiles to a valid skill', () => {
     let compiled = 0
     for (const c of compendium.creatures) {

@@ -5,16 +5,16 @@
  *
  *   node scripts/make-dev-room.mjs      (or `npm run scenes` for every generated scene)
  */
-import { CELL, block, fog, floor, floorCollider, grid, group, light, mat, newScene, spawn, wall, writeGlb } from './make-scenes/lib.mjs'
+import { CELL, block, fog, floor, floorCollider, grid, group, light, mat, newScene, palette, spawn, wall, writeGlb } from './make-scenes/lib.mjs'
 
 const ROOM_W = 12 // x, meters
 const ROOM_D = 9 // z
 const WALL_H = 2.2
 const WALL_T = 0.25
 
-const stone = mat('#6f6a63', { roughness: 0.95 })
-const floorMat = mat('#4b4740', { roughness: 1 })
-const trimMat = mat('#8a7b5a', { roughness: 0.8 })
+const stone = mat(palette.stone)
+const floorMat = mat(palette.devFloor)
+const trimMat = mat(palette.trim)
 
 const scene = newScene('dev-room', { ambient_audio: 'library/audio/dungeon-drips.ogg' })
 

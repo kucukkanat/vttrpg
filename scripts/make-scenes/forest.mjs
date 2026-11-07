@@ -9,9 +9,9 @@
  *   SPAWN_player    ( 0.75, 0, 1.299)  hex (0, 1), south-east of the fire
  *   SPAWN_player_2  (-0.75, 0, 1.299)  hex (-1, 1), south-west of the fire
  */
-import { BufferAttribute, CylinderGeometry, Mesh, PlaneGeometry } from 'three'
+import { BufferAttribute, CylinderGeometry, Mesh } from 'three'
 import {
-  CELL, boulder, campfire, floorCollider, grid, group, mat, newScene, paint, spawn, tree, vertexMaterial,
+  CELL, boulder, campfire, floorCollider, grid, group, mat, newScene, paint, palette, planeGeometry, spawn, tree, vertexMaterial,
   writeGlb,
 } from './lib.mjs'
 
@@ -22,7 +22,7 @@ const hex = (q, r) => [CELL * (q + r / 2), CELL * (SQRT3 / 2) * r]
 const scene = newScene('forest', { ambient_preset: 'forest' })
 
 // Ground: a subdivided plane with gently varied vertex colours so the grass is not one flat tone.
-const ground = new PlaneGeometry(SIZE, SIZE, 12, 12)
+const ground = planeGeometry(SIZE, SIZE, 0.75)
 ground.rotateX(-Math.PI / 2)
 {
   const pos = ground.getAttribute('position')
@@ -43,11 +43,11 @@ scene.add(floorCollider(SIZE, SIZE))
 
 // Dirt path from the south edge to the fire, as flat patches a hair above the ground.
 const path = group('path')
-const dirt = mat('#6b5637', { roughness: 1 })
+const dirt = mat(palette.dirt)
 for (let k = 0; k < 7; k++) {
   const z = 10.5 - k * 1.45
   const x = Math.sin(k * 0.9) * 0.6
-  const p = new Mesh(new PlaneGeometry(1.4 + (k % 2) * 0.3, 1.6), dirt)
+  const p = new Mesh(planeGeometry(1.4 + (k % 2) * 0.3, 1.6, 0.8), dirt)
   p.name = 'path_patch'
   p.rotation.x = -Math.PI / 2
   p.rotation.z = Math.sin(k) * 0.3
@@ -62,7 +62,7 @@ scene.add(fireProp, fireLight)
 
 // Logs to sit on around the fire.
 for (const a of [0.6, 2.4, 4.3]) {
-  const seat = new Mesh(paint(new CylinderGeometry(0.18, 0.2, 1.6, 7), '#4a3320', '#6b4a2e'), vertexMaterial())
+  const seat = new Mesh(paint(new CylinderGeometry(0.18, 0.2, 1.6, 7), palette.bark, palette.barkLight), vertexMaterial())
   seat.name = 'log_seat'
   seat.position.set(Math.cos(a) * 2.4, 0.18, Math.sin(a) * 2.4)
   seat.rotation.set(Math.PI / 2, 0, a + Math.PI / 2)
@@ -83,7 +83,7 @@ for (let i = 0; i < 26; i++) {
   const r = 8.2 + rnd() * 2.3
   const [x, z] = [Math.cos(a) * r, Math.sin(a) * r]
   const height = 4.5 + rnd() * 2.5
-  const tint = rnd() < 0.3 ? '#27502a' : '#2d5a27'
+  const tint = rnd() < 0.3 ? palette.leafDark : palette.leaf
   const [g, c] = tree(`tree_${t++}`, [x, z], { height, trunkR: 0.22 + rnd() * 0.1, canopyR: 1.3 + rnd() * 0.6, tint })
   trees.add(g)
   colliders.add(c)
@@ -111,4 +111,4 @@ scene.add(spawn('SPAWN_player', hex(0, 1)))
 scene.add(spawn('SPAWN_player_2', hex(-1, 1)))
 scene.add(grid([0, 0], CELL, 'hex'))
 
-await writeGlb(scene, 'forest.glb')
+await writeGlb(scene, 'forest.glb', { merge: [path] })

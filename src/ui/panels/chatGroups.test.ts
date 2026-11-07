@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ChatMessage } from '@/core/doc'
 import type { PlayerPubkey } from '@/core/ids'
 import type { LocalNotice } from '@/state/store'
-import { formatDay, formatTime, GROUP_WINDOW_MS, groupMessages } from './chatGroups'
+import { channelOf, filterChannel, formatDay, formatTime, GROUP_WINDOW_MS, groupMessages } from './chatGroups'
 
 const A = 'alice' as PlayerPubkey, B = 'bob' as PlayerPubkey
 // Local-time dates keep the day boundaries stable whatever zone the tests run in.
@@ -72,5 +72,25 @@ describe('time labels', () => {
     expect(formatDay(new Date(2026, 2, 6, 23, 59).getTime(), now)).toBe('Yesterday')
     expect(formatDay(t0, now, 'en-GB')).toBe('Thu 5 Mar')
     expect(formatDay(new Date(2025, 2, 5).getTime(), now, 'en-GB')).toContain('2025')
+  })
+})
+
+describe('chat channels', () => {
+  const lines = [
+    say(A, t0),
+    say(B, t0, { kind: 'whisper', to: [A] }),
+    say(A, t0, { kind: 'roll', text: 'd20' }),
+    say(A, t0, { kind: 'system', text: 'Pip attacks Rat.', channel: 'combat' }),
+    say(A, t0, { kind: 'system', text: 'Encounter over', summary: { rounds: 1, rows: [] } }),
+    say(A, t0, { kind: 'system', text: 'old skill line' }),
+    { id: 'n1', at: t0, text: 'You are Pip' } as LocalNotice,
+  ]
+  it('sorts every line into one channel', () => {
+    expect(lines.map(channelOf)).toEqual(['chat', 'chat', 'rolls', 'combat', 'combat', 'system', 'system'])
+  })
+  it('filters to a channel, all keeps everything', () => {
+    expect(filterChannel(lines, 'all')).toHaveLength(lines.length)
+    expect(filterChannel(lines, 'combat').map((l) => l.text)).toEqual(['Pip attacks Rat.', 'Encounter over'])
+    expect(filterChannel(lines, 'rolls')).toHaveLength(1)
   })
 })
