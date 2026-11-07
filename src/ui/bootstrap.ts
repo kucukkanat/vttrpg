@@ -78,8 +78,15 @@ export function snapshotUploader(identity: Pick<Identity, 'sign'>, servers: stri
   }
 }
 
-/** The game's asset resolver: uploads are signed by this identity, encrypted, and retried. */
+let trackingUnshared = false
+
+/**
+ * The game's asset resolver: uploads are signed by this identity, encrypted, and retried.
+ * Unfinished uploads are remembered across reloads so the GM's next start sends them again.
+ */
 export function gameAssets(identity: Pick<Identity, 'sign'>): AssetResolver {
+  // Loaded on the side: nothing has a status before the first upload starts, well after this resolves.
+  if (!trackingUnshared) { trackingUnshared = true; void import('@/assets/unshared').then((m) => m.trackUnshared()) }
   return createAssetResolver({
     libraryBase: import.meta.env.BASE_URL + 'library/',
     blossomServers: blossomList(),

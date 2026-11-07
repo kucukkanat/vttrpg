@@ -42,6 +42,7 @@ import { KitLayer } from './kits/KitLayer'
 import { KitBoardControl } from './kits/KitBoardControl'
 import { heightVisible, levelCellKey, tokenLevel } from './kits/levels'
 import { useKitScene } from './kits/useKitScene'
+import { BuilderPresence } from './build/BuilderPresence'
 import { EditGizmo } from './EditGizmo'
 import { PropEditor } from './build/PropEditor'
 import { PropEditOverlay } from './build/PropEditOverlay'
@@ -393,6 +394,7 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           <vfx.VfxLayer events={events} since={mountedAt} cellSize={grid.cellSize} />
           <vfx.WeatherLayer kind={scene.weather ?? 'none'} bounds={weatherBounds} />
           <BuildLayer bounds={bounds2} baseWalls={baseWalls} />
+          <BuilderPresence />
           <EditGizmo />
           <PropEditor />
           <CameraRigFromStore mode={mode} sceneId={sceneId} viewer={viewer ?? null} bounds={bounds3} floorY={floorY} cellSize={grid.cellSize} walls={walls} />

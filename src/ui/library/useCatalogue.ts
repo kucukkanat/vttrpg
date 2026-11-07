@@ -17,7 +17,9 @@ let builtinCache: CatalogueEntry[] | null = null
 export function useBuiltinCatalogue(enabled = true): CatalogueEntry[] | null {
   const [list, setList] = useState<CatalogueEntry[] | null>(builtinCache)
   useEffect(() => {
-    if (builtinCache || !enabled) return
+    if (!enabled) return
+    // Loaded meanwhile by another user of the hook (this one mounted before it was enabled).
+    if (builtinCache) { setList(builtinCache); return }
     let live = true
     void loadBuiltinCatalogue().then((l) => { builtinCache = l; if (live) setList(l) })
     return () => { live = false }

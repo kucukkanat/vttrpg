@@ -14,7 +14,7 @@ import { numbersEvent } from '@/table/vfx/numbers'
 import type { RulesEngine } from '@/rules'
 import type { AssetResolver } from '@/assets'
 import type { Intent, IntentEnvelope } from '@/core/intents'
-import type { Presence } from '@/core/presence'
+import { admitPresence, type Presence } from '@/core/presence'
 import type { Character, GameDocShape, GameEvent, ResourceDelta, RollResult } from '@/core/doc'
 import type { PlayerPubkey, SceneId } from '@/core/ids'
 import { applyIntent, type ApplyContext } from '@/state/apply'
@@ -181,7 +181,7 @@ export function createController(opts: {
   const offIntent = connection.isGm ? connection.onIntent((env) => void gmApply(env)) : () => {}
   const pingsSeen = new Map<string, number>()
   const offPresence = connection.onPresence((p) => {
-    useGame.getState().setPresence(p)
+    useGame.getState().setPresence(admitPresence(p, { fromWriter: connection.isWriter(p.pubkey), viewerBuilds: connection.isGm }))
     rememberName(p.pubkey, p.name)
     const ping = takePing(pingsSeen, p)
     if (ping) vfxBus.emit('ping', ping)

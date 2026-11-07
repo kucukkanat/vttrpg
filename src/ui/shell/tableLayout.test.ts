@@ -24,6 +24,12 @@ describe('panel routes', () => {
     for (const id of ['character', 'skills', 'initiative', 'journal', 'players', 'sound']) expect(routePanel(id, true)).toEqual({ kind: 'card', id })
   })
 
+  it('scene credits live in the Reference leaf for the GM and stay a card for players', () => {
+    expect(LEAVES.find((l) => l.id === 'reference')?.panels).toContain('credits')
+    expect(routePanel('credits', true)).toEqual({ kind: 'prep', leaf: 'reference', tab: 'credits' })
+    expect(routePanel('credits', false)).toEqual({ kind: 'card', id: 'credits' })
+  })
+
   it('every leaf and tab names a real panel, and every panel has a home', () => {
     const ids = new Set(PANELS.map((p) => p.id))
     for (const leaf of LEAVES) for (const id of leaf.panels) expect(ids.has(id), id).toBe(true)

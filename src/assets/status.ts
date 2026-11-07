@@ -61,6 +61,11 @@ export function subscribeAssetStatus(cb: () => void): () => void {
   return () => void listeners.delete(cb)
 }
 
+/** Every asset this session has a status for. */
+export function allAssetStatus(): IterableIterator<[string, AssetStatusInfo]> {
+  return entries.entries()
+}
+
 /** Test helper: forget everything. */
 export function resetAssetStatus(): void {
   entries.clear()

@@ -4,7 +4,13 @@
  * OnboardingTips.tsx gathers the facts from the stores and the DOM and renders the bubble.
  */
 
-export type TipId = 'your-turn' | 'token-bar' | 'long-press' | 'edit-gesture' | 'dice'
+export type TipId =
+  | 'your-turn' | 'token-bar' | 'long-press' | 'edit-gesture' | 'dice'
+  /** The first Build visit: pick up, turn, put down, undo, paste. */
+  | 'build-pickup' | 'build-turn' | 'build-putdown' | 'build-undo' | 'build-paste'
+
+/** The Build tips, in the order a first visit meets them. */
+export const BUILD_TIPS: readonly TipId[] = ['build-pickup', 'build-turn', 'build-putdown', 'build-undo', 'build-paste']
 
 export const TIP_TEXT: Record<TipId, string> = {
   'your-turn': "It's your turn: use a skill, then End turn.",
@@ -12,10 +18,15 @@ export const TIP_TEXT: Record<TipId, string> = {
   'long-press': 'Long-press (or right-click) a token for more actions.',
   'edit-gesture': 'Double-tap a token or prop to move, turn and resize it.',
   dice: 'Roll dice here.',
+  'build-pickup': 'Pick a model up from the Library, then click the board to place it.',
+  'build-turn': 'R or the mouse wheel turns the model in your hand (Shift: 90°).',
+  'build-putdown': 'Esc or right-click puts the model down.',
+  'build-undo': 'Placed one too many? Ctrl/⌘-Z undoes it.',
+  'build-paste': 'Ctrl/⌘-C copies the selection; Ctrl/⌘-V puts the copy in your hand to place.',
 }
 
 /** First match wins: the time-critical tip, then the ones about what is on screen right now. */
-export const TIP_ORDER: readonly TipId[] = ['your-turn', 'token-bar', 'long-press', 'edit-gesture', 'dice']
+export const TIP_ORDER: readonly TipId[] = ['your-turn', 'token-bar', ...BUILD_TIPS, 'long-press', 'edit-gesture', 'dice']
 
 export interface TipFacts {
   isGm: boolean
@@ -33,6 +44,16 @@ export interface TipFacts {
   targets: ReadonlySet<TipId>
   /** Tips retired on this device. */
   seen: ReadonlySet<TipId>
+  /** The GM screen is in Build. */
+  building?: boolean
+  /** A model is in hand (the place tool). */
+  holding?: boolean
+  /** Something was placed during this Build visit. */
+  placed?: boolean
+  /** Props are selected. */
+  propSelected?: boolean
+  /** A keyboard and mouse (fine pointer): the key and wheel tips make sense. */
+  keyboard?: boolean
 }
 
 function wanted(id: TipId, f: TipFacts): boolean {
@@ -41,7 +62,12 @@ function wanted(id: TipId, f: TipFacts): boolean {
     case 'token-bar': return !f.isGm && f.ownsToken
     case 'long-press': return f.tokenSelected
     case 'edit-gesture': return f.isGm && f.editableSelected
-    case 'dice': return true
+    case 'dice': return !f.building
+    case 'build-pickup': return f.isGm && !!f.building && !f.holding
+    case 'build-turn': return f.isGm && !!f.building && !!f.holding && !!f.keyboard
+    case 'build-putdown': return f.isGm && !!f.building && !!f.holding && !!f.keyboard
+    case 'build-undo': return f.isGm && !!f.building && !!f.placed && !!f.keyboard
+    case 'build-paste': return f.isGm && !!f.building && !!f.propSelected && !f.holding && !!f.keyboard
   }
 }
 

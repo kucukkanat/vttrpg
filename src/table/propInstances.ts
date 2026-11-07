@@ -3,7 +3,7 @@
  * rest group by model, the slot table that maps instance ids to props and finds what changed, and
  * the matrix and footprint maths. No React here, so it is all unit tested.
  */
-import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
+import { Box3, Euler, Matrix4, Quaternion, Vector3, type BufferGeometry } from 'three'
 import type { Prop } from '@/core/doc'
 import type { PropId } from '@/core/ids'
 import { isLegacyScale, propScale } from '@/core/props'
@@ -206,4 +206,27 @@ export function hullBox(h: ModelHull, matrix: Matrix4): { min: { x: number; y: n
     }
   }
   return { min, max }
+}
+
+/** Model-space bounds of a batch's parts: each sub-mesh's geometry box under its own transform. */
+export function partsBounds(parts: readonly { geometry: BufferGeometry; matrix: Matrix4 }[]): Box3 {
+  const out = new Box3()
+  const tmp = new Box3()
+  for (const p of parts) {
+    if (!p.geometry.boundingBox) p.geometry.computeBoundingBox()
+    const g = p.geometry.boundingBox
+    if (!g || g.isEmpty()) continue
+    out.union(tmp.copy(g).applyMatrix4(p.matrix))
+  }
+  return out
+}
+
+const tmpBoundsMatrix = new Matrix4()
+
+/**
+ * World bounds of one instance: the model-space box under the prop's own matrix (the box's eight
+ * corners, re-boxed), exactly what the instance draws for a turn about Y.
+ */
+export function instanceBounds(local: Box3, prop: Pick<Prop, 'position' | 'rotation' | 'scale'>, out: Box3 = new Box3()): Box3 {
+  return out.copy(local).applyMatrix4(propMatrix(prop, tmpBoundsMatrix))
 }

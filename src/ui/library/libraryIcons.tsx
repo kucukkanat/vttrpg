@@ -5,6 +5,8 @@
 import { ICON_STROKE } from '../icons'
 
 const PATHS = {
+  /** A card's menu: three dots. */
+  more: <><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>,
   /** Favourite: a five-pointed star. */
   star: <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5z" />,
   /** Eyedropper: pick a model up from the board. */

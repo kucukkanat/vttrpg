@@ -20,7 +20,8 @@ import { LibIcon } from './libraryIcons'
 import { useBreakpoint } from '../shell/useBreakpoint'
 import { useTableLayout } from '../shell/tableLayout'
 import { pushToast } from '../toasts'
-import { DEFAULT_CELL_M, libraryResults, licenceBadge, sceneCatalogueIds, SHELVES, sizeBadge, type ShelfId } from './libraryLogic'
+import { DEFAULT_CELL_M, libraryResults, licenceBadge, MAX_TITLE, placedCopies, removalNote, renamedEntry, sceneCatalogueIds, SHELVES, sizeBadge, type ShelfId } from './libraryLogic'
+import { AssetStatusBadge } from '../AssetStatusBadge'
 import { toggleFavouriteModel, useLibraryPrefs } from './libraryPrefs'
 import { heldFromEntry, pickUpEntry, useBuiltinCatalogue, useMyModels, useThumbnail } from './useCatalogue'
 import './LibraryPanel.css'
@@ -55,6 +56,17 @@ export function LibraryPanel({ controller }: { controller: GameController }) {
   const results = useMemo(() => libraryResults(src, { shelf, query, category, kit }), [src, shelf, query, category, kit])
   const categories = useMemo(() => catalogueCategories([...mine, ...(builtin ?? [])].filter((e) => !e.kit)), [builtin, mine])
   const resolve = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
+  const manage = useMemo<Manage>(() => ({
+    rename: (e, title) => {
+      const next = renamedEntry(e, title)
+      if (next) void controller.dispatch({ type: 'catalogue.add', entry: next })
+    },
+    remove: (e) => {
+      void controller.dispatch({ type: 'catalogue.remove', id: e.id })
+      if (useBuildUi.getState().held?.catalogue === e.id) putDownModel()
+      pushToast({ text: `${e.title} is no longer in My models`, ttl: 2500 })
+    },
+  }), [controller])
 
   if (!controller.connection.isGm) return <div className="panel"><p className="muted small">The GM places models.</p></div>
 
@@ -111,7 +123,7 @@ export function LibraryPanel({ controller }: { controller: GameController }) {
       <PlacementOptions phone={phone} />
       {results.length === 0
         ? <p className="muted small lib-empty">{emptyText}</p>
-        : <CardGrid entries={results} cell={cell} resolve={resolve} onPick={pick} phone={phone} favourites={favourites} />}
+        : <CardGrid entries={results} cell={cell} resolve={resolve} onPick={pick} phone={phone} favourites={favourites} mine={mine} manage={manage} />}
       {importing && (
         <Suspense fallback={null}>
           <ImportDialog open onClose={() => setImporting(false)} onImported={onImported} assets={controller.assets} />
@@ -160,7 +172,15 @@ function PlacementOptions({ phone }: { phone: boolean }) {
   )
 }
 
+/** What a My models card's menu does. */
+interface Manage {
+  rename(e: CatalogueEntry, title: string): void
+  remove(e: CatalogueEntry): void
+}
+
 interface GridProps {
+  mine: CatalogueEntry[]
+  manage: Manage
   entries: CatalogueEntry[]
   cell: number
   resolve(ref: AssetRef): Promise<string>
@@ -170,7 +190,8 @@ interface GridProps {
 }
 
 /** The cards, windowed: only the rows in view (plus one each side) are in the DOM. */
-function CardGrid({ entries, cell, resolve, onPick, phone, favourites }: GridProps) {
+function CardGrid({ entries, cell, resolve, onPick, phone, favourites, mine, manage }: GridProps) {
+  const mineIds = useMemo(() => new Set(mine.map((e) => e.id)), [mine])
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
   const [height, setHeight] = useState(400)
@@ -225,6 +246,7 @@ function CardGrid({ entries, cell, resolve, onPick, phone, favourites }: GridPro
       <div className="lib-grid-inner" style={{ height: rows * rowH - GAP }}>
         {shown.map(({ e, i }) => (
           <Card key={e.id} entry={e} cell={cell} resolve={resolve} onPick={onPick} draggable={!phone} fav={favourites.includes(e.id)} held={heldId === e.id}
+            manage={mineIds.has(e.id) ? manage : undefined}
             style={{ left: (i % cols) * (cardW + GAP), top: Math.floor(i / cols) * rowH, width: cardW, height: cardW + CARD_TEXT_H }}
             onHover={hoverStart} onLeave={hoverEnd} />
         ))}
@@ -238,14 +260,18 @@ function CardGrid({ entries, cell, resolve, onPick, phone, favourites }: GridPro
   )
 }
 
-const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, held, style, onHover, onLeave }: {
+const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, held, style, onHover, onLeave, manage }: {
   entry: CatalogueEntry; cell: number; resolve(ref: AssetRef): Promise<string>; onPick(e: CatalogueEntry): void
   draggable: boolean; fav: boolean; held: boolean; style: CSSProperties
   onHover(e: CatalogueEntry, el: HTMLElement): void; onLeave(): void
+  /** My models only: the card menu (Rename, Remove from library) and the upload status. */
+  manage?: Manage | undefined
 }) {
   const thumb = useThumbnail(entry, resolve)
   const licence = licenceBadge(entry)
   const size = sizeBadge(entry.size, cell)
+  const [menu, setMenu] = useState<CardMenu>('closed')
+  if (manage && menu !== 'closed') return <ManageCard entry={entry} style={style} menu={menu} setMenu={setMenu} manage={manage} />
   return (
     <div className={`lib-card${held ? ' held' : ''}`} style={style}
       onPointerEnter={(ev) => { if (ev.pointerType === 'mouse') onHover(entry, ev.currentTarget) }} onPointerLeave={onLeave}>
@@ -270,8 +296,64 @@ const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, 
         title={fav ? 'Remove from Favourites' : 'Add to Favourites'} onClick={() => toggleFavouriteModel(entry.id)}>
         <LibIcon name="star" size={14} />
       </button>
+      {manage && (
+        <>
+          <button type="button" className="lib-more" aria-label={`${entry.title}: rename or remove`} title="Rename or remove from library"
+            aria-haspopup="menu" onClick={() => { onLeave(); setMenu('open') }}>
+            <LibIcon name="more" size={14} />
+          </button>
+          <span className="lib-status"><AssetStatusBadge sha256={entry.model.sha256} /></span>
+        </>
+      )}
     </div>
   )
 })
+
+type CardMenu = 'closed' | 'open' | 'rename' | 'confirm'
+
+/** A My models card turned over: its menu, the rename field or the inline remove confirmation. */
+export function ManageCard({ entry, style, menu, setMenu, manage }: {
+  entry: CatalogueEntry; style: CSSProperties; menu: Exclude<CardMenu, 'closed'>; setMenu(m: CardMenu): void; manage: Manage
+}) {
+  const [title, setTitle] = useState(entry.title)
+  const first = useRef<HTMLButtonElement | HTMLInputElement | null>(null)
+  useEffect(() => { first.current?.focus() }, [menu])
+  const close = () => setMenu('closed')
+  const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close() } }
+  return (
+    <div className="lib-card lib-card--manage" style={style} onKeyDown={onKey}>
+      <div className="lib-manage" role={menu === 'open' ? 'menu' : 'group'} aria-label={entry.title}>
+        <strong className="lib-manage-title">{entry.title}</strong>
+        {menu === 'open' && (
+          <>
+            <button type="button" role="menuitem" className="tiny" ref={(el) => { first.current = el }} onClick={() => setMenu('rename')}>Rename</button>
+            <button type="button" role="menuitem" className="tiny danger" onClick={() => setMenu('confirm')}>Remove from library</button>
+            <button type="button" role="menuitem" className="tiny" onClick={close}>Cancel</button>
+          </>
+        )}
+        {menu === 'rename' && (
+          <form onSubmit={(e) => { e.preventDefault(); manage.rename(entry, title); close() }}>
+            <input value={title} maxLength={MAX_TITLE} aria-label="New name" ref={(el) => { first.current = el }}
+              onChange={(e) => setTitle(e.target.value)} onFocus={(e) => e.currentTarget.select()} />
+            <div className="lib-manage-row">
+              <button type="submit" className="tiny" disabled={!renamedEntry(entry, title)}>Save</button>
+              <button type="button" className="tiny" onClick={close}>Cancel</button>
+            </div>
+          </form>
+        )}
+        {menu === 'confirm' && (
+          <>
+            <span className="small">Remove from library?</span>
+            <span className="small muted">{removalNote(placedCopies(useGame.getState().props, entry.id))}</span>
+            <div className="lib-manage-row">
+              <button type="button" className="tiny danger" ref={(el) => { first.current = el }} onClick={() => { manage.remove(entry); close() }}>Remove</button>
+              <button type="button" className="tiny" onClick={close}>Keep</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default LibraryPanel

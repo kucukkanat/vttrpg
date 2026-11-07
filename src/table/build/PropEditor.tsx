@@ -25,7 +25,7 @@ import { useTableUi, tableRuntime } from '../tableState'
 import { capture } from '../TokenMesh'
 import { useBuildUi } from './buildState'
 import { BOX_THRESHOLD_PX, boxHits, rectAround, rectFrom, type ScreenRect } from './boxSelect'
-import { editRuntime, isPhoneLike, propObjects } from './editRuntime'
+import { editRuntime, isPhoneLike, propBounds } from './editRuntime'
 import { applyGroupOp, snapFactor, updatesFrom, type Poses } from './groupTransform'
 import {
   centreOf, commitGroupOp, copySelection, dropSelection, duplicateSelection, pasteToHand, removeSelection, selectionPoses, turnSelection,
@@ -271,11 +271,10 @@ function keysLiveTouch(): boolean {
 
 /** Screen rectangle (relative to the canvas) of a prop's projected bounds. */
 function projectedRect(prop: Prop, camera: THREE_Camera, w: number, h: number, cell: number): ScreenRect | null {
-  const o = propObjects.get(prop.id)
-  let box: Box3
-  if (o) { o.updateWorldMatrix(true, true); box = new Box3().setFromObject(o, true) } else box = new Box3()
+  // Standalone or instanced, the bounds it is drawn with.
+  let box = propBounds(prop.id) ?? new Box3()
   if (box.isEmpty()) {
-    // Not drawn on its own (instanced or still loading): a cell-sized box at its position.
+    // Not drawn yet (still loading): a cell-sized box at its position.
     const half = cell * 0.3
     box = new Box3(new Vector3(prop.position.x - half, prop.position.y, prop.position.z - half), new Vector3(prop.position.x + half, prop.position.y + 2 * half, prop.position.z + half))
   }

@@ -12,7 +12,7 @@ import type { Intent } from '@/core/intents'
 import { useGame } from '@/state/store'
 import { knownLegacyFit } from '../propMigration'
 import { tableRuntime, useTableUi } from '../tableState'
-import { editRuntime, propObjects } from './editRuntime'
+import { editRuntime, propBounds, propRayTargets } from './editRuntime'
 import { applyGroupOp, poseOf, selectionCentre, updatesFrom, type GroupOp, type Poses } from './groupTransform'
 import { pickUpModel } from './buildState'
 import type { HeldModel, HeldPart } from './placement'
@@ -175,14 +175,10 @@ function visibleChain(o: Object3D | null): boolean {
   return true
 }
 
-/** World bounds of a prop: its standalone mesh when drawn, else a point at its position. */
+/** World bounds of a prop as drawn (standalone or instanced), else a point at its position. */
 export function propWorldBounds(prop: Prop): Box3 {
-  const o = propObjects.get(prop.id)
-  if (o) {
-    o.updateWorldMatrix(true, true)
-    const box = new Box3().setFromObject(o, true)
-    if (!box.isEmpty()) return box
-  }
+  const box = propBounds(prop.id)
+  if (box) return box
   const p = new Vector3(prop.position.x, prop.position.y, prop.position.z)
   return new Box3(p.clone(), p.clone())
 }
@@ -204,9 +200,10 @@ export function dropSelection(dispatch: Dispatch, floorY: number = tableRuntime.
   const props = selectedProps()
   if (!props.length) return false
   const selected = new Set(props.map((p) => p.id))
-  const targets: Object3D[] = []
+  // The scene model, standalone props and instanced batches (a batch never holds a selected prop:
+  // selected props draw standalone, see Props.tsx).
+  const targets: Object3D[] = propRayTargets(selected)
   if (editRuntime.sceneRoot) targets.push(editRuntime.sceneRoot)
-  for (const [id, o] of propObjects) if (!selected.has(id)) targets.push(o)
   const ray = new Raycaster()
   const updates: { id: PropId; patch: { position: Vec3 } }[] = []
   for (const p of props) {
