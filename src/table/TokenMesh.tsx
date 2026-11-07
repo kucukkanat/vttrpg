@@ -3,7 +3,10 @@
  * Handles hover, selection (click; Shift/Cmd-click or touch Select mode adds to the set), the context
  * menu (right-click / long-press) and drag-to-move with snapping; dragging a selected token moves the whole selection.
  * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
- * chips around the disc, and a ring in the local player's colour on the tokens they own.
+ * chips around the disc, a ring in the owner's presence colour on player-owned tokens (thicker on
+ * the viewer's own) and a pulsing amber ring on the combatant whose turn it is. A name label floats
+ * above the viewer's own tokens, the selection, the current combatant and whatever is hovered.
+ * While the viewer drags, the path and its length show on the floor (TokenOverlays.tsx).
  */
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
@@ -22,9 +25,11 @@ import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { doubleTapEdit, tapTwice } from './editTap'
 import { chipAngle, conditionChips, HP_BAND_COLORS, hpBand, MAX_PIPS, readResource, type ConditionChip, type HpBand } from './tokenHud'
+import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
+import { MoveTrail, Nameplate, TurnRing } from './TokenOverlays'
 
 /** Colour the local player is shown as (see `createController` in `src/ui/controller.ts` and the Players panel). */
-export const LOCAL_PRESENCE_COLOR = '#7cc4ff'
+export const LOCAL_PRESENCE_COLOR = LOCAL_OWNER_COLOR
 
 const PRESENCE_INTERVAL_MS = 66 // ~15/s
 
@@ -48,13 +53,6 @@ export const LONG_PRESS_MS = 500
 /** Shift / Cmd / Ctrl held, or touch Select mode on: the tap adds to the selection instead of replacing it. */
 export function isAdditiveSelect(e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, multiSelect: boolean): boolean {
   return multiSelect || e.shiftKey || e.metaKey || e.ctrlKey
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase()
 }
 
 function makeInitialsTexture(text: string, color: string): CanvasTexture {
@@ -152,6 +150,7 @@ function Disc({ token, radius, dimmed, ghost = false }: { token: Token; radius: 
 interface HudShared {
   plane: PlaneGeometry
   ring: RingGeometry
+  ownRing: RingGeometry
   back: MeshBasicMaterial
   divider: MeshBasicMaterial
   bands: Record<HpBand, MeshBasicMaterial>
@@ -163,6 +162,7 @@ function hud(): HudShared {
   hudShared = {
     plane: new PlaneGeometry(1, 1),
     ring: new RingGeometry(1, 1.1, 48),
+    ownRing: new RingGeometry(0.98, 1.2, 48),
     back: flat('#100e0c', 0.82),
     divider: flat('#100e0c'),
     bands: { high: flat(HP_BAND_COLORS.high), mid: flat(HP_BAND_COLORS.mid), low: flat(HP_BAND_COLORS.low) },
@@ -264,10 +264,10 @@ function ConditionGlyphs({ chips, radius }: { chips: ConditionChip[]; radius: nu
   )
 }
 
-/** Permanent ring in the viewer's presence colour around the tokens they own. */
-function OwnerRing({ radius, color }: { radius: number; color: string }) {
+/** Permanent ring in the owner's presence colour; the viewer's own tokens get a thicker one. */
+function OwnerRing({ radius, color, mine }: { radius: number; color: string; mine: boolean }) {
   return (
-    <mesh geometry={hud().ring} material={ownerMaterial(color)} rotation-x={-Math.PI / 2} position-y={0.004} scale={[radius, radius, 1]} renderOrder={3} raycast={noRaycast} />
+    <mesh geometry={mine ? hud().ownRing : hud().ring} material={ownerMaterial(color)} rotation-x={-Math.PI / 2} position-y={0.004} scale={[radius, radius, 1]} renderOrder={3} raycast={noRaycast} />
   )
 }
 
@@ -306,7 +306,11 @@ export function TokenMesh({ token }: { token: Token }) {
   const modelUrl = useAssetUrl(token.model)
   const character = useGame((s) => (token.character ? s.characters[token.character] : undefined))
   const showHpToPlayers = useGame((s) => s.meta?.showHpToPlayers ?? false)
-  const presenceColor = useGame((s) => (viewer ? s.presence[viewer.pubkey]?.color : undefined))
+  const ownerPresence = useGame((s) => (token.owner ? s.presence[token.owner]?.color : undefined))
+  const gmPubkey = useGame((s) => s.meta?.gm)
+  const pack = useGame((s) => s.meta?.pack ?? null)
+  // Whose turn it is: a boolean per token, so a turn change re-renders two tokens, not all of them.
+  const isTurn = useGame((s) => !!s.initiative?.active && s.initiative.order[s.initiative.turn]?.token === token.id)
   // The pack (resources, conditions) comes from the session's rules engine; the Canvas bridges the context.
   const rules = useSession().controller?.rules ?? null
 
@@ -491,7 +495,14 @@ export function TokenMesh({ token }: { token: Token }) {
   const dimmed = token.hidden || targetOutOfRange
   const ghost = pending !== null && !dragGhost
 
+  const ringColor = ownerRingColor(token.owner, gmPubkey, viewer?.pubkey ?? null, ownerPresence)
+  // While the viewer drags it, the distance label takes the name's place over the ghost.
+  const showName = !dragGhost && nameplateShown({ mine, selected, hovered, current: isTurn })
+  // Above the disc top, or above a mini's head (minis are fitted to about a cell tall at most).
+  const nameY = (modelUrl ? 0.95 * cell * scale : radius * 0.22 + 0.12 * cell)
+
   return (
+    <>
     <group
       ref={group}
       onPointerDown={onPointerDown}
@@ -553,12 +564,16 @@ export function TokenMesh({ token }: { token: Token }) {
       </group>
       {/* Combat state and the owner marker follow the lift but not the facing, so the bar always sits in front. */}
       <group ref={hudGroup} position-y={elevation + 0.012} raycast={noRaycast}>
-        {mine && <OwnerRing radius={radius} color={presenceColor ?? LOCAL_PRESENCE_COLOR} />}
+        {ringColor && <OwnerRing radius={radius} color={ringColor} mine={mine} />}
+        {isTurn && <TurnRing radius={radius} />}
+        {showName && <Nameplate name={token.name} y={nameY} accent={ringColor} mine={mine && !gmView} current={isTurn} />}
         {hp && <HpBar current={hp.current} max={hp.max} radius={radius} />}
         {chips.length > 0 && <ConditionGlyphs chips={chips} radius={radius} />}
       </group>
       {elevation > 0.01 && <ElevationMarker elevation={elevation} radius={radius} cell={cell} />}
     </group>
+    {dragGhost && <MoveTrail grid={grid} from={dragGhost.from} to={dragGhost} y={floorY + 0.014} pack={pack} />}
+    </>
   )
 }
 
