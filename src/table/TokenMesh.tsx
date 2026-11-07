@@ -20,6 +20,7 @@ import { useGame } from '@/state/store'
 import { useSession } from '@/ui/session'
 import { canControl, useTable } from './context'
 import { snapToCell } from './grid'
+import { moveBlocked } from './build/wallEdit'
 import { flickerNoise } from './SceneModel'
 import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
@@ -285,7 +286,7 @@ export function useAssetUrl(ref: Token['model']): string | null {
 }
 
 export function TokenMesh({ token }: { token: Token }) {
-  const { grid, floorY, viewer, onIntent, onPresence } = useTable()
+  const { grid, floorY, viewer, walls, onIntent, onPresence } = useTable()
   const selected = useGame((s) => s.selectedTokens.includes(token.id))
   const setSelected = useGame((s) => s.setSelectedToken)
   const toggleSelected = useGame((s) => s.toggleSelected)
@@ -459,6 +460,8 @@ export function TokenMesh({ token }: { token: Token }) {
     }
     if (!e.ray.intersectPlane(d.plane, hit)) return
     const snapped = snapToCell(grid, hit.x, hit.z)
+    // Players cannot drag through walls or closed doors: the ghost stays on the last cell in reach.
+    if (!gmView && moveBlocked(token.position, snapped, walls)) return
     const key = `${snapped.cell.q},${snapped.cell.r}`
     if (key !== d.lastCell) {
       d.lastCell = key

@@ -5,6 +5,7 @@
  */
 import { INTENT_QUEUE_TTL_MS, type GameConnection } from '@/net'
 import { takePing } from '@/table/ping'
+import { docBlockingSegments, moveBlocked, sceneWalls } from '@/table/build/wallEdit'
 import { clearPendingMove, setPendingMove } from '@/table/tableState'
 import { vfxBus } from '@/table/vfx/bus'
 import { numbersEvent } from '@/table/vfx/numbers'
@@ -68,7 +69,16 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights }
+  }
+
+  /** A player's token move through a drawn or imported wall or a closed door (the table stops such drags too). */
+  const crossesWall = (intent: Intent): boolean => {
+    if (intent.type !== 'token.move') return false
+    const s = useGame.getState()
+    const t = s.tokens[intent.token]
+    if (!t) return false
+    return moveBlocked(t.position, intent.position, docBlockingSegments(s.scenes[t.scene], sceneWalls(s.walls, t.scene)))
   }
 
   /** The sheet a roll intent was made from, if it names one that still exists. */
@@ -111,6 +121,7 @@ export function createController(opts: {
   }
 
   async function gmApply(env: IntentEnvelope) {
+    if (env.from !== connection.gm && crossesWall(env.intent)) return
     if (rules) {
       const reason = rules.validate(env.intent, { isGm: env.from === connection.gm, pubkey: env.from }, docJson())
       if (reason) {
