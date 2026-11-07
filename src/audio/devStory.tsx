@@ -52,7 +52,7 @@ function fakeController(): GameController {
         if (!u) throw new Error('dev: unknown asset')
         return u
       },
-      async importFile(file: File): Promise<AssetRef> {
+      async shareFile(file: File): Promise<AssetRef> {
         const sha256 = await sha256Hex(file)
         urls.set(sha256, URL.createObjectURL(file))
         return { sha256, kind: inferKind(file.name, file.type), mime: inferMime(file.name, file.type), size: file.size, name: file.name, sources: [] }

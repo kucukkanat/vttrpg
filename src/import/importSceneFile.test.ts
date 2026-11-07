@@ -12,12 +12,12 @@ import { parseUvtt } from './uvtt'
 function stubController() {
   const intents: Intent[] = []
   const imported: File[] = []
-  const importFile = vi.fn(async (file: File): Promise<AssetRef> => {
+  const shareFile = vi.fn(async (file: File): Promise<AssetRef> => {
     imported.push(file)
     return { sha256: `sha-${file.name}` as AssetHash, kind: 'image', mime: file.type, size: file.size, name: file.name, sources: [] }
   })
   const dispatch = vi.fn(async (intent: Intent) => { intents.push(intent) })
-  return { controller: { assets: { importFile }, dispatch }, intents, imported, importFile }
+  return { controller: { assets: { shareFile }, dispatch }, intents, imported, shareFile }
 }
 
 const PNG: AssetRef = { sha256: 'png' as AssetHash, kind: 'image', mime: 'image/png', size: 1, name: 'map.png', sources: [] }
@@ -51,7 +51,7 @@ describe('sceneFromParsedMap', () => {
 })
 
 describe('importSceneFile', () => {
-  it('imports a .dd2vtt: embedded image through importFile, walls in world units, add + activate', async () => {
+  it('imports a .dd2vtt: embedded image through shareFile, walls in world units, add + activate', async () => {
     const { controller, intents, imported } = stubController()
     const file = new File([JSON.stringify(uvtt)], 'tiny.dd2vtt', { type: 'application/octet-stream' })
     const result = await importSceneFile(file, controller, { cellSize: 1 })

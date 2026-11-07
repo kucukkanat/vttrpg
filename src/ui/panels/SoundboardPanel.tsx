@@ -78,7 +78,7 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
     setError(null)
     try {
       const refs: AssetRef[] = []
-      for (const f of Array.from(files)) refs.push(await controller.assets.importFile(f))
+      for (const f of Array.from(files)) refs.push(await controller.assets.shareFile(f))
       setBoard((b) => [...b.filter((r) => !refs.some((n) => n.sha256 === r.sha256)), ...refs])
     } catch (e) {
       setError(String((e as Error).message ?? e))

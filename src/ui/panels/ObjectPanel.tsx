@@ -307,7 +307,7 @@ export function ModelPicker({ controller, title, actionLabel, kinds, hint, curre
     if (!file) return
     setBusy(file.name)
     try {
-      const ref = await controller.assets.importFile(file)
+      const ref = await controller.assets.shareFile(file)
       onPick(ref, file.name.replace(/\.glb$/i, ''))
     } catch (e) {
       console.warn('model upload failed', e)

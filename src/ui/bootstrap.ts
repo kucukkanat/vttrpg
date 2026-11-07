@@ -7,7 +7,8 @@
  *   startGame({ mode: 'rejoin', gameId, displayName? })  // from the registry, with the saved role
  */
 import { createGame, joinGame, loadIdentity, parseInvite, createSnapshotLoop, DEFAULT_RELAYS, type GameConnection, type Identity } from '@/net'
-import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, type AssetResolver } from '@/assets'
+import { createAssetResolver, DEFAULT_BLOSSOM_SERVERS, putBlobWithRetry, type AssetResolver } from '@/assets'
+import { sha256Hex } from '@/assets/hash'
 import { createController, type GameController } from './controller'
 import { games, decideRejoin } from './games'
 import type { GameMeta } from '@/core/doc'
@@ -22,18 +23,24 @@ export type Start =
 /** A controller plus an optional message worth showing (e.g. a GM demoted to player on rejoin). */
 export type StartedGame = GameController & { notice?: string }
 
-/** Dev only: `localStorage.setItem('vttrpg.relays', JSON.stringify(['ws://localhost:7777']))` points new games at other relays. */
-function relayList(): string[] {
-  if (!import.meta.env.DEV) return DEFAULT_RELAYS
+/** Dev only: a list of URLs from localStorage, else `fallback`. */
+function devList(key: string, fallback: string[]): string[] {
+  if (!import.meta.env.DEV) return fallback
   try {
-    const raw = localStorage.getItem('vttrpg.relays')
+    const raw = localStorage.getItem(key)
     const list: unknown = raw ? JSON.parse(raw) : null
     if (Array.isArray(list) && list.length && list.every((r) => typeof r === 'string')) return list as string[]
   } catch {
     // ignore
   }
-  return DEFAULT_RELAYS
+  return fallback
 }
+
+/** Dev only: `localStorage.setItem('vttrpg.relays', JSON.stringify(['ws://localhost:7777']))` points new games at other relays. */
+const relayList = () => devList('vttrpg.relays', DEFAULT_RELAYS)
+
+/** Dev only: `localStorage.setItem('vttrpg.blossom', JSON.stringify(['http://localhost:3000']))` uploads and fetches assets and snapshots there. */
+const blossomList = () => devList('vttrpg.blossom', DEFAULT_BLOSSOM_SERVERS)
 
 
 const metaOf = (connection: GameConnection) => connection.doc.getMap('meta')
@@ -53,17 +60,31 @@ function remember(connection: GameConnection, extra: { name: string; pack: strin
   })
 }
 
-/** Blossom upload through the asset resolver, shaped for the net snapshot loop. */
-function snapshotUploader(assets: AssetResolver, identity: Identity) {
-  const server = DEFAULT_BLOSSOM_SERVERS[0]
+/**
+ * Blossom upload shaped for the net snapshot loop. The loop hands over ciphertext (it encrypts each
+ * snapshot itself), so this only uploads; the snapshot is not kept in the local asset cache.
+ */
+export function snapshotUploader(identity: Pick<Identity, 'sign'>, servers: string[] = DEFAULT_BLOSSOM_SERVERS, delaysMs = [3_000, 10_000]) {
   return async (bytes: Uint8Array): Promise<{ url: string; sha256: string }> => {
-    const file = new File([bytes as BlobPart], 'snapshot.yjs', { type: 'application/octet-stream' })
-    const ref = await assets.importFile(file)
-    const uploaded = await assets.uploadToBlossom(ref, server, (ev) => identity.sign(ev))
-    const url = uploaded.sources.find((s) => s.includes(ref.sha256)) ?? uploaded.sources[uploaded.sources.length - 1]
-    if (!url) throw new Error('Blossom returned no URL for the snapshot')
-    return { url, sha256: ref.sha256 }
+    const sha256 = await sha256Hex(bytes)
+    const { url } = await putBlobWithRetry(servers, new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), {
+      sha256,
+      mime: 'application/octet-stream',
+      name: 'snapshot',
+      sign: (ev) => identity.sign(ev),
+      delaysMs,
+    })
+    return { url, sha256 }
   }
+}
+
+/** The game's asset resolver: uploads are signed by this identity, encrypted, and retried. */
+export function gameAssets(identity: Pick<Identity, 'sign'>): AssetResolver {
+  return createAssetResolver({
+    libraryBase: import.meta.env.BASE_URL + 'library/',
+    blossomServers: blossomList(),
+    uploader: { sign: (ev) => identity.sign(ev) },
+  })
 }
 
 function finish(opts: {
@@ -84,7 +105,7 @@ function finish(opts: {
     // edits reach late joiners as deltas on top of the founder's latest snapshot.
     if (opts.connection.isGm && opts.connection.role === 'gm') {
       const loop = createSnapshotLoop(opts.connection, {
-        upload: snapshotUploader(opts.assets, opts.identity),
+        upload: snapshotUploader(opts.identity, blossomList()),
         prune: (intent) => controller.dispatch(intent),
       })
       stopSnapshots = loop.stop
@@ -102,7 +123,7 @@ function finish(opts: {
 
 export async function startGame(start: Start): Promise<StartedGame> {
   const identity = await loadIdentity()
-  const assets = createAssetResolver({ libraryBase: import.meta.env.BASE_URL + 'library/' })
+  const assets = gameAssets(identity)
 
   if (start.mode === 'create') {
     const connection = await createGame({ relays: relayList(), identity, name: start.name })

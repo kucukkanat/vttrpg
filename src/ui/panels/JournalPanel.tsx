@@ -195,7 +195,7 @@ function NoteEditor({ controller, note, onSave, onCancel }: { controller: GameCo
   const pickImage = async (file: File | undefined) => {
     if (!file) return
     setBusy(true); setError(null)
-    try { setImage(await controller.assets.importFile(file)) } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
+    try { setImage(await controller.assets.shareFile(file)) } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
   }
   const toggle = (pk: PlayerPubkey) => setPlayers((ps) => (ps.includes(pk) ? ps.filter((x) => x !== pk) : [...ps, pk]))
   const submit = () => {
