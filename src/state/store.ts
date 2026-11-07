@@ -6,6 +6,7 @@ import { create } from 'zustand'
 import type * as Y from 'yjs'
 import type { Character, ChatMessage, CreatureTemplate, Encounter, FogState, GameEvent, GameMeta, InitiativeState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
 import type { SkillDef } from '@/core/pack'
+import type { CatalogueEntry } from '@/core/catalogue'
 import type { CharacterId, LightId, NoteId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from '@/core/ids'
 import type { Presence } from '@/core/presence'
 
@@ -51,6 +52,8 @@ export interface GameState {
   walls: Record<WallId, Wall>
   prefabs: Record<PrefabId, Prefab>
   lights: Record<LightId, PlacedLight>
+  /** The game's own models (imports and uploads), by catalogue id. */
+  catalogue: Record<string, CatalogueEntry>
   presence: Record<string, Presence>
   notices: LocalNotice[]
   pushNotice(text: string, at?: number): LocalNotice
@@ -69,7 +72,7 @@ export interface GameState {
   selection: Selection | null
   setSelection(sel: Selection | null): void
   setPresence(p: Presence): void
-  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters'>>): void
+  _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'catalogue'>>): void
 }
 
 let noticeSeq = 0
@@ -91,6 +94,7 @@ export const useGame = create<GameState>((set) => ({
   walls: {} as Record<WallId, Wall>,
   prefabs: {} as Record<PrefabId, Prefab>,
   lights: {} as Record<LightId, PlacedLight>,
+  catalogue: {},
   presence: {},
   notices: [],
   pushNotice: (text, at = Date.now()) => {
@@ -200,7 +204,7 @@ export function bindDoc(doc: Y.Doc): () => void {
     chat: doc.getArray('chat'), fog: doc.getMap('fog'), events: doc.getArray('events'), props: doc.getMap('props'),
     notes: doc.getMap('notes'), customSkills: doc.getMap('customSkills'), initiative: doc.getMap('initiative'),
     creatures: doc.getMap('creatures'), encounters: doc.getMap('encounters'), walls: doc.getMap('walls'),
-    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'),
+    prefabs: doc.getMap('prefabs'), lights: doc.getMap('lights'), catalogue: doc.getMap('catalogue'),
   }
   const keys = Object.keys(types) as DocKey[]
   // An empty `meta` map mirrors as an empty object, as it always has.

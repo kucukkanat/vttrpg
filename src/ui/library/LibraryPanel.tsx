@@ -1,0 +1,270 @@
+/**
+ * The Library: the Build tray's first tab (reports/Level design plan.md, Phase 1 item 3). Search
+ * over titles and tags, category chips, shelves (Recently placed, Favourites, In this scene,
+ * Built-in, My models), a thumbnail grid of cards with a size and licence badge, a hover preview
+ * that slowly spins the model (desktop), and Import… for the GM's own models.
+ *
+ * Clicking a card picks the model up (`pickUpEntry`); the table's `PlaceLayer` stamps it. Cards can
+ * also be dragged onto the board. The grid is windowed, so 300+ cards scroll smoothly.
+ */
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import type { GameController } from '../controller'
+import type { AssetRef } from '@/core/assets'
+import type { CatalogueEntry } from '@/core/catalogue'
+import { useGame } from '@/state/store'
+import { putDownModel, toggleBuildTool, useBuildUi } from '@/table/build/buildState'
+import { MAX_SCATTER_RANGE, SNAP_CHOICES } from '@/table/build/placement'
+import { catalogueCategories } from '../catalogue'
+import { Icon } from '../icons'
+import { useBreakpoint } from '../shell/useBreakpoint'
+import { useTableLayout } from '../shell/tableLayout'
+import { pushToast } from '../toasts'
+import { DEFAULT_CELL_M, libraryResults, licenceBadge, sceneCatalogueIds, SHELVES, sizeBadge, type ShelfId } from './libraryLogic'
+import { toggleFavouriteModel, useLibraryPrefs } from './libraryPrefs'
+import { heldFromEntry, pickUpEntry, useBuiltinCatalogue, useMyModels, useThumbnail } from './useCatalogue'
+import './LibraryPanel.css'
+
+const ImportDialog = lazy(() => import('../import/ImportDialog'))
+const HoverPreview = lazy(() => import('./HoverPreview'))
+
+/** Hover this long before the 3D preview appears. */
+const PREVIEW_DELAY_MS = 400
+const CARD_MIN_W = 104
+const CARD_TEXT_H = 46
+const GAP = 8
+
+const snapLabel = (c: number) => (c === 0 ? 'Free' : c === 0.25 ? '¼ cell' : c === 0.5 ? '½ cell' : `${c} cell`)
+
+export function LibraryPanel({ controller }: { controller: GameController }) {
+  const builtin = useBuiltinCatalogue()
+  const mine = useMyModels()
+  const recent = useLibraryPrefs((s) => s.recent)
+  const favourites = useLibraryPrefs((s) => s.favourites)
+  const props = useGame((s) => s.props)
+  const sceneId = useGame((s) => s.meta?.activeScene ?? null)
+  const cell = useGame((s) => (s.meta?.activeScene ? s.scenes[s.meta.activeScene]?.grid.cellSize : undefined)) ?? DEFAULT_CELL_M
+  const phone = useBreakpoint() === 'phone'
+  const [query, setQuery] = useState('')
+  const [shelf, setShelf] = useState<ShelfId>('all')
+  const [category, setCategory] = useState<string | null>(null)
+  const [kit, setKit] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const scene = useMemo(() => sceneCatalogueIds(props, sceneId), [props, sceneId])
+  const src = useMemo(() => ({ builtin: builtin ?? [], mine, recent, favourites, scene }), [builtin, mine, recent, favourites, scene])
+  const results = useMemo(() => libraryResults(src, { shelf, query, category, kit }), [src, shelf, query, category, kit])
+  const categories = useMemo(() => catalogueCategories([...mine, ...(builtin ?? [])].filter((e) => !e.kit)), [builtin, mine])
+  const resolve = useCallback((ref: AssetRef) => controller.assets.resolve(ref), [controller])
+
+  if (!controller.connection.isGm) return <div className="panel"><p className="muted small">The GM places models.</p></div>
+
+  const pick = (e: CatalogueEntry) => {
+    pickUpEntry(e)
+    // On a phone the sheet covers the board: put it away so the next tap places.
+    if (phone) useTableLayout.getState().set({ phone: null })
+  }
+  const onImported = (entry: CatalogueEntry) => {
+    setImporting(false)
+    void controller.dispatch({ type: 'catalogue.add', entry })
+    setShelf('mine')
+    pickUpEntry(entry)
+    pushToast({ text: `${entry.title} is in My models; click the board to place it`, ttl: 3500 })
+  }
+  const emptyText = builtin === null ? 'Loading the library…'
+    : shelf === 'recent' && !recent.length ? 'Models you place show up here.'
+      : shelf === 'favourites' && !favourites.length ? 'Star a card to keep it here.'
+        : shelf === 'scene' && !scene.length ? 'Nothing from the library is in this scene yet.'
+          : shelf === 'mine' && !mine.length ? 'Import a model (Upload, Poly Haven, Sketchfab) and it lands here for every GM of this game.'
+            : `Nothing matches${query ? ` “${query}”` : ''}.`
+
+  return (
+    <div className="panel library-panel">
+      <div className="lib-top">
+        <label className="lib-search">
+          <Icon name="search" size={16} />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search models and tags"
+            aria-label="Search the library" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+            onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) pick(results[0]) }} />
+        </label>
+        {!phone && (
+          <button type="button" className="tiny" onClick={() => setImporting(true)} title="Upload a model, or import from Poly Haven or Sketchfab">
+            <Icon name="plus" size={14} /> Import…
+          </button>
+        )}
+      </div>
+      <div className="lib-chips" role="tablist" aria-label="Shelf">
+        {SHELVES.map((s) => (
+          <button key={s.id} type="button" role="tab" aria-selected={shelf === s.id} className={`lib-chip${shelf === s.id ? ' on' : ''}`} onClick={() => setShelf(s.id)}>
+            {s.label}{s.id === 'mine' && mine.length ? ` ${mine.length}` : ''}
+          </button>
+        ))}
+      </div>
+      <div className="lib-chips lib-cats" role="group" aria-label="Category">
+        <button type="button" className={`lib-chip lib-chip--cat${!category && !kit ? ' on' : ''}`} aria-pressed={!category && !kit} onClick={() => { setCategory(null); setKit(false) }}>Any</button>
+        {categories.map((c) => (
+          <button key={c.category} type="button" aria-pressed={category === c.category} className={`lib-chip lib-chip--cat${category === c.category ? ' on' : ''}`}
+            onClick={() => { setCategory(category === c.category ? null : c.category); setKit(false) }}>{c.category}</button>
+        ))}
+        <button type="button" aria-pressed={kit} className={`lib-chip lib-chip--cat${kit ? ' on' : ''}`} title="Grid kit pieces: floors, walls, stairs"
+          onClick={() => { setKit(!kit); setCategory(null) }}>Kit pieces</button>
+      </div>
+      <PlacementOptions phone={phone} />
+      {results.length === 0
+        ? <p className="muted small lib-empty">{emptyText}</p>
+        : <CardGrid entries={results} cell={cell} resolve={resolve} onPick={pick} phone={phone} favourites={favourites} />}
+      {importing && (
+        <Suspense fallback={null}>
+          <ImportDialog open onClose={() => setImporting(false)} onImported={onImported} assets={controller.assets} />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+
+/** Snap, scatter and the eyedropper, under the chips. */
+function PlacementOptions({ phone }: { phone: boolean }) {
+  const snapCells = useBuildUi((s) => s.snapCells)
+  const scatter = useBuildUi((s) => s.scatter)
+  const range = useBuildUi((s) => s.scatterRange)
+  const tool = useBuildUi((s) => s.tool)
+  const set = useBuildUi((s) => s.set)
+  return (
+    <div className="lib-opts" role="group" aria-label="Placement">
+      <label className="lib-opt" title="Snap step (hold Alt for free placement)">
+        <span className="muted small">Snap</span>
+        <select value={snapCells} onChange={(e) => set({ snapCells: Number(e.target.value) })} aria-label="Snap step">
+          {SNAP_CHOICES.map((c) => <option key={c} value={c}>{snapLabel(c)}</option>)}
+        </select>
+      </label>
+      <label className="check lib-opt" title="Each stamp gets a random turn and size">
+        <input type="checkbox" checked={scatter} onChange={(e) => {
+          const on = e.target.checked
+          set({ scatter: on, roll: on ? { yaw: Math.random() * Math.PI * 2, scale: 1 - range + Math.random() * 2 * range } : { yaw: 0, scale: 1 } })
+        }} />
+        Scatter
+      </label>
+      {scatter && (
+        <label className="lib-opt lib-range" title="Scale range of scattered stamps">
+          <span className="muted small">±{Math.round(range * 100)}%</span>
+          <input type="range" min={0} max={MAX_SCATTER_RANGE} step={0.05} value={range} onChange={(e) => set({ scatterRange: Number(e.target.value) })} aria-label="Scatter scale range" />
+        </label>
+      )}
+      {!phone && (
+        <button type="button" className={`icon lib-dropper${tool === 'eyedropper' ? ' on' : ''}`} aria-pressed={tool === 'eyedropper'}
+          title="Eyedropper: click a prop on the board to pick its model up again (or Alt-click any prop)" aria-label="Eyedropper"
+          onClick={() => (tool === 'eyedropper' ? putDownModel() : toggleBuildTool('eyedropper'))}>
+          <Icon name="dropper" size={18} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+interface GridProps {
+  entries: CatalogueEntry[]
+  cell: number
+  resolve(ref: AssetRef): Promise<string>
+  onPick(e: CatalogueEntry): void
+  phone: boolean
+  favourites: string[]
+}
+
+/** The cards, windowed: only the rows in view (plus one each side) are in the DOM. */
+function CardGrid({ entries, cell, resolve, onPick, phone, favourites }: GridProps) {
+  const box = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(320)
+  const [height, setHeight] = useState(400)
+  const [top, setTop] = useState(0)
+  const heldId = useBuildUi((s) => (s.tool === 'place' ? s.held?.catalogue : undefined))
+  const [preview, setPreview] = useState<{ entry: CatalogueEntry; rect: DOMRect } | null>(null)
+  const [previewMounted, setPreviewMounted] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const canHover = useMemo(() => !phone && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches, [phone])
+
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => { setWidth(el.clientWidth); setHeight(el.clientHeight) }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  // A new search starts at the top.
+  useEffect(() => { box.current?.scrollTo?.({ top: 0 }); setTop(0) }, [entries])
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+
+  const cols = Math.max(2, Math.floor((width + GAP) / (CARD_MIN_W + GAP)))
+  const cardW = (width - GAP * (cols - 1)) / cols
+  const rowH = cardW + CARD_TEXT_H + GAP
+  const rows = Math.ceil(entries.length / cols)
+  const first = Math.max(0, Math.floor(top / rowH) - 1)
+  const last = Math.min(rows - 1, Math.ceil((top + height) / rowH) + 1)
+  const shown: Array<{ e: CatalogueEntry; i: number }> = []
+  for (let r = first; r <= last; r++) for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < entries.length) shown.push({ e: entries[i]!, i }) }
+
+  const hoverStart = (e: CatalogueEntry, el: HTMLElement) => {
+    if (!canHover) return
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => { setPreviewMounted(true); setPreview({ entry: e, rect: el.getBoundingClientRect() }) }, PREVIEW_DELAY_MS)
+  }
+  const hoverEnd = () => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null }
+    setPreview(null)
+  }
+
+  return (
+    <div className="lib-grid" ref={box} onScroll={(e) => setTop(e.currentTarget.scrollTop)} onPointerLeave={hoverEnd}>
+      <div className="lib-grid-inner" style={{ height: rows * rowH - GAP }}>
+        {shown.map(({ e, i }) => (
+          <Card key={e.id} entry={e} cell={cell} resolve={resolve} onPick={onPick} draggable={!phone} fav={favourites.includes(e.id)} held={heldId === e.id}
+            style={{ left: (i % cols) * (cardW + GAP), top: Math.floor(i / cols) * rowH, width: cardW, height: cardW + CARD_TEXT_H }}
+            onHover={hoverStart} onLeave={hoverEnd} />
+        ))}
+      </div>
+      {previewMounted && (
+        <Suspense fallback={null}>
+          <HoverPreview entry={preview?.entry ?? null} anchor={preview?.rect ?? null} resolve={resolve} />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+
+const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, held, style, onHover, onLeave }: {
+  entry: CatalogueEntry; cell: number; resolve(ref: AssetRef): Promise<string>; onPick(e: CatalogueEntry): void
+  draggable: boolean; fav: boolean; held: boolean; style: CSSProperties
+  onHover(e: CatalogueEntry, el: HTMLElement): void; onLeave(): void
+}) {
+  const thumb = useThumbnail(entry, resolve)
+  const licence = licenceBadge(entry)
+  const size = sizeBadge(entry.size, cell)
+  return (
+    <div className={`lib-card${held ? ' held' : ''}`} style={style}
+      onPointerEnter={(ev) => { if (ev.pointerType === 'mouse') onHover(entry, ev.currentTarget) }} onPointerLeave={onLeave}>
+      <button type="button" className="lib-card-pick" onClick={() => onPick(entry)} aria-pressed={held}
+        title={`${entry.title}: ${size}${licence ? ` · ${licence}` : ''}. Click to pick up, then click the board to place`}
+        draggable={draggable}
+        onDragStart={(ev) => {
+          ev.dataTransfer.setData('text/plain', entry.title)
+          ev.dataTransfer.effectAllowed = 'copy'
+          onLeave()
+          useBuildUi.getState().set({ dragging: heldFromEntry(entry) })
+        }}
+        onDragEnd={() => useBuildUi.getState().set({ dragging: null })}>
+        <span className="lib-thumb">
+          {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" draggable={false} /> : <Icon name="cube" size={28} />}
+          {licence && <span className="lib-badge lib-badge--licence">{licence}</span>}
+        </span>
+        <span className="lib-title">{entry.title}</span>
+        <span className="lib-size">{size}</span>
+      </button>
+      <button type="button" className={`lib-star${fav ? ' on' : ''}`} aria-pressed={fav} aria-label={fav ? `Unstar ${entry.title}` : `Star ${entry.title}`}
+        title={fav ? 'Remove from Favourites' : 'Add to Favourites'} onClick={() => toggleFavouriteModel(entry.id)}>
+        <Icon name="star" size={14} />
+      </button>
+    </div>
+  )
+})
+
+export default LibraryPanel

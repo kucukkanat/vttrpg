@@ -40,6 +40,7 @@ import { GmCallout } from '../onboarding/GmCallout'
 import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, type LayoutPresetId } from './layoutPresets'
 import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
 import { panelShown, useTableLayout } from './tableLayout'
+import { HeldBar } from '../library/HeldBar'
 import { Bell, CardHost, CombatControl, DiceWell, GmScreen, JournalBook, PresenceRow, Scroll } from './TableChrome'
 import { CommandPalette, type PaletteActions } from './CommandPalette'
 import { PhoneBar, PhoneSheets } from './PhoneBar'
@@ -227,6 +228,7 @@ export function GameShell({ controller }: { controller: GameController }) {
         <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
+        {isGm && chrome && <HeldBar phone={phone} />}
         {meta?.activeScene && <OnboardingTips controller={controller} />}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />

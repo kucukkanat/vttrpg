@@ -26,8 +26,11 @@ export type LeafId = (typeof LEAVES)[number]['id']
 /** Reference-leaf panels that open as a card when asked for directly (the leaf still shows them in Prep). */
 const PLAY_CARDS = new Set(['journal', 'players', 'sound'])
 
-/** Panels the Build tray shows as tabs: the tools, and the scene's own settings. */
-export const BUILD_TABS = ['build', 'scenes'] as const
+/** Panels the Build tray shows as tabs: the model library, the tools, and the scene's own settings. */
+export const BUILD_TABS = ['library', 'build', 'scenes'] as const
+
+/** Tab labels in the tray where the panel title would read oddly. */
+export const BUILD_TAB_LABELS: Record<string, string> = { library: 'Library', build: 'Tools', scenes: 'Scene' }
 
 export type PanelRoute =
   | { kind: 'scroll' }
@@ -43,7 +46,7 @@ export type PanelRoute =
 export function routePanel(id: string, isGm: boolean): PanelRoute {
   if (id === 'chat') return { kind: 'scroll' }
   if (!isGm) return { kind: 'card', id }
-  if (id === 'build') return { kind: 'build', tab: 'build' }
+  if (id === 'build' || id === 'library') return { kind: 'build', tab: id }
   // Sound, Players and the Journal are used at the table as much as in prep: a card, in any mode.
   if (PLAY_CARDS.has(id)) return { kind: 'card', id }
   const leaf = LEAVES.find((l) => (l.panels as readonly string[]).includes(id))
@@ -78,7 +81,7 @@ export const useTableLayout = create<TableLayoutState>((set) => ({
   card: null,
   leafTabs: { ...DEFAULT_LEAF_TABS },
   leaf: 'world',
-  buildTab: 'build',
+  buildTab: 'library',
   scrollOpen: false,
   palette: false,
   bell: false,
