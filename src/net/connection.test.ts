@@ -344,7 +344,11 @@ describe('intents', () => {
     expect(got).toHaveLength(1)
     expect(got[0].from).toBe(playerId.pubkey) // envelope lied; the signature wins
     expect(got[0].intent).toEqual({ type: 'chat.say', text: 'hi' })
-    expect(w.relay.published.some((e) => e.kind === KIND_INTENT && !e.content.includes('hi'))).toBe(true)
+    // Encrypted on the wire: the plaintext envelope never appears. (Checking for the bare word "hi"
+    // failed now and then, because random base64 ciphertext contains it.)
+    const intents = w.relay.published.filter((e) => e.kind === KIND_INTENT)
+    expect(intents.length).toBeGreaterThan(0)
+    expect(intents.some((e) => e.content.includes('"text":"hi"') || e.content.includes('chat.say'))).toBe(false)
 
     const before = w.relay.published.length
     w.gm.sendIntent({ id: 'i2', from: w.gm.gm, at: 2, intent: { type: 'fog.reset', scene: 's' as never } })
