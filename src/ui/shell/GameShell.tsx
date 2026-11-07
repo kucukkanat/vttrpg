@@ -29,6 +29,8 @@ import { useGameAlerts } from './useGameAlerts'
 import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
+import { DEFAULT_PRESET, isDisplayPreset, isPresetId, presetBreakpoint, presetLayouts, type LayoutPresetId, type TabletLayout } from './layoutPresets'
+import { RestoreChrome, ViewMenu, useZenKeys } from './ViewMenu'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
@@ -45,13 +47,19 @@ function TableLoading() {
   )
 }
 
-interface TabletLayout { tab: string; open: boolean; pinned: boolean }
-
 const TABLET_DEFAULT: TabletLayout = { tab: 'chat', open: true, pinned: true }
 const DRAWER_W = 360
 
 export function GameShell({ controller }: { controller: GameController }) {
-  const bp = useBreakpoint()
+  const deviceBp = useBreakpoint()
+  // Layout preset per device (layoutPresets.ts): Compact uses the phone arrangement at any width.
+  const [view, setView] = usePersisted<{ preset: LayoutPresetId }>('vtt.shell.preset', { preset: DEFAULT_PRESET })
+  const preset = isPresetId(view.preset) ? view.preset : DEFAULT_PRESET
+  const bp = presetBreakpoint(preset, deviceBp)
+  const display = isDisplayPreset(preset)
+  // Zen: every bit of chrome hidden over the table for this session; Z, Esc or the corner button restores.
+  const [zen, setZen] = useState(false)
+  useZenKeys(zen, setZen)
   const isGm = controller.connection.isGm
   const panels = useMemo(() => PANELS.filter((p) => p.scope === 'all' || isGm), [isGm])
   const phoneTabs = useMemo(() => splitPhoneTabs(panels, isGm), [panels, isGm])
@@ -136,7 +144,13 @@ export function GameShell({ controller }: { controller: GameController }) {
     '--right-w': `${desktop.right.open ? desktop.right.width : RAIL_W}px`,
     '--drawer-w': `${tablet.open && tablet.pinned ? DRAWER_W : 0}px`,
   } as CSSProperties
-  const cls = ['game', `game--${bp}`, keyboard > 0 ? 'kb' : '', bp === 'phone' && (phonePanel || phoneMore) ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
+  const pickPreset = (id: LayoutPresetId) => {
+    const next = presetLayouts(id)
+    if (next.desktop) setDesktop(next.desktop)
+    if (next.tablet) setTablet(next.tablet)
+    setView({ preset: id })
+  }
+  const cls = ['game', `game--${bp}`, zen ? 'game--zen' : '', display ? 'game--display' : '', keyboard > 0 ? 'kb' : '', bp === 'phone' && (phonePanel || phoneMore) ? `bsheet-${sheetSize}` : ''].filter(Boolean).join(' ')
 
   const drawerToggle = bp === 'tablet' ? (
     <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
@@ -146,7 +160,7 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   return (
     <div className={cls} style={style}>
-      <TopBar controller={controller} compact={bp === 'phone'} trailing={drawerToggle} />
+      <TopBar controller={controller} compact={bp === 'phone'} trailing={<><ViewMenu isGm={isGm} preset={preset} onPreset={pickPreset} onZen={() => setZen(true)} />{drawerToggle}</>} />
 
       {bp === 'desktop' ? (
         <SideColumn side="left" panels={panels.filter((p) => p.side === 'left')} width={desktop.left.width} open={desktop.left.open}
@@ -182,6 +196,8 @@ export function GameShell({ controller }: { controller: GameController }) {
         {bp !== 'phone' ? dice : null}
         {!isGm && <ClaimPrompt controller={controller} />}
         <PresenceBeacon controller={controller} />
+        {zen ? <RestoreChrome label="Show UI" onRestore={() => setZen(false)} />
+          : display ? <RestoreChrome label="Exit display" onRestore={() => pickPreset('auto')} /> : null}
       </section>
 
       {bp === 'desktop' ? (
