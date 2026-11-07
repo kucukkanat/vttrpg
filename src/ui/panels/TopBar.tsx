@@ -9,6 +9,8 @@ import { useGame } from '@/state/store'
 import { useConnectionStatus, type ConnectionStatus } from '../shell/useConnectionStatus'
 import { buildInviteUrl, RELAY_HEALTH_HINT, relayHealth, relayStatusLine, selectAll, useCopy } from '../invite'
 import { Icon } from '../icons'
+import { reopenInRole, roleLabel, useAuthority } from '../authority'
+import { RelayPopover } from './RelayStatus'
 import './invite.css'
 
 const css = `
@@ -29,8 +31,13 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
   const meta = useGame((s) => s.meta)
   const { status, gmAway, relaysOpen, relaysTotal } = useConnectionStatus(controller)
   const isGm = controller.connection.isGm
+  const { role, needsReopen } = useAuthority(controller)
+  // The role this connection runs in (a grant or revocation shows the reopen banner instead).
+  const shownRole = isGm ? (controller.connection.gm === controller.pubkey ? 'gm' : 'co-gm') : 'player'
   const [menu, setMenu] = useState(false)
   const [invite, setInvite] = useState(false)
+  const [relaysOpenList, setRelaysOpenList] = useState(false)
+  const relayRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const inviteRef = useRef<HTMLDivElement>(null)
   const inviteButtonRef = useRef<HTMLButtonElement>(null)
@@ -62,11 +69,15 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
     <header className={`topbar ${compact ? 'compact' : ''}`}>
       <style>{css}</style>
       <strong className="game-name" title={meta?.name}>{meta?.name ?? 'Game'}</strong>
-      <span className={`status ${status}${showAway ? ' gm-away' : ''}${degraded ? ' degraded' : ''}`} role="status" aria-label={statusLabel} title={statusLabel}>
-        <span className="dot" />
-        <span className="small word">{statusLabel}</span>
-      </span>
-      <span className={`role ${isGm ? 'gm' : ''}`}>{isGm ? 'GM' : 'Player'}</span>
+      <div className="relay-anchor" ref={relayRef}>
+        <button type="button" className={`status ${status}${showAway ? ' gm-away' : ''}${degraded ? ' degraded' : ''}`} aria-label={`${statusLabel}. Show relays`} title={statusLabel}
+          aria-haspopup="dialog" aria-expanded={relaysOpenList} onClick={() => setRelaysOpenList((o) => !o)}>
+          <span className="dot" />
+          <span className="small word" role="status">{statusLabel}</span>
+        </button>
+        {relaysOpenList && <RelayPopover controller={controller} onClose={() => setRelaysOpenList(false)} containerRef={relayRef} />}
+      </div>
+      <span className={`role ${isGm ? 'gm' : ''}`}>{roleLabel(shownRole)}</span>
       <span className="spacer" />
       {trailing}
       {compact ? (
@@ -74,7 +85,7 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
           <button type="button" className="icon" aria-haspopup="menu" aria-expanded={menu} aria-label="More" onClick={() => setMenu((m) => !m)}><Icon name="more" /></button>
           {menu && (
             <div className="menu-list" role="menu">
-              <div className="menu-info muted small">{statusLabel} · {isGm ? 'GM' : 'Player'}</div>
+              <div className="menu-info muted small">{statusLabel} · {roleLabel(shownRole)}</div>
               {isGm && <button type="button" role="menuitem" ref={inviteButtonRef} onClick={openInvite}>Invite players</button>}
               <button type="button" role="menuitem" className="danger" onClick={leave}>Leave game</button>
             </div>
@@ -89,6 +100,13 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
       {isGm && (
         <div className="invite-anchor" ref={inviteRef}>
           {invite && <InvitePopover controller={controller} status={status} open={relaysOpen} onClose={closeInvite} containerRef={inviteRef} />}
+        </div>
+      )}
+      {needsReopen && (
+        <div className="offline-banner" role="status">
+          <span className="dot" aria-hidden="true" style={{ background: 'var(--accent)' }} />
+          <span>{role === 'player' ? 'The GM ended your co-GM access; your edits no longer reach the table.' : 'The GM made you a co-GM. Reopen the game to get the GM tools.'}</span>
+          <button type="button" onClick={() => reopenInRole(controller, role)}>Reopen</button>
         </div>
       )}
       {status === 'offline' && (

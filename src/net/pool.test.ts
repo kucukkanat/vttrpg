@@ -218,6 +218,47 @@ describe('RelayPool', () => {
   })
 })
 
+describe('RelayPool health and addRelay', () => {
+  it('reports per-relay state, failures, retry time and publish counters', async () => {
+    const t = 1_000_000
+    const s = scripted({ [A]: ['ok'], [B]: ['fail', 'fail', 'ok'] })
+    const pool = make({ relays: [A, B], createRelay: s.createRelay, now: () => t })
+    await vi.advanceTimersByTimeAsync(0)
+    const h = () => Object.fromEntries(pool.health().map((x) => [x.url, x]))
+    expect(h()[A + '/'].state).toBe('open')
+    expect(h()[A + '/'].lastOpenAt).toBe(t)
+    expect(h()[B + '/']).toMatchObject({ state: 'down', failures: 1, lastError: expect.stringContaining('refused'), nextRetryAt: t + 1000 })
+
+    // Publishes: one accepted, then three refusals in a row on an open socket.
+    const relayA = s.created.find((r) => r.url.startsWith(A))!
+    await Promise.all(pool.publish([A], ev('p1')))
+    relayA.publish = () => Promise.reject(new Error('blocked: rate limited'))
+    for (const id of ['p2', 'p3', 'p4']) await Promise.allSettled(pool.publish([A], ev(id)))
+    expect(h()[A + '/']).toMatchObject({ publishOk: 1, publishFailed: 3, rejectStreak: 3 })
+
+    await vi.advanceTimersByTimeAsync(1000 + 2000)
+    expect(h()[B + '/']).toMatchObject({ state: 'open', failures: 0, lastError: undefined })
+  })
+
+  it('addRelay connects a new relay and extends open subscriptions to it', async () => {
+    const C = 'wss://c.test'
+    const s = scripted({ [A]: ['ok'], [C]: ['ok'] })
+    const pool = make({ relays: [A], createRelay: s.createRelay })
+    await vi.advanceTimersByTimeAsync(0)
+    const got: string[] = []
+    pool.subscribeMany([A], { kinds: [1] }, { onevent: (e) => got.push(e.id) })
+    expect(pool.addRelay(C)).toBe(true)
+    expect(pool.addRelay(C + '/')).toBe(false)
+    await vi.advanceTimersByTimeAsync(0)
+    const relayC = s.created.find((r) => r.url.startsWith(C))!
+    expect(relayC.subs).toHaveLength(1)
+    relayC.subs[0].params.onevent?.(ev('fromC', 5))
+    expect(got).toEqual(['fromC'])
+    expect(pool.urls).toEqual([A + '/', C + '/'])
+    expect(await Promise.all(pool.publish([C], ev('x')))).toEqual(['ok'])
+  })
+})
+
 describe('StatusTracker over RelayPool', () => {
   it('is connected while any relay is open, offline when all drop, connected again on reconnect', async () => {
     const s = scripted({ [A]: ['ok', 'ok'], [B]: ['fail'] })

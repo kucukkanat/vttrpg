@@ -135,9 +135,11 @@ export function createController(opts: {
   async function gmApply(env: IntentEnvelope) {
     if (env.from !== connection.gm && crossesWall(env.intent)) return
     if (rules) {
-      const reason = rules.validate(env.intent, { isGm: env.from === connection.gm, pubkey: env.from }, docJson())
+      // The founder and active co-GMs act as GM; the founder's signed manifest says who they are.
+      const fromGm = connection.isWriter ? connection.isWriter(env.from) : env.from === connection.gm
+      const reason = rules.validate(env.intent, { isGm: fromGm, pubkey: env.from }, docJson())
       if (reason) {
-        if (env.from === connection.gm) console.warn('rejected own intent:', reason)
+        if (env.from === opts.pubkey) console.warn('rejected own intent:', reason)
         return
       }
     }

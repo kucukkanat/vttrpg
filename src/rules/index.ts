@@ -79,6 +79,7 @@ export interface RulesEngine {
 export { loadPack, createRulesEngine, BUILTIN_PACKS } from './impl'
 /** Validate a skill definition the way the pack loader does (throws `PackError`). */
 export { guardSkill, PackError } from './load'
+export type { FetchLike } from './load'
 /** Parse a DSL expression; throws `ExprError` with a message on syntax errors. */
 export { parse as parseExpression, ExprError } from './expr'
 export { SheetView } from './SheetView'

@@ -160,13 +160,21 @@ export type RejoinDecision =
  * `connectionIsGm` is what net granted (saved role AND manifest gm matches us);
  * `metaGm` is `meta.gm` read from the restored doc, undefined when the doc is empty.
  */
-export function decideRejoin(input: { saved: Pick<SavedGame, 'isGm' | 'name'>; pubkey: string; connectionIsGm: boolean; metaGm: string | undefined }): RejoinDecision {
+export function decideRejoin(input: {
+  saved: Pick<SavedGame, 'isGm' | 'name'>
+  pubkey: string
+  connectionIsGm: boolean
+  /** The identity's role per the founder's manifest; a co-GM's pubkey is not `meta.gm`. */
+  connectionRole?: 'gm' | 'co-gm' | 'player'
+  metaGm: string | undefined
+}): RejoinDecision {
   const { saved, pubkey, connectionIsGm, metaGm } = input
   if (metaGm === undefined) {
     return { role: 'error', message: `Could not restore "${saved.name || 'the game'}" from the relays. Check your connection and try again.` }
   }
   if (!saved.isGm) return { role: 'player' }
   if (connectionIsGm && metaGm === pubkey) return { role: 'gm' }
+  if (connectionIsGm && input.connectionRole === 'co-gm') return { role: 'gm' }
   return {
     role: 'player',
     notice: 'This device is no longer the GM of this game (the identity does not match), so you rejoined as a player.',

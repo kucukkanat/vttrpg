@@ -15,6 +15,8 @@ export interface GameMeta {
   gm: PlayerPubkey
   pack: PackId
   packSource?: string // URL of the pack folder, if not built in
+  /** A third-party pack loaded from a bundle file, shared as a content-addressed asset (see ui/packSource.ts). */
+  packAsset?: AssetRef
   activeScene: SceneId | null
   createdAt: number
   /** Last-seen display names keyed by pubkey; the GM records them from presence so chat can name people who have gone offline. */
@@ -290,6 +292,8 @@ export type GameEvent =
       numbers?: ResourceDelta[]
     }
   | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
+  /** Stop a one-shot (or, without `asset`, all of them) on every client. */
+  | { id: string; at: number; kind: 'audio-stop'; asset?: AssetRef; by: PlayerPubkey }
 
 /** One resource change on a token's sheet: negative for damage or a cost, positive for healing. */
 export interface ResourceDelta {

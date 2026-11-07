@@ -55,6 +55,8 @@ export type Intent =
   | { type: 'token.claim'; token: TokenId; owner?: PlayerPubkey }
   /** GM soundboard: one-shot sound for everyone. */
   | { type: 'audio.play'; asset: AssetRef; volume?: number }
+  /** GM soundboard: stop one sound for everyone (`asset`), or every one-shot still sounding. */
+  | { type: 'audio.stop'; asset?: AssetRef }
   /** GM housekeeping: drop events older than `before`. */
   | { type: 'event.prune'; before: number }
   /** Standalone props (GM only). */

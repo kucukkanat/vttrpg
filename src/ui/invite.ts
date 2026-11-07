@@ -166,7 +166,7 @@ export async function previewGame(info: InviteInfo, relays: string[], opts: { ti
   const { pool, tracker } = createPool(relays)
   try {
     const found = await Promise.race([
-      fetchManifest(pool, relays, info.gameKey, info.gameId, opts.timeoutMs ?? PREVIEW_TIMEOUT_MS),
+      fetchManifest(pool, relays, info.gameKey, info.gameId, opts.timeoutMs ?? PREVIEW_TIMEOUT_MS, info.gm),
       new Promise<never>((_, reject) => opts.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true })),
     ])
     const manifest: Manifest = found.manifest

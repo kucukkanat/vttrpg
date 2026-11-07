@@ -346,6 +346,9 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'audio.play':
         events.push([{ id: env.id, at, kind: 'audio', asset: intent.asset, volume: intent.volume, by: from }])
         break
+      case 'audio.stop':
+        events.push([intent.asset ? { id: env.id, at, kind: 'audio-stop', asset: intent.asset, by: from } : { id: env.id, at, kind: 'audio-stop', by: from }])
+        break
       case 'prop.add':
         props.set(intent.prop.id, intent.prop)
         break
