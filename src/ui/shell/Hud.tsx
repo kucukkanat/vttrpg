@@ -11,6 +11,7 @@ import type { PlayerPubkey } from '@/core/ids'
 import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
+import { Icon } from '../icons'
 import { InitiativeChip } from '../panels/InitiativePanel'
 import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
 import { useSession } from '../session'
@@ -82,6 +83,7 @@ export function CameraPill() {
         <button type="button" className={`cam-btn cam-eyes${eyes ? ' on' : ''}`} aria-pressed={eyes} disabled={noToken && !eyes}
           title={noToken ? 'Select a token to look through its eyes' : eyes ? 'Back to the table camera (F)' : 'Look through the token\'s eyes (F)'}
           onClick={() => set({ firstPerson: !eyes })}>
+          <Icon name="eye" className="cam-icon" />
           <span className="cam-label">Eyes</span>
           <kbd aria-hidden>F</kbd>
         </button>
@@ -90,7 +92,7 @@ export function CameraPill() {
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}
           title={`${showGrid ? 'Hide' : 'Show'} grid (G)`} onClick={() => set({ showGrid: !showGrid })}>
-          <span className="cam-label" aria-hidden>▦</span>
+          <Icon name="grid" className="cam-icon" />
           <kbd aria-hidden>G</kbd>
         </button>
       </div>
@@ -98,18 +100,19 @@ export function CameraPill() {
       <div className="cam-group cam-group--select">
         <button type="button" className={`cam-btn cam-select${multiSelect ? ' on' : ''}`} aria-pressed={multiSelect}
           title="Select several tokens by tapping them" onClick={() => set({ multiSelect: !multiSelect })}>
+          <Icon name="select" className="cam-icon" />
           <span className="cam-label">Select</span>
         </button>
       </div>
       <div className="cam-group" role="group" aria-label="Table tools">
         <button type="button" className={`cam-btn cam-tool${tool === 'ruler' ? ' on' : ''}`} aria-pressed={tool === 'ruler'} aria-label="Ruler: measure distance"
           title={`${tool === 'ruler' ? 'Put away' : 'Measure with'} the ruler (M)`} onClick={() => set({ tool: tool === 'ruler' ? null : 'ruler' })}>
-          <span className="cam-label" aria-hidden>📏</span>
+          <Icon name="ruler" className="cam-icon" />
           <kbd aria-hidden>M</kbd>
         </button>
         <button type="button" className={`cam-btn cam-tool${tool === 'ping' ? ' on' : ''}`} aria-pressed={tool === 'ping'} aria-label="Ping: mark a spot for everyone"
           title={tool === 'ping' ? 'Tap the table to ping, Esc to cancel' : 'Ping a spot on the table (or double-tap the floor)'} onClick={() => set({ tool: tool === 'ping' ? null : 'ping' })}>
-          <span className="cam-label" aria-hidden>📍</span>
+          <Icon name="pin" className="cam-icon" />
         </button>
       </div>
     </div>
@@ -177,7 +180,7 @@ function DicePad() {
   return (
     <div className="cam-group cam-dice-group">
       <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label="Roll dice" title="Roll dice" onClick={() => setOpen(!open)}>
-        <span className="cam-label" aria-hidden>🎲</span>
+        <Icon name="dice" className="cam-icon" />
       </button>
       {open && (
         <div className="dice-pad" role="dialog" aria-label="Roll dice">

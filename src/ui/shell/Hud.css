@@ -38,7 +38,7 @@
 .cam-btn.on { background: rgba(224, 164, 88, .18); color: var(--accent); }
 .cam-btn:disabled { opacity: .4; cursor: default; }
 .cam-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.cam-grid { font-size: var(--fs-lg); }
+.cam-icon { flex: none; }
 .cam-btn kbd {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-xs); line-height: 16px;
   padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted);
@@ -62,6 +62,9 @@
 .game--phone, .game--tablet { --rail-w: 60px; }
 .game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
 .game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }
+/* Icon above its label so "Eyes" and "Select" fit the 60px rail. */
+.game--phone .cam-btn, .game--tablet .cam-btn { flex-direction: column; gap: 2px; padding: 4px 2px; }
+.game--phone .cam-label, .game--tablet .cam-label { font-size: var(--fs-xs); }
 
 /* Dice pad: opens under the pill on desktop, to the left of the rail on phones and tablets. */
 .cam-dice-group { position: relative; }

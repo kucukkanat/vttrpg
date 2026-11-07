@@ -8,6 +8,7 @@ import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useConnectionStatus, type ConnectionStatus } from '../shell/useConnectionStatus'
 import { buildInviteUrl, RELAY_HEALTH_HINT, relayHealth, relayStatusLine, selectAll, useCopy } from '../invite'
+import { Icon } from '../icons'
 import './invite.css'
 
 const css = `
@@ -70,7 +71,7 @@ export function TopBar({ controller, compact = false, trailing }: { controller: 
       {trailing}
       {compact ? (
         <div className="menu" ref={menuRef}>
-          <button type="button" className="icon" aria-haspopup="menu" aria-expanded={menu} aria-label="More" onClick={() => setMenu((m) => !m)}>⋯</button>
+          <button type="button" className="icon" aria-haspopup="menu" aria-expanded={menu} aria-label="More" onClick={() => setMenu((m) => !m)}><Icon name="more" /></button>
           {menu && (
             <div className="menu-list" role="menu">
               <div className="menu-info muted small">{statusLabel} · {isGm ? 'GM' : 'Player'}</div>

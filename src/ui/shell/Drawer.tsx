@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { BuildTag } from '../BuildTag'
+import { Icon } from '../icons'
 import { PanelHost } from './PanelHost'
 
 export interface EdgeFade { start: boolean; end: boolean }
@@ -66,8 +67,8 @@ export function Drawer({ panels, active, badges, pinned, controller, onSelect, o
     <div className="drawer-head">
       <h2 className="host-title">{def.title}</h2>
       <span className="spacer" />
-      <button type="button" className={`icon pin ${pinned ? 'on' : ''}`} aria-pressed={pinned} aria-label={pinned ? 'Unpin drawer' : 'Pin drawer open'} title={pinned ? 'Unpin: float over the table' : 'Pin: dock beside the table'} onClick={() => onPin(!pinned)}>📌</button>
-      <button type="button" className="icon" aria-label="Hide drawer" onClick={onClose}>✕</button>
+      <button type="button" className={`icon pin ${pinned ? 'on' : ''}`} aria-pressed={pinned} aria-label={pinned ? 'Unpin drawer' : 'Pin drawer open'} title={pinned ? 'Unpin: float over the table' : 'Pin: dock beside the table'} onClick={() => onPin(!pinned)}><Icon name="tack" /></button>
+      <button type="button" className="icon" aria-label="Hide drawer" onClick={onClose}><Icon name="close" /></button>
     </div>
   )
   return (
@@ -79,7 +80,7 @@ export function Drawer({ panels, active, badges, pinned, controller, onSelect, o
             const on = p.id === def.id
             return (
               <button key={p.id} type="button" role="tab" aria-selected={on} aria-label={n > 0 ? `${p.title}, ${n} unread` : p.title} className={`tab ${on ? 'on' : ''}`} onClick={() => onSelect(p.id)}>
-                <span className="glyph" aria-hidden>{p.glyph}</span>
+                <span className="glyph" aria-hidden><Icon name={p.glyph} /></span>
                 <span className="lbl">{p.short}</span>
                 {n > 0 && <span className="badge" aria-hidden>{n > 99 ? '99+' : n}</span>}
               </button>

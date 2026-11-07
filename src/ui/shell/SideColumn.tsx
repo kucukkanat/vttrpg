@@ -11,6 +11,7 @@ import { useRef, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPoi
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { BuildTag } from '../BuildTag'
+import { Icon } from '../icons'
 import { PanelHost } from './PanelHost'
 
 export const COL_MIN = 200
@@ -132,6 +133,7 @@ export function SideColumn({ side, panels, width, open, collapsed, controller, o
           const head = (
             <button type="button" className="section-head" aria-expanded={!isCollapsed} onClick={() => onToggleSection(def.id)}>
               <span className="chev" aria-hidden>{isCollapsed ? '▸' : '▾'}</span>
+              <Icon name={def.glyph} size={16} className="section-icon" />
               <span className="host-title">{def.title}</span>
             </button>
           )

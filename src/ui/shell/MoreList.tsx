@@ -5,6 +5,7 @@
  */
 import type { PanelDef } from '../panels/registry'
 import { BuildTag } from '../BuildTag'
+import { Icon } from '../icons'
 
 export function MoreList({ panels, current, badges, onSelect }: {
   panels: PanelDef[]
@@ -22,7 +23,7 @@ export function MoreList({ panels, current, badges, onSelect }: {
           return (
             <li key={p.id}>
               <button type="button" className={`more-row ${on ? 'on' : ''}`} aria-current={on ? 'true' : undefined} onClick={() => onSelect(p.id)}>
-                <span className="glyph" aria-hidden>{p.glyph}</span>
+                <span className="glyph" aria-hidden><Icon name={p.glyph} /></span>
                 <span className="more-title">{p.title}</span>
                 {p.scope === 'gm' && <span className="more-tag">GM</span>}
                 {n > 0 && <span className="more-count" aria-label={`${n} unread`}>{n > 99 ? '99+' : n}</span>}
