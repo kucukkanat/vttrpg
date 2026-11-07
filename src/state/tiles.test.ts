@@ -34,7 +34,7 @@ describe('validateTilesIntent', () => {
     expect(validateTilesIntent(place(['0,0,0,f', '1,0,0,n', '2,1,-3,v'], ['0:1:0', '', '0:2:3:1']), doc)).toBeNull()
   })
   it('refuses bad batches', () => {
-    expect(validateTilesIntent({ ...place(['0,0,0,f'], ['0:1:0']), scene: 'nope' as SceneId }, doc)).toBe('unknown scene')
+    expect(validateTilesIntent({ type: 'tiles.place', scene: 'nope' as SceneId, kits: ['kaykit-dungeon'], keys: ['0,0,0,f'], values: ['0:1:0'] }, doc)).toBe('unknown scene')
     expect(validateTilesIntent(place([], []), doc)).toBe('nothing to place')
     expect(validateTilesIntent(place(['0,0,0,q'], ['0:1:0']), doc)).toBe('not a tile cell')
     expect(validateTilesIntent(place(['0,0,0,f', '0,0,0,f'], ['0:1:0', '0:1:0']), doc)).toBe('the same cell twice in one batch')
