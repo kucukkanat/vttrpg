@@ -7,6 +7,7 @@ import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
 import type { CharacterId, LightId, NoteId, PackId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
 import type { SkillDef, VfxCue } from './pack'
+import type { SceneTiles } from './kits'
 
 export type CameraMode = 'orbit' | 'token'
 
@@ -496,6 +497,12 @@ export interface GameDocShape {
   walls?: Record<WallId, Wall>
   prefabs?: Record<PrefabId, Prefab>
   lights?: Record<LightId, PlacedLight>
+  /**
+   * Grid kit tiles by scene (src/core/kits.ts). In the Yjs doc: `tiles` (Y.Map) -> scene id ->
+   * Y.Map holding `kits` (the scene's kit table, a plain array) and one Y.Map<string> per 16×16
+   * chunk (`cx,cz`), keyed by cell key `x,level,z,slot` with values `kit:piece:rot[:variant]`.
+   */
+  tiles?: Record<SceneId, SceneTiles>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights', 'creatures', 'encounters'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights', 'creatures', 'encounters', 'tiles'] as const

@@ -9,6 +9,7 @@ import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
 import { migratedScale } from '@/core/props'
+import { applyTilesIntent } from './tilesDoc'
 import { combatEntries, EMPTY_INITIATIVE, inCurrentSlot, nextTurn, sheetDeltas, slotRange, sortInitiative, withOrder, withoutToken } from './initiative'
 import { DEFAULT_NAMES, endConcentration, pruneEffects, setEffect, startConcentration, tickEffects, updateMessage, type EffectsDoc, type PackNames } from './effects'
 
@@ -472,6 +473,11 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         walls.set(intent.wall, { ...w, door: { ...w.door, open: intent.open } })
         break
       }
+      case 'tiles.place':
+      case 'tiles.erase':
+      case 'tiles.door':
+        applyTilesIntent(doc, intent)
+        break
       case 'light.add':
         lights.set(intent.light.id, intent.light)
         break

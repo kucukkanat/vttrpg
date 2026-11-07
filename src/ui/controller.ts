@@ -73,7 +73,7 @@ export function createController(opts: {
 
   const docJson = (): GameDocShape => {
     const s = useGame.getState()
-    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters }
+    return { meta: s.meta!, scenes: s.scenes, tokens: s.tokens, characters: s.characters, chat: s.chat, fog: s.fog, events: s.events, props: s.props, notes: s.notes, customSkills: s.customSkills, initiative: s.initiative ?? undefined, walls: s.walls, prefabs: s.prefabs, lights: s.lights, creatures: s.creatures, encounters: s.encounters, tiles: s.tiles }
   }
 
   /** A player's token move through a drawn or imported wall or a closed door (the table stops such drags too). */

@@ -11,10 +11,10 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "lint": "eslint src",
-    "library:index": "node scripts/build-library-index.mjs",
-    "library": "node scripts/make-library/fetch.mjs && node scripts/make-library/index.mjs && node scripts/make-library/thumbs.mjs && node scripts/build-library-index.mjs",
-    "scenes": "node scripts/make-scenes/index.mjs && node scripts/build-library-index.mjs",
-    "props": "node scripts/make-props/index.mjs && node scripts/build-library-index.mjs",
+    "library:index": "node scripts/build-library-index.mjs && node scripts/make-library/kits.mjs",
+    "library": "node scripts/make-library/fetch.mjs && node scripts/make-library/index.mjs && node scripts/make-library/thumbs.mjs && node scripts/build-library-index.mjs && node scripts/make-library/kits.mjs",
+    "scenes": "node scripts/make-scenes/index.mjs && node scripts/build-library-index.mjs && node scripts/make-library/kits.mjs",
+    "props": "node scripts/make-props/index.mjs && node scripts/build-library-index.mjs && node scripts/make-library/kits.mjs",
     "creatures": "node scripts/build-creatures/index.mjs"
   },
   "dependencies": {
