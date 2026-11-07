@@ -351,6 +351,10 @@ export interface ResourceDelta {
   delta: number
   /** Sheet key of the resource (e.g. `hp`). */
   resource: string
+  /** The loss came from a critical hit (bigger gold number, hit-stop and shake on the table). */
+  crit?: boolean
+  /** The resource fell from above zero to zero or below: the token is down (bigger red number). */
+  down?: boolean
 }
 
 /** GM journal entry or handout. Markdown body; optional image. */

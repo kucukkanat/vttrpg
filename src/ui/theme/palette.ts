@@ -49,6 +49,10 @@ export const HP_LOW = '#d8342c'
 /** Floating numbers. */
 export const DAMAGE = '#ff5f52'
 export const HEAL = '#5fd36b'
+/** Critical hit numbers: white-hot, not gold (gold is "now"), with a "crit!" tag. */
+export const CRIT = '#fff1c9'
+/** Knock-down numbers: deep crimson with a "down" tag. */
+export const DOWNED = '#ff2e4d'
 
 /** Status categories: border colour per kind; the border shape carries the same meaning. */
 export const STATUS = {

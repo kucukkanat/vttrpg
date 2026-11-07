@@ -26,6 +26,7 @@ this pack adds on top of it and how it uses the engine.
 | `creature-actions.json` | Templates that turn stat-block actions into skills |
 | `encounter.json` | XP budget per character by level (Low, Moderate, High), SRD 5.2.1 |
 | `skills/*.json` | Two weapon attacks and eight spells |
+| `glossary.json` | Rules terms the tooltips link to: Armor Class, saving throw, spell save DC, attack roll, natural 20 and 1, proficiency bonus, spell slot, cantrip, concentration, ability modifier, bonus action |
 
 ## Sheet data
 

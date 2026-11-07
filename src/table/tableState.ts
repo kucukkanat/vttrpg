@@ -24,6 +24,8 @@ export interface ContextMenuRequest {
   token: TokenId
   x: number
   y: number
+  /** Opened by a long-press: a radial ring of big buttons around the finger instead of the list. */
+  radial?: boolean
 }
 
 /**

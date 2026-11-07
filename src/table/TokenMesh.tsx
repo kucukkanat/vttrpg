@@ -4,7 +4,8 @@
  * menu (right-click / long-press) and drag-to-move with snapping; dragging a selected token moves the whole selection.
  * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
  * chips around the disc, a ring in the owner's presence colour on player-owned tokens (thicker on
- * the viewer's own) and a pulsing gold ring on the combatant whose turn it is. A name label floats
+ * the viewer's own, with the owner's shape on it as a colour-blind-safe backup) and a pulsing gold
+ * ring on the combatant whose turn it is. A name label floats
  * above the viewer's own tokens, the selection, the current combatant and whatever is hovered.
  * While the viewer drags, the path and its length show on the floor (TokenOverlays.tsx).
  * Look: toon materials, an ink outline and a rim light on minis, a soft blob shadow under every
@@ -15,8 +16,8 @@ import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useSt
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor, useGLTF } from '@react-three/drei'
 import {
-  CanvasTexture, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
-  PointLight, RingGeometry, SRGBColorSpace, Vector3,
+  CanvasTexture, CircleGeometry, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
+  PointLight, RingGeometry, Shape, ShapeGeometry, SRGBColorSpace, Vector3,
 } from 'three'
 import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
@@ -35,6 +36,7 @@ import { inCurrentSlot } from '@/state/initiative'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
 import { MoveTrail, Nameplate, TargetRing, TurnRing } from './TokenOverlays'
 import { HOVER, MEASURE, SELECT, WAITING } from '@/ui/theme/palette'
+import { ownerShapeIn, shapePoints, type OwnerShape } from './ownerShape'
 import { blobShadowLook } from './atmosphere'
 import { labelYaw } from './labelFacing'
 import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
@@ -320,10 +322,45 @@ function ConditionGlyphs({ chips, radius }: { chips: ConditionChip[]; radius: nu
   )
 }
 
-/** Permanent ring in the owner's presence colour; the viewer's own tokens get a thicker one. */
-function OwnerRing({ radius, color, mine }: { radius: number; color: string; mine: boolean }) {
+/** Unit-radius floor geometry per owner shape (and a fatter copy for the dark outline behind it). */
+const shapeGeometries = new Map<string, ShapeGeometry | CircleGeometry>()
+function ownerShapeGeometry(shape: OwnerShape, outline: boolean): ShapeGeometry | CircleGeometry {
+  const key = `${shape}:${outline}`
+  let g = shapeGeometries.get(key)
+  if (g) return g
+  const grow = outline ? 1.35 : 1
+  const pts = shapePoints(shape)
+  if (!pts) g = new CircleGeometry(grow, 24)
+  else {
+    const s = new Shape()
+    // shapePoints' y points down the screen; the ring's plane is rotated so local +y is away from the camera.
+    s.moveTo(pts[0]!.x * grow, -pts[0]!.y * grow)
+    for (const p of pts.slice(1)) s.lineTo(p.x * grow, -p.y * grow)
+    s.closePath()
+    g = new ShapeGeometry(s)
+  }
+  shapeGeometries.set(key, g)
+  return g
+}
+
+/**
+ * Permanent ring in the owner's presence colour; the viewer's own tokens get a thicker one. The
+ * owner's shape (ownerShape.ts) sits on the ring at the back left, so who owns a token reads
+ * without telling colours apart.
+ */
+function OwnerRing({ radius, color, mine, shape }: { radius: number; color: string; mine: boolean; shape: OwnerShape | null }) {
+  const a = (3 * Math.PI) / 4
+  const size = radius * 0.3
   return (
-    <mesh geometry={mine ? hud().ownRing : hud().ring} material={ownerMaterial(color)} rotation-x={-Math.PI / 2} position-y={0.004} scale={[radius, radius, 1]} renderOrder={3} raycast={noRaycast} />
+    <group rotation-x={-Math.PI / 2} position-y={0.004} raycast={noRaycast}>
+      <mesh geometry={mine ? hud().ownRing : hud().ring} material={ownerMaterial(color)} scale={[radius, radius, 1]} renderOrder={3} raycast={noRaycast} />
+      {shape && (
+        <group position={[Math.cos(a) * radius * 1.1, Math.sin(a) * radius * 1.1, 0.002]} raycast={noRaycast}>
+          <mesh geometry={ownerShapeGeometry(shape, true)} material={hud().divider} scale={[size, size, 1]} renderOrder={4} raycast={noRaycast} />
+          <mesh geometry={ownerShapeGeometry(shape, false)} material={ownerMaterial(color)} position-z={0.001} scale={[size, size, 1]} renderOrder={5} raycast={noRaycast} />
+        </group>
+      )}
+    </group>
   )
 }
 
@@ -365,6 +402,7 @@ export function TokenMesh({ token }: { token: Token }) {
   const showHpToPlayers = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const ownerPresence = useGame((s) => (token.owner ? s.presence[token.owner]?.color : undefined))
   const gmPubkey = useGame((s) => s.meta?.gm)
+  const ownerShape = useGame((s) => ownerShapeIn(s, token.owner))
   const pack = useGame((s) => s.meta?.pack ?? null)
   // Whose turn it is: a boolean per token, so a turn change re-renders two tokens, not all of them.
   const isTurn = useGame((s) => inCurrentSlot(s.initiative, token.id))
@@ -448,11 +486,11 @@ export function TokenMesh({ token }: { token: Token }) {
     else setSelected(token.id)
   }
   /** Right-click / long-press: the token becomes the primary selection (the set is kept when it is a member) and the menu opens there. */
-  const openMenu = (x: number, y: number) => {
+  const openMenu = (x: number, y: number, radial = false) => {
     const s = useGame.getState()
     if (s.selectedTokens.includes(token.id)) s.selectMany(s.selectedTokens, token.id)
     else s.setSelectedToken(token.id)
-    uiSet({ contextMenu: { token: token.id, x, y } })
+    uiSet({ contextMenu: { token: token.id, x, y, ...(radial ? { radial } : {}) } })
   }
 
   const endDrag = (commit: boolean) => {
@@ -501,7 +539,7 @@ export function TokenMesh({ token }: { token: Token }) {
       longPress: e.pointerType === 'touch'
         ? setTimeout(() => {
           const held = drag.current
-          if (held && !held.moved) { endDrag(false); openMenu(held.startX, held.startY) }
+          if (held && !held.moved) { endDrag(false); openMenu(held.startX, held.startY, true) }
         }, LONG_PRESS_MS)
         : null,
       plane: new Plane(new Vector3(0, 1, 0), -floorY),
@@ -624,9 +662,9 @@ export function TokenMesh({ token }: { token: Token }) {
       </group>
       {/* Combat state and the owner marker follow the lift but not the facing, so the bar always sits in front. */}
       <group ref={hudGroup} position-y={elevation + 0.012} raycast={noRaycast}>
-        {ringColor && <OwnerRing radius={radius} color={ringColor} mine={mine} />}
+        {ringColor && <OwnerRing radius={radius} color={ringColor} mine={mine} shape={ownerShape} />}
         {isTurn && <TurnRing radius={radius} />}
-        {showName && <Nameplate name={token.name} y={nameY} accent={ringColor} mine={mine && !gmView} current={isTurn} />}
+        {showName && <Nameplate name={token.name} y={nameY} accent={ringColor} mine={mine && !gmView} current={isTurn} shape={ringColor ? ownerShape : null} />}
         {hp && <HpBar current={hp.current} max={hp.max} radius={radius} />}
         {chips.length > 0 && <ConditionGlyphs chips={chips} radius={radius} />}
         {(vital || defense) && <CombatBadges vital={vital} defense={defense} radius={radius} />}

@@ -92,6 +92,16 @@ export function tone(
   return osc
 }
 
+/** "Your turn": two soft rising bell notes (a fifth apart), short enough not to talk over play. */
+export function turnChime(ctx: BaseAudioContext, out: AudioNode, when: number, v = 1): void {
+  const note = (t: number, freq: number, amp: number) => {
+    tone(ctx, out, t, { freq, peak: 0.22 * amp * v, attack: 0.004, decay: 0.55 })
+    tone(ctx, out, t, { freq: freq * 2.01, peak: 0.07 * amp * v, attack: 0.004, decay: 0.3 })
+  }
+  note(when, 659.25, 1)
+  note(when + 0.13, 987.77, 0.85)
+}
+
 /** Dice hitting the tray: filtered noise tick + a short click, pitch randomized per impact. */
 export function diceImpact(ctx: BaseAudioContext, out: AudioNode, when: number, strength: number): void {
   const s = Math.min(1, Math.max(0, strength))

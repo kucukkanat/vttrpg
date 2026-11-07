@@ -173,6 +173,11 @@ separation (below). Scenery materials and lights are not colour roles.
 | HP bands | `--hp-*` / `HP_*` | `#3fbf7f` · `#f2b33d` · `#d8342c` | same | pip count, drop at ≤ 50 %, skull at 0 | token bar, floor bar, character card |
 | Whisper | `--whisper` | `#c58af9` | `#7b2fbf` | lock glyph | chat |
 | Waiting (GM away) | `WAITING` | `#9a9892` | – | ghosted token | queued move ring |
+| Crit / down numbers | `CRIT` / `DOWNED` | `#fff1c9` / `#ff2e4d` | – | "crit!" / "down" tag, size tier | floating numbers (gold stays "now") |
+| Declared enemy intent | `HOSTILE` | `#ff5a1f` | `--hostile` | "!" triangle, flag icon | declared-action marks, tracker rows, turn-strip badge |
+| Owner | presence colour | – | – | owner shape on the ring and nameplate | owner rings (`ownerShape.ts`) |
+| Build layer | `BUILD` | wall `#e8dcc0`, door `#3ee08f`, open door `#7cc4ff`, locked/erase `#ff5a1f`, proposal `#4fd1ff` | – | line style per kind | GM walls, doors and fog brush |
+| Press glow | `--select` | cream at 26–34 % | same | same-frame halo | every pressed control |
 
 Neutrals (dark → daylight): `--bg` `#0e0e10` → `#f4f1ea`, `--panel` `#17171b` → `#fbfaf6`,
 `--panel-2` `#1f1f25` → `#ece8de`, `--fg` `#e8e6e3` → `#17150f`, `--muted` `#9a9892` → `#5a5549`,
@@ -237,11 +242,14 @@ Conditions on tokens, in the token bar's GM toggles and on the character card sh
 - A monochrome glyph (`ConditionDef.icon`, drawn from `src/ui/theme/glyphs.ts`) sits on a dark
   fill inside the frame; a pack condition without a known glyph shows its two letters instead, and
   a condition the pack does not define gets a grey frame.
-- `ConditionDef.category` sets the kind; without it the id is matched against common names, else
-  harm. Both bundled packs set it.
-- Turns left show as a number on the lower right corner when the token or sheet carries duration
-  data (`{ id, turns }` entries, or a `conditionDurations` / `durations` map; `remaining`, `rounds`
-  and `duration` are read too). Without durations, no badge. On the last turn the chip pulses
+- `ConditionDef.category` sets the kind (`CONDITION_CATEGORIES` in `src/core/pack.ts`, the one scheme
+  the loader accepts); without it the id is matched against common names, else harm. Both bundled
+  packs set it; `concentrating` is magic.
+- The same badge shows in the encounter frame rows. The bloodied and down states use one pair of
+  glyphs everywhere: the drop and the skull on the token bar, the tracker (`VitalGlyph`), the
+  encounter summary and the table (`CombatBadges`, via `vitalMaterial`).
+- Turns left show as a number on the lower right corner from `Token.effects[id].remaining`
+  (src/state/effects.ts). Without a duration, no badge. On the last turn the chip pulses
   (reduced motion: a thicker frame).
 
 ## Themes
@@ -299,8 +307,31 @@ Panel padding `--sp-3`; stack gap inside panels `--sp-2`; sheet side padding `--
 | `G` / `F` / `C` | grid overlay / first person / camera mode (table, existing) |
 | `T` / `Q` / `E` | tactical top-down view / turn it 45° left / right (table) |
 | `Delete` | remove the selected token (GM, existing) |
+| `i` | on a focused skill chip: pin its tooltip (focus moves in; `Esc` closes and returns) |
+| arrows, `Home` / `End` | walk the token menu (list or radial); focus returns to the opener on close |
 
-The shell never binds a key the table uses. Phone and tablet get no shortcut layer; hardware
+The shell never binds a key the table uses.
+
+## Play flows on touch and feedback
+
+Each flow is one short sequence, learned once. Every new motion respects
+`prefers-reduced-motion`; every cue with sound or vibration has a toggle in the Players panel.
+
+| Flow | What happens | Where |
+|---|---|---|
+| Press feedback | Every button glows on `pointerdown`, before the next paint, with a halo wider than a fingertip; touch presses add an 8 ms vibration where `navigator.vibrate` exists (not iOS Safari) | `ui/feedback/press.ts`, `.is-pressed` in global.css |
+| Two-tap move | Your token selected, tap a cell: path, distance ("4 cells · 6 m") and a ghost; tap the same cell again or Move to commit; another cell re-aims; Cancel or Esc drops it. Drag still moves at once; mouse clicks unchanged | `table/twoTapMove.ts`, `table/MovePreview.tsx` |
+| Area aim on touch | Bursts, cones and lines snap to cell centres; while the finger drags, the aim rides 64 px above the touch point | `table/targeting.ts` (`fingerAimPoint`, `snapAim`) |
+| Radial token menu | Long-press a token: Sheet, Attack, Ping, (GM) HP −1 / +1, Hide, Edit, More in a ring around the finger, pulled in from the edges; More opens the list menu | `ui/shell/ContextMenu.tsx` |
+| Layered tooltips | Hover or focus a skill chip (or a status badge) to see it; hold it on touch, tap the tip, or press `i` to pin. Glossary terms in a tip open a second level; that level has no links (two deep at most) | `ui/tips/` |
+| Skill previews | The skill tip loops a small SVG of the cells its shape covers (dart, bloom, sweep), drawn with the table's own targeting maths | `ui/tips/ShapePreview.tsx` |
+| Feedback hierarchy | Ordinary hits: number, flash and a small ground ring. Knock-downs: larger crimson number tagged "down". Crits: largest gold number tagged "crit!", an 85 ms hit-stop and a shake. Nothing else shakes on its own | `table/vfx/numbers.ts`, `hitStop.ts` |
+| Turn start | The turn ring flares out once for everyone; the owner hears a chime and, where supported, feels a vibration (Turn chime toggle) | `table/TokenOverlays.tsx`, `ui/feedback/TurnCue.tsx` |
+| Dice | The toast's total pops when the dice settle; on phones the dice then shrink into the toast after 1.2 s, and leave at once when the keyboard or a full sheet needs the room | `dice/choreography.ts` |
+| Owner shapes | Each player's tokens carry one of six shapes on the owner ring, on the nameplate and in the Players panel, so ownership never depends on colour alone | `table/ownerShape.ts` |
+
+Packs may ship `glossary.json` (`[{ id, term, aliases?, text }]`); conditions and resources are
+glossary terms already. Phone and tablet get no shortcut layer; hardware
 keyboards still reach the table's own keys.
 
 ## Checklist

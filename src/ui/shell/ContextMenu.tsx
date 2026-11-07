@@ -11,21 +11,32 @@
  *   Remove      GM: `token.remove` for this token, or the whole selection when it is a member (undo toasts come from the controller)
  *
  * Players see Sheet / Attack / Edit on their own tokens only (TokenMesh never opens it on other tokens).
+ *
+ * A long-press opens the radial twin instead (`req.radial`): big round buttons in a ring around the
+ * finger, clockwise from the top: Sheet, Attack, Ping (rings the token's spot for everyone), the GM's
+ * HP −1 / +1 and Hide/Show, Edit, and More, which turns it into the list above (Assign, Remove).
+ * The ring is pulled in from the edges so every button stays on screen; the centre closes it.
+ *
+ * Keyboard: focus starts on the first item, arrows walk the items (wrapping), Home / End jump, Esc
+ * closes, and focus returns to whatever opened the menu (the token bar's ⋯).
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { Token } from '@/core/doc'
 import type { PlayerPubkey } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import { useGame } from '@/state/store'
 import { useTableUi, type ContextMenuRequest } from '@/table/tableState'
 import { startEditing } from '@/table/editTap'
+import { pingAt } from '@/table/ping'
 import type { GameController } from '../controller'
+import { haptic } from '../feedback/haptics'
+import { Icon, type IconName } from '../icons'
+import { changeTokenHp } from '../skillbar/changeHp'
 import { useSession } from '../session'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from './useShortcuts'
 import { tokenSkillList } from '../skillbar/tokenSkills'
 import './ContextMenu.css'
-import { Icon } from '@/ui/icons'
 
 /** The pack's first skill that reads as an attack: deals damage and is aimed at something. Falls back to the first aimed skill. */
 export function firstAttackSkill(skills: readonly SkillDef[]): SkillDef | undefined {
@@ -68,14 +79,54 @@ export function ContextMenu() {
   return <Menu key={`${req.token}:${req.x},${req.y}`} req={req} token={token} controller={controller} onClose={close} />
 }
 
+/** Radial menu metrics: ring radius to the button centres, and the button size (44px+ touch targets). */
+export const RADIAL_RADIUS = 84
+export const RADIAL_ITEM = 56
+
+/**
+ * Centre and button positions for a radial menu of `n` buttons around (x, y), clockwise from the
+ * top. The centre is pulled inwards so the whole ring stays inside the padded container (and is
+ * centred in it when the container is too small for the ring).
+ */
+export function radialLayout(n: number, p: { x: number; y: number; width: number; height: number; pad: MenuPlacement['pad'] }, radius = RADIAL_RADIUS, item = RADIAL_ITEM): { cx: number; cy: number; items: { x: number; y: number }[] } {
+  const reach = radius + item / 2
+  const clampAxis = (v: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(Math.max(v, lo), hi))
+  const cx = clampAxis(p.x, p.pad.left + reach, p.width - p.pad.right - reach)
+  const cy = clampAxis(p.y, p.pad.top + reach, p.height - p.pad.bottom - reach)
+  const items = Array.from({ length: n }, (_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(1, n)
+    return { x: Math.round(Math.cos(a) * radius), y: Math.round(Math.sin(a) * radius) }
+  })
+  return { cx, cy, items }
+}
+
+/**
+ * Which menu item a key moves focus to: arrows step (wrapping), Home / End jump to the ends;
+ * null for any other key. A radial menu takes all four arrows (left/up back, right/down on).
+ */
+export function menuKeyTarget(key: string, index: number, count: number): number | null {
+  if (count <= 0) return null
+  switch (key) {
+    case 'ArrowDown': case 'ArrowRight': return (index + 1 + count) % count
+    case 'ArrowUp': case 'ArrowLeft': return (index - 1 + count) % count
+    case 'Home': return 0
+    case 'End': return count - 1
+    default: return null
+  }
+}
+
+type MenuMode = 'radial' | 'main' | 'assign'
+interface RadialItem { key: string; label: string; icon?: IconName; text?: string; run(): void; more?: boolean }
+
 function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; token: Token; controller: GameController; onClose(): void }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [mode, setMode] = useState<'main' | 'assign'>('main')
+  const [mode, setMode] = useState<MenuMode>(req.radial ? 'radial' : 'main')
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   const presence = useGame((s) => s.presence)
   const selectedCount = useGame((s) => (s.selectedTokens.includes(token.id) ? s.selectedTokens.length : 1))
   const isGm = controller.connection.isGm
   const skill = firstAttackSkill(tokenSkillList(token, controller.rules?.allSkills() ?? []))
+  const hasHp = !!token.character && !!controller.rules?.pack.resources[0]
 
   // Place at the pointer, inside the HUD (its padding carries the safe-area insets). Re-run when the list changes height.
   useLayoutEffect(() => {
@@ -85,11 +136,17 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
     const rect = parent?.getBoundingClientRect()
     const cs = parent ? getComputedStyle(parent) : null
     const px = (v: string | undefined) => { const n = parseFloat(v ?? ''); return Number.isFinite(n) ? n : 8 }
-    setPos(placeMenu({
-      x: req.x - (rect?.left ?? 0), y: req.y - (rect?.top ?? 0), w: el.offsetWidth, h: el.offsetHeight,
+    const box = {
+      x: req.x - (rect?.left ?? 0), y: req.y - (rect?.top ?? 0),
       width: rect?.width ?? window.innerWidth, height: rect?.height ?? window.innerHeight,
       pad: { left: px(cs?.paddingLeft), top: px(cs?.paddingTop), right: px(cs?.paddingRight), bottom: px(cs?.paddingBottom) },
-    }))
+    }
+    if (mode === 'radial') {
+      const { cx, cy } = radialLayout(0, box)
+      setPos({ left: cx, top: cy })
+      return
+    }
+    setPos(placeMenu({ ...box, w: el.offsetWidth, h: el.offsetHeight }))
   }, [req.x, req.y, mode])
 
   // Esc closes (and does not also deselect: the table's own Esc handler runs in the bubble phase); a press outside closes.
@@ -101,8 +158,29 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
     return () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointerdown', onDown, true) }
   }, [onClose])
   useEffect(() => { ref.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus() }, [mode])
+  // Focus goes back where it came from (the ⋯ button) when the menu closes with focus inside it.
+  const returnTo = useRef<Element | null>(typeof document === 'undefined' ? null : document.activeElement)
+  useLayoutEffect(() => {
+    const el = ref.current
+    return () => {
+      const back = returnTo.current
+      if (el && el.contains(document.activeElement) && back instanceof HTMLElement && back.isConnected && back !== document.body) back.focus()
+    }
+  }, [])
+  useEffect(() => { if (req.radial) haptic('press') }, [req.radial])
+
+  /** Arrow keys walk the items (wrapping), Home / End jump to the ends. */
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])
+    const next = menuKeyTarget(e.key, items.indexOf(document.activeElement as HTMLElement), items.length)
+    if (next === null) return
+    e.preventDefault()
+    items[next]?.focus()
+  }
 
   const dispatch = (intent: Parameters<GameController['dispatch']>[0]) => void controller.dispatch(intent)
+  const ping = () => { pingAt(token.position.x, token.position.z); onClose() }
+  const hp = (delta: number) => { changeTokenHp(controller, token, delta) }
   const sheet = () => { requestOpenPanel('character'); onClose() }
   const edit = () => { onClose(); startEditing({ kind: 'token', id: token.id }) }
   const attack = () => {
@@ -124,8 +202,37 @@ function Menu({ req, token, controller, onClose }: { req: ContextMenuRequest; to
   const offlineOwner = token.owner && token.owner !== controller.pubkey && !presence[token.owner] ? token.owner : null
   const style = pos ? { left: pos.left, top: pos.top } : { left: 0, top: 0, visibility: 'hidden' as const }
 
+  if (mode === 'radial') {
+    const items: RadialItem[] = [
+      { key: 'sheet', label: 'Sheet', icon: 'sheet', run: sheet },
+      { key: 'attack', label: skill && token.character ? skill.name : 'Attack', icon: 'swords', run: attack },
+      { key: 'ping', label: 'Ping', icon: 'pin', run: ping },
+      ...(isGm && hasHp ? [
+        { key: 'hp-', label: 'HP −1', text: '−1', run: () => hp(-1) },
+        { key: 'hp+', label: 'HP +1', text: '+1', run: () => hp(1) },
+      ] : []),
+      ...(isGm ? [{ key: 'hide', label: token.hidden ? 'Show' : 'Hide', icon: 'eye' as const, run: toggleHidden }] : []),
+      { key: 'edit', label: 'Edit', icon: 'wrench', run: edit },
+      { key: 'more', label: 'More', icon: 'more', run: () => setMode('main'), more: true },
+    ]
+    const { items: spots } = radialLayout(items.length, { x: 0, y: 0, width: 0, height: 0, pad: { left: 0, top: 0, right: 0, bottom: 0 } })
+    return (
+      <div ref={ref} className="ctx-radial" role="menu" aria-label={`${token.name} actions`} style={style} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
+        <span className="ctx-radial-name" aria-hidden="true">{token.name}</span>
+        {items.map((it, i) => (
+          <button key={it.key} type="button" role="menuitem" aria-haspopup={it.more ? 'menu' : undefined} className="ctx-radial-item"
+            style={{ '--rx': `${spots[i]!.x}px`, '--ry': `${spots[i]!.y}px`, '--i': i } as CSSProperties} onClick={it.run}>
+            {it.icon ? <Icon name={it.icon} className="ctx-radial-icon" /> : <span className="ctx-radial-text" aria-hidden="true">{it.text}</span>}
+            <span className="ctx-radial-label">{it.label}</span>
+          </button>
+        ))}
+        <button type="button" className="ctx-radial-close" aria-label="Close menu" onClick={onClose}><Icon name="close" /></button>
+      </div>
+    )
+  }
+
   return (
-    <div ref={ref} className="ctx-menu" role="menu" aria-label={`${token.name} actions`} style={style} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={ref} className="ctx-menu" role="menu" aria-label={`${token.name} actions`} style={style} onKeyDown={onKeyDown} onContextMenu={(e) => e.preventDefault()}>
       <div className="ctx-head">
         <span className="dot" style={{ background: token.color }} />
         <span className="ctx-name">{token.name}</span>

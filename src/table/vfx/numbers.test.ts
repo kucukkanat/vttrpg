@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Token } from '@/core/doc'
 import type { SceneId, TokenId } from '@/core/ids'
-import { DAMAGE_COLOR, formatDelta, HEAL_COLOR, NUMBER_DELAY_MS, NUMBER_STAGGER_MS, numbersEvent, planNumbers, resourceTag } from './numbers'
+import {
+  CRIT_COLOR, DAMAGE_COLOR, DOWN_COLOR, formatDelta, HEAL_COLOR, LOUD_NUMBER_DURATION_MS, NUMBER_DELAY_MS, NUMBER_STAGGER_MS, numbersEvent, numberTier, planNumbers,
+  resourceTag, TIER_SCALE,
+} from './numbers'
 import { CHEST_HEIGHT_CELLS, type VfxEvent } from './schedule'
 
 const scene = 's1' as SceneId
@@ -45,6 +48,23 @@ describe('planNumbers', () => {
     const out = planNumbers(event([{ token: B, delta: -4, resource: 'hp' }, { token: B, delta: -1, resource: 'wil' }]), tokens, 1, 0)
     expect(out.map((n) => n.fireAt)).toEqual([NUMBER_DELAY_MS, NUMBER_DELAY_MS + NUMBER_STAGGER_MS])
     expect(out[1]!.resource).toBe('wil')
+  })
+  it('makes crits and knock-downs louder: own colour, word tag, larger and longer; ordinary hits stay plain', () => {
+    const out = planNumbers(event([
+      { token: B, delta: -9, resource: 'hp', crit: true, down: true },
+      { token: A, delta: -3, resource: 'hp', down: true },
+      { token: A, delta: -1, resource: 'hp' },
+    ]), tokens, 1, 0)
+    const [crit, down, plain] = ['e1:n:0', 'e1:n:1', 'e1:n:2'].map((k) => out.find((n) => n.key === k)!)
+    expect(crit).toMatchObject({ tier: 'crit', color: CRIT_COLOR, resource: 'crit!', scale: TIER_SCALE.crit, duration: LOUD_NUMBER_DURATION_MS })
+    expect(down).toMatchObject({ tier: 'down', color: DOWN_COLOR, resource: 'down', scale: TIER_SCALE.down })
+    expect(plain).toMatchObject({ tier: 'normal', color: DAMAGE_COLOR, resource: 'hp', scale: 1 })
+    expect(TIER_SCALE.crit).toBeGreaterThan(TIER_SCALE.down)
+    expect(TIER_SCALE.down).toBeGreaterThan(TIER_SCALE.normal)
+  })
+  it('never makes a heal loud', () => {
+    expect(numberTier({ delta: 4, crit: true, down: true })).toBe('normal')
+    expect(numberTier({ delta: -4, crit: true })).toBe('crit')
   })
   it('skips zero deltas, missing tokens and events without numbers', () => {
     expect(planNumbers(event([{ token: B, delta: 0, resource: 'hp' }, { token: 'ghost' as TokenId, delta: -2, resource: 'hp' }]), tokens, 1, 0)).toEqual([])

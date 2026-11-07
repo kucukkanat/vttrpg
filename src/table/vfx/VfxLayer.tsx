@@ -3,13 +3,17 @@
  * (pure, see schedule.ts); a per-frame check spawns the ones whose time has come; each effect
  * component removes itself when finished. `shake` goes out through `vfxBus`, `sound` is left to
  * the audio module. An event's `numbers` (resource deltas) become floating damage and heal numbers
- * over the tokens, planned by `numbers.ts` and drawn by `FloatingNumber`.
+ * over the tokens, planned by `numbers.ts` and drawn by `FloatingNumber`. A critical number adds a
+ * hit-stop (hitStop.ts) and a camera shake, and nothing else does, unless reduced motion is on.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { GameEvent } from '@/core/doc'
 import { useGame } from '@/state/store'
+import { haptic } from '@/ui/feedback/haptics'
+import { prefersReducedMotion } from '@/ui/feedback/prefs'
 import { vfxBus } from './bus'
+import { CRIT_SHAKE, HIT_STOP_MS, requestHitStop } from './hitStop'
 import { AuraEffect } from './presets/AuraEffect'
 import { BeamEffect } from './presets/BeamEffect'
 import { clamp01, useLifetime } from './presets/common'
@@ -71,6 +75,14 @@ export function VfxLayer({ events, since, cellSize, maxActive = 48 }: VfxLayerPr
       if (due.length) {
         pendingNumbers.current = rest
         setNumbers((n) => [...n, ...due].slice(-maxActive))
+        // Only a critical hit stops time and shakes the camera; ordinary hits stay restrained.
+        if (due.some((n) => n.tier === 'crit')) {
+          haptic('crit')
+          if (!prefersReducedMotion()) {
+            requestHitStop(HIT_STOP_MS, now)
+            vfxBus.emit('shake', CRIT_SHAKE.strength, CRIT_SHAKE.durationMs)
+          }
+        }
       }
     }
   })

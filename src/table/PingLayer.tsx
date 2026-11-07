@@ -21,7 +21,7 @@ import { useGame } from '@/state/store'
 import { useTable } from './context'
 import type { Bounds2 } from './grid'
 import {
-  DOUBLE_TAP_MS, isDoubleTap, LONG_PRESS_MS, PING_CLEAR_MS, PING_DURATION_MS, PING_LABEL_MS, PRESS_SLOP_PX, type PingEvent, type Tap,
+  DOUBLE_TAP_MS, isDoubleTap, LONG_PRESS_MS, PING_CLEAR_MS, PING_DURATION_MS, PING_LABEL_MS, PRESS_SLOP_PX, setPingSender, type PingEvent, type Tap,
 } from './ping'
 import { FloorCatcher, FloorLabel, floorPoint } from './RulerLayer'
 import { useTableUi } from './tableState'
@@ -86,6 +86,7 @@ export function PingLayer({ bounds }: { bounds: Bounds2 }) {
     play({ ...ping, pubkey: viewer?.pubkey ?? ('' as PingEvent['pubkey']), name: 'You' })
   }, [sceneId, myColor, onPresence, play, viewer])
   useEffect(() => () => { if (clearTimer.current) clearTimeout(clearTimer.current) }, [])
+  useEffect(() => setPingSender(send), [send])
 
   /** Gestures only while nothing else owns the pointer. */
   const gesturesFree = () => {

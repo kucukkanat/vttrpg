@@ -12,6 +12,7 @@
     "conditions": "conditions.json",
     "sheet": "sheet.json",
     "chargen": "chargen.json",
+    "glossary": "glossary.json",
     "skills": ["skills/attack.json", "skills/fireball.json", "skills/heal.json", "skills/magic-missile.json"]
   }
 }

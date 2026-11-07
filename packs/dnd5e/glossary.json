@@ -1,0 +1,69 @@
+[
+  {
+    "id": "armor-class",
+    "term": "Armor Class",
+    "aliases": ["AC"],
+    "text": "How hard a creature is to hit. An attack roll equal to or higher than the target's Armor Class hits."
+  },
+  {
+    "id": "saving-throw",
+    "term": "Saving throw",
+    "aliases": ["saving throws", "save", "saves"],
+    "text": "A d20 roll plus an ability modifier (and the proficiency bonus if proficient) to resist a spell or danger. Meeting the DC succeeds."
+  },
+  {
+    "id": "save-dc",
+    "term": "spell save DC",
+    "aliases": ["DC", "Difficulty Class"],
+    "text": "The number a saving throw must reach: 8 + the caster's spellcasting ability modifier + proficiency bonus."
+  },
+  {
+    "id": "attack-roll",
+    "term": "attack roll",
+    "aliases": ["spell attack", "ranged spell attack"],
+    "text": "A d20 roll plus an ability modifier and the proficiency bonus, compared with the target's Armor Class."
+  },
+  {
+    "id": "natural-20",
+    "term": "natural 20",
+    "aliases": ["critical hit"],
+    "text": "A d20 that lands on 20 before modifiers. On an attack roll it always hits and is a critical hit: the damage dice are rolled twice."
+  },
+  {
+    "id": "natural-1",
+    "term": "natural 1",
+    "text": "A d20 that lands on 1 before modifiers. An attack roll with a natural 1 always misses."
+  },
+  {
+    "id": "proficiency-bonus",
+    "term": "proficiency bonus",
+    "text": "A bonus from level (+2 at 1st, rising every four levels) added to attacks, saves and skills a character is trained in."
+  },
+  {
+    "id": "spell-slot",
+    "term": "spell slot",
+    "aliases": ["spell slots", "1st-level spell slot"],
+    "text": "Casting a leveled spell spends a slot of that level or higher. Slots come back after a long rest."
+  },
+  {
+    "id": "cantrip",
+    "term": "cantrip",
+    "text": "A spell that can be cast at will, without spending a spell slot. Its damage grows at 5th, 11th and 17th level."
+  },
+  {
+    "id": "concentration",
+    "term": "concentration",
+    "text": "Some spells last only while the caster concentrates. Casting another concentration spell, or failing a CON save after taking damage, ends it."
+  },
+  {
+    "id": "modifier",
+    "term": "ability modifier",
+    "aliases": ["spellcasting ability modifier"],
+    "text": "Half of the ability score minus 10, rounded down: 10 gives +0, 16 gives +3, 8 gives -1."
+  },
+  {
+    "id": "bonus-action",
+    "term": "bonus action",
+    "text": "A quick extra action some spells and features use. A creature gets at most one per turn."
+  }
+]

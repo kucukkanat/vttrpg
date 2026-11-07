@@ -2,7 +2,7 @@ import type { AssetRef } from '@/core/assets'
 import type { AmbientPreset, AudioEngine } from './index'
 import { AMBIENT_PRESETS, buildAmbience, type AmbienceGraph } from './ambience'
 import { BUILTIN_DURATION_S, builtinName, soundKey } from './builtin'
-import { SYNTHS, diceImpact as synthDiceImpact } from './synth'
+import { SYNTHS, diceImpact as synthDiceImpact, turnChime as synthTurnChime } from './synth'
 
 /** One-shots whose `at` is older than this are skipped (late joiners, replayed deltas). */
 export const STALE_ONE_SHOT_MS = 5000
@@ -271,6 +271,11 @@ export function createAudioEngine(opts: AudioEngineOptions): AudioEngine {
       if (t - lastImpact < 0.012) return // many dice land at once; the ear hears one
       lastImpact = t
       synthDiceImpact(ctx, fxBus, t, strength)
+    },
+
+    turnChime() {
+      if (disposed) return
+      synthTurnChime(ctx, fxBus, ctx.currentTime)
     },
 
     setMasterVolume(v) {

@@ -19,7 +19,9 @@ import { firstOwnedToken, useGame } from '@/state/store'
 import { newSeed } from '@/dice/fair'
 import { inCurrentSlot } from '@/state/initiative'
 import { useTableUi } from '@/table/tableState'
-import { defenseAbbr, defenseAttribute, readDefense, readResource } from '@/table/tokenHud'
+import { conditionChips, defenseAbbr, defenseAttribute, readDefense, readResource } from '@/table/tokenHud'
+import { mergeHandlers, pinOnClick, tipTriggerProps } from '../tips/useTipTrigger'
+import { useMoveDraft } from '@/table/twoTapMove'
 import { useTargeting } from '../targeting'
 import { requestOpenPanel } from '../shell/useShortcuts'
 import { requestSkillEditor } from '../skilleditor/requests'
@@ -27,7 +29,8 @@ import { pushToast } from '../toasts'
 import { combatants, lateJoin, rollInitiative, rollLateJoin } from '../panels/initiative'
 import { costLabel, useSkillCasting } from './useSkillCasting'
 import { missingSkills, withoutSkill, withSkill } from './tokenSkills'
-import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
+import { saveChipLabel, sheetSaves } from './tokenBar'
+import { changeTokenHp } from './changeHp'
 import { conditionStyle, rangePreviewFor, type RangePreview } from './barVisuals'
 import { CostBadges, HpMeter } from './BarParts'
 import { SkillIcon } from './skillIcons'
@@ -45,6 +48,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
     return sel && sel.owner === me ? sel : firstOwnedToken(s, me as PlayerPubkey)
   })
   const aimingAny = useTargeting((s) => s.pending !== null)
+  const moving = useMoveDraft((s) => s.draft !== null)
+  const showHp = useGame((s) => s.meta?.showHpToPlayers ?? false)
   const [card, setCard] = useState<{ token: TokenId; kind: Card } | null>(null)
   const casting = useSkillCasting(controller, token)
   const init = useGame((s) => s.initiative)
@@ -56,7 +61,8 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const tokenId = token?.id
   useEffect(() => { setPreview(null); return () => setPreview(null) }, [tokenId, aimingAny])
 
-  if (!token || aimingAny) return null
+  // Aiming a skill or previewing a two-tap move: the table's own bar takes the bottom.
+  if (!token || aimingAny || moving) return null
   const { skills, canUse, labelOf, shortfall, use, character } = casting
   const open = card?.token === token.id ? card.kind : null
   const toggle = (kind: Card) => setCard(open === kind ? null : { token: token.id, kind })
@@ -70,21 +76,15 @@ export function SkillBar({ controller }: { controller: GameController }) {
   const defense = character && rules && defAttr ? readDefense(character.data, defAttr, (e) => rules.evaluateNow(e, character)) : null
   const mayEnd = up && (isGm || token.owner === me)
   const inOrder = !!init?.order.some((e) => e.token === token.id)
+  // Statuses with their tap-to-pin explanations: the GM always, players on their own token or when HP is shown.
+  const statuses = isGm || token.owner === me || showHp ? conditionChips(token, character, rules?.pack.conditions ?? []) : []
 
   const roll = (label: string, formula: string) => {
     if (!character) return
     void controller.dispatch({ type: 'roll', formula, seed: newSeed(), label: `${character.name}: ${label}`, character: character.id })
   }
-  const changeHp = (delta: number) => {
-    if (!character || !primary) return
-    const data = adjustResource(character.data, primary.id, delta, hp?.max)
-    if (!data) return
-    void controller.dispatch({ type: 'character.upsert', character: { ...character, data } })
-    // Everyone sees the change float over the token, like a skill's damage or healing.
-    const after = readResource(data, primary, (e) => rules!.evaluateNow(e, character))
-    const moved = after && hp ? after.current - hp.current : 0
-    if (moved) controller.floatNumbers?.(token.scene, [{ token: token.id, delta: moved, resource: primary.id }])
-  }
+  // Everyone sees the change float over the token, like a skill's damage or healing.
+  const changeHp = (delta: number) => { changeTokenHp(controller, token, delta) }
   const endTurn = () => void controller.dispatch(isGm ? { type: 'initiative.next' } : { type: 'initiative.next', token: token.id })
   const openMenu = () => {
     const r = menuBtn.current?.getBoundingClientRect()
@@ -112,6 +112,17 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
           <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}><Icon name="more" /></button>
         </div>
+        {statuses.length > 0 && (
+          <div className="token-bar-status" role="group" aria-label={`${token.name}'s statuses`}>
+            {statuses.map((c) => (
+              <button key={c.id} type="button" className="status-badge" style={{ '--cond': c.color } as CSSProperties}
+                aria-label={`${c.name}, status: what it does`} {...pinOnClick(() => ({ kind: 'condition', condition: c.id }))}>
+                <span className="condition-chip-badge" aria-hidden="true">{c.label}</span>
+                <span className="status-badge-name">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="token-bar-chips">
           {!character && <span className="muted small skill-bar-note">{isGm ? 'No sheet: skills and saves need one.' : 'No character sheet.'}</span>}
           {character && canUse && saves.map((s) => (
@@ -126,10 +137,10 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {character && skills.map((skill) => {
             const reason = canUse ? shortfall(skill) : 'not yours'
             return (
-              <button key={skill.id} type="button" className="skill-chip" disabled={reason !== null}
-                title={reason ? `${skill.name}: ${reason}` : skill.description} onClick={() => use(skill)}
-                aria-label={`${skill.name}, ${reason ?? costLabel(skill, labelOf)}`}
-                {...previewHandlers(skill, token.id)}>
+              <button key={skill.id} type="button" className="skill-chip" aria-disabled={reason !== null || undefined}
+                onClick={() => { if (reason === null) use(skill) }}
+                aria-label={`${skill.name}, ${reason ?? costLabel(skill, labelOf)}`} aria-keyshortcuts="i"
+                {...mergeHandlers(previewHandlers(skill, token.id), tipTriggerProps(() => ({ kind: 'skill', skill: skill.id, token: token.id, reason })))}>
                 <SkillIcon icon={skill.icon} kind={skill.target.kind} />
                 <span className="skill-chip-text">
                   <span className="skill-chip-name">{skill.name}</span>

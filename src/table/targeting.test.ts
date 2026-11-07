@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { GridSpec } from '@/core/geometry'
 import { cellKey } from './grid'
 import {
-  cellsInShape, clampToRange, directionTo, pointInShape, resolveShape, shapeOutline, shapeSummary, stagedSummary, stageTargeting,
-  tokenAt, tokensInRange, tokensInShape,
+  cellsInShape, clampToRange, directionTo, FINGER_OFFSET_PX, fingerAimPoint, isAreaShape, pointInShape, resolveShape, shapeOutline, shapeSummary, snapAim,
+  stagedSummary, stageTargeting, tokenAt, tokensInRange, tokensInShape,
 } from './targeting'
 
 describe('stageTargeting', () => {
@@ -199,5 +199,24 @@ describe('shapeOutline', () => {
     const line = shapeOutline(resolveShape(grid, { kind: 'line', range: 4, width: 2 }, src, { x: 1, y: 0 }))
     expect(line).toHaveLength(4)
     expect(line.map((p) => p.y).sort()).toEqual([-1, -1, 1, 1])
+  })
+})
+
+describe('touch aim', () => {
+  it('takes the offset and the snap for area shapes only', () => {
+    expect(isAreaShape({ kind: 'radius', radius: 2, range: 6 })).toBe(true)
+    expect(isAreaShape({ kind: 'cone', range: 3, angle: 90 })).toBe(true)
+    expect(isAreaShape({ kind: 'line', range: 4, width: 1 })).toBe(true)
+    expect(isAreaShape({ kind: 'single', range: 3 })).toBe(false)
+    expect(isAreaShape({ kind: 'self' })).toBe(false)
+  })
+  it('aims a finger-width above the touch, never above the canvas top', () => {
+    expect(fingerAimPoint(100, 400, { top: 50 })).toEqual({ x: 100, y: 400 - FINGER_OFFSET_PX })
+    expect(fingerAimPoint(100, 70, { top: 50 })).toEqual({ x: 100, y: 51 })
+  })
+  it('snaps to cell centres, and leaves gridless scenes free', () => {
+    expect(snapAim(grid, { x: 2.3, y: -0.7 })).toEqual({ x: 2, y: -1 })
+    const free: GridSpec = { ...grid, type: 'none' }
+    expect(snapAim(free, { x: 2.3, y: -0.7 })).toEqual({ x: 2.3, y: -0.7 })
   })
 })

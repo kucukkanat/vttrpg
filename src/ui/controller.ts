@@ -126,7 +126,7 @@ export function createController(opts: {
       if (source) {
         const r = await rules.resolveSkill(intent.skill, source, targets, intent.seed, intent.advantage ? { advantage: intent.advantage } : {})
         const extras = skillExtras(rules, s, intent, present.map((t) => t.id as TokenId), r)
-        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx, ...extras }
+        ctx.skill = { patches: r.patches, messages: r.messages, vfx: r.vfx, ...extras, ...(r.crits ? { crits: r.crits } : {}) }
       }
     }
     return ctx

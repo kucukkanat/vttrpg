@@ -1,0 +1,38 @@
+[
+  {
+    "id": "save",
+    "term": "Save",
+    "aliases": ["saves", "DEX save", "STR save", "WIL save"],
+    "text": "Roll a d20 and compare it with the attribute named: equal or under succeeds, over fails. A 1 is always the best result."
+  },
+  {
+    "id": "str",
+    "term": "STR",
+    "aliases": ["Strength"],
+    "text": "Strength: muscle and toughness. Damage past Hit Protection comes off STR, and a failed STR save then takes the mouse out of the fight."
+  },
+  {
+    "id": "dex",
+    "term": "DEX",
+    "aliases": ["Dexterity"],
+    "text": "Dexterity: speed, stealth and reflexes. Dodging a blast or a falling rock is a DEX save."
+  },
+  {
+    "id": "wil",
+    "term": "WIL",
+    "aliases": ["Willpower"],
+    "text": "Willpower: nerve and magic. Spells cost it, and fear is resisted with a WIL save."
+  },
+  {
+    "id": "armor",
+    "term": "Armor",
+    "aliases": ["armour"],
+    "text": "Points subtracted from each hit's damage before it lands. Magic darts and other spells may ignore it."
+  },
+  {
+    "id": "cell",
+    "term": "cell",
+    "aliases": ["cells"],
+    "text": "One square of the table grid, about a mouse-length across. Ranges and areas count in cells."
+  }
+]
