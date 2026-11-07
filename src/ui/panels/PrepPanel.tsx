@@ -12,6 +12,7 @@ import { spawnNpcs, setHidden, removeTokens, statBlock, type Spawned } from '../
 import { ENCOUNTER_COLORS, encounterSize, loadEncounters, newEncounter, newRow, saveEncounters, type Encounter, type EncounterRow } from '../prep/encounters'
 import { formatTableRoll, rollTable, tableTitle } from '../prep/tables'
 import { AddProp } from './ObjectPanel'
+import { Icon } from '@/ui/icons'
 
 export function PrepPanel({ controller }: { controller: GameController }) {
   const meta = useGame((s) => s.meta)
@@ -71,7 +72,7 @@ function NpcGenerator({ controller, disabled }: { controller: GameController; di
         <label>Name
           <div style={{ display: 'flex', gap: 'var(--sp-1)' }}>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="random" />
-            <button className="icon" aria-label="Random name" title="Random name" onClick={() => setName(randomName(packId))}>🎲</button>
+            <button className="icon" aria-label="Random name" title="Random name" onClick={() => setName(randomName(packId))}><Icon name="dice" /></button>
           </div>
         </label>
         <label>Count<input type="number" min={1} max={20} value={count} onChange={(e) => setCount(Number(e.target.value))} /></label>
@@ -183,7 +184,7 @@ function EncounterEditor({ e, hasChargen, onChange, onDelete }: { e: Encounter; 
           <div style={{ display: 'flex', gap: 'var(--sp-1)', alignItems: 'end' }}>
             <label style={{ flex: 1, margin: 0 }}>Creature<input value={r.name} onChange={(ev) => setRow(r.id, { name: ev.target.value })} placeholder="Goblin" /></label>
             <label style={{ width: 72, margin: 0 }}>Count<input type="number" min={0} max={30} value={r.count} onChange={(ev) => setRow(r.id, { count: Number(ev.target.value) })} /></label>
-            <button className="icon" aria-label="Remove row" onClick={() => onChange({ ...e, rows: e.rows.filter((x) => x.id !== r.id) })}>🗑</button>
+            <button className="icon" aria-label="Remove row" onClick={() => onChange({ ...e, rows: e.rows.filter((x) => x.id !== r.id) })}><Icon name="trash" /></button>
           </div>
           <div className="swatches">
             {ENCOUNTER_COLORS.map((c) => <button key={c} className={`swatch ${c === r.color ? 'on' : ''}`} style={{ background: c }} aria-label={c} onClick={() => setRow(r.id, { color: c })} />)}

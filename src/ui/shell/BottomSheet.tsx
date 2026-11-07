@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type R
 import type { GameController } from '../controller'
 import type { PanelDef } from '../panels/registry'
 import { PanelHost } from './PanelHost'
+import { Icon } from '@/ui/icons'
 
 export type SheetSize = 'half' | 'full'
 
@@ -115,10 +116,10 @@ export function BottomSheet({ def, title, children, controller, size, keyboard, 
     <div className="bsheet-head" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
       <span className="grip" aria-hidden />
       <button type="button" className="icon sheet-size" aria-label={size === 'full' ? 'Shrink panel' : 'Expand panel'} onClick={() => onSize(size === 'full' ? 'half' : 'full')}>
-        {size === 'full' ? '⌄' : '⌃'}
+        <Icon name={size === 'full' ? 'chevron-down' : 'chevron-up'} />
       </button>
       <h2 className="host-title" ref={heading} tabIndex={-1}>{label}</h2>
-      <button type="button" className="icon sheet-close" aria-label="Close panel" onClick={onClose}>✕</button>
+      <button type="button" className="icon sheet-close" aria-label="Close panel" onClick={onClose}><Icon name="close" /></button>
     </div>
   )
   return (

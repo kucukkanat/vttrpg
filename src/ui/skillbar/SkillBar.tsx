@@ -30,6 +30,7 @@ import { adjustResource, saveChipLabel, sheetSaves } from './tokenBar'
 import { conditionStyle, rangePreviewFor, type RangePreview } from './barVisuals'
 import { CostBadges, HpMeter } from './BarParts'
 import { SkillIcon } from './skillIcons'
+import { Icon } from '@/ui/icons'
 
 type Card = 'skills' | 'conditions' | 'assign' | null
 
@@ -103,7 +104,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
             </span>
           )}
           {mayEnd && <button type="button" className="tiny primary end-turn" onClick={endTurn}>End turn</button>}
-          <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}>⋯</button>
+          <button ref={menuBtn} type="button" className="icon token-bar-more" aria-label={`${token.name} actions`} title="More actions" onClick={openMenu}><Icon name="more" /></button>
         </div>
         <div className="token-bar-chips">
           {!character && <span className="muted small skill-bar-note">{isGm ? 'No sheet: skills and saves need one.' : 'No character sheet.'}</span>}
@@ -135,7 +136,7 @@ export function SkillBar({ controller }: { controller: GameController }) {
           {isGm && (
             <button type="button" className={`skill-chip skill-chip--edit${open === 'skills' ? ' on' : ''}`} aria-expanded={open === 'skills'}
               title={`Choose ${token.name}'s skills`} onClick={() => toggle('skills')}>
-              <span className="skill-chip-name">Skills ✎</span>
+              <span className="skill-chip-name">Skills <Icon name="pencil" size={14} /></span>
               <span className="skill-chip-cost">edit</span>
             </button>
           )}
@@ -225,7 +226,7 @@ function ConditionsCard({ controller, token, onClose }: { controller: GameContro
   const set = (ids: string[]) => void controller.dispatch({ type: 'token.update', token: token.id, patch: { conditions: ids } })
   return (
     <div className="dock-card" role="dialog" aria-label={`${token.name}'s conditions`}>
-      <div className="token-skills-head"><strong>{token.name}'s conditions</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}>✕</button></div>
+      <div className="token-skills-head"><strong>{token.name}'s conditions</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}><Icon name="close" /></button></div>
       {defs.length === 0 && <p className="muted small">This ruleset has no conditions.</p>}
       <div className="condition-chips">
         {defs.map((c) => {
@@ -252,7 +253,7 @@ function AssignCard({ controller, token, onClose }: { controller: GameController
   const assign = (owner: PlayerPubkey) => { void controller.dispatch({ type: 'token.claim', token: token.id, owner }); onClose() }
   return (
     <div className="dock-card" role="dialog" aria-label={`Assign ${token.name}`}>
-      <div className="token-skills-head"><strong>Who plays {token.name}?</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}>✕</button></div>
+      <div className="token-skills-head"><strong>Who plays {token.name}?</strong><button type="button" className="icon" aria-label="Close" onClick={onClose}><Icon name="close" /></button></div>
       <div className="condition-chips">
         <button type="button" className={`tiny${!token.owner || token.owner === controller.pubkey ? ' on' : ''}`} onClick={() => assign(controller.pubkey as PlayerPubkey)}>GM (you)</button>
         {players.map((p) => (
@@ -277,7 +278,7 @@ function TokenSkillsEditor({ controller, token, onClose }: { controller: GameCon
     <div className="dock-card token-skills" role="dialog" aria-label={`${token.name}'s skills`}>
       <div className="token-skills-head">
         <strong>{token.name}'s skills</strong>
-        <button type="button" className="icon" aria-label="Close" onClick={onClose}>✕</button>
+        <button type="button" className="icon" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
       </div>
       {skills.length === 0 && <p className="muted small">No skills yet.</p>}
       <ul className="token-skills-list">
@@ -287,7 +288,7 @@ function TokenSkillsEditor({ controller, token, onClose }: { controller: GameCon
             <span className="muted small">{costLabel(s, labelOf)}</span>
             <button type="button" className="tiny" onClick={() => { requestSkillEditor({ kind: 'edit', skillId: s.id }); openEditor() }}>Edit</button>
             <button type="button" className="icon" aria-label={`Remove ${s.name} from ${token.name}`} title="Remove from this token"
-              onClick={() => setSkills(withoutSkill(token, all, s.id))}>✕</button>
+              onClick={() => setSkills(withoutSkill(token, all, s.id))}><Icon name="close" /></button>
           </li>
         ))}
       </ul>

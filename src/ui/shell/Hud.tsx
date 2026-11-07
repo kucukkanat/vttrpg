@@ -40,7 +40,7 @@ export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?:
         <button type="button" className="chip-main" onClick={() => find(mine)} aria-label={`Find my token ${mine.name}`}>
           <span className="dot" style={{ background: mine.color }} />
           <span className="chip-name">{mine.name}</span>
-          <span className="chip-hint">⌖ Find me</span>
+          <span className="chip-hint"><Icon name="crosshair" size={16} /> Find me</span>
         </button>
       </div>
     )
@@ -56,7 +56,7 @@ export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?:
         {character && character.name !== token.name && <span className="muted small">{character.name}</span>}
         <span className="chip-hint">Sheet ›</span>
       </button>
-      <button type="button" className="chip-find" onClick={() => find(target)} aria-label={findLabel} title={findLabel}>⌖</button>
+      <button type="button" className="chip-find" onClick={() => find(target)} aria-label={findLabel} title={findLabel}><Icon name="crosshair" /></button>
     </div>
   )
 }

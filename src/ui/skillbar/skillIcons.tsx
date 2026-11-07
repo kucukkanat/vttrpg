@@ -6,10 +6,11 @@
  */
 import type { ReactNode } from 'react'
 import type { TargetShape } from '@/core/geometry'
+import { ICON_STROKE } from '../icons'
 
 type Kind = TargetShape['kind']
 
-/** Paths per icon name, drawn with a 2px round stroke on a 24x24 box. */
+/** Paths per icon name, drawn with the app's icon stroke (`ICON_STROKE`) on a 24x24 box. */
 const ICONS: Record<string, ReactNode> = {
   sword: (
     <>
@@ -130,7 +131,7 @@ export function SkillIcon({ icon, kind, className = 'skill-icon' }: { icon?: str
   const src = resolveIcon(icon, kind)
   if (src.type === 'text') return <span className={`${className} skill-icon--text`} aria-hidden="true">{src.text}</span>
   return (
-    <svg className={className} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"
+    <svg className={className} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE}
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {src.type === 'svg' ? ICONS[src.name] : KIND_ICONS[src.kind]}
     </svg>

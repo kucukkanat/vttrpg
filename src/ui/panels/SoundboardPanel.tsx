@@ -8,9 +8,10 @@ import type { AssetRef } from '@/core/assets'
 import { useGame } from '@/state/store'
 import { AMBIENT_PRESETS, BUILTIN_SOUNDS, builtinRef, sharedAudioEngine, useAudioUnlock, type AmbientPreset, type AudioEngine } from '@/audio'
 import { BUILTIN_LABELS } from '@/audio/builtin'
+import { Icon, type IconName } from '@/ui/icons'
 
 const BOARD_KEY = 'vttrpg.soundboard'
-const ICONS: Record<(typeof BUILTIN_SOUNDS)[number], string> = { door: '🚪', sword: '⚔️', thunder: '⛈️', coin: '🪙', scream: '😱', drum: '🥁' }
+const ICONS: Record<(typeof BUILTIN_SOUNDS)[number], IconName> = { door: 'door', sword: 'swords', thunder: 'thunder', coin: 'coin', scream: 'scream', drum: 'drum' }
 
 function loadBoard(): AssetRef[] {
   try {
@@ -80,14 +81,14 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
         {BUILTIN_SOUNDS.map((name) => (
           <button key={name} style={pad} onClick={() => play(builtinRef(name))} aria-label={BUILTIN_LABELS[name]}>
-            <span style={{ fontSize: 22 }}>{ICONS[name]}</span>
+            <Icon name={ICONS[name]} size={24} />
             <span>{BUILTIN_LABELS[name]}</span>
           </button>
         ))}
         {board.map((ref) => (
           <div key={ref.sha256} style={{ position: 'relative', display: 'grid' }}>
             <button style={pad} onClick={() => play(ref)} title={ref.name}>
-              <span style={{ fontSize: 22 }}>🔊</span>
+              <Icon name="sound" size={24} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{ref.name?.replace(/\.[^.]+$/, '') ?? 'sound'}</span>
             </button>
             {/* A real button beside the pad (never inside it), so it is reachable by keyboard. */}
@@ -96,12 +97,12 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
               className="icon"
               aria-label={`Remove ${ref.name ?? 'sound'}`}
               onClick={() => remove(ref)}
-              style={{ position: 'absolute', top: 0, right: 0, minHeight: 0, minWidth: 0, width: 32, height: 32, fontSize: 12, color: 'var(--muted)', padding: 0 }}
-            >✕</button>
+              style={{ position: 'absolute', top: 0, right: 0, minHeight: 0, minWidth: 0, width: 32, height: 32, color: 'var(--muted)', padding: 0 }}
+            ><Icon name="close" size={14} /></button>
           </div>
         ))}
         <label className="tiny-file" style={{ ...pad, margin: 0, color: 'var(--muted)' }}>
-          <span style={{ fontSize: 22 }}>＋</span>
+          <Icon name="plus" size={24} />
           <span>{busy ? 'Importing…' : 'Audio file'}</span>
           <input type="file" accept="audio/*" multiple hidden disabled={busy} onChange={(e) => { void importFiles(e.target.files); e.target.value = '' }} />
         </label>

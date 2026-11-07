@@ -30,6 +30,7 @@ import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
+import { Icon } from '@/ui/icons'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
 // the shell's chrome renders before it downloads. Both are module-level so the components keep
@@ -140,7 +141,7 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   const drawerToggle = bp === 'tablet' ? (
     <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
-      ☰{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
+      <Icon name="menu" />{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
     </button>
   ) : null
 
