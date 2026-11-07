@@ -29,6 +29,7 @@ import { useAssetLoad } from '../TokenMesh'
 import { useModel } from '../useModel'
 import { nextRoll, putDownModel, useBuildUi } from './buildState'
 import { eyedrop } from './eyedrop'
+import { propIdOfHit } from './editRuntime'
 import { pickSurface, placedProps, sceneSurfaceLabel, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
 
 const noRaycast = () => undefined
@@ -62,17 +63,9 @@ const isTyping = (t: EventTarget | null) => {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
 }
 
-interface PropUserData { propId?: unknown; propSlots?: { idAt(slot: number | undefined): string | undefined } }
+interface PropUserData { propId?: unknown; propSlots?: unknown }
 
-/** The prop a ray hit belongs to: a PropMesh group's `propId`, or a PropBatch's instance slot. */
-function propIdOf(hit: Pick<Intersection, 'object' | 'instanceId'>): string | undefined {
-  for (let x: Object3D | null = hit.object; x; x = x.parent) {
-    const d = x.userData as PropUserData
-    if (typeof d.propId === 'string') return d.propId
-    if (d.propSlots) return d.propSlots.idAt(hit.instanceId)
-  }
-  return undefined
-}
+const propIdOf = propIdOfHit
 
 /** The prop groups (standalone and instanced) under `root`, not descending into them. */
 function propRoots(root: Object3D): Object3D[] {

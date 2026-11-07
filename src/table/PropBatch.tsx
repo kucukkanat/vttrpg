@@ -20,7 +20,7 @@
 import { memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useCursor } from '@react-three/drei'
 import {
-  BoxGeometry, DynamicDrawUsage, EdgesGeometry, InstancedMesh, Light, Matrix4, Mesh, MeshStandardMaterial, PlaneGeometry,
+  BoxGeometry, DynamicDrawUsage, EdgesGeometry, Group, InstancedMesh, Light, Matrix4, Mesh, MeshStandardMaterial, PlaneGeometry,
   SkinnedMesh, Vector3, type BufferGeometry, type Material, type Object3D, type Box3,
 } from 'three'
 import type { Prop } from '@/core/doc'
@@ -36,7 +36,8 @@ import { ModelBoundary, prepareModel, useAssetLoad } from './TokenMesh'
 import { useModel } from './useModel'
 import { localBounds, MemoPropMesh } from './PropMesh'
 import { usePropPointer } from './propPointer'
-import { capacityFor, hullBox, InstanceSlots, propMatrix, sameItems, xzHull, type ModelHull, type XZ } from './propInstances'
+import { capacityFor, hullBox, instanceBounds, InstanceSlots, partsBounds, propMatrix, sameItems, xzHull, type ModelHull, type XZ } from './propInstances'
+import { registerPropBatch } from './build/editRuntime'
 
 const noRaycast = () => undefined
 const HELPER = /^(COL|FOG)_/
@@ -209,13 +210,30 @@ function InstancedProps({ model, props }: { model: InstanceModel; props: Prop[] 
     uiSet({ propWalls: next })
   }, [uiSet])
 
+  // Box select, drop to surface and the place tool find instances through the registry.
+  const group = useRef<Group>(null)
+  const local = useMemo(() => partsBounds(model.parts), [model])
+  useEffect(() => {
+    const object = group.current
+    if (!object) return
+    return registerPropBatch({
+      object,
+      has: (id) => slots.slotOf(id) !== undefined,
+      boundsOf: (id, out) => {
+        const slot = slots.slotOf(id)
+        const item = slot === undefined ? undefined : slots.itemAt(slot)
+        return item && !local.isEmpty() ? instanceBounds(local, item, out) : null
+      },
+    })
+  }, [slots, local])
+
   const [hovered, setHovered] = useState<PropId | null>(null)
   const handlers = usePropPointer((e) => slots.idAt(e.instanceId) as PropId | undefined, setHovered)
   const hoveredProp = hovered ? props.find((p) => p.id === hovered) : undefined
   useCursor(!!hoveredProp && gm && !hoveredProp.locked, 'grab')
 
   return (
-    <group userData={{ propSlots: slots }} {...handlers}>
+    <group ref={group} userData={{ propSlots: slots }} {...handlers}>
       {meshes.map((m) => <primitive key={m.uuid} object={m} />)}
       {hoveredProp && model.local && <HoverOutline prop={hoveredProp} local={model.local} />}
     </group>
