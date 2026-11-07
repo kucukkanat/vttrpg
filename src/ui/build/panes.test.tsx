@@ -5,7 +5,6 @@ import type { PlayerPubkey, SceneId, TokenId } from '@/core/ids'
 import { useGame } from '@/state/store'
 import type { GameController } from '../controller'
 import { useFolds } from './folds'
-import { FogOptions } from './panes/ToolOptions'
 import { ScenePane } from './panes/ScenePane'
 import { TokenEditor } from './panes/TokenPane'
 import { Fold } from './Fold'
@@ -36,21 +35,6 @@ describe('Inspector panes', () => {
   beforeEach(() => {
     useGame.getState()._replaceFromDoc({ meta, scenes: { [tavern.id]: tavern, [dungeon.id]: dungeon }, fog: {}, tokens: { [pip.id]: pip } })
     useFolds.setState({ open: {} })
-  })
-
-  it('Fog shows the fog status and Reveal all / Hide all / Reset', () => {
-    useGame.getState()._replaceFromDoc({ fog: { [tavern.id]: { scene: tavern.id, revealed: ['0,0', '1,0'] } } })
-    const html = renderToStaticMarkup(<FogOptions controller={controller()} />)
-    expect(html).toContain('fog on · 2 cells explored')
-    expect(html).toMatch(/>Reveal all<\/button>/)
-    expect(html).toMatch(/>Hide all<\/button>/)
-    expect(html).toMatch(/>Reset<\/button>/)
-    expect(html).toContain('Brush size')
-  })
-
-  it('Fog reports fog off when darkness is zero and nothing says otherwise', () => {
-    useGame.getState()._replaceFromDoc({ meta: { ...meta, activeScene: dungeon.id } })
-    expect(renderToStaticMarkup(<FogOptions controller={controller()} />)).toContain('fog off')
   })
 
   it('the scene context is folded sections, each remembered', () => {

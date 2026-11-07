@@ -28,7 +28,7 @@ function load(): boolean {
 }
 
 /** Build tools that come from a Library card: holding one means the GM is editing. */
-export const LIBRARY_TOOLS: ReadonlySet<BuildTool> = new Set<BuildTool>(['place', 'kit', 'creature', 'prefab-stamp', 'eyedropper'])
+export const LIBRARY_TOOLS: ReadonlySet<BuildTool> = new Set<BuildTool>(['place', 'kit', 'creature', 'prefab-stamp', 'eyedropper', 'segment'])
 
 interface EditModeState {
   on: boolean
