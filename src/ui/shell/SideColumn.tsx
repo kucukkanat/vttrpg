@@ -30,10 +30,12 @@ export interface DesktopLayout {
   collapsed: Record<string, boolean>
 }
 
-export const DESKTOP_LAYOUT_VERSION = 1
+export const DESKTOP_LAYOUT_VERSION = 2
 
-/** Authoring and reference panels start folded so Chat and the sheet get the column. */
-export const DEFAULT_COLLAPSED: Readonly<Record<string, boolean>> = { 'skills-editor': true, prep: true, journal: true }
+/** Authoring, reference and occasional panels start folded so the table tools, Chat and the sheet get the column. */
+export const DEFAULT_COLLAPSED: Readonly<Record<string, boolean>> = { 'skills-editor': true, prep: true, journal: true, sound: true, players: true }
+/** Sections that joined DEFAULT_COLLAPSED in version 2; a stored v1 layout gets them unless the user set them. */
+const V2_COLLAPSED: Readonly<Record<string, boolean>> = { sound: true, players: true }
 
 export const DESKTOP_DEFAULT: DesktopLayout = {
   version: DESKTOP_LAYOUT_VERSION,
@@ -51,6 +53,7 @@ export function migrateDesktopLayout(stored: Record<string, unknown>, storedVers
   const base: DesktopLayout = { ...DESKTOP_DEFAULT, ...(stored as Partial<DesktopLayout>), version: DESKTOP_LAYOUT_VERSION }
   const userCollapsed = stored.collapsed && typeof stored.collapsed === 'object' ? (stored.collapsed as Record<string, boolean>) : {}
   if (storedVersion < 1) base.collapsed = { ...DEFAULT_COLLAPSED, ...userCollapsed }
+  else if (storedVersion < 2) base.collapsed = { ...V2_COLLAPSED, ...userCollapsed }
   else base.collapsed = { ...userCollapsed }
   return base
 }

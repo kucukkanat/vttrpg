@@ -54,6 +54,10 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
   const [imagePrompt, setImagePrompt] = useState<ImagePrompt | null>(null)
   const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
+  // The add-scene buttons live behind the header's "+ Add" so the list and the live scene's
+  // settings get the room; they open by themselves while the game has no scene yet.
+  const [adding, setAdding] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(() => readFlag(SETTINGS_KEY))
   const isGm = controller.connection.isGm
   const cellSize = controller.rules?.pack.manifest.grid.cellSize ?? 1.5
   useEffect(() => { void loadLibraryIndex().then((l) => setLibrary(libraryModels(l, 'scene'))) }, [])
@@ -63,6 +67,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
   const switchTo = (id: SceneId) => controller.dispatch({ type: 'scene.activate', scene: id })
   /** A new scene is staged, not shown: say so and offer the switch. With no live scene yet it just goes live. */
   const staged = async (scene: Scene) => {
+    setAdding(false)
     if (!useGame.getState().meta?.activeScene) { await switchTo(scene.id); return }
     pushToast({ text: `Added ${scene.name}`, action: { label: 'Switch', run: () => void switchTo(scene.id) } })
   }
@@ -160,9 +165,17 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
     if (explored) await controller.dispatch({ type: 'fog.reset', scene: active.id })
   }
 
+  const showAdd = adding || Object.keys(scenes).length === 0
+
   return (
     <div className="panel">
-      <h3>Scenes</h3>
+      <h3>
+        Scenes
+        {isGm && (
+          <button type="button" className={`tiny${showAdd ? ' primary' : ''}`} aria-expanded={showAdd} onClick={() => setAdding(!showAdd)}
+            title="Add a scene from the library, a GLB, a map image or an imported map">{showAdd ? 'Done' : '+ Add'}</button>
+        )}
+      </h3>
       <ul className="list scenes-list">
         {Object.values(scenes).map((s) => {
           const live = s.id === meta?.activeScene
@@ -200,8 +213,8 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
           )
         })}
       </ul>
-      {isGm && (
-        <div className="row">
+      {isGm && showAdd && (
+        <div className="row scene-add">
           {library.map((e) => <button key={e.sha256} className="tiny" onClick={() => void addFromLibrary(e)}>+ {titleCase(e.name)}</button>)}
           <label className="tiny-file">
             + GLB file
@@ -239,6 +252,12 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
       {status && <p className={`small ${status.tone === 'error' ? 'error' : 'muted'}`} style={{ margin: '6px 0 0' }}>{status.text}</p>}
       {isGm && active && (
         <>
+          <details className="scene-settings" open={settingsOpen}
+            onToggle={(e) => { const open = (e.currentTarget as HTMLDetailsElement).open; setSettingsOpen(open); writeFlag(SETTINGS_KEY, open) }}>
+            <summary className="disclosure">
+              <span>Scene settings</span>
+              <span className="muted small scene-settings-sum">{settingsSummary(active, fogOn)}</span>
+            </summary>
           <div className="grid2">
             <label>Weather
               <select value={active.weather ?? 'none'} onChange={(e) => update({ weather: e.target.value as Scene['weather'] })}>
@@ -268,6 +287,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
               <button className="tiny" disabled={fogOn && !explored} title="Fog on with nothing explored" onClick={() => void resetFog()}>Reset</button>
             </div>
           </div>
+          </details>
         </>
       )}
       {isGm && Object.keys(scenes).length === 0 && (
@@ -278,6 +298,25 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
       )}
     </div>
   )
+}
+
+const SETTINGS_KEY = 'vtt.scenes.settings'
+
+function readFlag(key: string): boolean {
+  try { return localStorage.getItem(key) === '1' } catch { return false }
+}
+function writeFlag(key: string, on: boolean) {
+  try { localStorage.setItem(key, on ? '1' : '0') } catch { /* private mode */ }
+}
+
+/** One line for the closed settings row: what is on, so the GM need not open it to check. */
+function settingsSummary(scene: Scene, fogOn: boolean): string {
+  const parts: string[] = []
+  if (scene.weather && scene.weather !== 'none') parts.push(scene.weather)
+  if (scene.ambientPreset && scene.ambientPreset !== 'none') parts.push(scene.ambientPreset)
+  parts.push(`${Math.round(scene.darkness * 100)}% dark`)
+  parts.push(fogOn ? 'fog on' : 'fog off')
+  return parts.join(' · ')
 }
 
 /** Orbit: a ring around a body. Follow: an eye. Both inherit the button colour. */

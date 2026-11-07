@@ -62,3 +62,7 @@
 .game--phone, .game--tablet { --rail-w: 60px; }
 .game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
 .game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }
+
+/* Folded mode group (phone, tablet): only the current mode, with a small caret saying it opens. */
+.cam-modes.folded .cam-btn:not(.on) { display: none; }
+.cam-modes.folded .cam-btn.on .cam-label::after { content: " ▾"; font-size: 9px; vertical-align: middle; }

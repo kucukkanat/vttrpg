@@ -45,8 +45,8 @@ describe('desktop columns', () => {
     expect(clampWidth(10_000)).toBe(COL_MAX)
     expect(clampWidth(300.4)).toBe(300)
   })
-  it('starts with the authoring and reference sections folded', () => {
-    expect(DESKTOP_DEFAULT.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: true })
+  it('starts with the authoring, reference and occasional sections folded', () => {
+    expect(DESKTOP_DEFAULT.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: true, sound: true, players: true })
     expect(DESKTOP_DEFAULT.collapsed.chat).toBeUndefined()
     expect(DESKTOP_DEFAULT.version).toBe(DESKTOP_LAYOUT_VERSION)
   })
@@ -84,7 +84,13 @@ describe('desktop layout migration', () => {
   it('keeps the sections a version-0 user toggled, in either direction', () => {
     const raw = JSON.stringify({ left: { width: 260, open: true }, right: { width: 340, open: true }, collapsed: { journal: false, skills: true, chat: false } })
     const out = loadPersisted(raw, DESKTOP_DEFAULT, options)
-    expect(out.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: false, skills: true, chat: false })
+    expect(out.collapsed).toEqual({ 'skills-editor': true, prep: true, journal: false, skills: true, chat: false, sound: true, players: true })
+  })
+
+  it('folds the sections new in version 2 for a version-1 layout, unless the user set them', () => {
+    const raw = JSON.stringify({ version: 1, left: { width: 260, open: true }, right: { width: 340, open: true }, collapsed: { journal: true, players: false } })
+    const out = loadPersisted(raw, DESKTOP_DEFAULT, options)
+    expect(out.collapsed).toEqual({ journal: true, players: false, sound: true })
   })
 
   it('survives a version-0 object with no collapsed map', () => {

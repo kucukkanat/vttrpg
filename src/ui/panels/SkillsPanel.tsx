@@ -144,10 +144,10 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
     useTargeting.getState().start({ skillId: skill.id, name: skill.name, source: token.id as TokenId, shape: skill.target })
   }
 
-  const list: CSSProperties = { display: 'grid', gap: 8 }
+  const list: CSSProperties = { display: 'grid', gap: 6 }
   const btn = (active: boolean, disabled: boolean): CSSProperties => ({
-    display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 10, rowGap: 2, alignItems: 'center', textAlign: 'left',
-    minHeight: 56, padding: '8px 12px', borderRadius: 10, width: '100%',
+    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 10, rowGap: 0, alignItems: 'center', textAlign: 'left',
+    minHeight: 'var(--control)', padding: '6px 10px', borderRadius: 8, width: '100%',
     border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
     background: active ? 'rgba(224,164,88,0.16)' : disabled ? '#1c1c21' : '#26262d',
     opacity: disabled ? 0.55 : 1, cursor: disabled ? 'default' : 'pointer', touchAction: 'manipulation',
@@ -175,7 +175,7 @@ export function SkillsPanel({ controller }: { controller: GameController }) {
             const active = pending?.skillId === skill.id && pending.source === token.id
             return (
               <button key={skill.id} type="button" style={btn(active, disabled)} disabled={disabled} onClick={() => use(skill)} aria-pressed={active} title={skill.description}>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>
+                <span style={{ fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {skill.name}
                   {skill.id in custom && <span className="muted small" style={{ marginLeft: 6, fontWeight: 400 }} title="Custom skill for this game">custom</span>}
                 </span>

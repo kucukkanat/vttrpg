@@ -18,7 +18,7 @@
   --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
   /* chrome */
   --control: 32px;                       /* min size of a tappable control; 44 on touch */
-  --head-h: 44px;                        /* panel header rows */
+  --head-h: 36px;                        /* panel header rows; 48 on touch */
   --topbar-h: calc(44px + var(--sat));
   --tabbar-h: calc(56px + var(--sab));
   --kb: 0px;                             /* on-screen keyboard overlap, set by the shell */
@@ -61,7 +61,7 @@ input, select, textarea {
 textarea { padding: var(--sp-2); }
 input[type=range] { padding: 0; min-height: var(--control); accent-color: var(--accent); }
 input[type=checkbox] { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent); margin: 0; }
-label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sp-1); margin: var(--sp-2) 0; font-size: var(--fs-md); }
+label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 2px; margin: var(--sp-2) 0; font-size: var(--fs-md); }
 @media (pointer: coarse) {
   /* 16px stops iOS from zooming the page when a field gains focus. */
   input, select, textarea { font-size: var(--fs-lg); }
@@ -158,7 +158,7 @@ details[open] > summary.disclosure::before { content: "▾"; }
 /* ---------------------------------------------------------------------------------------------
    Panels (content) and hosts (chrome around them)
    --------------------------------------------------------------------------------------------- */
-.panel { padding: var(--sp-3); border-bottom: 1px solid var(--border); }
+.panel { padding: var(--sp-2) var(--sp-3) var(--sp-3); border-bottom: 1px solid var(--border); }
 .panel h3 { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); min-height: 28px; }
 /* One shrinkable column: a row never sizes the track to its content and pushes the panel sideways. */
 .list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -236,7 +236,7 @@ button.list-row-main:active { background: #22222a; filter: none; }
 
 /* ---------------------------------------------------------------------------------------------
    Desktop columns: resizable, collapsible, sections
-   Column budget: Chat (`.fill`) keeps at least 40 % of the column, list panels stop at 40 vh and
+   Column budget: Chat (`.fill`) keeps at least 30 % of the column, list panels stop at 40 vh and
    scroll inside, and the grabber on the inner edge is visible, focusable and carries a hide button.
    --------------------------------------------------------------------------------------------- */
 .col { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); }
@@ -245,12 +245,20 @@ button.list-row-main:active { background: #22222a; filter: none; }
 .col.rail { align-items: center; padding-top: var(--sp-2); }
 .col.rail .icon { min-width: 24px; padding: 0; }
 .section { display: flex; flex-direction: column; flex: 0 0 auto; min-height: 0; border-bottom: 1px solid var(--border); }
-.section.fill:not(.collapsed) { flex: 1 1 auto; min-height: max(180px, 40%); }
+/* Tall panels (the sheet, skill and scene lists, authoring tools) shrink when the column is full and
+   scroll inside, down to a useful minimum, so Chat stays on screen; the column itself scrolls only
+   once every section is at that minimum. Short panels (Scenes, Players, Initiative) keep their size. */
+.section:not(.collapsed):has(> .hosted:is([data-panel="character"], [data-panel="skills"], [data-panel="tokens"], [data-panel="object"],
+  [data-panel="journal"], [data-panel="skills-editor"], [data-panel="prep"], [data-panel="sound"])) {
+  flex: 0 1 auto; min-height: calc(var(--head-h) + 140px);
+}
+.section:not(.collapsed) > .hosted { flex: 1 1 auto; min-height: 0; }
+.section.fill:not(.collapsed) { flex: 1 1 auto; min-height: max(200px, 30%); }
 .section.fill:not(.collapsed) .hosted { flex: 1; min-height: 0; }
 .section-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: var(--head-h); padding: 0 var(--sp-3); background: transparent; border: 0; border-radius: 0; text-align: left; color: var(--muted); justify-content: flex-start; }
 @media (hover: hover) { .section-head:hover { background: var(--panel-2); border-color: transparent; } }
 .section-head .chev { width: 12px; font-size: var(--fs-sm); flex: none; }
-.section .hosted > .panel { flex: 0 0 auto; overflow: visible; }
+.section .hosted > .panel { flex: 0 1 auto; min-height: 0; overflow: auto; }
 .section.fill .hosted > .panel { flex: 1; min-height: 0; overflow: hidden; }
 .section .hosted > .panel.sheet { max-height: 50vh; overflow: auto; }
 /* List panels: cap the section and scroll the list inside it instead of growing the column. */
@@ -334,6 +342,9 @@ button.list-row-main:active { background: #22222a; filter: none; }
   box-shadow: 0 -8px 24px rgba(0, 0, 0, .45); transition: height .25s ease;
 }
 .bsheet.full, .bsheet.kb { height: 100%; }
+/* A short panel (Scenes, Initiative, Players) gets a sheet its own height instead of 55 % of the screen
+   with empty space under it; Chat keeps the fixed height its log and input are laid out in. */
+.bsheet:not(.full):not(.kb):not(.dragging):not(:has(.hosted[data-panel="chat"])) { height: auto; max-height: 55%; }
 .bsheet.dragging { transition: none; }
 .bsheet .hosted { flex: 1; min-height: 0; --actions-right: calc(var(--control) + var(--sp-2)); }
 .bsheet .hosted > .panel { overflow: auto; padding: var(--sp-1) calc(var(--sp-4) + var(--sar)) var(--sp-4) calc(var(--sp-4) + var(--sal)); }

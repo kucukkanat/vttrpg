@@ -12,6 +12,7 @@ import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
 import { InitiativeChip } from '../panels/InitiativePanel'
+import { useBreakpoint } from './useBreakpoint'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -83,20 +84,26 @@ export function CameraPill() {
   const multiSelect = useTableUi((s) => s.multiSelect)
   const tool = useTableUi((s) => s.tool)
   const set = useTableUi((s) => s.set)
+  // Phones and tablets show only the current mode on the rail; tapping it opens the other two.
+  const folds = useBreakpoint() !== 'desktop'
+  const [open, setOpen] = useState(false)
   if (!active) return null
   const view = cameraView(active, firstPerson)
   const pick = (v: CameraView) => {
+    if (folds && v === view) { setOpen(!open); return }
+    setOpen(false)
     if (v === 'orbit') set({ cameraOverride: 'orbit' })
     else set({ cameraOverride: 'token', firstPerson: v === 'eyes' })
   }
   return (
     <div className="cam-pill" role="toolbar" aria-label="Camera">
-      <div className="cam-group" role="group" aria-label="Camera mode">
+      <div className={`cam-group cam-modes${folds && !open ? ' folded' : ''}`} role="group" aria-label="Camera mode">
         {VIEWS.map((v) => {
           const disabled = v.id !== 'orbit' && !active.canFollow
           return (
             <button key={v.id} type="button" className={`cam-btn${view === v.id ? ' on' : ''}`} aria-pressed={view === v.id} disabled={disabled}
-              title={disabled ? 'No token to follow in this scene' : `${v.hint} (${v.key})`} onClick={() => pick(v.id)}>
+              aria-expanded={folds && view === v.id ? open : undefined}
+              title={disabled ? 'No token to follow in this scene' : folds && view === v.id && !open ? 'Camera mode: tap to change' : `${v.hint} (${v.key})`} onClick={() => pick(v.id)}>
               <span className="cam-label">{v.label}</span>
               <kbd aria-hidden>{v.key}</kbd>
             </button>

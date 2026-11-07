@@ -23,9 +23,10 @@
 }
 
 /* Quick dice above the input: wrapping chips the height of a control (44px on touch). */
-.chat .dice-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); flex: none; }
+.chat .dice-row { display: flex; flex-wrap: nowrap; gap: var(--sp-1); margin-top: var(--sp-2); flex: none; }
+/* The chips share one row (flex 1 1 0) instead of wrapping the "+" onto a second line. */
 .chat .die-chip {
-  min-height: var(--control); min-width: var(--control); padding: 0 var(--sp-3);
+  flex: 1 1 0; min-height: var(--control); min-width: 0; max-width: 72px; padding: 0 var(--sp-1);
   font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; border-radius: 999px;
   background: var(--panel-2); color: var(--accent); touch-action: manipulation;
 }

@@ -9,22 +9,22 @@
   background: var(--sheet-bg);
   font-size: 14px;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   padding: 12px;
   container-type: inline-size;
 }
 .sheet h2 { margin: 0; font-size: 18px; }
-.sheet section { border: 1px solid var(--sheet-border); border-radius: 8px; padding: 10px 12px; }
+.sheet section { border: 1px solid var(--sheet-border); border-radius: 8px; padding: 8px 10px; }
 .sheet section > h3 {
   margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--sheet-muted);
 }
-.sheet .fields { display: grid; gap: 8px 12px; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); }
-.sheet .field { display: grid; gap: 4px; margin: 0; min-width: 0; }
+.sheet .fields { display: grid; gap: 6px 10px; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); }
+.sheet .field { display: grid; gap: 2px; margin: 0; min-width: 0; }
 .sheet .field > span { font-size: 12px; color: var(--sheet-muted); }
 .sheet .span-all { grid-column: 1 / -1; }
 .sheet input, .sheet textarea {
-  width: 100%; min-height: 44px; background: var(--sheet-field); color: var(--sheet-fg); border: 1px solid var(--sheet-border);
-  border-radius: 6px; padding: 5px 8px; font: inherit;
+  width: 100%; min-height: var(--control, 44px); background: var(--sheet-field); color: var(--sheet-fg); border: 1px solid var(--sheet-border);
+  border-radius: 6px; padding: 4px 8px; font: inherit;
 }
 /* Stat boxes: keep room for two digits plus padding so the value never gets clipped to nothing in a tight grid. */
 .sheet input[type="number"] {
@@ -37,22 +37,22 @@
 .sheet .resource .sep { color: var(--sheet-muted); }
 .sheet .grid { display: grid; gap: 6px; grid-template-columns: repeat(var(--grid-cols, 2), minmax(0, 1fr)); }
 .sheet .slot {
-  border: 1px dashed var(--sheet-border); border-radius: 6px; padding: 6px; min-height: 58px;
+  border: 1px dashed var(--sheet-border); border-radius: 6px; padding: 6px; min-height: 48px;
   display: grid; gap: 4px; align-content: start; background: rgba(255, 255, 255, 0.02);
 }
 .sheet .slot.labeled { border-style: solid; }
 .sheet .slot.filled { background: rgba(255, 255, 255, 0.05); }
 .sheet .slot.continuation { opacity: .55; justify-items: center; align-content: center; font-size: 12px; }
 .sheet .slot .slot-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--sheet-muted); }
-.sheet .slot input { padding: 3px 6px; font-size: 13px; min-height: 36px; }
+.sheet .slot input { padding: 3px 6px; font-size: 13px; min-height: min(36px, var(--control, 36px)); }
 .sheet .slot .tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .sheet .tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--sheet-border); color: var(--sheet-muted); }
 .sheet .list-items { display: grid; gap: 8px; }
 .sheet .list-item { display: grid; gap: 6px; grid-template-columns: 1fr auto; align-items: end; }
 .sheet .list-item .fields { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .sheet button {
-  min-height: 44px; background: #26262d; color: var(--sheet-fg); border: 1px solid var(--sheet-border); border-radius: 6px;
-  padding: 6px 12px; cursor: pointer; font: inherit;
+  min-height: var(--control, 44px); background: #26262d; color: var(--sheet-fg); border: 1px solid var(--sheet-border); border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; font: inherit;
 }
 .sheet button:hover { border-color: var(--sheet-accent); }
 .sheet button.roll { font-weight: 600; }
