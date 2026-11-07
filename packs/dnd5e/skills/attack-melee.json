@@ -9,8 +9,8 @@
     { "kind": "roll", "formula": "d20 + melee_mod + pb", "vs": "target.ac", "label": "attack" },
     {
       "kind": "damage",
-      "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll(melee.damage) + (save.dice.0 == 20 ? roll(melee.damage) : 0) + melee_mod : 0",
-      "resource": "hp"
+      "formula": "(save.natural == 20 or (save.success and save.natural != 1)) ? roll(melee.damage) + (save.natural == 20 ? roll(melee.damage) : 0) + melee_mod : 0",
+      "resource": "hp", "type": "{melee.type}"
     }
   ],
   "vfx": [{ "at": 0, "preset": "hit", "from": "target", "color": "#f2f2f2", "duration": 250 }]

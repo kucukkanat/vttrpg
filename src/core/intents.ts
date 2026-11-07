@@ -5,7 +5,7 @@
  */
 import type { Vec3 } from './geometry'
 import type { CharacterId, NoteId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
-import type { Token, Character, Scene, Prop, Note, InitiativeEntry } from './doc'
+import type { Token, Character, Scene, Prop, Note, InitiativeEntry, DamageFactor, RollAdvantage, RollVisibility } from './doc'
 import type { SkillDef } from './pack'
 import type { AssetRef } from './assets'
 
@@ -26,8 +26,27 @@ export type Intent =
   | { type: 'character.upsert'; character: Character }
   | { type: 'character.remove'; character: CharacterId }
   | { type: 'chat.say'; text: string; to?: PlayerPubkey[] }
-  | { type: 'roll'; formula: string; seed: string; label?: string; character?: CharacterId }
-  | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string }
+  /**
+   * `advantage` turns the formula's first d20 (the pack's resolution die) into two dice, keeping
+   * the better or worse. `visibility` hides the result from others (`gm`) or from the roller too (`blind`).
+   */
+  | { type: 'roll'; formula: string; seed: string; label?: string; character?: CharacterId; advantage?: RollAdvantage; visibility?: RollVisibility }
+  /** GM only: show a hidden roll to everyone. */
+  | { type: 'roll.reveal'; message: string }
+  /** `advantage` applies to the skill's own rolls (rows that do not read `target.*`, so not the targets' saves). */
+  | { type: 'skill.use'; skill: SkillId; source: TokenId; targets: TokenId[]; point?: Vec3; seed: string; advantage?: RollAdvantage }
+  /**
+   * Apply-damage card: apply chat message `message`'s amount to `token` scaled by `factor`
+   * (`-1` heals, `0` undoes the previous choice). The GM reads the amount from the document.
+   * GM, or a player for a token they own. `damageType` sets the type on a roll's card.
+   */
+  | { type: 'damage.apply'; message: string; token: TokenId; factor: DamageFactor | 0; damageType?: string }
+  /** Roll the concentration save prompted by chat message `message` (GM or the token's owner). */
+  | { type: 'concentration.save'; message: string; token: TokenId; seed: string; advantage?: RollAdvantage }
+  /** End a token's concentration and every condition held by it (GM or the token's owner). */
+  | { type: 'concentration.end'; token: TokenId }
+  /** GM only: close a concentration prompt without a save (the damage did not count). */
+  | { type: 'concentration.dismiss'; message: string }
   | { type: 'fog.reveal'; scene: SceneId; cells: string[] }
   | { type: 'fog.reset'; scene: SceneId }
   /** GM only: mark the whole scene explored (sets `FogState.revealAll`); `fog.reset` clears it again. */

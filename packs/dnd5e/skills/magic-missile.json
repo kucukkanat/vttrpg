@@ -7,7 +7,7 @@
   "target": { "kind": "single", "range": 24 },
   "effects": [
     { "kind": "roll", "formula": "3d4 + 3", "label": "darts" },
-    { "kind": "damage", "formula": "rolls.darts.total", "resource": "hp" },
+    { "kind": "damage", "formula": "rolls.darts.total", "resource": "hp", "type": "force" },
     { "kind": "message", "text": "Three darts of force from {source.name} strike {target.name}." }
   ],
   "vfx": [
