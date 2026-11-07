@@ -71,6 +71,18 @@ export interface GameState {
   clearSelection(): void
   selection: Selection | null
   setSelection(sel: Selection | null): void
+  /**
+   * Every selected prop (multi-select, GM building). The primary item is the last one selected and
+   * is mirrored as `selection` ({ kind: 'prop' }); a token, node or scene selection empties it.
+   */
+  propSelection: PropId[]
+  /** Replace the prop selection; the last id becomes the primary `selection`. */
+  setPropSelection(ids: readonly PropId[]): void
+  /** Add `id`, or drop it when it is already selected (Shift-click). */
+  togglePropSelected(id: PropId): void
+  /** Add props to the selection (Shift-box); the last new one becomes the primary. */
+  addPropsToSelection(ids: readonly PropId[]): void
+  clearPropSelection(): void
   setPresence(p: Presence): void
   _replaceFromDoc(partial: Partial<Pick<GameState, 'meta' | 'scenes' | 'tokens' | 'characters' | 'chat' | 'fog' | 'events' | 'props' | 'notes' | 'customSkills' | 'initiative' | 'walls' | 'prefabs' | 'lights' | 'creatures' | 'encounters' | 'catalogue'>>): void
 }
@@ -103,30 +115,47 @@ export const useGame = create<GameState>((set) => ({
     return notice
   },
   selectedToken: null,
-  setSelectedToken: (id) => set(selectTokens(id ? [id] : [], id)),
+  setSelectedToken: (id) => set({ ...selectTokens(id ? [id] : [], id), propSelection: [] }),
   selectedTokens: [],
   toggleSelected: (id) => set((s) => {
     if (s.selectedTokens.includes(id)) {
       const rest = s.selectedTokens.filter((t) => t !== id)
       return selectTokens(rest, s.selectedToken === id ? rest[rest.length - 1] ?? null : s.selectedToken)
     }
-    return selectTokens([...s.selectedTokens, id], s.selectedToken ?? id)
+    return { ...selectTokens([...s.selectedTokens, id], s.selectedToken ?? id), propSelection: [] }
   }),
   selectMany: (ids, primary) => set((s) => {
     const unique = [...new Set(ids)]
     const keep = primary && unique.includes(primary) ? primary : s.selectedToken && unique.includes(s.selectedToken) ? s.selectedToken : unique[0] ?? null
-    return selectTokens(unique, keep)
+    return { ...selectTokens(unique, keep), propSelection: [] }
   }),
-  clearSelection: () => set(selectTokens([], null)),
+  clearSelection: () => set({ ...selectTokens([], null), propSelection: [] }),
   selection: null,
-  setSelection: (sel) => set({ selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null, selectedTokens: sel?.kind === 'token' ? [sel.id] : [] }),
+  setSelection: (sel) => set({
+    selection: sel, selectedToken: sel?.kind === 'token' ? sel.id : null, selectedTokens: sel?.kind === 'token' ? [sel.id] : [],
+    propSelection: sel?.kind === 'prop' ? [sel.id] : [],
+  }),
+  propSelection: [],
+  setPropSelection: (ids) => set(selectProps([...new Set(ids)])),
+  togglePropSelected: (id) => set((s) => selectProps(s.propSelection.includes(id) ? s.propSelection.filter((p) => p !== id) : [...s.propSelection, id])),
+  addPropsToSelection: (ids) => set((s) => {
+    const fresh = ids.filter((id) => !s.propSelection.includes(id))
+    return fresh.length ? selectProps([...s.propSelection, ...new Set(fresh)]) : s
+  }),
+  clearPropSelection: () => set((s) => (s.propSelection.length || s.selection?.kind === 'prop' ? selectProps([]) : s)),
   setPresence: (p) => set((s) => ({ presence: { ...s.presence, [p.pubkey]: p } })),
   // A scene switch drops the selection: the selected object belongs to the scene that was live.
   // Tokens that left the document (removed, or replaced on a resync) leave the selection too.
   _replaceFromDoc: (partial) => set((s) => {
     const next = 'meta' in partial ? partial.meta?.activeScene ?? null : s.meta?.activeScene ?? null
     const prev = s.meta?.activeScene ?? null
-    if (next !== prev && s.selection) return { ...partial, selection: null, selectedToken: null, selectedTokens: [] }
+    if (next !== prev && (s.selection || s.propSelection.length)) return { ...partial, selection: null, selectedToken: null, selectedTokens: [], propSelection: [] }
+    // Props that left the document (removed, undone) leave the selection.
+    if (partial.props && s.propSelection.length) {
+      const props = partial.props
+      const kept = s.propSelection.filter((id) => id in props)
+      if (kept.length !== s.propSelection.length) return { ...partial, ...selectProps(kept) }
+    }
     if (partial.tokens && s.selectedTokens.length) {
       const tokens = partial.tokens
       const kept = s.selectedTokens.filter((id) => id in tokens)
@@ -143,6 +172,12 @@ export const useGame = create<GameState>((set) => ({
 function selectTokens(ids: TokenId[], primary: TokenId | null): Pick<GameState, 'selectedTokens' | 'selectedToken' | 'selection'> {
   const selectedToken = primary && ids.includes(primary) ? primary : ids[0] ?? null
   return { selectedTokens: ids, selectedToken, selection: selectedToken ? { kind: 'token', id: selectedToken } : null }
+}
+
+/** Store patch for a prop selection: the set, and its last member mirrored as the primary `selection`. */
+export function selectProps(ids: PropId[]): Pick<GameState, 'propSelection' | 'selection' | 'selectedToken' | 'selectedTokens'> {
+  const last = ids[ids.length - 1]
+  return { propSelection: ids, selection: last ? { kind: 'prop', id: last } : null, selectedToken: null, selectedTokens: [] }
 }
 
 /**

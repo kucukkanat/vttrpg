@@ -1,15 +1,20 @@
 /**
  * Edit bar: shown over the bottom of the table while edit mode is on (double tap on a token or prop,
- * or "Edit" in its menu). Names what is being edited, toggles snapping, and opens "Details" with the
- * numeric editors (size, model, solid, hide a room part…) and, for the GM, adding props. "Done"
- * (or another double tap) leaves edit mode.
+ * or "Edit" in its menu), and in Build while props are selected. Names what is being edited, toggles
+ * snapping, cycles the prop gizmo's mode (like Tab), toggles the advanced prop gizmo (like A; with
+ * world or local axes), and opens "Details" with the numeric editors (size, model, solid, hide a
+ * room part…; in advanced mode the prop inspector with expressions) and, for the GM, adding props.
+ * "Done" (or another double tap) leaves edit mode and lets go of the props.
  */
 import { useState } from 'react'
 import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import { AddProp, Selected } from '../panels/ObjectPanel'
+import { PropInspector } from '../panels/PropInspector'
 import { Icon } from '@/ui/icons'
+import { MODE_LABEL, nextMode } from '@/table/build/transformKeys'
+import { useBreakpoint } from './useBreakpoint'
 
 export function EditBar({ controller }: { controller: GameController }) {
   const isGm = controller.connection.isGm
@@ -21,19 +26,29 @@ export function EditBar({ controller }: { controller: GameController }) {
     const sel = s.selection
     if (!sel) return null
     if (sel.kind === 'token') return s.tokens[sel.id]?.name ?? null
-    if (sel.kind === 'prop') return s.props[sel.id]?.name ?? null
+    if (sel.kind === 'prop') return s.propSelection.length > 1 ? `${s.propSelection.length} props` : s.props[sel.id]?.name ?? null
     if (sel.kind === 'scene') return s.scenes[sel.id]?.name ?? null
     return sel.id
   })
   const snap = useTableUi((s) => s.snap)
   const set = useTableUi((s) => s.set)
   const [details, setDetails] = useState(false)
-  const done = () => set({ editMode: false, editPreview: null, editDrag: false })
+  const advanced = useTableUi((s) => s.advanced)
+  const space = useTableUi((s) => s.gizmoSpace)
+  const gizmoMode = useTableUi((s) => s.gizmoMode)
+  const props = useGame((s) => s.propSelection.length > 0)
+  // Phones get no advanced mode.
+  const phone = useBreakpoint() === 'phone'
+  const done = () => {
+    set({ editMode: false, editPreview: null, editDrag: false, transformEntry: null })
+    if (useGame.getState().propSelection.length) useGame.getState().clearPropSelection()
+  }
 
   return (
     <div className="edit-dock">
       {details && (
         <div className="dock-card edit-details" role="region" aria-label="Edit details">
+          {isGm && props && advanced && !phone && <PropInspector controller={controller} />}
           {selection && scene && sceneId
             ? <Selected key={`${selection.kind}:${selection.id}`} controller={controller} selection={selection} scene={scene} sceneId={sceneId} onDeselect={() => setSelection(null)} />
             : <p className="muted small">Tap a token or prop{isGm ? ', or a part of the room,' : ''} to edit it.</p>}
@@ -53,6 +68,21 @@ export function EditBar({ controller }: { controller: GameController }) {
         <button type="button" className={`tiny${snap ? ' on' : ''}`} aria-pressed={snap} title="Snap to cells, 15° and 0.05 steps (hold Alt for free movement)" onClick={() => set({ snap: !snap })}>
           Snap
         </button>
+        {isGm && props && (
+          <button type="button" className="tiny" title="What typed numbers act on and which handle is highlighted (Tab)" onClick={() => set({ gizmoMode: nextMode(gizmoMode) })}>
+            {MODE_LABEL[gizmoMode]}
+          </button>
+        )}
+        {isGm && props && !phone && (
+          <button type="button" className={`tiny${advanced ? ' on' : ''}`} aria-pressed={advanced} title="Advanced: tilt on every axis, stretch per axis, type exact values (A)" onClick={() => { set({ advanced: !advanced }); if (!advanced) setDetails(true) }}>
+            Advanced
+          </button>
+        )}
+        {isGm && props && advanced && !phone && (
+          <button type="button" className="tiny" title="Axes of the advanced gizmo: the world's or the prop's own" onClick={() => set({ gizmoSpace: space === 'world' ? 'local' : 'world' })}>
+            {space === 'world' ? 'World' : 'Local'}
+          </button>
+        )}
         <button type="button" className={`tiny${details ? ' on' : ''}`} aria-expanded={details} onClick={() => setDetails(!details)}>
           Details <Icon name={details ? 'chevron-down' : 'chevron-up'} size={14} />
         </button>

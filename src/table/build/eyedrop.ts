@@ -6,6 +6,7 @@
 import type { Prop } from '@/core/doc'
 import { propScale } from '@/core/props'
 import { knownLegacyFit } from '../propMigration'
+import { useTableUi } from '../tableState'
 import { pickUpModel, useBuildUi } from './buildState'
 import type { HeldModel } from './placement'
 
@@ -27,6 +28,5 @@ export function eyedrop(p: Prop): void {
 
 /** Alt-click on a prop while building (and not holding a model, where Alt means free placement). */
 export function wantsEyedrop(e: { altKey: boolean; button: number }): boolean {
-  const s = useBuildUi.getState()
-  return e.altKey && e.button === 0 && s.building && s.tool !== 'place'
+  return e.altKey && e.button === 0 && useTableUi.getState().buildMode && useBuildUi.getState().tool !== 'place'
 }

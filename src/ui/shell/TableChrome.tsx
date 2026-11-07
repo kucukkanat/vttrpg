@@ -136,12 +136,6 @@ const MODES: { id: TableMode; label: string; hint: string }[] = [
   { id: 'build', label: 'Build', hint: 'The tool tray: the model library, walls, doors, fog, lights, scene settings' },
 ]
 
-// The table's build tools follow the mode: Alt-click is the eyedropper only in Build.
-useTableLayout.subscribe((s) => {
-  const building = s.mode === 'build'
-  if (useBuildUi.getState().building !== building) useBuildUi.getState().set({ building })
-})
-
 /** Switch the GM's mode; leaving Build puts any build tool away so the board is plain again. */
 export function setTableMode(mode: TableMode) {
   const s = useTableLayout.getState()

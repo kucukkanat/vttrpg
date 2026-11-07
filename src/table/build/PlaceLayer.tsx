@@ -29,7 +29,7 @@ import { useAssetLoad } from '../TokenMesh'
 import { useModel } from '../useModel'
 import { nextRoll, putDownModel, useBuildUi } from './buildState'
 import { eyedrop } from './eyedrop'
-import { pickSurface, placedProp, sceneSurfaceLabel, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
+import { pickSurface, placedProps, sceneSurfaceLabel, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
 
 const noRaycast = () => undefined
 const DRAG_THRESHOLD_PX = 6
@@ -155,12 +155,13 @@ function useStamp() {
   const { sceneId, viewer, onIntent } = useTable()
   return (held: HeldModel, at: { x: number; y: number; z: number }, yaw: number, useRoll = true) => {
     const ui = useBuildUi.getState()
-    const prop = placedProp({
-      id: newId<'PropId'>() as PropId, scene: sceneId, held, at, yaw,
-      scatter: useRoll && ui.scatter ? ui.roll : undefined,
+    const props = placedProps({
+      makeId: () => newId<'PropId'>() as PropId, scene: sceneId, held, at, yaw,
+      scatter: useRoll && ui.scatter && !held.parts ? ui.roll : undefined,
       createdBy: viewer?.pubkey,
     })
-    onIntent({ type: 'props.place', props: [prop] })
+    if (!props.length) return
+    onIntent({ type: 'props.place', props })
     noteRecentlyPlaced(held.catalogue)
     ui.set({ roll: nextRoll(ui) })
   }
@@ -288,18 +289,38 @@ export function PlaceLayer({ bounds, tool }: { bounds: Bounds2; tool: 'place' | 
 }
 
 /** The held model, translucent, where a click would put it. */
+/** Pieces of a held group drawn in the ghost; a bigger paste shows its first ones (it still stamps whole). */
+const MAX_GHOST_PARTS = 150
+
 function Ghost({ held, at, yaw, k }: { held: HeldModel; at: { x: number; y: number; z: number }; yaw: number; k: number }) {
-  const { url } = useAssetLoad(held.model)
+  if (held.parts?.length) {
+    return (
+      <group position={[at.x, at.y, at.z]} rotation-y={yaw}>
+        {held.parts.slice(0, MAX_GHOST_PARTS).map((p, i) => (
+          <group key={i} position={[p.offset.x, p.offset.y, p.offset.z]} rotation={[p.rotation.x, p.rotation.y, p.rotation.z]}>
+            <GhostPiece model={p.model} title={p.title} scale={p.scale} />
+          </group>
+        ))}
+      </group>
+    )
+  }
   const s = held.scale
   return (
     <group position={[at.x, at.y, at.z]} rotation={[held.tilt?.x ?? 0, yaw, held.tilt?.z ?? 0]}>
-      <group scale={[s.x * k, s.y * k, s.z * k]}>
-        {url ? (
-          <Suspense fallback={<SizeBox size={held.size} />}>
-            <GhostModel url={url} sha256={held.model.sha256} name={held.title} />
-          </Suspense>
-        ) : <SizeBox size={held.size} />}
-      </group>
+      <GhostPiece model={held.model} title={held.title} scale={{ x: s.x * k, y: s.y * k, z: s.z * k }} size={held.size} />
+    </group>
+  )
+}
+
+function GhostPiece({ model, title, scale, size }: { model: HeldModel['model']; title: string; scale: { x: number; y: number; z: number }; size?: [number, number, number] }) {
+  const { url } = useAssetLoad(model)
+  return (
+    <group scale={[scale.x, scale.y, scale.z]}>
+      {url ? (
+        <Suspense fallback={<SizeBox size={size} />}>
+          <GhostModel url={url} sha256={model.sha256} name={title} />
+        </Suspense>
+      ) : <SizeBox size={size} />}
     </group>
   )
 }

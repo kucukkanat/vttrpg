@@ -22,6 +22,20 @@ const UP_FACING = 0.5
 
 const TAU = Math.PI * 2
 
+/** One piece of a held group (a pasted clip): its place and pose relative to the group's centre. */
+export interface HeldPart {
+  title: string
+  model: AssetRef
+  catalogue?: string
+  /** Offset from the group's floor centre, metres. */
+  offset: Vec3
+  rotation: Vec3
+  scale: Vec3
+  tags?: string[]
+  solid?: boolean
+  locked?: boolean
+}
+
 /** What a click places: a model, its catalogue id when known, and the tilt / scale it keeps. */
 export interface HeldModel {
   /** `CatalogueEntry.id`; absent for a prop eyedropped from before the catalogue existed. */
@@ -34,6 +48,12 @@ export interface HeldModel {
   tilt?: { x: number; z: number }
   /** Per-axis scale on the real size: {1,1,1} from a card, the prop's own from the eyedropper. */
   scale: Vec3
+  /**
+   * A pasted group: every piece is stamped, turned with the held yaw about the group's centre.
+   * `model`, `tilt` and `scale` above are then unused. Pieces keep their own tilt (exact for
+   * upright pieces, which is nearly every prop).
+   */
+  parts?: HeldPart[]
 }
 
 /** One scatter roll: the extra yaw and the uniform scale factor of the next stamp. */
@@ -148,6 +168,47 @@ export function seededRandom(seed: number): () => number {
 export function rollScatter(random: () => number, range = DEFAULT_SCATTER_RANGE): ScatterRoll {
   const r = Math.max(0, Math.min(MAX_SCATTER_RANGE, range))
   return { yaw: random() * TAU, scale: 1 - r + random() * 2 * r }
+}
+
+/** `v` turned `a` radians about +Y (three.js convention). */
+function turnY(v: Vec3, a: number): Vec3 {
+  const c = Math.cos(a), s = Math.sin(a)
+  return { x: v.x * c + v.z * s, y: v.y, z: -v.x * s + v.z * c }
+}
+
+/**
+ * Every prop one click places: one for a single model, one per piece for a held group (the
+ * group's centre at `at`, the whole group turned by `yaw`). Groups take no scatter.
+ */
+export function placedProps(args: {
+  makeId(): PropId
+  scene: SceneId
+  held: HeldModel
+  at: Vec3
+  yaw: number
+  scatter?: ScatterRoll
+  createdBy?: PlayerPubkey
+}): Prop[] {
+  const { makeId, scene, held, at, yaw, createdBy } = args
+  if (!held.parts?.length) return [placedProp({ ...args, id: makeId() })]
+  return held.parts.map((part) => {
+    const o = turnY(part.offset, yaw)
+    const p: Prop = {
+      id: makeId(),
+      scene,
+      name: part.title,
+      model: part.model,
+      position: { x: at.x + o.x, y: at.y + o.y, z: at.z + o.z },
+      rotation: { x: part.rotation.x, y: wrapAngle(part.rotation.y + yaw), z: part.rotation.z },
+      scale: { ...part.scale },
+    }
+    if (part.catalogue) p.catalogue = part.catalogue
+    if (part.tags) p.tags = [...part.tags]
+    if (part.solid) p.solid = true
+    if (part.locked) p.locked = true
+    if (createdBy) p.createdBy = createdBy
+    return p
+  })
 }
 
 /**

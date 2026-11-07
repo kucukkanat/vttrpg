@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AssetRef } from '@/core/assets'
 import type { PropId, SceneId } from '@/core/ids'
 import {
-  DEFAULT_SCATTER_RANGE, MAX_SCATTER_RANGE, pickSurface, placedProp, rollScatter, sceneSurfaceLabel, seededRandom, snapPlacement, turnHeld,
+  DEFAULT_SCATTER_RANGE, MAX_SCATTER_RANGE, pickSurface, placedProp, placedProps, rollScatter, sceneSurfaceLabel, seededRandom, snapPlacement, turnHeld,
   TURN_STEP, TURN_STEP_BIG, wrapAngle, yawDegrees, type HeldModel,
 } from './placement'
 
@@ -121,5 +121,28 @@ describe('sceneSurfaceLabel', () => {
     expect(sceneSurfaceLabel(['BarCounter'])).toBe('Bar counter')
     expect(sceneSurfaceLabel(['Table_model'])).toBe('Table')
     expect(sceneSurfaceLabel(['Mesh_0', 'Object_7', ''])).toBeUndefined()
+  })
+})
+
+describe('placedProps (a held group, e.g. a paste)', () => {
+  const model = { sha256: 'abc' as AssetRef['sha256'], kind: 'glb' as const, mime: 'model/gltf-binary', size: 10, sources: ['x.glb'] } satisfies AssetRef
+  const part = (x: number, y: number) => ({ title: 'Chair', model, catalogue: 'builtin:chair', offset: { x, y: 0, z: 0 }, rotation: { x: 0, y, z: 0 }, scale: { x: 1, y: 1, z: 1 } })
+  const held: HeldModel = { title: '2 pasted props', model, scale: { x: 1, y: 1, z: 1 }, parts: [part(-1, 0), part(1, Math.PI / 2)] }
+  let n = 0
+  const makeId = () => `p${++n}` as PropId
+  it('stamps every piece around the centre, turned with the group, in one batch', () => {
+    const out = placedProps({ makeId, scene: 's1' as SceneId, held, at: { x: 5, y: 0.8, z: 5 }, yaw: Math.PI / 2, scatter: { yaw: 1, scale: 2 } })
+    expect(out).toHaveLength(2)
+    expect(out[0]!.position.x).toBeCloseTo(5)
+    expect(out[0]!.position.z).toBeCloseTo(6)
+    expect(out[1]!.position.z).toBeCloseTo(4)
+    expect(out[0]!.position.y).toBeCloseTo(0.8)
+    expect(out[1]!.rotation.y).toBeCloseTo(Math.PI)
+    expect(out[0]!.scale).toEqual({ x: 1, y: 1, z: 1 })
+    expect(out.every((p) => p.catalogue === 'builtin:chair')).toBe(true)
+  })
+  it('is one prop for a single model', () => {
+    const one = placedProps({ makeId, scene: 's1' as SceneId, held: { title: 'Barrel', model, scale: { x: 1, y: 1, z: 1 } }, at: { x: 0, y: 0, z: 0 }, yaw: 0 })
+    expect(one).toHaveLength(1)
   })
 })

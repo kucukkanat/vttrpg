@@ -1,7 +1,15 @@
 /**
- * Pointer handling for props, shared by the standalone PropMesh and the instanced PropBatch: tap
- * selects, double tap enters edit mode, right-click selects, and the GM drags unlocked props on the
- * floor, previewed through `editPreview` and committed as one `props.update` on release.
+ * Pointer handling for props, shared by the standalone PropMesh and the instanced PropBatch:
+ *
+ * - tap selects (in Build or edit mode it keeps the prop selected; otherwise it toggles), double tap
+ *   enters or leaves edit mode; Shift-click (GM) adds the prop to the selection or drops it
+ * - drag (GM, unlocked) moves the whole selection on the floor when the prop is part of it, else
+ *   just this prop; snapped to half cells unless Snap is off or Alt is pressed during the drag
+ * - Alt held when the press starts duplicates: the copies land where the drag ends, the originals stay
+ * - right-click, or a still long-press on touch, opens the prop menu (GM; players just select)
+ * - a finger on a selected prop arms the two-finger twist / pinch (build/PropEditor.tsx)
+ *
+ * Drags preview through `tableState.propPreview` and commit one intent on release (one undo step).
  *
  * `resolve` names the prop under an event: PropMesh always answers its own id, PropBatch maps the
  * event's `instanceId` through its slot table. Everything else is read from the stores at event
@@ -11,16 +19,18 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { Plane, Vector3 } from 'three'
+import type { Prop } from '@/core/doc'
 import type { PropId } from '@/core/ids'
-import { propScale, uniformScale } from '@/core/props'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
 import { snapTranslation } from './editing'
 import { doubleTapEdit, tapTwice } from './editTap'
-import { knownLegacyFit } from './propMigration'
 import { useTableUi } from './tableState'
 import { capture, DRAG_THRESHOLD_PX, LONG_PRESS_MS } from './TokenMesh'
+import { editRuntime } from './build/editRuntime'
 import { eyedrop, wantsEyedrop } from './build/eyedrop'
+import { applyGroupOp, type Poses } from './build/groupTransform'
+import { commitGroupOp, placeCopiesAt, posesOf } from './build/propActions'
 
 type PropEvent = ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>
 
@@ -34,6 +44,12 @@ interface DragState {
   plane: Plane
   offX: number
   offZ: number
+  /** Alt was held at the press: the drag places copies. */
+  duplicate: boolean
+  /** Props that move, with their poses when the drag started. */
+  group: Prop[]
+  poses: Poses
+  startedAt: number
 }
 
 export interface PropPointerHandlers {
@@ -50,37 +66,36 @@ export interface PropPointerHandlers {
 export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, onHover: (id: PropId | null) => void): PropPointerHandlers {
   const { grid, floorY, viewer, onIntent } = useTable()
   const targeting = useTableUi((s) => s.targeting !== null)
-  const snap = useTableUi((s) => s.snap)
-  const uiSet = useTableUi((s) => s.set)
-  const setSelection = useGame((s) => s.setSelection)
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const gm = !viewer || viewer.isGm
   const drag = useRef<DragState | null>(null)
   const hit = useMemo(() => new Vector3(), [])
 
-  const isSelected = (id: PropId) => {
-    const sel = useGame.getState().selection
-    return sel?.kind === 'prop' && sel.id === id
+  const select = (id: PropId) => useGame.getState().setSelection({ kind: 'prop', id })
+  const isSelected = (id: PropId) => useGame.getState().propSelection.includes(id)
+  const openMenu = (id: PropId, x: number, y: number, radial: boolean) => {
+    if (!isSelected(id)) select(id)
+    useTableUi.getState().set({ propMenu: { prop: id, x, y, radial }, contextMenu: null })
   }
-  const toggleSelect = (id: PropId) => setSelection(isSelected(id) ? null : { kind: 'prop', id })
 
   const endDrag = useCallback((commit: boolean) => {
     const d = drag.current
     if (!d) return
     if (d.longPress) clearTimeout(d.longPress)
     drag.current = null
+    if (editRuntime.touchArm?.pointerId === d.pointerId) editRuntime.touchArm = null
     if (controls) controls.enabled = true
-    const pv = useTableUi.getState().editPreview
-    uiSet({ editDrag: false, editPreview: null })
-    if (!d.moved) return
-    const prop = useGame.getState().props[d.id]
-    if (commit && prop && pv && pv.target.kind === 'prop' && pv.target.id === d.id) {
-      const p = pv.position
-      if (Math.abs(p.x - prop.position.x) > 1e-4 || Math.abs(p.z - prop.position.z) > 1e-4) {
-        onIntent({ type: 'props.update', updates: [{ id: d.id, patch: { position: { x: p.x, y: prop.position.y, z: p.z } } }] })
-      }
-    }
-  }, [controls, uiSet, onIntent])
+    const preview = useTableUi.getState().propPreview
+    useTableUi.getState().set({ editDrag: false, propPreview: null })
+    if (!d.moved || !commit || !preview || editRuntime.gestureActive) return
+    const after: Poses = {}
+    for (const p of d.group) if (preview[p.id]) after[p.id] = preview[p.id]!
+    if (d.duplicate) { placeCopiesAt(d.group, after, onIntent); return }
+    const lead = after[d.id]
+    const start = d.poses[d.id]
+    if (!lead || !start) return
+    commitGroupOp({ kind: 'move', delta: { x: lead.position.x - start.position.x, y: 0, z: lead.position.z - start.position.z } }, onIntent, d.poses)
+  }, [controls, onIntent])
 
   // A drag that outlives the component (unmount mid-drag) leaves no preview behind.
   const endRef = useRef(endDrag)
@@ -93,24 +108,48 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     const prop = id ? useGame.getState().props[id] : undefined
     if (!id || !prop) return
     e.stopPropagation()
-    // Build: Alt-click is the eyedropper (pick this model up again).
-    if (gm && wantsEyedrop(e.nativeEvent)) { eyedrop(prop); return }
-    if (e.button === 2) { setSelection({ kind: 'prop', id }); return }
+    // A second finger while a twist / pinch runs belongs to the gesture.
+    if (editRuntime.gestureActive || (e.pointerType === 'touch' && drag.current)) return
+    const ne = e.nativeEvent
+    if (e.button === 2) {
+      if (gm) openMenu(id, ne.clientX, ne.clientY, false)
+      else select(id)
+      return
+    }
     if (e.button !== 0) return
+    // Shift-click: add to or drop from the selection (GM building with several props).
+    if (gm && ne.shiftKey) { useGame.getState().togglePropSelected(id); return }
     if (!(gm && !prop.locked)) {
-      const twice = tapTwice(`prop:${id}`, e.nativeEvent.clientX, e.nativeEvent.clientY)
+      // Build: Alt-click is the eyedropper (pick this model up again); a locked prop cannot be dragged.
+      if (gm && wantsEyedrop(ne)) { eyedrop(prop); return }
+      const twice = tapTwice(`prop:${id}`, ne.clientX, ne.clientY)
       if (twice && doubleTapEdit(gm ? { kind: 'prop', id } : null)) return
-      setSelection({ kind: 'prop', id })
+      select(id)
       return
     }
     capture(e).setPointerCapture(e.pointerId)
-    uiSet({ editDrag: true })
+    useTableUi.getState().set({ editDrag: true })
+    const s = useGame.getState()
+    const inSelection = s.propSelection.includes(id)
+    const group = inSelection ? s.propSelection.map((pid) => s.props[pid]).filter((p): p is Prop => !!p && !p.locked) : [prop]
     const plane = new Plane(new Vector3(0, 1, 0), -Math.max(floorY, prop.position.y))
     const off = e.ray.intersectPlane(plane, hit) ? { x: hit.x - prop.position.x, z: hit.z - prop.position.z } : { x: 0, z: 0 }
+    if (e.pointerType === 'touch' && inSelection) {
+      // The camera stays put: this finger (and a second one) act on the selection.
+      editRuntime.touchArm = { pointerId: e.pointerId, prop: id }
+      if (controls) controls.enabled = false
+    }
     drag.current = {
-      id, pointerId: e.pointerId, startX: e.nativeEvent.clientX, startY: e.nativeEvent.clientY, moved: false,
-      longPress: e.pointerType === 'touch' ? setTimeout(() => { if (drag.current && !drag.current.moved) { toggleSelect(id); endDrag(false) } }, LONG_PRESS_MS) : null,
-      plane, offX: off.x, offZ: off.z,
+      id, pointerId: e.pointerId, startX: ne.clientX, startY: ne.clientY, moved: false,
+      longPress: e.pointerType === 'touch'
+        ? setTimeout(() => {
+          if (!drag.current || drag.current.moved || editRuntime.gestureActive) return
+          endDrag(false)
+          if (gm) openMenu(id, ne.clientX, ne.clientY, true)
+          else select(id)
+        }, LONG_PRESS_MS)
+        : null,
+      plane, offX: off.x, offZ: off.z, duplicate: ne.altKey, group, poses: posesOf(group), startedAt: performance.now(),
     }
   }
 
@@ -118,22 +157,31 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     const d = drag.current
     if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
-    const prop = useGame.getState().props[d.id]
-    if (!prop) { endDrag(false); return }
+    if (editRuntime.gestureActive) {
+      // A second finger took over: this drag gives way without committing.
+      if (d.longPress) { clearTimeout(d.longPress); d.longPress = null }
+      if (d.moved) { d.moved = false; useTableUi.getState().set({ propPreview: null }) }
+      return
+    }
+    const ne = e.nativeEvent
     if (!d.moved) {
-      if (Math.hypot(e.nativeEvent.clientX - d.startX, e.nativeEvent.clientY - d.startY) < DRAG_THRESHOLD_PX) return
+      if (Math.hypot(ne.clientX - d.startX, ne.clientY - d.startY) < DRAG_THRESHOLD_PX) return
       d.moved = true
       if (d.longPress) { clearTimeout(d.longPress); d.longPress = null }
       if (controls) controls.enabled = false
-      if (!isSelected(d.id)) setSelection({ kind: 'prop', id: d.id })
+      if (!isSelected(d.id)) select(d.id)
     }
     if (!e.ray.intersectPlane(d.plane, hit)) return
-    let p = { x: hit.x - d.offX, y: prop.position.y, z: hit.z - d.offZ }
-    if (snap && !e.nativeEvent.altKey) p = { ...snapTranslation(p, grid), y: prop.position.y }
-    const cur = useTableUi.getState().editPreview
-    if (cur && cur.target.kind === 'prop' && cur.target.id === d.id && cur.position.x === p.x && cur.position.z === p.z) return
-    const base = propScale(prop, knownLegacyFit(d.id) ?? 1)
-    uiSet({ editPreview: { target: { kind: 'prop', id: d.id }, position: p, rotationY: prop.rotation.y, scale: uniformScale(base), scaleVec: base } })
+    const start = d.poses[d.id]
+    if (!start) return
+    let p = { x: hit.x - d.offX, y: start.position.y, z: hit.z - d.offZ }
+    // Alt during the drag moves freely; the Alt that started a duplicate keeps snapping.
+    const free = !useTableUi.getState().snap || (ne.altKey && !d.duplicate)
+    if (!free) p = { ...snapTranslation(p, grid), y: start.position.y }
+    const cur = useTableUi.getState().propPreview?.[d.id]
+    if (cur && cur.position.x === p.x && cur.position.z === p.z) return
+    const delta = { x: p.x - start.position.x, y: 0, z: p.z - start.position.z }
+    useTableUi.getState().set({ propPreview: applyGroupOp(d.poses, { kind: 'move', delta }) })
   }
 
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
@@ -141,14 +189,20 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
     capture(e).releasePointerCapture(e.pointerId)
-    const wasClick = !d.moved
+    // A finger lifting after a twist / pinch is not a tap.
+    const wasClick = !d.moved && !editRuntime.gestureActive && editRuntime.gestureEndedAt < d.startedAt
     const id = d.id
     endDrag(true)
     if (!wasClick) return
-    if (tapTwice(`prop:${id}`, e.nativeEvent.clientX, e.nativeEvent.clientY) && doubleTapEdit({ kind: 'prop', id })) return
-    // In edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
-    if (useTableUi.getState().editMode) setSelection({ kind: 'prop', id })
-    else toggleSelect(id)
+    const ne = e.nativeEvent
+    // Build: Alt-click without a drag is the eyedropper (Alt-drag duplicates).
+    const dropped = d.duplicate && gm && wantsEyedrop({ altKey: true, button: 0 }) ? useGame.getState().props[id] : undefined
+    if (dropped) { eyedrop(dropped); return }
+    if (tapTwice(`prop:${id}`, ne.clientX, ne.clientY) && doubleTapEdit({ kind: 'prop', id })) return
+    // In Build or edit mode a tap keeps the prop selected (the gizmo stays); otherwise it toggles.
+    const ui = useTableUi.getState()
+    if (ui.editMode || ui.buildMode) select(id)
+    else useGame.getState().setSelection(isSelected(id) ? null : { kind: 'prop', id })
   }
 
   return {
@@ -159,11 +213,9 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     onLostPointerCapture: () => endDrag(false),
     onContextMenu: (e) => {
       if (targeting) return
-      const id = resolve(e)
-      if (!id) return
+      if (!resolve(e)) return
       e.stopPropagation()
       e.nativeEvent.preventDefault()
-      setSelection({ kind: 'prop', id })
     },
     onPointerOver: (e) => {
       if (targeting) return

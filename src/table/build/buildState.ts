@@ -48,8 +48,6 @@ export interface BuildUiState {
   proposal: WallProposal | null
   /** GM: publish the camera so table displays can follow it. */
   shareView: boolean
-  /** The GM screen is in Build (Alt-click on a prop is the eyedropper then). */
-  building: boolean
   /** The model in hand while `tool` is 'place'. */
   held: HeldModel | null
   /** The held model's turn, radians (R / wheel: 15°, Shift: 90°). */
@@ -75,7 +73,6 @@ export const useBuildUi = create<BuildUiState>((set) => ({
   showWalls: false,
   proposal: null,
   shareView: false,
-  building: false,
   held: null,
   yaw: 0,
   snapCells: DEFAULT_SNAP_CELLS,

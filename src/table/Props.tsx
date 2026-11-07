@@ -21,8 +21,7 @@ export function setPropInstancing(on: boolean): void {
 export function Props({ sceneId }: { sceneId: SceneId }) {
   const props = useGame((s) => s.props)
   const selection = useGame((s) => s.selection)
-  // The multi-selection may not exist in the store yet; read it defensively.
-  const propSelection = useGame((s) => (s as { propSelection?: readonly PropId[] }).propSelection)
+  const propSelection = useGame((s) => s.propSelection)
   const previewId = useTableUi((s) => (s.editPreview?.target.kind === 'prop' ? (s.editPreview.target.id as PropId) : null))
   const standalone = useMemo(() => standaloneIds({ selection, propSelection, previewId }), [selection, propSelection, previewId])
   const key = idsKey(standalone)
