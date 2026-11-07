@@ -16,6 +16,7 @@ import { putDownModel, toggleBuildTool, useBuildUi } from '@/table/build/buildSt
 import { MAX_SCATTER_RANGE, SNAP_CHOICES } from '@/table/build/placement'
 import { catalogueCategories } from '../catalogue'
 import { Icon } from '../icons'
+import { LibIcon } from './libraryIcons'
 import { useBreakpoint } from '../shell/useBreakpoint'
 import { useTableLayout } from '../shell/tableLayout'
 import { pushToast } from '../toasts'
@@ -152,7 +153,7 @@ function PlacementOptions({ phone }: { phone: boolean }) {
         <button type="button" className={`icon lib-dropper${tool === 'eyedropper' ? ' on' : ''}`} aria-pressed={tool === 'eyedropper'}
           title="Eyedropper: click a prop on the board to pick its model up again (or Alt-click any prop)" aria-label="Eyedropper"
           onClick={() => (tool === 'eyedropper' ? putDownModel() : toggleBuildTool('eyedropper'))}>
-          <Icon name="dropper" size={18} />
+          <LibIcon name="dropper" size={18} />
         </button>
       )}
     </div>
@@ -267,7 +268,7 @@ const Card = memo(function Card({ entry, cell, resolve, onPick, draggable, fav, 
       </button>
       <button type="button" className={`lib-star${fav ? ' on' : ''}`} aria-pressed={fav} aria-label={fav ? `Unstar ${entry.title}` : `Star ${entry.title}`}
         title={fav ? 'Remove from Favourites' : 'Add to Favourites'} onClick={() => toggleFavouriteModel(entry.id)}>
-        <Icon name="star" size={14} />
+        <LibIcon name="star" size={14} />
       </button>
     </div>
   )

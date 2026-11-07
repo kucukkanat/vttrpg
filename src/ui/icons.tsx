@@ -107,10 +107,6 @@ const ICONS = {
   'chevron-up': <path d="M6 15l6-6 6 6" />,
   /** The model library: a crate seen from a corner. */
   cube: <><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z" /><path d="M4 7.5 12 12l8-4.5M12 12v9" /></>,
-  /** Favourite: a five-pointed star. */
-  star: <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5z" />,
-  /** Eyedropper: pick a model up from the board. */
-  dropper: <><path d="M14.5 4.5a2.1 2.1 0 0 1 3 0l2 2a2.1 2.1 0 0 1 0 3L17 12l-5-5 2.5-2.5z" /><path d="M12.5 7.5 5 15v4h4l7.5-7.5" /></>,
   /** Credits: a rosette with ribbons. */
   ribbon: <><circle cx="12" cy="9" r="5" /><path d="m9 13.5-2 7 3-1.5 2 2.5M15 13.5l2 7-3-1.5-2 2.5" /></>,
 } satisfies Record<string, ReactNode>

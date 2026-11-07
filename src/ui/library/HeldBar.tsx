@@ -6,6 +6,7 @@
 import { putDownModel, useBuildUi } from '@/table/build/buildState'
 import { turnHeld, yawDegrees } from '@/table/build/placement'
 import { Icon } from '../icons'
+import { LibIcon } from './libraryIcons'
 import './HeldBar.css'
 
 export function HeldBar({ phone }: { phone: boolean }) {
@@ -16,7 +17,7 @@ export function HeldBar({ phone }: { phone: boolean }) {
   if (tool === 'eyedropper') {
     return (
       <div className="held-bar" role="status">
-        <Icon name="dropper" size={16} />
+        <LibIcon name="dropper" size={16} />
         <span className="held-bar-name">Click a prop to pick its model up</span>
         <button type="button" className="tiny" onClick={putDownModel}>Cancel</button>
       </div>

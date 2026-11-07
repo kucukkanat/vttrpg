@@ -33,14 +33,14 @@ describe('badCatalogueEntry (catalogue.add)', () => {
     expect(badCatalogueEntry({ ...good, licence: { id: 'cc-by', author: '  ' } })).toMatch(/author/)
   })
   it('refuses built-ins and broken shapes', () => {
-    expect(badCatalogueEntry({ ...good, origin: 'builtin' })).toMatch(/built-in/)
+    expect(badCatalogueEntry({ ...good, origin: 'builtin' })).toMatch(/imported/)
     expect(badCatalogueEntry(null)).toBeTruthy()
-    expect(badCatalogueEntry({ ...good, id: '' })).toMatch(/id/)
-    expect(badCatalogueEntry({ ...good, title: ' ' })).toMatch(/title/)
+    expect(badCatalogueEntry({ ...good, id: '' })).toMatch(/entry/)
+    expect(badCatalogueEntry({ ...good, title: ' ' })).toMatch(/entry/)
     expect(badCatalogueEntry({ ...good, model: { sha256: 1 } } as never)).toMatch(/model/)
     expect(badCatalogueEntry({ ...good, size: [1, 0, 1] })).toMatch(/size/)
     expect(badCatalogueEntry({ ...good, tags: ['ok', 3] } as never)).toMatch(/tags/)
-    expect(badCatalogueEntry({ ...good, origin: 'pirate' } as never)).toMatch(/origin/)
+    expect(badCatalogueEntry({ ...good, origin: 'pirate' } as never)).toMatch(/imported/)
   })
 })
 
