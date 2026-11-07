@@ -140,7 +140,7 @@ describe('unread chat', () => {
 })
 
 describe('phone tabs', () => {
-  const def = (id: string, phoneSlot?: number): PanelDef => ({ id, title: id, short: id, glyph: '', component: () => null, scope: 'all', side: 'left', phoneSlot })
+  const def = (id: string, phoneSlot?: number): PanelDef => ({ id, title: id, short: id, glyph: 'more', component: () => null, scope: 'all', side: 'left', phoneSlot })
   const panels = [def('scenes', 1), def('tokens', 2), def('object'), def('character', 3), def('chat', 4), def('journal'), def('prep')]
   const tabs = splitPhoneTabs(panels)
 
