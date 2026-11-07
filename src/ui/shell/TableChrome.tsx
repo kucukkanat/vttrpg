@@ -19,7 +19,7 @@ import { endCombat, startCombat } from '../panels/InitiativePanel'
 import { Icon, type IconName } from '../icons'
 
 /** Esc (outside a field) runs `onClose` while `active`. Capture phase, so it wins over table keys. */
-function useEscape(active: boolean, onClose: () => void) {
+export function useEscape(active: boolean, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -34,7 +34,7 @@ function useEscape(active: boolean, onClose: () => void) {
 }
 
 /** Closes on a pointer-down outside `ref` (deferred a tick so the opening tap does not close it). */
-function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+export function useOutside(active: boolean, ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
   const latest = useRef(onClose)
   latest.current = onClose
   useEffect(() => {
@@ -141,7 +141,7 @@ export { setTableMode }
  * The GM screen's plaque (bottom left): the mode and a live line (sounds playing, the round).
  * Build mounts the Build workspace around the board (GameShell).
  */
-export function GmScreen({ live, onLive }: { live: string; onLive(): void }) {
+export function GmScreen({ live, onLive, drawer }: { live: string; onLive(): void; drawer?: ReactNode }) {
   const mode = useTableLayout((s) => s.mode)
   return (
     <div className={`t-plaque t-plaque--${mode}`} role="group" aria-label="GM screen">
@@ -149,10 +149,13 @@ export function GmScreen({ live, onLive }: { live: string; onLive(): void }) {
         <strong>GM screen</strong>
         <span className="t-plaque-state">{mode === 'play' ? 'play' : 'build'}</span>
       </div>
-      <div className="t-modes" role="radiogroup" aria-label="Mode">
-        {MODES.map((m) => (
-          <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
-        ))}
+      <div className="t-plaque-row">
+        <div className="t-modes" role="radiogroup" aria-label="Mode">
+          {MODES.map((m) => (
+            <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={`t-mode${mode === m.id ? ' on' : ''}`} title={m.hint} onClick={() => setTableMode(m.id)}>{m.label}</button>
+          ))}
+        </div>
+        {mode !== 'build' && drawer}
       </div>
       {live && <button type="button" className="t-plaque-live" onClick={onLive}><Icon name="sound" size={14} /> {live}</button>}
     </div>

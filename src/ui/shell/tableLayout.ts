@@ -60,9 +60,13 @@ export interface BuildFolds {
 }
 
 export const BUILD_FOLDS_KEY = 'vtt.build.docks'
-const DEFAULT_FOLDS: BuildFolds = { buildLibraryOpen: true, buildInspectorOpen: true }
+/**
+ * First visit: the Inspector open, the Library folded to its rail (the Library's own controls
+ * would put an idle Build over its control budget). Asking for anything the Library holds opens it.
+ */
+const DEFAULT_FOLDS: BuildFolds = { buildLibraryOpen: false, buildInspectorOpen: true }
 
-/** The stored fold state (both docks open when nothing, or something unreadable, is stored). */
+/** The stored fold state (the defaults when nothing, or something unreadable, is stored). */
 export function readBuildFolds(raw: string | null): BuildFolds {
   if (!raw) return { ...DEFAULT_FOLDS }
   try {

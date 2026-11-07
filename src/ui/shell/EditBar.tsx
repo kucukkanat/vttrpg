@@ -85,7 +85,7 @@ export function EditBar({ controller }: { controller: GameController }) {
             Details <Icon name={details ? 'chevron-down' : 'chevron-up'} size={14} />
           </button>
         )}
-        <button type="button" className="tiny primary" onClick={done} title="Leave edit mode (or double tap)">Done</button>
+        <button type="button" className="tiny primary" onClick={done} title={building ? 'Let go of the props (Esc)' : 'Leave edit mode (or double tap)'}>{building ? 'Deselect' : 'Done'}</button>
       </div>
     </div>
   )

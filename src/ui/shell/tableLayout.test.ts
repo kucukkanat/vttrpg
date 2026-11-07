@@ -148,11 +148,12 @@ describe('Build dock folds', () => {
   beforeEach(() => { reset(); vi.stubGlobal('localStorage', memoryStorage()) })
   afterEach(() => { vi.unstubAllGlobals() })
 
-  it('reads the stored folds, defaulting to both docks open', () => {
-    expect(readBuildFolds(null)).toEqual({ buildLibraryOpen: true, buildInspectorOpen: true })
-    expect(readBuildFolds('not json')).toEqual({ buildLibraryOpen: true, buildInspectorOpen: true })
+  it('reads the stored folds, defaulting to the Inspector open and the Library on its rail', () => {
+    expect(readBuildFolds(null)).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
+    expect(readBuildFolds('not json')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
     expect(readBuildFolds('{"buildLibraryOpen":false}')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: true })
-    expect(readBuildFolds('{"buildLibraryOpen":1,"buildInspectorOpen":false}')).toEqual({ buildLibraryOpen: true, buildInspectorOpen: false })
+    expect(readBuildFolds('{"buildLibraryOpen":1,"buildInspectorOpen":false}')).toEqual({ buildLibraryOpen: false, buildInspectorOpen: false })
+    expect(readBuildFolds('{"buildLibraryOpen":true}')).toEqual({ buildLibraryOpen: true, buildInspectorOpen: true })
   })
 
   it('remembers them per device', () => {

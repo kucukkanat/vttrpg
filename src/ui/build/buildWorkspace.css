@@ -20,7 +20,7 @@
 .bw-sep { width: 1px; align-self: stretch; margin: 4px 0; background: rgba(241, 213, 142, .25); }
 .bw-bar-btn, .bw-scene-btn {
   min-height: 34px; min-width: 34px; padding: 0 var(--sp-2); border-radius: 6px; gap: var(--sp-1);
-  background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(241, 213, 142, .25); font-weight: 700;
+  background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(241, 213, 142, .25); font-weight: 700; white-space: nowrap;
 }
 .bw-bar-btn.on { background: color-mix(in srgb, var(--mode-build) 45%, transparent); border-color: var(--mode-build); }
 .bw-bar-btn:disabled { opacity: .4; }
@@ -131,6 +131,8 @@
 .game--mode-build:not(.game--phone) .t-scroll { z-index: 6; }
 .game--mode-build:not(.game--phone) .dock { padding-bottom: calc(var(--edge) + var(--sab) + var(--bw-strip-h) + var(--sp-2)); }
 .game--zen .bw, .game--display .bw { display: none !important; }
+/* Build is not for running the table: Roll initiative, Ping and the Journal step back (Play has them). */
+.game--mode-build:not(.game--phone) :is(button.t-combat[aria-label="Roll initiative"], .t-book, .cam-tool[aria-label^="Ping"]) { display: none; }
 
 /* --- phones: the Build bar's sheets ----------------------------------------------------------- */
 .bw-phone-lib, .bw-phone-tools, .bw-phone-scene { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
