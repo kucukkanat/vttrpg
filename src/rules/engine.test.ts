@@ -163,6 +163,17 @@ describe('validate', () => {
       expect(engine.validate(i, asGm, d)).toBeNull()
     }
   })
+  it('lets a player end their own token\'s turn, and only while it is up', () => {
+    const d = { ...doc(), initiative: { active: true, round: 1, turn: 0, order: [{ token: 't-alice' as TokenId, score: 12 }, { token: 't-bob' as TokenId, score: 8 }] } }
+    expect(engine.validate({ type: 'initiative.next', token: 't-alice' as TokenId }, asAlice, d)).toBeNull()
+    expect(engine.validate({ type: 'initiative.next', token: 't-bob' as TokenId }, asAlice, d)).toMatch(/control/)
+    const later = { ...d, initiative: { ...d.initiative, turn: 1 } }
+    expect(engine.validate({ type: 'initiative.next', token: 't-alice' as TokenId }, asAlice, later)).toMatch(/turn/)
+  })
+  it('keeps a token\'s skill list to the GM and its skills to the token', () => {
+    const d = doc()
+    expect(engine.validate({ type: 'token.update', token: 't-alice' as TokenId, patch: { skills: [] } }, asAlice, d)).toMatch(/GM/)
+  })
   it('always allows rolls and chat', () => {
     const d = doc()
     expect(engine.validate({ type: 'roll', formula: 'd20', seed: SEED_A }, asAlice, d)).toBeNull()

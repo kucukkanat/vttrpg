@@ -62,3 +62,19 @@
 .game--phone, .game--tablet { --rail-w: 60px; }
 .game--phone .cam-group, .game--tablet .cam-group { flex-direction: column; }
 .game--phone .cam-btn, .game--tablet .cam-btn { width: 100%; }
+
+/* Dice pad: opens under the pill on desktop, to the left of the rail on phones and tablets. */
+.cam-dice-group { position: relative; }
+.dice-pad {
+  position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 6; width: min(280px, calc(100vw - 2 * var(--sp-3)));
+  display: grid; gap: var(--sp-2); padding: var(--sp-2);
+  background: rgba(18, 18, 22, .95); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+.game--phone .dice-pad, .game--tablet .dice-pad { top: 0; right: calc(100% + var(--sp-2)); }
+.dice-pad-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.dice-pad .die-chip {
+  flex: 1 1 0; min-width: 0; min-height: var(--control); padding: 0 var(--sp-1); border-radius: 999px;
+  background: var(--panel-2); color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.dice-pad-form { display: flex; gap: var(--sp-1); }
+.dice-pad-form input { flex: 1; min-width: 0; }

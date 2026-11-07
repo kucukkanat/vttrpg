@@ -56,8 +56,12 @@ export type Intent =
   | { type: 'initiative.start'; order: InitiativeEntry[]; seed?: string }
   /** Replace the order as given (reorder by hand, edit a score, add a combatant); the current combatant keeps its turn. */
   | { type: 'initiative.set'; order: InitiativeEntry[] }
-  /** Advance one turn; past the last combatant the round increments and the first one is up again. */
-  | { type: 'initiative.next' }
+  /**
+   * Advance one turn; past the last combatant the round increments and the first one is up again.
+   * With `token` it is "end my turn": applied only while that token is up, so a late or repeated
+   * press cannot skip someone. Players may send it for a token they own; plain `next` is GM only.
+   */
+  | { type: 'initiative.next'; token?: TokenId }
   | { type: 'initiative.remove'; token: TokenId }
   | { type: 'initiative.end' }
 

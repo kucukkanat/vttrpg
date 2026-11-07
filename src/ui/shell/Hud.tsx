@@ -12,6 +12,9 @@ import { ContextMenu } from './ContextMenu'
 import { Toasts } from './Toasts'
 import { DiceValues } from '../components'
 import { InitiativeChip } from '../panels/InitiativePanel'
+import { lastRollFormula, quickDice, rememberRollFormula } from '../panels/ChatPanel'
+import { useSession } from '../session'
+import { newSeed } from '@/dice'
 import './Hud.css'
 
 const TOAST_MS = 6000
@@ -83,6 +86,7 @@ export function CameraPill() {
           <kbd aria-hidden>F</kbd>
         </button>
       </div>
+      <DicePad />
       <div className="cam-group">
         <button type="button" className={`cam-btn cam-grid${showGrid ? ' on' : ''}`} aria-pressed={showGrid} aria-label={showGrid ? 'Hide grid' : 'Show grid'}
           title={`${showGrid ? 'Hide' : 'Show'} grid (G)`} onClick={() => set({ showGrid: !showGrid })}>
@@ -140,5 +144,53 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
         </button>
       )}
     </>
+  )
+}
+
+/**
+ * Dice on the table: a die button on the camera rail opens a pad with the quick dice, "Last" and a
+ * formula field. Rolls go to chat and show the 3D dice like `/r`. Esc or a tap outside closes it.
+ */
+function DicePad() {
+  const { controller } = useSession()
+  const pack = useGame((s) => s.meta?.pack)
+  const [open, setOpen] = useState(false)
+  const [formula, setFormula] = useState('')
+  const [last, setLast] = useState(lastRollFormula)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onDown = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.('.dice-pad, .cam-dice')) setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown, true)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown, true) }
+  }, [open])
+  if (!controller) return null
+  const roll = (f: string) => {
+    const t = f.trim()
+    if (!t) return
+    rememberRollFormula(t)
+    setLast(t)
+    setOpen(false)
+    void controller.dispatch({ type: 'roll', formula: t, seed: newSeed() })
+  }
+  return (
+    <div className="cam-group cam-dice-group">
+      <button type="button" className={`cam-btn cam-dice${open ? ' on' : ''}`} aria-expanded={open} aria-label="Roll dice" title="Roll dice" onClick={() => setOpen(!open)}>
+        <span className="cam-label" aria-hidden>🎲</span>
+      </button>
+      {open && (
+        <div className="dice-pad" role="dialog" aria-label="Roll dice">
+          <div className="dice-pad-row">
+            {quickDice(pack).map((f) => <button key={f} type="button" className="die-chip" onClick={() => roll(f)} aria-label={`Roll ${f}`}>{f}</button>)}
+            <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) roll(last) }} title={last ? `Roll ${last} again` : 'Nothing rolled yet'}>Last</button>
+          </div>
+          <form className="dice-pad-form" onSubmit={(e) => { e.preventDefault(); roll(formula); setFormula('') }}>
+            <input value={formula} onChange={(e) => setFormula(e.target.value)} placeholder="2d6+1" aria-label="Dice formula" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+            <button type="submit" className="primary" disabled={!formula.trim()}>Roll</button>
+          </form>
+        </div>
+      )}
+    </div>
   )
 }

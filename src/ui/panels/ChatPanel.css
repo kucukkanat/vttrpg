@@ -21,15 +21,3 @@
   .chat .group .msg .time { opacity: 0; transition: opacity .12s ease; }
   .chat .group .msg:hover .time, .chat .group .msg:focus-within .time { opacity: 1; }
 }
-
-/* Quick dice above the input: wrapping chips the height of a control (44px on touch). */
-.chat .dice-row { display: flex; flex-wrap: nowrap; gap: var(--sp-1); margin-top: var(--sp-2); flex: none; }
-/* The chips share one row (flex 1 1 0) instead of wrapping the "+" onto a second line. */
-.chat .die-chip {
-  flex: 1 1 0; min-height: var(--control); min-width: 0; max-width: 72px; padding: 0 var(--sp-1);
-  font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; border-radius: 999px;
-  background: var(--panel-2); color: var(--accent); touch-action: manipulation;
-}
-.chat .die-chip:disabled { opacity: .45; cursor: default; }
-.chat .die-plus { color: var(--fg); font-size: var(--fs-lg); padding: 0 var(--sp-2); }
-.chat .dice-row + .chatform { margin-top: var(--sp-1); }

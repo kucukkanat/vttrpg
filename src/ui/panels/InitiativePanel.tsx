@@ -17,6 +17,7 @@ import { newSeed, rollFromSeed } from '@/dice/fair'
 import { ListRow } from '../components'
 import { pushToast } from '../toasts'
 import { requestOpenPanel } from '../shell/useShortcuts'
+import { focusToken } from '@/table/tableState'
 import { combatantName, combatants, concernsViewer, currentEntry, DEFAULT_INITIATIVE_FORMULA, moveEntry, possessive, rollInitiative, seedFor, turnLabel, withScore } from './initiative'
 import './initiative.css'
 
@@ -210,10 +211,13 @@ export function useTurnNotices(controller: GameController | null): void {
       const cur = currentEntry(s.initiative)
       if (!cur) return
       const token = s.tokens[cur.token]
-      const text = `${possessive(combatantName(token, isGm))} turn`
-      pushToast({ text, key: 'initiative-turn', ttl: 4000 })
+      // The owner gets "Your turn" and the camera on their token; everyone else the name.
+      const mine = !!token && !isGm && token.owner === me
+      const text = mine ? `Your turn: ${token.name}` : `${possessive(combatantName(token, isGm))} turn`
+      pushToast({ text, key: 'initiative-turn', ttl: mine ? 6000 : 4000 })
       s.pushNotice(text)
       if (token && concernsViewer(token, me, isGm)) s.setSelectedToken(token.id)
+      if (mine) focusToken(token.id)
     })
   }, [controller])
 }

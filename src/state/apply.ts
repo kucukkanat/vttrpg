@@ -298,6 +298,7 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
       case 'initiative.next': {
         const init = readInitiative(initiative)
         if (!init.active) return
+        if (intent.token && init.order[init.turn]?.token !== intent.token) return
         writeInitiative(initiative, nextTurn(init))
         break
       }

@@ -14,9 +14,14 @@ export interface PhoneTabs {
   more: PanelDef[]
 }
 
-export function splitPhoneTabs(panels: PanelDef[]): PhoneTabs {
-  const primary = panels.filter((p) => p.phoneSlot != null).sort((a, b) => (a.phoneSlot ?? 0) - (b.phoneSlot ?? 0))
-  const more = panels.filter((p) => p.phoneSlot == null)
+/**
+ * Tab bar by role: the GM's slots come from `phoneSlot`, a player's from `playerSlot` (players do not
+ * run scenes or tokens, so their bar is Sheet, Chat, Journal, Turns).
+ */
+export function splitPhoneTabs(panels: PanelDef[], isGm = true): PhoneTabs {
+  const slot = (p: PanelDef) => (isGm ? p.phoneSlot : p.playerSlot)
+  const primary = panels.filter((p) => slot(p) != null).sort((a, b) => (slot(a) ?? 0) - (slot(b) ?? 0))
+  const more = panels.filter((p) => slot(p) == null)
   return { primary, more }
 }
 

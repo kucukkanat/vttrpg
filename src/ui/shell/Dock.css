@@ -11,7 +11,7 @@
   pointer-events: auto; background: rgba(18, 18, 22, .9); border: 1px solid var(--border); border-radius: var(--r-md);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
 }
-.dock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-1); padding: var(--sp-1); max-height: 40vh; overflow-y: auto; }
+.dock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-1); padding: var(--sp-1); max-height: 45vh; overflow-y: auto; }
 .dock-card { padding: var(--sp-2) var(--sp-3); max-height: 40vh; overflow-y: auto; }
 
 /* Skill chips: name over cost, sized like a control, as many per row as fit. */
@@ -48,3 +48,21 @@
 .edit-details-extra > :last-child { justify-self: stretch; }
 /* The editors' own "Done" (deselect) would sit next to the bar's Done; the bar's is the one. */
 .edit-details .props > :first-child > button { display: none; }
+
+/* Token bar: a head row (name, turn, HP, End turn, ⋯), chips (saves, skills), and the GM's actions. */
+.token-bar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: var(--sp-1); }
+.token-bar.up { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 6px 20px rgba(0, 0, 0, .4); }
+.token-bar-head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--sp-1) 0 var(--sp-2); }
+.token-bar-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-bar-turn { flex: none; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-fg); background: var(--accent); border-radius: 999px; padding: 2px 8px; }
+.token-bar-hp { flex: none; display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
+.token-bar-hp-value { padding: 0 var(--sp-1); white-space: nowrap; }
+.token-bar-more { flex: none; font-size: var(--fs-lg); }
+.token-bar-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
+.token-bar-gm { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); padding-top: var(--sp-1); border-top: 1px solid var(--border); }
+.token-bar-gm button.on, .condition-chips button.on { border-color: var(--accent); color: var(--accent); }
+.save-chip { background: transparent; }
+.save-chip .skill-chip-cost { color: var(--muted); }
+.condition-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+
+.token-bar-head > button { flex: none; white-space: nowrap; }

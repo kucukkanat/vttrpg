@@ -216,9 +216,17 @@ export function createRulesEngine(pack: LoadedPack): RulesEngine {
         if (skill.target.kind === 'self' && intent.targets.some((t) => t !== intent.source)) return `${skill.name} only targets yourself`
         return costShortfall(skill, character)
       }
+      case 'initiative.next': {
+        // A player ends their own turn: the token must be theirs and currently up.
+        if (!intent.token) return 'only the GM runs initiative'
+        const t = doc.tokens?.[intent.token]
+        if (!t || t.owner !== actor.pubkey) return 'you do not control that token'
+        const init = doc.initiative
+        if (!init?.active || init.order[init.turn]?.token !== intent.token) return 'it is not that token\'s turn'
+        return null
+      }
       case 'initiative.start':
       case 'initiative.set':
-      case 'initiative.next':
       case 'initiative.remove':
       case 'initiative.end':
         return 'only the GM runs initiative'

@@ -147,6 +147,16 @@ describe('initiative', () => {
     applyIntent(doc, env({ type: 'initiative.next' }))
     expect(read(doc)).toMatchObject({ round: 2, turn: 0 })
   })
+  it('ends a named turn only while that token is up', () => {
+    const doc = new Y.Doc()
+    applyIntent(doc, env({ type: 'initiative.start', order: [entry('rat', 15), entry('pip', 9)] }))
+    applyIntent(doc, env({ type: 'initiative.next', token: t('pip') }))
+    expect(read(doc)).toMatchObject({ turn: 0 })
+    applyIntent(doc, env({ type: 'initiative.next', token: t('rat') }))
+    expect(read(doc)).toMatchObject({ turn: 1 })
+    applyIntent(doc, env({ type: 'initiative.next', token: t('rat') }))
+    expect(read(doc)).toMatchObject({ turn: 1 })
+  })
   it('ignores next, set and remove while nothing is running', () => {
     const doc = new Y.Doc()
     applyIntent(doc, env({ type: 'initiative.next' }))

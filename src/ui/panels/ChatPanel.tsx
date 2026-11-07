@@ -17,7 +17,10 @@ const HELP = [
 ]
 
 /** Last formula rolled from this chat (a chip or `/r`); module-level so it survives the panel remounting. */
+/** The last formula rolled from chat or the dice pad, for the pad's "Last". */
 let lastChatFormula: string | null = null
+export const lastRollFormula = () => lastChatFormula
+export const rememberRollFormula = (f: string) => { lastChatFormula = f }
 
 /** Quick dice: the pack's table die last. Mausritter reads two d6 as tens and ones (d66); others roll d100. */
 export function quickDice(pack: string | undefined): string[] {
@@ -29,11 +32,9 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   const notices = useGame((s) => s.notices)
   const presence = useGame((s) => s.presence)
   const names = useGame((s) => s.meta?.names)
-  const pack = useGame((s) => s.meta?.pack)
   const [text, setText] = useState('')
   const [to, setTo] = useState<string>('')
   const [notice, setNotice] = useState<string[] | null>(null)
-  const [last, setLast] = useState(lastChatFormula)
   const log = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const me = controller.pubkey
@@ -59,25 +60,14 @@ export function ChatPanel({ controller }: { controller: GameController }) {
 
   useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [chat.length, notices.length, notice])
 
-  /** The `/r` command and the quick dice share this; the formula is remembered for "Last". */
+  /** The `/r` command; the formula is remembered for the dice pad's "Last". */
   const roll = async (formula: string) => {
     const f = formula.trim()
     if (!f) return
     lastChatFormula = f
-    setLast(f)
     await controller.dispatch({ type: 'roll', formula: f, seed: newSeed() })
   }
 
-  /** "+" chip: a prefilled `/r ` with the caret at the end, ready for a formula. */
-  const startRoll = () => {
-    setText('/r ')
-    requestAnimationFrame(() => {
-      const el = input.current
-      if (!el) return
-      el.focus()
-      el.setSelectionRange(el.value.length, el.value.length)
-    })
-  }
 
   const send = async () => {
     const t = text.trim()
@@ -156,13 +146,6 @@ export function ChatPanel({ controller }: { controller: GameController }) {
             {notice.map((line) => <div key={line}>{line}</div>)}
           </div>
         )}
-      </div>
-      <div className="dice-row" role="toolbar" aria-label="Quick dice">
-        {quickDice(pack).map((f) => (
-          <button type="button" key={f} className="die-chip" onClick={() => void roll(f)} aria-label={`Roll ${f}`}>{f}</button>
-        ))}
-        <button type="button" className="die-chip" disabled={!last} onClick={() => { if (last) void roll(last) }} aria-label={last ? `Roll ${last} again` : 'Repeat the last roll'} title={last ? `Roll ${last} again` : 'Nothing rolled from the chat yet'}>Last</button>
-        <button type="button" className="die-chip die-plus" onClick={startRoll} aria-label="Type a dice formula">+</button>
       </div>
       <form className="chatform" onSubmit={(e) => { e.preventDefault(); void send() }}>
         <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Whisper to">

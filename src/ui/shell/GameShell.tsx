@@ -25,6 +25,7 @@ import { Drawer } from './Drawer'
 import { SideColumn, RAIL_W, DESKTOP_DEFAULT, DESKTOP_LAYOUT_VERSION, migrateDesktopLayout, type DesktopLayout } from './SideColumn'
 import { CameraPill, RollToast, SelectedTokenChip } from './Hud'
 import { Dock } from './Dock'
+import { useGameAlerts } from './useGameAlerts'
 import { GameNotices } from './GameNotices'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { GmCallout } from '../onboarding/GmCallout'
@@ -52,7 +53,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   const bp = useBreakpoint()
   const isGm = controller.connection.isGm
   const panels = useMemo(() => PANELS.filter((p) => p.scope === 'all' || isGm), [isGm])
-  const phoneTabs = useMemo(() => splitPhoneTabs(panels), [panels])
+  const phoneTabs = useMemo(() => splitPhoneTabs(panels, isGm), [panels, isGm])
   const meta = useGame((s) => s.meta)
   const chat = useGame((s) => s.chat)
   const presence = useGame((s) => s.presence)
@@ -94,6 +95,8 @@ export function GameShell({ controller }: { controller: GameController }) {
     : desktop.right.open && !desktop.collapsed.chat
   const unread = useUnread(chat.length, chatOpen)
   const journalUnread = useUnreadNotes(controller, bp === 'phone' ? phoneTab === 'journal' : bp === 'tablet' ? tablet.open && tabletTab === 'journal' : desktop.right.open && !desktop.collapsed.journal)
+  const journalOpen = bp === 'phone' ? phoneTab === 'journal' : bp === 'tablet' ? tablet.open && tabletTab === 'journal' : desktop.right.open && !desktop.collapsed.journal
+  useGameAlerts(controller, { chat: chatOpen, journal: journalOpen }, openPanel)
   const badges = useMemo(() => ({ chat: unread, journal: journalUnread }), [unread, journalUnread])
 
   // Aiming a skill on a phone needs the whole table: drop the sheet, the table's own bar has Cancel.
