@@ -9,20 +9,16 @@
  *   FOG_*   meshes  -> regions that start hidden; hidden
  *   scene custom prop `ambient_audio` (or `AUDIO_ambient`) -> ambient track reference
  *
- * Draco-compressed meshes work out of the box: three 0.187 ships the Draco decoder and the Basis
- * transcoder as bundled assets (Vite emits them next to the app, fetched lazily on first use), so
- * nothing is loaded from a third party. Pass `dracoDecoderPath` / `ktx2TranscoderPath` to point at
- * a CDN instead (`DRACO_DECODER_PATH` is Google's gstatic mirror). KTX2/Basis textures need
- * `{ renderer }` so the loader can detect GPU formats; without a renderer, GLBs that use
- * KHR_texture_basisu fail to load with a clear error.
+ * Decoding (Draco, meshopt, KTX2) goes through the shared loader in gltf.ts, with every decoder
+ * bundled. KTX2/Basis textures need `{ renderer }` so the loader can detect GPU formats; without a
+ * renderer, GLBs that use KHR_texture_basisu fail to load with a clear error.
  */
 import {
   Box3, Color, Light, Mesh, Object3D, PointLight, SpotLight, Texture, Vector3,
   type WebGLRenderer,
 } from 'three'
-import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { loadGltf } from './gltf'
 import type { GridSpec, GridType, Vec3 } from '@/core/geometry'
 import { extractWallSegments, type WallSegment } from './walls'
 
@@ -58,47 +54,13 @@ export interface LoadSceneOptions {
   dracoDecoderPath?: string
   /** Directory of the Basis transcoder; default: the copy bundled with three. */
   ktx2TranscoderPath?: string
+  /** Asset hash of the scene model; its cost is recorded for `getModelStats` (gltf.ts). */
+  sha256?: string
   /** Pass `fetch`-style abort control through to the loader. */
   signal?: AbortSignal
 }
 
-/** CDN alternatives to the bundled decoders, for hosts that prefer not to serve the wasm. */
-export const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
-export const KTX2_TRANSCODER_PATH = 'https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/libs/basis/'
-
-// Decoders spin up a worker pool each; share one instance per path across scene loads.
-const dracoLoaders = new Map<string, DRACOLoader>()
-const ktx2Loaders = new Map<string, KTX2Loader>()
-
-function dracoLoader(path: string | undefined): DRACOLoader {
-  const key = path ?? ''
-  let l = dracoLoaders.get(key)
-  if (!l) {
-    l = new DRACOLoader()
-    if (path) l.setDecoderPath(path)
-    dracoLoaders.set(key, l)
-  }
-  return l
-}
-
-function ktx2Loader(path: string | undefined, renderer: WebGLRenderer): KTX2Loader {
-  const key = path ?? ''
-  let l = ktx2Loaders.get(key)
-  if (!l) {
-    l = new KTX2Loader()
-    if (path) l.setTranscoderPath(path)
-    l.detectSupport(renderer)
-    ktx2Loaders.set(key, l)
-  }
-  return l
-}
-
-export function createGltfLoader(opts: LoadSceneOptions = {}): GLTFLoader {
-  const loader = new GLTFLoader()
-  loader.setDRACOLoader(dracoLoader(opts.dracoDecoderPath))
-  if (opts.renderer) loader.setKTX2Loader(ktx2Loader(opts.ktx2TranscoderPath, opts.renderer))
-  return loader
-}
+export { createGltfLoader } from './gltf'
 
 /**
  * One readable sentence for a failed scene load, for the table banner and the Scenes list. The raw
@@ -116,8 +78,7 @@ export function describeLoadError(e: unknown): string {
 }
 
 export async function loadSceneModel(url: string, opts: LoadSceneOptions = {}): Promise<LoadedScene> {
-  const loader = createGltfLoader(opts)
-  const gltf = await loader.loadAsync(url)
+  const { gltf } = await loadGltf(url, opts)
   if (opts.signal?.aborted) throw new DOMException('scene load aborted', 'AbortError')
   return interpretScene(gltf)
 }
