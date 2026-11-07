@@ -12,6 +12,9 @@
  *   add it with "+ Map image" (or `createImageScene`), giving the number of grid columns; fog
  *   and walls have to be set up on the table.
  *
+ * Wall detection (`detectSceneWalls`, method in wallDetect.ts) proposes walls for a plain map
+ * image from its dark areas and dark lines along the grid, in a worker; the GM reviews them.
+ *
  * `parseUvtt` and `parseFoundryScene` are pure (JSON in, grid-unit walls out) and unit tested;
  * `importSceneFile` is the orchestrator the Scenes panel uses.
  */
@@ -24,3 +27,7 @@ export type { ImportController, ImageSize, MapImageOptions } from './mapImage'
 export { importSceneFile, parseMapFile, parseMapJson, detectMapFormat, IMPORT_EXTENSIONS } from './importSceneFile'
 export type { ImportHooks, ImportResult, MapFormat } from './importSceneFile'
 export type { ParsedMap, MapWall, MapPoint, MapImage } from './types'
+export { detectWalls, otsuThreshold, lumaFromRgba, detectionSize } from './wallDetect'
+export type { WallDetectInput, WallDetectOptions, WallDetectResult } from './wallDetect'
+export { detectSceneWalls } from './mapWalls'
+export type { DetectedWalls } from './mapWalls'

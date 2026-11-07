@@ -21,6 +21,10 @@ export interface PackManifest {
   resolution?: RollResolution
   /** Optional look for games of this pack: tints the chrome, never moves it (src/ui/theme/theme.ts). */
   theme?: PackTheme
+  /** How damage lands: the resource it hits, temporary points, types and resistances. */
+  damage?: DamageModel
+  /** Concentration: one skill at a time per caster, a save when the caster takes damage. */
+  concentration?: ConcentrationRule
   /** Files relative to the pack folder. */
   files: {
     attributes: string
@@ -48,6 +52,32 @@ export type RollResolution =
   | { kind: 'roll-under'; die: string }
   | { kind: 'd20-vs-dc' }
 
+/**
+ * The pack's damage model, read by the engine for skill damage and by apply-damage cards. Packs
+ * without one keep plain `damage` rows against whatever resource they name.
+ */
+export interface DamageModel {
+  /** Resource that damage and healing go to by default (`hp`). */
+  resource: string
+  /** Sheet key of a plain number spent before `resource` and never healed: temporary hit points. */
+  temp?: string
+  /** Damage types the pack knows; effect rows and cards name them by id. */
+  types?: { id: string; name: string }[]
+  /** Sheet keys holding lists of damage type ids; the id `all` matches every type. */
+  resist?: string
+  vulnerable?: string
+  immune?: string
+}
+
+export interface ConcentrationRule {
+  /** Condition id shown on a concentrating caster. */
+  condition: string
+  /** Save formula against the caster's sheet, e.g. "d20 + con_mod + save_prof.con * pb". */
+  save: string
+  /** DC expression; `damage` is the damage just taken, e.g. "max(10, floor(damage / 2))". */
+  dc: string
+}
+
 export interface AttributeDef {
   id: string
   name: string
@@ -66,16 +96,28 @@ export interface ResourceDef {
   resetOn?: 'rest' | 'longRest' | 'session' | 'never'
 }
 
+export type ConditionCategory = 'buff' | 'harm' | 'control' | 'magic' | 'affliction'
+export const CONDITION_CATEGORIES: readonly ConditionCategory[] = ['buff', 'harm', 'control', 'magic', 'affliction']
+
 export interface ConditionDef {
   id: string
   name: string
   description: string
   /** Glyph name drawn on the status chip (see src/ui/theme/glyphs.ts); unknown names fall back to letters. */
   icon?: string
-  /** Status kind: sets the chip's border shape and colour. Absent: guessed from the id, else harm. */
-  category?: 'buff' | 'harm' | 'control' | 'magic' | 'affliction'
   /** Attribute modifiers while active, e.g. { str: -2 }. */
   modifiers?: Record<string, number>
+  /**
+   * Status kind, one scheme for every display: `buff` helps; `harm`, `control` (takes away actions or
+   * movement) and `affliction` (poison, disease, curse, exhaustion) hinder; `magic` is neither
+   * (concentration, magical marks). Sets the chip's border shape and colour (docs/UX.md, "Status
+   * icons"). Absent: guessed from the id, else harm.
+   */
+  category?: ConditionCategory
+  /** Damage type ids this condition grants resistance, immunity or vulnerability to (`all` for every type). */
+  resist?: string[]
+  immune?: string[]
+  vulnerable?: string[]
 }
 
 export type SheetField =
@@ -109,11 +151,23 @@ export interface SheetSchema {
 /** One row of a skill's effect. Interpreted by the rules engine. */
 export type Effect =
   | { kind: 'roll'; formula: string; vs?: string; label?: string }
-  | { kind: 'damage'; formula: string; resource: string }
+  /** `type` is a damage type id from the pack's damage model; resistances apply when it is set. */
+  | { kind: 'damage'; formula: string; resource: string; type?: string }
   | { kind: 'heal'; formula: string; resource: string }
-  | { kind: 'condition'; add?: string[]; remove?: string[] }
+  /** `duration` sets a countdown on the added conditions (see `ConditionDuration`). */
+  | { kind: 'condition'; add?: string[]; remove?: string[]; duration?: ConditionDuration }
   | { kind: 'move'; cells: number }
   | { kind: 'message'; text: string }
+
+/**
+ * How long an added condition lasts, in turns of `on` (default `target`, the bearer): it counts down
+ * at the start or the end (default) of that token's turn while initiative runs, and ends at zero.
+ */
+export interface ConditionDuration {
+  turns: number
+  tick?: 'start' | 'end'
+  on?: 'source' | 'target'
+}
 
 /** VFX cue sent to the table engine. Presets live in `src/table/vfx`. */
 export interface VfxCue {
@@ -135,6 +189,11 @@ export interface SkillDef {
   target: TargetShape
   effects: Effect[]
   vfx: VfxCue[]
+  /**
+   * Needs concentration (packs with a `concentration` rule): using it ends the caster's previous
+   * concentration skill, and the conditions it adds end when the concentration does.
+   */
+  concentration?: boolean
 }
 
 export interface ChargenStep {

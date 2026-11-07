@@ -8,8 +8,8 @@
     { "kind": "roll", "formula": "d20 + spell_attack", "vs": "target.ac", "label": "spell attack" },
     {
       "kind": "damage",
-      "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll((cantrip_dice * (save.dice.0 == 20 ? 2 : 1)) + 'd10') : 0",
-      "resource": "hp"
+      "formula": "(save.natural == 20 or (save.success and save.natural != 1)) ? roll((cantrip_dice * (save.natural == 20 ? 2 : 1)) + 'd10') : 0",
+      "resource": "hp", "type": "fire"
     },
     { "kind": "message", "text": "{source.name}'s fire bolt {save.success ? 'scorches' : 'streaks past'} {target.name}." }
   ],

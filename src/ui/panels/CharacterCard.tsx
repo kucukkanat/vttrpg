@@ -115,7 +115,7 @@ export function CharacterCard({ rules, character, token, assets, onRoll }: Chara
         <div className="cc-chips">
           {chips.map((c) => (
             <span key={c.id} className="cc-chip" style={{ ['--chip' as string]: c.color }}>
-              <StatusBadge chip={c} size={18} />{c.name}{c.turns !== null && <span className="sr-only">, {c.turns} {c.turns === 1 ? 'turn' : 'turns'} left</span>}
+              <StatusBadge chip={c} size={18} />{c.name}{c.remaining !== null && <span className="sr-only">, {c.remaining} {c.remaining === 1 ? 'turn' : 'turns'} left</span>}
             </span>
           ))}
         </div>

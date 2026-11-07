@@ -1,17 +1,37 @@
 /**
- * GM soundboard: built-in synthesized one-shots, imported audio files, master volume and the
- * active scene's ambient preset. Every sound goes through `audio.play` so all clients hear it.
+ * GM soundboard: built-in synthesized one-shots, imported audio files, a volume per pad, stop
+ * (one pad or everything), a "playing" ring on pads that are sounding, master volume and the
+ * active scene's ambient preset. Every sound goes through `audio.play` / `audio.stop` so all
+ * clients hear (and stop hearing) it; pad volumes are this device's and travel with each play.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { GameController } from '@/ui/controller'
 import type { AssetRef } from '@/core/assets'
 import { useGame } from '@/state/store'
-import { AMBIENT_PRESETS, BUILTIN_SOUNDS, builtinRef, sharedAudioEngine, useAudioUnlock, type AmbientPreset, type AudioEngine } from '@/audio'
+import { AMBIENT_PRESETS, BUILTIN_SOUNDS, builtinRef, sharedAudioEngine, soundKey, useAudioUnlock, type AmbientPreset, type AudioEngine } from '@/audio'
 import { BUILTIN_LABELS } from '@/audio/builtin'
 import { Icon, type IconName } from '@/ui/icons'
+import { PAD_VOLUME_MAX, clampPadVolume, loadPadVolumes, padVolume, savePadVolumes, usePlaying, type PadVolumes } from './soundboard'
 
 const BOARD_KEY = 'vttrpg.soundboard'
 const ICONS: Record<(typeof BUILTIN_SOUNDS)[number], IconName> = { door: 'door', sword: 'swords', thunder: 'thunder', coin: 'coin', scream: 'scream', drum: 'drum' }
+
+const css = `
+.sb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.sb-pad { display: grid; gap: 2px; border: 1px solid var(--border); border-radius: var(--r-md); padding: 4px; position: relative; background: var(--panel-2); }
+.sb-pad.playing { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent); }
+.sb-pad.playing .sb-play::after { content: ''; position: absolute; inset: 4px; border-radius: var(--r-sm); border: 2px solid var(--accent); animation: sb-pulse 1s ease-in-out infinite; pointer-events: none; }
+@keyframes sb-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .sb-pad.playing .sb-play::after { animation: none; } }
+.sb-play { min-height: 60px; display: grid; place-items: center; gap: 2px; padding: 6px; font-size: 13px; line-height: 1.2; touch-action: manipulation; position: relative; }
+.sb-play .icon { font-size: 22px; }
+.sb-play .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.sb-row { display: flex; align-items: center; gap: 4px; }
+.sb-row input[type=range] { flex: 1 1 auto; min-width: 0; padding: 0; height: 28px; }
+.sb-row button { min-height: 32px; min-width: 32px; padding: 0; font-size: 12px; }
+.sb-state { font-size: var(--fs-xs); color: var(--accent); min-height: 1em; text-align: center; }
+.sb-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+`
 
 function loadBoard(): AssetRef[] {
   try {
@@ -34,18 +54,24 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
   engineRef.current ??= engineProp ?? sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) })
   const engine = engineRef.current
   const { unlocked, unlock } = useAudioUnlock(engine)
+  const playing = usePlaying(engine)
   const [volume, setVolume] = useState(engine.getMasterVolume())
   const [board, setBoard] = useState<AssetRef[]>(loadBoard)
+  const [volumes, setVolumes] = useState<PadVolumes>(loadPadVolumes)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => { saveBoard(board) }, [board])
+  useEffect(() => { savePadVolumes(volumes) }, [volumes])
 
   if (!isGm) return null
 
   const play = (asset: AssetRef) => {
     if (!unlocked) void unlock()
-    void controller.dispatch({ type: 'audio.play', asset })
+    const v = padVolume(volumes, soundKey(asset))
+    void controller.dispatch(v === 1 ? { type: 'audio.play', asset } : { type: 'audio.play', asset, volume: v })
   }
+  const stop = (asset?: AssetRef) => void controller.dispatch(asset ? { type: 'audio.stop', asset } : { type: 'audio.stop' })
+  const setPadVolume = (key: string, v: number) => setVolumes((all) => ({ ...all, [key]: clampPadVolume(v) }))
   const importFiles = async (files: FileList | null) => {
     if (!files?.length) return
     setBusy(true)
@@ -70,38 +96,46 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
     void controller.dispatch({ type: 'scene.update', scene: meta.activeScene, patch: { ambientAudio: undefined } })
   }
 
-  const pad: React.CSSProperties = { minHeight: 64, display: 'grid', placeItems: 'center', gap: 2, padding: 6, fontSize: 13, lineHeight: 1.2, touchAction: 'manipulation', position: 'relative' }
+  const pad = (asset: AssetRef, icon: IconName, label: string, extra?: React.ReactNode) => {
+    const key = soundKey(asset)
+    const on = playing.has(key)
+    const v = padVolume(volumes, key)
+    return (
+      <div key={key} className={`sb-pad${on ? ' playing' : ''}`}>
+        <button type="button" className="sb-play" onClick={() => play(asset)} aria-label={`Play ${label}${on ? ' (playing)' : ''}`} title={label}>
+          <span className="icon" aria-hidden><Icon name={icon} size={24} /></span>
+          <span className="name">{label}</span>
+        </button>
+        <div className="sb-row">
+          <input type="range" min={0} max={PAD_VOLUME_MAX} step={0.05} value={v} aria-label={`Volume for ${label}`}
+            title={`${Math.round(v * 100)}%`} onChange={(e) => setPadVolume(key, Number(e.target.value))} />
+          <button type="button" className="icon" aria-label={`Stop ${label}`} disabled={!on} onClick={() => stop(asset)}><Icon name="stop" size={16} /></button>
+          {extra}
+        </div>
+        <div className="sb-state" aria-live="polite">{on ? 'Playing' : v !== 1 ? `${Math.round(v * 100)}%` : ''}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="panel soundboard">
+      <style>{css}</style>
       <h3>
         Soundboard
         {!unlocked && <button className="tiny primary" onClick={() => void unlock()}>Tap to enable sound</button>}
       </h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
-        {BUILTIN_SOUNDS.map((name) => (
-          <button key={name} style={pad} onClick={() => play(builtinRef(name))} aria-label={BUILTIN_LABELS[name]}>
-            <Icon name={ICONS[name]} size={24} />
-            <span>{BUILTIN_LABELS[name]}</span>
-          </button>
-        ))}
-        {board.map((ref) => (
-          <div key={ref.sha256} style={{ position: 'relative', display: 'grid' }}>
-            <button style={pad} onClick={() => play(ref)} title={ref.name}>
-              <Icon name="sound" size={24} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{ref.name?.replace(/\.[^.]+$/, '') ?? 'sound'}</span>
-            </button>
-            {/* A real button beside the pad (never inside it), so it is reachable by keyboard. */}
-            <button
-              type="button"
-              className="icon"
-              aria-label={`Remove ${ref.name ?? 'sound'}`}
-              onClick={() => remove(ref)}
-              style={{ position: 'absolute', top: 0, right: 0, minHeight: 0, minWidth: 0, width: 32, height: 32, color: 'var(--muted)', padding: 0 }}
-            ><Icon name="close" size={14} /></button>
-          </div>
-        ))}
-        <label className="tiny-file" style={{ ...pad, margin: 0, color: 'var(--muted)' }}>
+      <div className="sb-top">
+        <button type="button" disabled={playing.size === 0} onClick={() => stop()}><Icon name="stop" size={16} /> Stop all sounds</button>
+        <span className="small muted">{playing.size ? `${playing.size} playing` : 'Nothing playing'}</span>
+      </div>
+      <div className="sb-grid">
+        {BUILTIN_SOUNDS.map((name) => pad(builtinRef(name), ICONS[name], BUILTIN_LABELS[name]))}
+        {board.map((ref) =>
+          pad(ref, 'sound', ref.name?.replace(/\.[^.]+$/, '') ?? 'sound', (
+            <button type="button" className="icon" aria-label={`Remove ${ref.name ?? 'sound'}`} onClick={() => remove(ref)} style={{ color: 'var(--muted)' }}><Icon name="close" size={14} /></button>
+          )),
+        )}
+        <label className="tiny-file sb-pad" style={{ margin: 0, color: 'var(--muted)', display: 'grid', placeItems: 'center', minHeight: 60 }}>
           <Icon name="plus" size={24} />
           <span>{busy ? 'Importing…' : 'Audio file'}</span>
           <input type="file" accept="audio/*" multiple hidden disabled={busy} onChange={(e) => { void importFiles(e.target.files); e.target.value = '' }} />
@@ -109,7 +143,7 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
       </div>
       {error && <div className="error small">{error}</div>}
       <label style={{ marginBottom: 0 }}>
-        <span className="small muted">Volume {Math.round(volume * 100)}%</span>
+        <span className="small muted">Master volume (this device) {Math.round(volume * 100)}%</span>
         <input
           type="range" min={0} max={1} step={0.01} value={volume}
           style={{ padding: 0, height: 32 }}

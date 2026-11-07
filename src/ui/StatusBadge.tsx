@@ -26,7 +26,7 @@ export function StatusBadge({ chip, size = 22, off = false, label }: { chip: Con
           <text className="status-letters" x="12" y="12.5" textAnchor="middle" dominantBaseline="central" fontSize={chip.label.length > 1 ? 9 : 11}>{chip.label}</text>
         )}
       </svg>
-      {chip.turns !== null && <span className="status-turns">{chip.turns}</span>}
+      {chip.remaining !== null && <span className="status-turns">{chip.remaining}</span>}
     </span>
   )
 }

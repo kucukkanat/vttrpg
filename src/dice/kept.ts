@@ -11,7 +11,10 @@ export function keptMask(formula: string | ParsedFormula, dice: { value: number 
   try {
     parsed = typeof formula === 'string' ? parseFormula(formula) : formula
   } catch {
-    return dice.map(() => true)
+    // A sheet formula (`2d20kh1 + dex_mod + pb`): read its dice terms in order and ignore the rest.
+    const terms = typeof formula === 'string' ? diceTermsOf(formula) : null
+    if (!terms) return dice.map(() => true)
+    parsed = { terms, modifier: 0, raw: formula as string }
   }
   const expected = parsed.terms.reduce((n, t) => n + t.count, 0)
   if (expected !== dice.length) return dice.map(() => true)
@@ -27,6 +30,19 @@ export function keptMask(formula: string | ParsedFormula, dice: { value: number 
     i += t.count
   }
   return kept
+}
+
+/** Dice terms of an expression in source order, or null when a term does not parse. */
+function diceTermsOf(src: string): ParsedFormula['terms'] | null {
+  const out: ParsedFormula['terms'] = []
+  for (const m of src.matchAll(/(?<![A-Za-z0-9_.'"])\d*d\d+(?:k[hl]\d+)?(?![A-Za-z0-9_.])/g)) {
+    try {
+      out.push(...parseFormula(m[0]).terms)
+    } catch {
+      return null
+    }
+  }
+  return out.length ? out : null
 }
 
 /** True when any die of the roll is dropped. */

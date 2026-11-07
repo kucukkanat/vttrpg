@@ -15,6 +15,7 @@ import type {
   SkillDef,
   VfxCue,
 } from '@/core/pack'
+import { CONDITION_CATEGORIES } from '@/core/pack'
 import type { TargetShape } from '@/core/geometry'
 import type { LoadedPack } from './index'
 import { parse, usesDice } from './expr'
@@ -124,6 +125,13 @@ export function guardManifest(v: unknown): PackManifest {
     throw new PackError(file, '"theme" must be { accent?, accentFg?, frameTint?: "#rrggbb", displayFont?: { family, src?, weight? } }')
   if (v.resolution !== undefined && !guardResolution(v.resolution))
     throw new PackError(file, '"resolution" must be { kind: "roll-under", die } or { kind: "d20-vs-dc" }')
+  if (v.damage !== undefined) guardDamageModel(v.damage, file)
+  if (v.concentration !== undefined) {
+    const c = v.concentration
+    if (!isRec(c) || !isStr(c.condition) || !c.condition) throw new PackError(file, '"concentration" needs a "condition" id')
+    expr(c.save, file, 'concentration.save')
+    expr(c.dc, file, 'concentration.dc')
+  }
   const files = v.files
   if (!isRec(files)) throw new PackError(file, '"files" required')
   for (const k of ['attributes', 'resources', 'conditions', 'sheet'])
@@ -131,6 +139,18 @@ export function guardManifest(v: unknown): PackManifest {
   if (!opt(files.chargen, isStr)) throw new PackError(file, 'files.chargen must be a string')
   if (!opt(files.skills, isStrArr)) throw new PackError(file, 'files.skills must be a list of paths')
   return v as unknown as PackManifest
+}
+
+function guardDamageModel(v: unknown, file: string): void {
+  if (!isRec(v) || !isStr(v.resource) || !v.resource) throw new PackError(file, '"damage" needs a "resource"')
+  for (const k of ['temp', 'resist', 'vulnerable', 'immune'])
+    if (!opt(v[k], isStr)) throw new PackError(file, `damage.${k} must be a sheet key`)
+  if (v.types !== undefined) {
+    if (!Array.isArray(v.types)) throw new PackError(file, 'damage.types must be a list')
+    v.types.forEach((t, i) => {
+      if (!isRec(t) || !isStr(t.id) || !t.id || !isStr(t.name)) throw new PackError(file, `damage.types[${i}]: "id" and "name" required`)
+    })
+  }
 }
 
 function guardArray(v: unknown, file: string): Rec[] {
@@ -171,10 +191,12 @@ export function guardConditions(v: unknown, file: string): ConditionDef[] {
     guardIdName(x, file, i)
     if (!isStr(x.description)) throw new PackError(file, `${x.id}: "description" required`)
     if (!opt(x.icon, isStr)) throw new PackError(file, `${x.id}: icon must be a string`)
-    if (x.category !== undefined && !['buff', 'harm', 'control', 'magic', 'affliction'].includes(x.category as string))
-      throw new PackError(file, `${x.id}: category must be buff, harm, control, magic or affliction`)
     if (x.modifiers !== undefined && !(isRec(x.modifiers) && Object.values(x.modifiers).every(isNum)))
       throw new PackError(file, `${x.id}: modifiers must map attribute ids to numbers`)
+    if (x.category !== undefined && !(CONDITION_CATEGORIES as readonly unknown[]).includes(x.category))
+      throw new PackError(file, `${x.id}: category must be one of ${CONDITION_CATEGORIES.join(', ')}`)
+    for (const k of ['resist', 'immune', 'vulnerable'])
+      if (!opt(x[k], isStrArr)) throw new PackError(file, `${x.id}: ${k} must be a list of damage type ids`)
     return x as unknown as ConditionDef
   })
 }
@@ -274,9 +296,16 @@ function guardEffect(v: unknown, file: string, i: number): Effect {
     case 'heal':
       expr(v.formula, file, `${where}.formula`)
       if (!isStr(v.resource) || !v.resource) throw new PackError(file, `${where}: "resource" required`)
+      if (!opt(v.type, isStr)) throw new PackError(file, `${where}: type must be a damage type id`)
       break
     case 'condition':
       if (!opt(v.add, isStrArr) || !opt(v.remove, isStrArr)) throw new PackError(file, `${where}: add/remove must be id lists`)
+      if (v.duration !== undefined) {
+        const d = v.duration
+        if (!isRec(d) || !isNum(d.turns) || d.turns < 1 || !Number.isInteger(d.turns)) throw new PackError(file, `${where}: duration needs whole "turns" >= 1`)
+        if (d.tick !== undefined && d.tick !== 'start' && d.tick !== 'end') throw new PackError(file, `${where}: duration.tick must be start or end`)
+        if (d.on !== undefined && d.on !== 'source' && d.on !== 'target') throw new PackError(file, `${where}: duration.on must be source or target`)
+      }
       break
     case 'move':
       if (!isNum(v.cells)) throw new PackError(file, `${where}: "cells" required`)
@@ -312,6 +341,7 @@ export function guardSkill(v: unknown, file: string): SkillDef {
   guardIdName(v, file, 0)
   if (!isStr(v.description)) throw new PackError(file, '"description" required')
   if (!opt(v.icon, isStr)) throw new PackError(file, 'icon must be a string')
+  if (!opt(v.concentration, isBool)) throw new PackError(file, 'concentration must be true or false')
   if (v.cost !== undefined) {
     if (!Array.isArray(v.cost)) throw new PackError(file, '"cost" must be a list')
     v.cost.forEach((c, i) => {

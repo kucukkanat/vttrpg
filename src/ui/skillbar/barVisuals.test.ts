@@ -19,7 +19,7 @@ describe('hp meter', () => {
   })
   it('colours by band', () => {
     expect(hpMeter(2, 6).color).toBe(HP_BAND_COLORS.mid)
-    expect([hpMeter(4, 6).state, hpMeter(3, 6).state, hpMeter(0, 6).state]).toEqual([null, 'bloodied', 'down'])
+    expect([hpMeter(4, 6).state, hpMeter(3, 6).state, hpMeter(0, 6).state]).toEqual([null, 'bloodied', 'dead'])
   })
 })
 
@@ -61,7 +61,7 @@ describe('condition chips', () => {
   ]
   it('matches the token chips: category frame and colour, glyph from the pack icon, letters as fallback', () => {
     expect(conditionStyle(defs, 'shield')).toMatchObject({ color: CATEGORY_COLORS.buff, shape: 'circle', glyph: 'shield', label: 'SF' })
-    expect(conditionStyle(defs, 'frightened', 1)).toMatchObject({ color: CATEGORY_COLORS.control, shape: 'square', glyph: 'ghost', turns: 1, last: true })
+    expect(conditionStyle(defs, 'frightened', 1)).toMatchObject({ color: CATEGORY_COLORS.control, shape: 'square', glyph: 'ghost', remaining: 1, last: true })
     expect(conditionStyle(defs, 'odd')).toMatchObject({ color: UNKNOWN_CONDITION_COLOR, glyph: null, label: 'OD' })
   })
   it('has a glyph for every condition icon the bundled packs use', () => {

@@ -3,6 +3,8 @@
  * Applies the scene's in-game transform (`scene.transform`) to the root and per-node overrides
  * (`scene.overrides`) on top of the transforms authored in the GLB. In edit mode a tap on a
  * mesh selects its nearest named node for the gizmo and the Edit panel.
+ * Materials follow the graphics tier (stylize.ts): library scenes are toon-shaded on every tier,
+ * the tier caps the shadow-casting lights, and the high tier adds a glow around flames.
  */
 import { useEffect, useMemo } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
@@ -15,10 +17,11 @@ import {
 } from './editing'
 import type { LoadedScene } from './sceneLoader'
 import { useTableUi, type EditPreview } from './tableState'
+import { buildGlow, materialModeFor, stylizeObject } from './stylize'
 import { doubleTapEdit, tapTwice } from './editTap'
 
+/** Most lights that ever cast shadows (the high tier); lower tiers cast fewer or none. */
 export const MAX_SHADOW_CASTERS = 4
-const SHADOW_MAP = 1024
 
 /** Smooth pseudo-random flame flicker in roughly [-1, 1]. */
 export function flickerNoise(t: number, seed: number): number {
@@ -62,7 +65,7 @@ function isUnder(o: Object3D | null, root: Object3D): boolean {
 }
 
 export function SceneModel({ loaded }: { loaded: LoadedScene }) {
-  const { scene, viewer } = useTable()
+  const { scene, viewer, graphics } = useTable()
   const selection = useGame((s) => s.selection)
   const setSelection = useGame((s) => s.setSelection)
   const editMode = useTableUi((s) => s.editMode)
@@ -70,15 +73,19 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
   const uiSet = useTableUi((s) => s.set)
   const gm = !viewer || viewer.isGm
 
+  const maxCasters = graphics.shadows ? Math.min(MAX_SHADOW_CASTERS, graphics.shadowCasters) : 0
+  const shadowMap = graphics.shadowMapSize
   useEffect(() => {
     let casters = 0
     for (const { object } of loaded.lights) {
       if (object instanceof PointLight || object instanceof SpotLight || object instanceof DirectionalLight) {
-        const cast = casters < MAX_SHADOW_CASTERS
+        const cast = casters < maxCasters
+        if (object.castShadow && !cast) { object.shadow.map?.dispose(); object.shadow.map = null }
         object.castShadow = cast
         if (cast) {
           casters++
-          object.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP)
+          if (object.shadow.mapSize.x !== shadowMap) { object.shadow.map?.dispose(); object.shadow.map = null }
+          object.shadow.mapSize.set(shadowMap, shadowMap)
           object.shadow.bias = -0.0008
           object.shadow.normalBias = 0.02
           object.shadow.camera.near = 0.1
@@ -86,7 +93,14 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
         }
       }
     }
-  }, [loaded])
+  }, [loaded, maxCasters, shadowMap])
+
+  // Toon on library scenes (every tier), PBR or Lambert on imported ones. Runs before the wall
+  // materials below are cloned, so the clones start from the right material.
+  const mode = materialModeFor(loaded.root, graphics.pbr)
+  useMemo(() => stylizeObject(loaded.root, mode), [loaded, mode])
+  const glow = useMemo(() => (graphics.glow ? buildGlow(loaded.root) : null), [loaded, graphics.glow])
+  useEffect(() => () => glow?.dispose(), [glow])
 
   const bases = useMemo(() => loaded.lights.map((l) => (l.object as Light).intensity), [loaded])
 
@@ -106,7 +120,7 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
       out.push({ mesh: o, mats })
     })
     return out
-  }, [loaded])
+  }, [loaded, mode])
   useEffect(() => () => { for (const w of walls) for (const m of w.mats) m.dispose() }, [walls])
 
   const dir = useMemo(() => new Vector3(), [])
@@ -172,6 +186,7 @@ export function SceneModel({ loaded }: { loaded: LoadedScene }) {
   return (
     <group position={[offset.x, offset.y, offset.z]} rotation-y={rotationY} scale={scale} onClick={picking ? pick : undefined}>
       <primitive object={loaded.root} />
+      {glow && <primitive object={glow.group} />}
     </group>
   )
 }

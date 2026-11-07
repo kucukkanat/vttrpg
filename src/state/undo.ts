@@ -10,11 +10,14 @@
  *   scene.remove   -> scene.add   (tokens, props and fog of the scene are never deleted, so they come back with it)
  *   fog.reset      -> fog.reveal  (the cells that were revealed), plus fog.revealAll if the map was fully revealed
  *   fog.revealAll  -> fog.reset   (then fog.reveal of what had been explored before)
+ *   wall.remove    -> wall.add    (the removed walls and doors)
+ *   light.remove   -> light.add
+ *   prefab.remove  -> prefab.upsert
  */
 import { create } from 'zustand'
 import type { Intent } from '@/core/intents'
-import type { FogState, Note, Prop, Scene, Token } from '@/core/doc'
-import type { NoteId, PropId, SceneId, TokenId } from '@/core/ids'
+import type { FogState, Note, PlacedLight, Prefab, Prop, Scene, Token, Wall } from '@/core/doc'
+import type { LightId, NoteId, PrefabId, PropId, SceneId, TokenId, WallId } from '@/core/ids'
 
 export const MAX_UNDO = 20
 
@@ -25,6 +28,10 @@ export interface UndoSnapshot {
   notes: Record<NoteId, Note>
   fog: Record<SceneId, FogState>
   scenes: Record<SceneId, Scene>
+  /** Optional so snapshots from before walls, lights and prefabs existed still fit. */
+  walls?: Record<WallId, Wall>
+  lights?: Record<LightId, PlacedLight>
+  prefabs?: Record<PrefabId, Prefab>
   /** Only `activeScene` is read: removing the live scene is refused, so there is nothing to undo. */
   meta?: { activeScene: SceneId | null } | null
 }
@@ -80,10 +87,29 @@ export function captureUndo(intent: Intent, s: UndoSnapshot, now = Date.now()): 
       if (fog && fog.revealed.length) inverse.push({ type: 'fog.reveal', scene: intent.scene, cells: [...fog.revealed] })
       return { label: `Revealed all of ${name}`, subject: `fog on ${name}`, inverse, at: now }
     }
+    case 'wall.remove': {
+      const gone = intent.walls.map((id) => s.walls?.[id]).filter((w): w is Wall => !!w)
+      if (!gone.length) return null
+      const doors = gone.filter((w) => w.door).length
+      const what = doors === gone.length ? plural(doors, 'door') : doors ? `${plural(gone.length, 'wall')} and doors` : plural(gone.length, 'wall')
+      return { label: `Removed ${what}`, subject: what, inverse: [{ type: 'wall.add', walls: gone }], at: now }
+    }
+    case 'light.remove': {
+      const light = s.lights?.[intent.light]
+      if (!light) return null
+      return { label: 'Removed a light', subject: 'the light', inverse: [{ type: 'light.add', light }], at: now }
+    }
+    case 'prefab.remove': {
+      const prefab = s.prefabs?.[intent.prefab]
+      if (!prefab) return null
+      return { label: `Deleted ${prefab.name}`, subject: prefab.name, inverse: [{ type: 'prefab.upsert', prefab }], at: now }
+    }
     default:
       return null
   }
 }
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 export type UndoDispatch = (intent: Intent) => Promise<void>
 

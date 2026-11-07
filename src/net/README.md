@@ -16,6 +16,8 @@ authority: players send intents, the GM applies them to the Yjs doc and publishe
 | `localStore.ts` | IndexedDB copy of each game (doc update + manifest) so a device is self-sufficient |
 | `connection.ts` | `GameConnection`: manifest, deltas, intents, presence, snapshots |
 | `snapshots.ts` | `startSnapshotLoop`: GM-side periodic snapshot upload + manifest pointer, event pruning |
+| `authority.ts` | Pure: founder, co-GM grants, host, who may write a delta, processor order (see ARCHITECTURE.md) |
+| `relays.ts` | Pure: relay grading, `planRelayRotation`, reserve relays |
 | `testing.ts` | In-memory relay/pool for tests and the dev harness |
 | `devHarness.ts` | GM + player in one tab, logs the doc syncing |
 
@@ -23,12 +25,14 @@ authority: players send intents, the GM applies them to the Yjs doc and publishe
 
 | Kind | Type | Author | Tags | Content (all NIP-44 v2, game key as conversation key) |
 |---|---|---|---|---|
-| `30078` | parameterized replaceable | GM | `d`=gameId, `t`=`vttrpg` | JSON `{ name, gm, relays, snapshot?: { url, sha256, at } }` |
-| `1078` | regular | GM only | `a`=`30078:<gm>:<gameId>`, `g`=gameId, optional `chunk`=`i/n` + `batch`=id | base64 of one Yjs update (or one chunk of it) |
+| `30078` | parameterized replaceable | GM (founder) | `d`=gameId, `t`=`vttrpg` | JSON `{ name, gm, relays, snapshot?: { url, sha256, at }, coGms?: [{ pubkey, since, until? }], host?, updatedAt }` |
+| `1078` | regular | founder or co-GM in window | `a`=`30078:<gm>:<gameId>`, `g`=gameId, optional `chunk`=`i/n` + `batch`=id | base64 of one Yjs update (or one chunk of it) |
 | `21078` | ephemeral | players | `g`=gameId | JSON `IntentEnvelope`; `from` is overwritten with the event signer |
 | `21079` | ephemeral | everyone | `g`=gameId | JSON `Presence`; `pubkey` is overwritten with the signer; throttled to 10/s |
 
-Receivers ignore `1078` events whose author is not the GM, and dedupe every kind by event id.
+Receivers ignore `1078` events whose author is not the founder or a co-GM inside their grant
+window, and dedupe every kind by event id. Manifests count only when signed by the founder the
+invite names (`joinGame({ gm })`); everyone follows the founder's manifest live.
 
 ## Encryption
 
@@ -79,7 +83,9 @@ at 10/s that was a storm of half-open sockets. The pool keeps exactly one connec
 relay at a time (20 s connect timeout), retries with exponential backoff (1 s doubling to 60 s,
 ±20 % jitter, reset on a successful open), publishes only to open relays (the rest reject at
 once), and (re)attaches every open subscription when a relay comes up, with
-`since = lastEmitted + 1` after a drop. A subscription's `oneose` fires once every relay that
+`since = lastEmitted + 1` after a drop. `pool.health()` reports per-relay state, failures,
+next retry, last error and publish counters; `pool.addRelay(url)` brings a relay in at runtime
+and extends open subscriptions to it (relay rotation, manifests listing more relays). A subscription's `oneose` fires once every relay that
 was open at subscribe time has answered, or after `maxWait` when none was. Built-in ping and
 reconnect of nostr-tools' `Relay` are off. `pool.onOpen(cb)` reports each opened socket.
 

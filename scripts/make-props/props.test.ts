@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Box3, Mesh, PointLight } from 'three'
 import { fitObjectToCell, horizontalExtent, PROP_FIT, TOKEN_FIT } from '@/table/fitScale'
+import { expectDiorama } from '../make-scenes/diorama'
 
 const LIBRARY = resolve(__dirname, '../../public/library')
 const CELL = 1.5
@@ -18,8 +19,13 @@ async function parseGlb(file: string): Promise<GLTF> {
   return new Promise((ok, err) => new GLTFLoader().parse(buffer, '', ok, err))
 }
 
-const PROPS = ['barrel', 'crate', 'table', 'chair', 'chest', 'torch-stand', 'bed', 'bookshelf', 'campfire', 'rock'].map((n) => `props/${n}.glb`)
-const MINIS = ['mouse-adventurer', 'rat', 'knight'].map((n) => `minis/${n}.glb`)
+const PROPS = [
+  'barrel', 'crate', 'table', 'chair', 'chest', 'torch-stand', 'bed', 'bookshelf', 'campfire', 'rock', 'cauldron',
+  'weapon-rack', 'well',
+].map((n) => `props/${n}.glb`)
+const MINIS = ['mouse-adventurer', 'rat', 'knight', 'goblin', 'skeleton', 'wizard'].map((n) => `minis/${n}.glb`)
+/** Models with a light source: their flame, embers, eyes or orb stay emissive. */
+const EMISSIVE = new Set(['props/table.glb', 'props/torch-stand.glb', 'props/campfire.glb', 'props/cauldron.glb', 'minis/rat.glb', 'minis/wizard.glb'])
 
 describe.each([...PROPS, ...MINIS])('%s', (file) => {
   it('stays under 100 kB', () => {
@@ -43,6 +49,26 @@ describe.each([...PROPS, ...MINIS])('%s', (file) => {
     expect(tokenFit).toBeGreaterThanOrEqual(1)
     expect(tokenFit).toBeLessThanOrEqual(file.startsWith('minis/') ? 1.5 : 4)
     expect(gltf.scene.userData.kind).toBe(file.startsWith('minis/') ? 'mini' : 'prop')
+  })
+
+  it('carries the baked diorama look in a single shared-material mesh', async () => {
+    const gltf = await parseGlb(file)
+    const { baked, emissive } = expectDiorama(gltf.scene)
+    // Baked parts are merged into one mesh per model; light sources stay separate.
+    expect(baked).toBe(1)
+    if (EMISSIVE.has(file)) expect(emissive).toBeGreaterThan(0)
+    else expect(emissive).toBe(0)
+  })
+})
+
+describe.each(MINIS)('%s proportions', (file) => {
+  it('stands 1.1 to 1.8 m tall and faces +Z', async () => {
+    const gltf = await parseGlb(file)
+    const box = new Box3().setFromObject(gltf.scene, true)
+    expect(box.max.y).toBeGreaterThanOrEqual(1.1)
+    expect(box.max.y).toBeLessThanOrEqual(1.8)
+    // Faces +Z: snouts, weapons and shields reach well forward of the centre.
+    expect(box.max.z).toBeGreaterThan(0.2)
   })
 })
 

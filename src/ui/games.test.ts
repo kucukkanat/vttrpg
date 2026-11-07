@@ -112,6 +112,12 @@ describe('decideRejoin', () => {
     expect(decideRejoin({ saved: { isGm: true, name: 'X' }, pubkey: me, connectionIsGm: true, metaGm: me })).toEqual({ role: 'gm' })
   })
 
+  it('restores a co-GM the founder still lists, although meta.gm names the founder', () => {
+    expect(decideRejoin({ saved: { isGm: true, name: 'X' }, pubkey: me, connectionIsGm: true, connectionRole: 'co-gm', metaGm: other })).toEqual({ role: 'gm' })
+    // Revoked since: net opened a player connection.
+    expect(decideRejoin({ saved: { isGm: true, name: 'X' }, pubkey: me, connectionIsGm: false, connectionRole: 'player', metaGm: other }).role).toBe('player')
+  })
+
   it('falls back to player with a notice when net refused GM powers', () => {
     const d = decideRejoin({ saved: { isGm: true, name: 'X' }, pubkey: me, connectionIsGm: false, metaGm: other })
     expect(d.role).toBe('player')

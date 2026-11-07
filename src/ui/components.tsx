@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
 import { colorName } from './colorName'
 import { dieLabel, dieViews } from './dice/diceFaces'
 import { DiceRow } from './dice/DiceFace'
@@ -17,7 +17,7 @@ export function Shell({ title, children }: { title: string; children: ReactNode 
  * `aria-pressed` when selected) and `trailing` holds controls that must not nest inside it. Without
  * `onSelect` the row is static. Children are flex items; text spans get ellipsis from `.list` CSS.
  */
-export function ListRow({ selected = false, onSelect, label, title, expanded, trailing, className, style, children }: {
+export function ListRow({ selected = false, onSelect, label, title, expanded, trailing, className, style, rowProps, children }: {
   selected?: boolean
   onSelect?(): void
   /** Accessible name when the visible text is not enough. */
@@ -29,11 +29,13 @@ export function ListRow({ selected = false, onSelect, label, title, expanded, tr
   trailing?: ReactNode
   className?: string
   style?: CSSProperties
+  /** Extra handlers on the row's `<li>` (hover, focus). */
+  rowProps?: Omit<HTMLAttributes<HTMLLIElement>, 'className' | 'style' | 'children'>
   children: ReactNode
 }) {
   const cls = ['list-row', selected ? 'selected' : '', className ?? ''].filter(Boolean).join(' ')
   return (
-    <li className={cls} style={style}>
+    <li {...rowProps} className={cls} style={style}>
       {onSelect ? (
         <button type="button" className="list-row-main" aria-pressed={expanded === undefined ? selected : undefined} aria-expanded={expanded} aria-label={label} title={title} onClick={onSelect}>
           {children}

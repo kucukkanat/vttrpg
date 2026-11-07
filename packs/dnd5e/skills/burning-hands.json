@@ -8,7 +8,7 @@
   "effects": [
     { "kind": "roll", "formula": "3d6", "label": "fire" },
     { "kind": "roll", "formula": "d20 + target.dex_mod + target.save_prof.dex * target.pb", "vs": "spell_dc", "label": "DEX save" },
-    { "kind": "damage", "formula": "save.success ? floor(rolls.fire.total / 2) : rolls.fire.total", "resource": "hp" },
+    { "kind": "damage", "formula": "save.success ? floor(rolls.fire.total / 2) : rolls.fire.total", "resource": "hp", "type": "fire" },
     { "kind": "message", "text": "Flames fan out from {source.name}'s fingertips." }
   ],
   "vfx": [

@@ -9,8 +9,8 @@
     { "kind": "roll", "formula": "d20 + ranged_mod + pb", "vs": "target.ac", "label": "attack" },
     {
       "kind": "damage",
-      "formula": "(save.dice.0 == 20 or (save.success and save.dice.0 != 1)) ? roll(ranged.damage) + (save.dice.0 == 20 ? roll(ranged.damage) : 0) + ranged_mod : 0",
-      "resource": "hp"
+      "formula": "(save.natural == 20 or (save.success and save.natural != 1)) ? roll(ranged.damage) + (save.natural == 20 ? roll(ranged.damage) : 0) + ranged_mod : 0",
+      "resource": "hp", "type": "{ranged.type}"
     }
   ],
   "vfx": [

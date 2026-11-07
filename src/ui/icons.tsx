@@ -40,6 +40,8 @@ const ICONS = {
   toolbox: <><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 12h18M10 12v2h4v-2" /></>,
   /** Skill editor: a wrench. */
   wrench: <path d="M14.5 3.5a5 5 0 0 0-5.3 6.6l-5.7 5.7a1.9 1.9 0 0 0 2.7 2.7l5.7-5.7a5 5 0 0 0 6.6-5.3l-3 3-2.5-.5-.5-2.5 2-4z" />,
+  /** Build: a brick wall. */
+  wall: <><rect x="3" y="5" width="18" height="14" rx="1" /><path d="M3 9.67h18M3 14.33h18M9 5v4.67M15 5v4.67M6 9.67v4.66M12 9.67v4.66M18 9.67v4.66M9 14.33V19M15 14.33V19" /></>,
   /** More / overflow menu: three dots. */
   more: <>{[dot(5, 12, 1.6), dot(12, 12, 1.6), dot(19, 12, 1.6)]}</>,
   /** First-person camera: an eye. */
@@ -57,6 +59,14 @@ const ICONS = {
   /** Pin the drawer: a thumbtack. */
   tack: <path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  /** Stop playback: a rounded square. */
+  stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
+  /** Play / current turn: a triangle pointing right. */
+  play: <path d="M8 5.5v13l10.5-6.5L8 5.5z" />,
+  /** Done / chosen: a check mark. */
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  /** A flag (declared, marked). */
+  flag: <><path d="M5 21V4" /><path d="M5 4.5h11l-2.5 4 2.5 4H5" /></>,
   /** Add. */
   plus: <path d="M12 5v14M5 12h14" />,
   /** Edit: a pencil. */

@@ -5,7 +5,7 @@
  */
 import type { AssetRef } from './assets'
 import type { Cell, GridSpec, Vec3 } from './geometry'
-import type { CharacterId, NoteId, PackId, PlayerPubkey, PropId, SceneId, SkillId, TokenId } from './ids'
+import type { CharacterId, LightId, NoteId, PackId, PlayerPubkey, PrefabId, PropId, SceneId, SkillId, TokenId, WallId } from './ids'
 import type { SkillDef, VfxCue } from './pack'
 
 export type CameraMode = 'orbit' | 'token'
@@ -15,6 +15,8 @@ export interface GameMeta {
   gm: PlayerPubkey
   pack: PackId
   packSource?: string // URL of the pack folder, if not built in
+  /** A third-party pack loaded from a bundle file, shared as a content-addressed asset (see ui/packSource.ts). */
+  packAsset?: AssetRef
   activeScene: SceneId | null
   createdAt: number
   /** Last-seen display names keyed by pubkey; the GM records them from presence so chat can name people who have gone offline. */
@@ -50,6 +52,8 @@ export interface Scene {
   transform?: SceneTransform
   /** Per-node overrides inside the scene model, keyed by the node's name in the GLB. */
   overrides?: Record<string, NodeOverride>
+  /** Players may open and close the unlocked doors drawn in this scene (`door.set`). The GM always can. */
+  playersOpenDoors?: boolean
 }
 
 export interface SceneTransform {
@@ -108,6 +112,10 @@ export interface Token {
    * game's custom skills, as before per-token skills existed.
    */
   skills?: string[]
+  /** Durations and concentration links for conditions on this token (sheet or token list), by condition id. */
+  effects?: Record<string, ConditionEffect>
+  /** This token is concentrating on a skill; a new concentration skill ends the old one. */
+  concentrating?: { skill: string; name: string }
 }
 
 /** Sheet data is pack-defined; the engine treats it as an opaque JSON object. */
@@ -128,6 +136,77 @@ export interface ChatMessage {
   /** Present for kind 'roll'. */
   roll?: RollResult
   to?: PlayerPubkey[]
+  /** The sheet a roll was made from (sheet rolls; initiative rolled from a sheet joins the tracker). */
+  character?: CharacterId
+  /** Log channel for system lines; `combat` marks skill results and encounter summaries. */
+  channel?: 'combat'
+  /** The end-of-encounter report, rendered as a table (kind 'system'). */
+  summary?: EncounterSummary
+  /**
+   * Rolls: who may read the result. Absent = everyone. Hidden by the interface only: the document
+   * is shared and every member holds the game key (see docs/ROLLS.md).
+   */
+  visibility?: RollVisibility
+  /** An amount the GM (or the token's owner) can apply to tokens: the apply-damage card. */
+  damage?: DamageCard
+  /** A concentration save prompted by damage; `result` is set once it is rolled or dismissed. */
+  concentration?: ConcentrationCheck
+}
+
+/**
+ * `public`: everyone sees the result. `gm`: the roller and the GM. `blind`: the GM only; the
+ * roller sees that the roll was made, and the GM mixes in its own seed so the roller cannot work
+ * the result out from theirs.
+ */
+export type RollVisibility = 'public' | 'gm' | 'blind'
+export type RollAdvantage = 'advantage' | 'disadvantage'
+
+/** How an apply-damage button scales the card's amount; `-1` heals by the amount. */
+export type DamageFactor = 1 | 0.5 | 2 | -1
+
+/** What one apply-damage choice did to a sheet, so it can be undone or swapped for another. */
+export interface AppliedDamage {
+  factor: DamageFactor
+  /** Final amount after the factor and the target's resistances (positive). */
+  amount: number
+  /** Sheet keys changed and by how much (`hp: -7`, `temp_hp: -3`), for undo. */
+  changes: { key: string; delta: number }[]
+  /** "resistant", "immune", "vulnerable" when a trait changed the amount. */
+  note?: string
+}
+
+export interface DamageTarget {
+  token: TokenId
+  /** Raw amount for this target before factor and traits; defaults to the card's amount. */
+  amount?: number
+  applied?: AppliedDamage
+}
+
+export interface DamageCard {
+  amount: number
+  /** Damage type id from the pack's damage model (`fire`), if known. */
+  type?: string
+  /** `heal` cards apply as healing at factor 1. */
+  heal?: boolean
+  targets: DamageTarget[]
+}
+
+export interface ConcentrationCheck {
+  token: TokenId
+  dc: number
+  result?: 'kept' | 'lost' | 'dismissed'
+}
+
+/** A timed or concentration-bound condition on a token. Keyed by condition id in `Token.effects`. */
+export interface ConditionEffect {
+  /** Turns left; absent = lasts until removed (or until the concentration holding it ends). */
+  remaining?: number
+  /** Count down at the start or the end of the turn of `on` (default `end`). */
+  tick?: 'start' | 'end'
+  /** Token whose turns count down the duration (the caster for "until the end of your next turn"); default the bearer. */
+  on?: TokenId
+  /** Caster concentrating on it: the condition ends when their concentration does. */
+  concentration?: TokenId
 }
 
 export interface RollResult {
@@ -138,6 +217,8 @@ export interface RollResult {
   total: number
   /** Pack-specific interpretation, e.g. { success: true, critical: false }. */
   outcome?: Record<string, unknown>
+  /** Rolled with advantage or disadvantage (the formula's d20 became 2d20kh1 / 2d20kl1). */
+  advantage?: RollAdvantage
 }
 
 export interface FogState {
@@ -146,6 +227,58 @@ export interface FogState {
   revealed: string[]
   /** The GM revealed the whole map (`fog.revealAll`); `revealed` is kept for when fog is reset. */
   revealAll?: boolean
+  /** Cells the GM painted back into fog (`fog.hide`) after revealing the whole map; only read while `revealAll` is set. */
+  hidden?: string[]
+}
+
+/**
+ * A wall or door drawn on the table, or accepted from wall detection. A segment on the XZ plane in
+ * world units; drawn walls join the scene's model, imported and prop walls for line of sight and
+ * movement. A closed door blocks like a wall, an open one is a gap.
+ */
+export interface Wall {
+  id: WallId
+  scene: SceneId
+  a: { x: number; z: number }
+  b: { x: number; z: number }
+  door?: { open: boolean; locked?: boolean }
+  /** Where the segment came from; detected walls can be told apart and cleared together. */
+  source?: 'drawn' | 'detected' | 'prefab'
+}
+
+/** A light the GM placed in a scene: a point light on the floor plan. Visual only. */
+export interface PlacedLight {
+  id: LightId
+  scene: SceneId
+  position: Vec3
+  /** Reach in cells. */
+  radius: number
+  color: string
+  /** 0..2, 1 = normal. */
+  intensity?: number
+}
+
+/** A prop as stored in a prefab: position relative to the prefab's footprint corner. */
+export type PrefabProp = Omit<Prop, 'id' | 'scene'>
+
+/** A wall as stored in a prefab, relative to the footprint corner. */
+export type PrefabWall = Pick<Wall, 'a' | 'b' | 'door'>
+
+/**
+ * A reusable build ("slab"): props and walls captured from a rectangle of the table, stamped back
+ * on any scene with its footprint corner snapped to the grid. Positions are meters from the
+ * footprint's minimum corner; `cellSize` is the grid they were captured on, so a stamp on another
+ * grid scales them.
+ */
+export interface Prefab {
+  id: PrefabId
+  name: string
+  /** Footprint size in meters along x and z. */
+  size: { x: number; z: number }
+  cellSize: number
+  props: PrefabProp[]
+  walls: PrefabWall[]
+  createdAt: number
 }
 
 /**
@@ -159,6 +292,8 @@ export type GameEvent =
       numbers?: ResourceDelta[]
     }
   | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
+  /** Stop a one-shot (or, without `asset`, all of them) on every client. */
+  | { id: string; at: number; kind: 'audio-stop'; asset?: AssetRef; by: PlayerPubkey }
 
 /** One resource change on a token's sheet: negative for damage or a cost, positive for healing. */
 export interface ResourceDelta {
@@ -186,6 +321,59 @@ export interface Note {
 export interface InitiativeEntry {
   token: TokenId
   score: number
+  /**
+   * Group initiative: adjacent entries with the same group share one score and act in one slot
+   * (a pack of goblins). Absent for a combatant acting alone.
+   */
+  group?: string
+}
+
+/**
+ * A GM-declared next action of a combatant ("telegraph"): drawn on the board and on the turn strip
+ * until the GM resolves it, the combatant uses a skill, or the encounter ends.
+ */
+export interface DeclaredAction {
+  token: TokenId
+  /** What it will do: the skill's name or the GM's own words ("Charges the door"). */
+  label: string
+  skill?: SkillId
+  /** Skill icon name, when the action is a skill that has one. */
+  icon?: string
+  targets: TokenId[]
+  at: number
+}
+
+/** One resource change during an encounter, collected for the end-of-combat summary. */
+export interface CombatLogEntry {
+  /** Who caused it (the caster of a skill); absent for a change made on the sheet by hand. */
+  source?: TokenId
+  target: TokenId
+  /** Sheet key of the resource (e.g. `hp`). */
+  resource: string
+  delta: number
+  /** The change took the resource from above zero to zero or below. */
+  ko?: boolean
+  round: number
+}
+
+/** End-of-encounter report: one row per combatant, in the order they fought. */
+export interface EncounterSummary {
+  rounds: number
+  rows: EncounterSummaryRow[]
+}
+
+export interface EncounterSummaryRow {
+  token: TokenId
+  name: string
+  /** A hidden token; players do not see the row. */
+  hidden?: boolean
+  dealt: number
+  taken: number
+  healed: number
+  /** Knockouts scored. */
+  kos: number
+  /** Ended the encounter at zero. */
+  down?: boolean
 }
 
 /**
@@ -198,6 +386,10 @@ export interface InitiativeState {
   round: number
   turn: number
   order: InitiativeEntry[]
+  /** Declared enemy actions by token id (absent when none). */
+  declared?: Record<string, DeclaredAction>
+  /** Resource changes since the encounter started (absent when none). */
+  log?: CombatLogEntry[]
 }
 
 export interface GameDocShape {
@@ -214,6 +406,10 @@ export interface GameDocShape {
   customSkills: Record<SkillId, SkillDef>
   /** Turn order; optional so documents from before the tracker existed still fit. */
   initiative?: InitiativeState
+  /** Drawn walls and doors, prefabs and placed lights; optional for documents from before they existed. */
+  walls?: Record<WallId, Wall>
+  prefabs?: Record<PrefabId, Prefab>
+  lights?: Record<LightId, PlacedLight>
 }
 
-export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative'] as const
+export const DOC_KEYS = ['meta', 'scenes', 'tokens', 'characters', 'chat', 'fog', 'events', 'props', 'notes', 'customSkills', 'initiative', 'walls', 'prefabs', 'lights'] as const

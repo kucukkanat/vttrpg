@@ -6,6 +6,33 @@
   "license": "Mechanics and content from the SRD 5.1 by Wizards of the Coast LLC under CC-BY-4.0; see LICENSE.md for the attribution notice. No Player's Handbook-only content.",
   "grid": { "type": "square", "cellSize": 1.5 },
   "resolution": { "kind": "d20-vs-dc" },
+  "damage": {
+    "resource": "hp",
+    "temp": "temp_hp",
+    "resist": "resistances",
+    "vulnerable": "vulnerabilities",
+    "immune": "immunities",
+    "types": [
+      { "id": "acid", "name": "Acid" },
+      { "id": "bludgeoning", "name": "Bludgeoning" },
+      { "id": "cold", "name": "Cold" },
+      { "id": "fire", "name": "Fire" },
+      { "id": "force", "name": "Force" },
+      { "id": "lightning", "name": "Lightning" },
+      { "id": "necrotic", "name": "Necrotic" },
+      { "id": "piercing", "name": "Piercing" },
+      { "id": "poison", "name": "Poison" },
+      { "id": "psychic", "name": "Psychic" },
+      { "id": "radiant", "name": "Radiant" },
+      { "id": "slashing", "name": "Slashing" },
+      { "id": "thunder", "name": "Thunder" }
+    ]
+  },
+  "concentration": {
+    "condition": "concentrating",
+    "save": "d20 + con_mod + save_prof.con * pb",
+    "dc": "max(10, floor(damage / 2))"
+  },
   "files": {
     "attributes": "attributes.json",
     "resources": "resources.json",
@@ -21,7 +48,8 @@
       "skills/sacred-flame.json",
       "skills/cure-wounds.json",
       "skills/healing-word.json",
-      "skills/shield-of-faith.json"
+      "skills/shield-of-faith.json",
+      "skills/false-life.json"
     ]
   }
 }

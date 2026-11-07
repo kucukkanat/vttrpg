@@ -11,6 +11,8 @@
  * No React, no three.js; `drawGlyph` needs a canvas 2D context and runs in the browser only.
  */
 
+import { CONDITION_CATEGORIES, type ConditionCategory } from '@/core/pack'
+
 const circle = (cx: number, cy: number, r: number) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`
 
 export const GLYPHS: Record<string, readonly string[]> = {
@@ -38,13 +40,15 @@ export const GLYPHS: Record<string, readonly string[]> = {
   bowl: ['M3 11h18a9 9 0 0 1-18 0z', 'M8 20.5h8', 'M9 7.5c0-1.5 1-1.5 1-3M13.5 7.5c0-1.5 1-1.5 1-3'],
   bandage: ['M4.6 14.6 14.6 4.6a3 3 0 0 1 4.2 0l.6.6a3 3 0 0 1 0 4.2L9.4 19.4a3 3 0 0 1-4.2 0l-.6-.6a3 3 0 0 1 0-4.2z', 'M11 11h.01M13 13h.01M11 13h.01M13 11h.01'],
   flame: ['M12 22c4 0 7-2.7 7-6.8 0-3.6-2.4-6-4.2-8.2-.4 2-1.3 3.3-2.8 4C12.6 7.5 11 4.4 8.5 2c.3 3.4-1.6 5.6-3 7.6A9 9 0 0 0 5 15.2C5 19.3 8 22 12 22z'],
+  brain: ['M9.5 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5.2A3 3 0 0 0 6 17a3 3 0 0 0 3.5 3 2.5 2.5 0 0 0 2.5-2.5V6.5A2.5 2.5 0 0 0 9.5 4z', 'M14.5 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5.2A3 3 0 0 1 18 17a3 3 0 0 1-3.5 3 2.5 2.5 0 0 1-2.5-2.5'],
   spark: ['M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z'],
 }
 
-export type StatusCategory = 'buff' | 'harm' | 'control' | 'magic' | 'affliction'
+/** The pack's condition categories (one scheme, defined with `ConditionDef`). */
+export type StatusCategory = ConditionCategory
 export type StatusShape = 'circle' | 'hexagon' | 'square' | 'shield' | 'diamond'
 
-export const STATUS_CATEGORIES: readonly StatusCategory[] = ['buff', 'harm', 'control', 'magic', 'affliction']
+export const STATUS_CATEGORIES: readonly StatusCategory[] = CONDITION_CATEGORIES
 
 /** Border shape per category, so the kind reads without its colour (round buff, square control, …). */
 export const CATEGORY_SHAPE: Record<StatusCategory, StatusShape> = {

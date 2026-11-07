@@ -1,14 +1,15 @@
 /**
  * Canvas textures for the status chips around a token and the HP backup glyph, drawn from the same
  * path data as the DOM icons (src/ui/theme/glyphs.ts): the category frame filled dark and stroked
- * in the category colour, a monochrome glyph (or the letters), and a turns-left badge. One material
+ * in the category colour, a monochrome glyph (or the letters), and a turns-left badge; and the
+ * bloodied / down badge. One material
  * per look, cached; the pack's condition list and small turn counts bound the cache.
  */
-import { CanvasTexture, MeshBasicMaterial, SpriteMaterial, SRGBColorSpace } from 'three'
+import { CanvasTexture, SpriteMaterial, SRGBColorSpace } from 'three'
 import { ICON_STROKE } from '@/ui/icons'
 import { drawGlyph, GLYPH_INSET, SHAPES } from '@/ui/theme/glyphs'
 import { HP_LOW, INK, PARCHMENT, STATUS_FILL, STATUS_GLYPH } from '@/ui/theme/palette'
-import type { ConditionChip, HpState } from './tokenHud'
+import type { ConditionChip, VitalState } from './tokenHud'
 
 const SIZE = 128
 const chipCache = new Map<string, SpriteMaterial>()
@@ -28,7 +29,7 @@ function texture(c: HTMLCanvasElement): CanvasTexture {
 
 /** Sprite material for one status chip on the table. */
 export function statusChipMaterial(chip: ConditionChip): SpriteMaterial {
-  const key = `${chip.shape}|${chip.color}|${chip.glyph ?? chip.label}|${chip.turns ?? ''}`
+  const key = `${chip.shape}|${chip.color}|${chip.glyph ?? chip.label}|${chip.remaining ?? ''}`
   const hit = chipCache.get(key)
   if (hit) return hit
   const [c, ctx] = canvas()
@@ -57,7 +58,7 @@ export function statusChipMaterial(chip: ConditionChip): SpriteMaterial {
     ctx.textBaseline = 'middle'
     ctx.fillText(chip.label, SIZE / 2, SIZE / 2 + 3)
   }
-  if (chip.turns !== null) {
+  if (chip.remaining !== null) {
     const r = SIZE * 0.2
     const cx = SIZE - r - 1
     const cy = SIZE - r - 1
@@ -69,21 +70,24 @@ export function statusChipMaterial(chip: ConditionChip): SpriteMaterial {
     ctx.strokeStyle = STATUS_FILL
     ctx.stroke()
     ctx.fillStyle = INK
-    ctx.font = `800 ${chip.turns > 9 ? 26 : 32}px system-ui, sans-serif`
+    ctx.font = `800 ${chip.remaining > 9 ? 26 : 32}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(String(chip.turns), cx, cy + 2)
+    ctx.fillText(String(chip.remaining), cx, cy + 2)
   }
   const m = new SpriteMaterial({ map: texture(c), transparent: true, depthWrite: false, toneMapped: false })
   chipCache.set(key, m)
   return m
 }
 
-const hpCache = new Map<string, MeshBasicMaterial>()
+const vitalCache = new Map<VitalState, SpriteMaterial>()
 
-/** Flat material for the floor bar's backup glyph: a drop when bloodied, a skull when down. */
-export function hpGlyphMaterial(state: Exclude<HpState, null>): MeshBasicMaterial {
-  const hit = hpCache.get(state)
+/**
+ * Camera-facing badge for a vital state (CombatBadges.tsx): a blood drop when bloodied, a skull
+ * when down, drawn from the same glyphs as the token bar and the tracker.
+ */
+export function vitalMaterial(state: VitalState): SpriteMaterial {
+  const hit = vitalCache.get(state)
   if (hit) return hit
   const [c, ctx] = canvas()
   ctx.fillStyle = STATUS_FILL
@@ -93,8 +97,8 @@ export function hpGlyphMaterial(state: Exclude<HpState, null>): MeshBasicMateria
   ctx.fill()
   ctx.globalAlpha = 1
   const g = SIZE * 0.7
-  drawGlyph(ctx, state === 'down' ? 'skull' : 'bloodied', (SIZE - g) / 2, (SIZE - g) / 2, g, state === 'down' ? PARCHMENT : HP_LOW, ICON_STROKE / 0.7)
-  const m = new MeshBasicMaterial({ map: texture(c), transparent: true, depthWrite: false, toneMapped: false })
-  hpCache.set(state, m)
+  drawGlyph(ctx, state === 'dead' ? 'skull' : 'bloodied', (SIZE - g) / 2, (SIZE - g) / 2, g, state === 'dead' ? PARCHMENT : HP_LOW, ICON_STROKE / 0.7)
+  const m = new SpriteMaterial({ map: texture(c), transparent: true, depthWrite: false, toneMapped: false })
+  vitalCache.set(state, m)
   return m
 }

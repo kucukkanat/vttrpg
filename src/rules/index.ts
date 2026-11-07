@@ -1,9 +1,9 @@
 /**
  * Rules engine: loads a system pack and interprets it. Pure, no rendering, no networking.
  */
-import type { Character, RollResult } from '@/core/doc'
+import type { AppliedDamage, Character, RollAdvantage, RollResult } from '@/core/doc'
 import type { Intent } from '@/core/intents'
-import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, SheetSchema, SkillDef, ChargenSchema, VfxCue } from '@/core/pack'
+import type { PackManifest, AttributeDef, ResourceDef, ConditionDef, ConditionDuration, SheetSchema, SkillDef, ChargenSchema, VfxCue } from '@/core/pack'
 
 export interface LoadedPack {
   manifest: PackManifest
@@ -13,6 +13,30 @@ export interface LoadedPack {
   sheet: SheetSchema
   skills: SkillDef[]
   chargen?: ChargenSchema
+}
+
+/** One damage or heal row's result on one target of a skill, for the apply-damage card. */
+export interface SkillDamage {
+  /** Index into the skill's targets. */
+  target: number
+  /** Formula result before resistances. */
+  amount: number
+  /** What was applied after traits (damage) or actually recovered (heal). */
+  final: number
+  type?: string
+  note?: string
+  heal?: boolean
+  /** Granted temporary points rather than healing. */
+  temp?: boolean
+  changes: AppliedDamage['changes']
+}
+
+/** A condition a skill added (or refreshed), for durations and concentration. */
+export interface SkillCondition {
+  /** Index into the skill's targets; -1 for the caster (a skill with no targets). */
+  target: number
+  condition: string
+  duration?: ConditionDuration
 }
 
 export interface RulesEngine {
@@ -33,10 +57,14 @@ export interface RulesEngine {
    * Resolve a skill use into document patches + vfx cues. Pass a skill id to use a pack or custom
    * skill, or a `SkillDef` to dry-run an unsaved definition (the skill editor's Test button).
    */
-  resolveSkill(skill: string | SkillDef, source: Character, targets: Character[], seed: string): Promise<{
+  resolveSkill(skill: string | SkillDef, source: Character, targets: Character[], seed: string, opts?: { advantage?: RollAdvantage }): Promise<{
     patches: { character: string; data: Record<string, unknown> }[]
     messages: string[]
     vfx: VfxCue[]
+    /** Damage and heal rows per target (apply-damage card). */
+    damage?: SkillDamage[]
+    /** Conditions added, with their durations. */
+    conditions?: SkillCondition[]
   }>
   /**
    * Skills created or overridden in this game (`GameDocShape.customSkills`). They are merged over
@@ -51,7 +79,10 @@ export interface RulesEngine {
 export { loadPack, createRulesEngine, BUILTIN_PACKS } from './impl'
 /** Validate a skill definition the way the pack loader does (throws `PackError`). */
 export { guardSkill, PackError } from './load'
+export type { FetchLike } from './load'
 /** Parse a DSL expression; throws `ExprError` with a message on syntax errors. */
 export { parse as parseExpression, ExprError } from './expr'
 export { SheetView } from './SheetView'
+export { withAdvantage, advantageDie, naturalDie } from './rollMode'
+export { applyDamageChoice, adjustForTraits, damageTraits, changedKeys, resourceRef } from './damage'
 export type { SheetViewProps } from './SheetView'

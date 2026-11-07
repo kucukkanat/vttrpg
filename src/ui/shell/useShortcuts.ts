@@ -36,9 +36,12 @@ export interface Shortcut {
 export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'G', what: 'Toggle the grid overlay', group: 'Table' },
   { keys: 'F', what: 'Eyes: first-person view from the selected token', group: 'Table' },
+  { keys: 'T', what: 'Tactical view: top-down camera (or keep zooming out)', group: 'Table' },
+  { keys: 'Q / E', what: 'Turn the tactical view 45° left / right', group: 'Table' },
   { keys: 'Double-click', what: 'Edit a token or prop (move, turn, scale); again or elsewhere to stop', group: 'Table' },
   { keys: 'Delete', what: 'Remove the selected prop (GM)', group: 'Table' },
   { keys: 'Esc', what: 'Deselect; cancel skill targeting', group: 'Table' },
+  { keys: 'Z', what: 'Zen mode: hide all UI over the table (Z, Esc or the corner button restores)', group: 'Table' },
   { keys: 'Cmd/Ctrl+Z', what: 'Undo the last destructive action (GM)', group: 'Table' },
   { keys: '[ / ]', what: 'Show or hide the left / right column', group: 'Panels' },
   { keys: '1 – 9', what: 'Expand or fold the n-th panel section', group: 'Panels' },

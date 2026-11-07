@@ -6,8 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameEvent } from '@/core/doc'
 import { useGame } from '@/state/store'
 import type { AudioEngine } from './index'
+import { soundKey } from './builtin'
 
-export type AudioEvent = Extract<GameEvent, { kind: 'audio' }>
+export type AudioEvent = Extract<GameEvent, { kind: 'audio' | 'audio-stop' }>
 
 /**
  * Audio events not yet played and not older than `since` (ms epoch). Marks the ids it returns in
@@ -17,7 +18,7 @@ export function pickNewAudioEvents(events: GameEvent[], played: Set<string>, sin
   const live = new Set<string>()
   const out: AudioEvent[] = []
   for (const e of events) {
-    if (e.kind !== 'audio') continue
+    if (e.kind !== 'audio' && e.kind !== 'audio-stop') continue
     live.add(e.id)
     if (played.has(e.id)) continue
     if (e.at < since) { played.add(e.id); continue }
@@ -47,7 +48,8 @@ export function useGameAudio(engine: AudioEngine | null): void {
   useEffect(() => {
     if (!engine) return
     for (const e of pickNewAudioEvents(events, played.current, mountedAt.current)) {
-      void engine.playOneShot(e.asset, { volume: e.volume, at: e.at })
+      if (e.kind === 'audio-stop') engine.stopOneShots(e.asset ? soundKey(e.asset) : undefined)
+      else void engine.playOneShot(e.asset, { volume: e.volume, at: e.at })
     }
   }, [engine, events])
 }

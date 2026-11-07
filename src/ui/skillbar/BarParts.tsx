@@ -13,7 +13,7 @@ export function HpMeter({ current, max, label }: { current: number; max: number;
   return (
     <span className={`hp-meter hp-meter--${m.band}${m.state ? ` hp-meter--${m.state}` : ''}`} style={style} role="meter" aria-label={label}
       aria-valuemin={0} aria-valuemax={max} aria-valuenow={current} aria-valuetext={`${current} of ${max}${m.state ? `, ${m.state}` : ''}`}>
-      {m.state && <Icon name={m.state === 'down' ? 'skull' : 'bloodied'} size={14} className="hp-state" />}
+      {m.state && <Icon name={m.state === 'dead' ? 'skull' : 'bloodied'} size={14} className="hp-state" />}
       {m.mode === 'pips' ? (
         <span className="hp-pips" aria-hidden="true">
           {Array.from({ length: m.pips }, (_, i) => <i key={i} className={i < m.lit ? 'on' : undefined} />)}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ConditionDef, ResourceDef } from '@/core/pack'
-import { CATEGORY_COLORS, chipAngle, chipLabel, conditionCategory, conditionChips, conditionTurns, hpBand, hpState, MAX_PIPS, readResource, UNKNOWN_CONDITION_COLOR } from './tokenHud'
+import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
+import { CATEGORY_COLORS, chipAngle, chipLabel, conditionCategory, conditionChips, defenseAbbr, defenseAttribute, hpBand, MAX_PIPS, readDefense, readResource, UNKNOWN_CONDITION_COLOR, vitalState } from './tokenHud'
 
 const hp: ResourceDef = { id: 'hp', name: 'Hit Protection', max: 'hp.max' }
 const defs: ConditionDef[] = [
@@ -38,12 +38,6 @@ describe('hpBand', () => {
     expect(hpBand(0, 6)).toBe('low')
     expect(hpBand(1, 0)).toBe('low')
   })
-  it('marks bloodied at half or less and down at zero', () => {
-    expect(hpState(4, 6)).toBeNull()
-    expect(hpState(3, 6)).toBe('bloodied')
-    expect(hpState(0, 6)).toBe('down')
-    expect(hpState(0, 0)).toBeNull()
-  })
   it('keeps pips for short bars only', () => {
     expect(MAX_PIPS).toBeGreaterThanOrEqual(6)
   })
@@ -66,19 +60,18 @@ describe('condition chips', () => {
   it('keeps unknown ids as grey chips and ignores non-strings', () => {
     const chips = conditionChips({ conditions: ['stunned', '' as string] }, { data: { conditions: [3, null] } }, defs)
     expect(chips).toEqual([{
-      id: 'stunned', label: 'ST', name: 'stunned', color: UNKNOWN_CONDITION_COLOR, category: 'control', shape: 'square', glyph: null, turns: null, last: false,
+      id: 'stunned', label: 'ST', name: 'stunned', color: UNKNOWN_CONDITION_COLOR, category: 'control', shape: 'square', glyph: null, remaining: null, last: false,
     }])
   })
   it('defaults to harm and honours the pack category', () => {
     expect(conditionCategory('mystery', undefined)).toBe('harm')
     expect(conditionCategory('stunned', { category: 'buff' })).toBe('buff')
   })
-  it('reads turns left from whatever duration data is present, and tolerates none', () => {
-    const token = { conditions: ['frightened', { id: 'exhausted', turns: 1 }] as unknown as string[], conditionDurations: { frightened: { remaining: 3 } } }
-    const chips = conditionChips(token, undefined, defs)
-    expect(chips.map((c) => [c.id, c.turns, c.last])).toEqual([['frightened', 3, false], ['exhausted', 1, true]])
-    expect([...conditionTurns({ conditions: ['x'] }, { data: { durations: { x: 2, y: 'soon', z: -1 } } })]).toEqual([['x', 2]])
-    expect(conditionTurns({ conditions: [] }, undefined).size).toBe(0)
+  it('reads turns left and concentration from Token.effects, and pulses on the last turn', () => {
+    const token = { conditions: ['frightened', 'exhausted'], effects: { frightened: { remaining: 3 }, exhausted: { remaining: 1, concentration: true } } }
+    const chips = conditionChips(token as never, undefined, defs)
+    expect(chips.map((c) => [c.id, c.remaining, c.last, c.concentration ?? false])).toEqual([['frightened', 3, false, false], ['exhausted', 1, true, true]])
+    expect(conditionChips({ conditions: ['frightened'] }, undefined, defs)[0]).toMatchObject({ remaining: null, last: false })
   })
   it('is empty without conditions or a sheet', () => {
     expect(conditionChips({ conditions: [] }, undefined, defs)).toEqual([])
@@ -86,5 +79,37 @@ describe('condition chips', () => {
   it('spaces chips 40 degrees apart from the upper right', () => {
     expect(chipAngle(0)).toBeCloseTo(Math.PI / 4)
     expect(chipAngle(1)).toBeCloseTo(Math.PI / 4 - (40 * Math.PI) / 180)
+  })
+})
+
+describe('vitalState', () => {
+  it('is bloodied at half or less and dead at zero', () => {
+    expect(vitalState({ current: 6, max: 6 })).toBeNull()
+    expect(vitalState({ current: 4, max: 7 })).toBeNull()
+    expect(vitalState({ current: 3, max: 6 })).toBe('bloodied')
+    expect(vitalState({ current: 1, max: 6 })).toBe('bloodied')
+    expect(vitalState({ current: 0, max: 6 })).toBe('dead')
+    expect(vitalState(null)).toBeNull()
+  })
+})
+
+describe('defense', () => {
+  const ac: AttributeDef = { id: 'ac', name: 'Armor Class', abbr: 'AC', derived: 'armor_base + shield' }
+  it('finds the pack attribute by id, abbreviation or name', () => {
+    expect(defenseAttribute([{ id: 'str', name: 'Strength' }, ac])).toBe(ac)
+    expect(defenseAttribute([{ id: 'def', name: 'Defense' }])?.id).toBe('def')
+    expect(defenseAttribute([{ id: 'str', name: 'Strength' }])).toBeUndefined()
+    expect(defenseAttribute(undefined)).toBeUndefined()
+  })
+  it('evaluates derived values and falls back to the stored one', () => {
+    expect(readDefense({}, ac, (e) => (e === 'armor_base + shield' ? 15 : 0))).toBe(15)
+    expect(readDefense({ ac: 12 }, ac, () => { throw new Error('unknown') })).toBe(12)
+    expect(readDefense({ ac: { current: 11 } }, ac)).toBe(11)
+    expect(readDefense({}, ac)).toBeNull()
+    expect(readDefense({ ac: 12 }, undefined)).toBeNull()
+  })
+  it('labels the badge', () => {
+    expect(defenseAbbr(ac)).toBe('AC')
+    expect(defenseAbbr({ id: 'def', name: 'Defense' })).toBe('DEF')
   })
 })

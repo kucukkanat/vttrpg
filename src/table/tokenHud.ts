@@ -2,10 +2,10 @@
  * Pure helpers for the combat state drawn on a token's footprint (`TokenMesh`): the primary
  * resource read off a sheet for the HP bar, the colour band it falls in (and its bloodied / down
  * backup), and the condition chips around the disc: category border shape and colour, a monochrome
- * glyph and the turns left when the game tracks durations. No three.js here so it stays testable.
+ * glyph and the turns left from `Token.effects`. No three.js here so it stays testable.
  */
 import type { Character, Token } from '@/core/doc'
-import type { ConditionDef, ResourceDef } from '@/core/pack'
+import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
 import { HP_HIGH, HP_LOW, HP_MID, STATUS } from '@/ui/theme/palette'
 import { CATEGORY_SHAPE, hasGlyph, STATUS_CATEGORIES, type StatusCategory, type StatusShape } from '@/ui/theme/glyphs'
 
@@ -56,19 +56,67 @@ export function hpBand(current: number, max: number): HpBand {
 
 export const HP_BAND_COLORS: Record<HpBand, string> = { high: HP_HIGH, mid: HP_MID, low: HP_LOW }
 
-/** Bars up to this many points are split into pips; longer ones are a continuous fill. */
-export const MAX_PIPS = 12
+/**
+ * Glanceable combat state beyond the colour band: `bloodied` at half or less, `dead` at zero
+ * (the pack's primary resource; D&D Beyond's 50 % / 0 % rule). Null above half. It doubles as the
+ * non-colour backup for the HP band.
+ */
+export type VitalState = 'bloodied' | 'dead'
+
+export function vitalState(reading: ResourceReading | null | undefined): VitalState | null {
+  if (!reading || reading.max <= 0) return null
+  if (reading.current <= 0) return 'dead'
+  return reading.current / reading.max <= 0.5 ? 'bloodied' : null
+}
+
+/** Words for screen readers and tooltips. */
+export const VITAL_LABELS: Record<VitalState, string> = { bloodied: 'Bloodied', dead: 'Down' }
 
 /**
- * HP backup beside the colour band: bloodied at half or less, down at zero, null above half.
- * The token bar and the floor bar draw a drop or a skull for these, so the state reads without colour.
+ * The pack's armour-class-like attribute: id `ac`, an abbreviation `AC`, or a name such as
+ * "Armor Class" or "Defense". Undefined for packs without one (Mausritter), so nothing is shown.
  */
-export type HpState = 'bloodied' | 'down' | null
-export function hpState(current: number, max: number): HpState {
-  if (max <= 0) return null
-  if (current <= 0) return 'down'
-  return current / max <= 0.5 ? 'bloodied' : null
+export function defenseAttribute(attributes: readonly AttributeDef[] | undefined): AttributeDef | undefined {
+  if (!attributes) return undefined
+  return (
+    attributes.find((a) => a.id === 'ac') ??
+    attributes.find((a) => a.abbr?.toUpperCase() === 'AC') ??
+    attributes.find((a) => /^(armou?r class|defen[cs]e)$/i.test(a.name))
+  )
 }
+
+/**
+ * The defense value on a sheet: the evaluated attribute (derived ones run through `evaluate`),
+ * else a stored number or `{ current }`. Null when unknown, so the badge is hidden.
+ */
+export function readDefense(
+  data: Record<string, unknown>,
+  attr: AttributeDef | undefined,
+  evaluate?: (expr: string) => unknown,
+): number | null {
+  if (!attr) return null
+  if (evaluate) {
+    try {
+      const v = evaluate(attr.derived ?? attr.id)
+      if (typeof v === 'number' && Number.isFinite(v)) return v
+    } catch { /* unknown identifiers on this sheet: fall back to the stored value */ }
+  }
+  const v = data[attr.id]
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (v && typeof v === 'object') {
+    const c = (v as { current?: unknown }).current
+    if (typeof c === 'number' && Number.isFinite(c)) return c
+  }
+  return null
+}
+
+/** Short badge text: the attribute's abbreviation, else "AC". */
+export function defenseAbbr(attr: AttributeDef): string {
+  return attr.abbr ?? (attr.id.length <= 3 ? attr.id.toUpperCase() : 'AC')
+}
+
+/** Bars up to this many points are split into pips; longer ones are a continuous fill. */
+export const MAX_PIPS = 12
 
 /** Border colour per status category (the frame shape carries the same meaning). */
 export const CATEGORY_COLORS: Record<StatusCategory, string> = STATUS
@@ -103,10 +151,12 @@ export interface ConditionChip {
   shape: StatusShape
   /** Monochrome glyph name from theme/glyphs.ts, or null to draw `label` instead. */
   glyph: string | null
-  /** Turns left when the game tracks a duration; null when it does not. */
-  turns: number | null
+  /** Turns left when the condition has a duration (`Token.effects[id].remaining`); null without one. */
+  remaining: number | null
   /** One turn left: the chip pulses. */
   last: boolean
+  /** Held by someone's concentration. */
+  concentration?: boolean
 }
 
 /** "Shield of Faith" -> "SF", "Injured" -> "IN". */
@@ -118,7 +168,7 @@ export function chipLabel(name: string): string {
 }
 
 /** Look of one condition (shared by the token chips, the token bar and the character card). */
-export function conditionLook(id: string, defs: readonly ConditionDef[], turns: number | null = null): ConditionChip {
+export function conditionLook(id: string, defs: readonly ConditionDef[], remaining: number | null = null): ConditionChip {
   const def = defs.find((d) => d.id === id)
   const category = conditionCategory(id, def)
   return {
@@ -129,77 +179,34 @@ export function conditionLook(id: string, defs: readonly ConditionDef[], turns: 
     category,
     shape: CATEGORY_SHAPE[category],
     glyph: hasGlyph(def?.icon) ? def.icon : null,
-    turns,
-    last: turns === 1,
+    remaining,
+    last: remaining === 1,
   }
-}
-
-const TURN_KEYS = ['turns', 'remaining', 'rounds', 'duration'] as const
-const turnsOf = (v: unknown): number | null => {
-  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return Math.ceil(v)
-  if (v && typeof v === 'object') {
-    for (const k of TURN_KEYS) {
-      const n = (v as Record<string, unknown>)[k]
-      if (typeof n === 'number' && Number.isFinite(n) && n > 0) return Math.ceil(n)
-    }
-  }
-  return null
-}
-
-/**
- * Turns remaining per condition id, from whatever duration data the token or sheet carries:
- * an object list entry (`{ id, turns }`, also `remaining` / `rounds` / `duration`) or a side map
- * (`conditionDurations` / `durations`: id -> number or such an object). Absent data gives no entry,
- * so conditions without durations simply show no badge.
- */
-export function conditionTurns(token: object, character: Pick<Character, 'data'> | undefined): Map<string, number> {
-  const out = new Map<string, number>()
-  const read = (src: unknown) => {
-    if (!src || typeof src !== 'object') return
-    const rec = src as Record<string, unknown>
-    if (Array.isArray(rec.conditions)) {
-      for (const c of rec.conditions) {
-        const id = c && typeof c === 'object' ? (c as { id?: unknown }).id : undefined
-        const n = turnsOf(c)
-        if (typeof id === 'string' && n !== null && !out.has(id)) out.set(id, n)
-      }
-    }
-    for (const key of ['conditionDurations', 'durations']) {
-      const map = rec[key]
-      if (!map || typeof map !== 'object' || Array.isArray(map)) continue
-      for (const [id, v] of Object.entries(map as Record<string, unknown>)) {
-        const n = turnsOf(v)
-        if (n !== null && !out.has(id)) out.set(id, n)
-      }
-    }
-  }
-  read(token)
-  read(character?.data)
-  return out
 }
 
 /**
  * Conditions to show on a token: the token's own list plus the sheet's `conditions` (the engine
- * writes skill effects there), deduplicated in order. Entries may be ids or `{ id, turns }` objects.
- * Ids the pack does not know still get a grey chip so nothing is silently dropped.
+ * writes skill effects there), deduplicated in order, with turns left and concentration from
+ * `Token.effects`. Ids the pack does not know still get a grey chip so nothing is silently dropped.
  */
 export function conditionChips(
-  token: Pick<Token, 'conditions'>,
+  token: Pick<Token, 'conditions'> & Partial<Pick<Token, 'effects'>>,
   character: Pick<Character, 'data'> | undefined,
   defs: readonly ConditionDef[],
 ): ConditionChip[] {
   const ids: string[] = []
   const push = (list: unknown) => {
     if (!Array.isArray(list)) return
-    for (const x of list) {
-      const id = typeof x === 'string' ? x : x && typeof x === 'object' ? (x as { id?: unknown }).id : undefined
-      if (typeof id === 'string' && id && !ids.includes(id)) ids.push(id)
-    }
+    for (const x of list) if (typeof x === 'string' && x && !ids.includes(x)) ids.push(x)
   }
   push(token.conditions)
   push(character?.data.conditions)
-  const turns = conditionTurns(token, character)
-  return ids.map((id) => conditionLook(id, defs, turns.get(id) ?? null))
+  return ids.map((id) => {
+    const effect = token.effects?.[id]
+    const chip = conditionLook(id, defs, effect?.remaining ?? null)
+    if (effect?.concentration) chip.concentration = true
+    return chip
+  })
 }
 
 /** Where chip `i` of `n` sits around the disc: angles from the upper right, spaced 40 degrees. */

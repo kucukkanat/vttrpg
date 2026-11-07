@@ -73,3 +73,31 @@ describe('discSlots', () => {
     expect(discSlots(320 - 16 - 60 - 8)).toBeGreaterThanOrEqual(5)
   })
 })
+
+describe('turnStrip groups and declared actions', () => {
+  const grouped = (turn: number): InitiativeState => ({
+    active: true, round: 1, turn,
+    order: [
+      { token: 'Pip' as TokenId, score: 20 },
+      { token: 'Rat' as TokenId, score: 12, group: 'r' },
+      { token: 'Ghost' as TokenId, score: 12, group: 'r' },
+      { token: 'Toad' as TokenId, score: 12, group: 'r' },
+      { token: 'Owl' as TokenId, score: 3 },
+    ],
+  })
+  it('draws a group as one disc with its size', () => {
+    const s = turnStrip(grouped(1), tokens, true, me, 9)!
+    expect(ids(s)).toEqual(['Rat', 'Owl', 'Pip'])
+    expect(s.discs[0]).toMatchObject({ current: true, count: 3 })
+    expect(s.discs[1]!.count).toBeUndefined()
+  })
+  it('players count only the members they can see', () => {
+    const s = turnStrip(grouped(0), tokens, false, me, 9)!
+    expect(s.discs.find((d) => d.token === 'Rat')!.count).toBe(2)
+  })
+  it('carries a declared action on the disc', () => {
+    const s = turnStrip({ ...grouped(0), declared: { Toad: { token: 'Toad' as TokenId, label: 'Bite', icon: 'fang', targets: [], at: 1 } } }, tokens, true, me, 9)!
+    expect(s.discs.find((d) => d.token === 'Rat')!.intent).toEqual({ label: 'Bite', icon: 'fang' })
+    expect(s.discs[0]!.intent).toBeUndefined()
+  })
+})

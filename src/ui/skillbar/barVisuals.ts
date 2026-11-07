@@ -6,7 +6,7 @@
 import type { TargetShape } from '@/core/geometry'
 import type { TokenId } from '@/core/ids'
 import type { ConditionDef, SkillDef } from '@/core/pack'
-import { conditionLook, HP_BAND_COLORS, hpBand, hpState, MAX_PIPS, type ConditionChip, type HpBand, type HpState } from '@/table/tokenHud'
+import { conditionLook, HP_BAND_COLORS, hpBand, MAX_PIPS, vitalState, type ConditionChip, type HpBand, type VitalState } from '@/table/tokenHud'
 
 export interface HpMeter {
   /** Up to MAX_PIPS points are drawn as pips; more as one continuous fill. */
@@ -19,7 +19,7 @@ export interface HpMeter {
   band: HpBand
   color: string
   /** Bloodied (half or less) or down (zero): drawn as a glyph beside the meter. */
-  state: HpState
+  state: VitalState | null
 }
 
 export function hpMeter(current: number, max: number): HpMeter {
@@ -33,7 +33,7 @@ export function hpMeter(current: number, max: number): HpMeter {
     fraction: m > 0 ? c / m : 0,
     band,
     color: HP_BAND_COLORS[band],
-    state: hpState(c, m),
+    state: vitalState({ current: c, max: m }),
   }
 }
 
@@ -99,6 +99,6 @@ export function rangePreviewFor(skill: Pick<SkillDef, 'target'>, source: TokenId
 }
 
 /** Look of a pack condition (category frame, glyph or letters), matching the chips drawn around the token. */
-export function conditionStyle(defs: readonly ConditionDef[], id: string, turns: number | null = null): ConditionChip {
-  return conditionLook(id, defs, turns)
+export function conditionStyle(defs: readonly ConditionDef[], id: string, remaining: number | null = null): ConditionChip {
+  return conditionLook(id, defs, remaining)
 }

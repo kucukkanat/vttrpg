@@ -5,11 +5,14 @@ export type Route =
   | { name: 'new' }
   | { name: 'join'; invite: string }
   | { name: 'game' }
+  /** A table display (TV / second screen); `href` is the whole link, it carries the game key. */
+  | { name: 'display'; href: string }
   | { name: 'dev'; story: string }
 
 export function parseRoute(hash: string): Route {
   const h = hash.replace(/^#/, '')
   if (h.startsWith('/join/')) return { name: 'join', invite: window.location.href }
+  if (h.startsWith('/display/')) return { name: 'display', href: window.location.href }
   if (h.startsWith('/new')) return { name: 'new' }
   if (h.startsWith('/game')) return { name: 'game' }
   // Dev stories exist only in dev builds; in production the hash falls through to home.

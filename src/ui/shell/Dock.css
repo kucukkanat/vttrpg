@@ -72,6 +72,8 @@
 .token-bar-head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--sp-2); min-width: 0; padding: 0 var(--sp-1) 0 var(--sp-2); }
 .token-bar-name { flex: 1 1 4em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .token-bar-turn { flex: none; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--now-fg); background: var(--now); border-radius: 999px; padding: 2px 8px; }
+.token-bar-turn { flex: none; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-fg); background: var(--accent); border-radius: 999px; padding: 2px 8px; }
+.token-bar-def { flex: none; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; }
 .token-bar-hp { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
 /* HP meter: pips (up to 12) or a bar, in the token HP band colour (--hp), the number small beside it. */
 .hp-meter { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 0 var(--sp-1); }
@@ -84,7 +86,7 @@
 .hp-meter--low .hp-num { color: var(--hp); }
 /* Bloodied / down backup: a drop or a skull before the pips, so the state reads without the band colour. */
 .hp-meter .hp-state { flex: none; color: var(--hp); }
-.hp-meter--down .hp-state { color: var(--fg); }
+.hp-meter--dead .hp-state { color: var(--fg); }
 .token-bar-more { flex: none; font-size: var(--fs-lg); }
 .token-bar-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .token-bar-gm { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); padding-top: var(--sp-1); border-top: 1px solid var(--border); }
