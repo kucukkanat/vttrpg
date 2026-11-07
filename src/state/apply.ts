@@ -3,7 +3,7 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, PlacedLight, Prefab, Prop, ResourceDelta, RollResult, Scene, Token, Wall } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
@@ -133,6 +133,9 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const notes = doc.getMap<Note>('notes')
   const customSkills = doc.getMap<SkillDef>('customSkills')
   const initiative = doc.getMap<unknown>('initiative')
+  const walls = doc.getMap<Wall>('walls')
+  const lights = doc.getMap<PlacedLight>('lights')
+  const prefabs = doc.getMap<Prefab>('prefabs')
 
   doc.transact(() => {
     switch (intent.type) {
@@ -275,7 +278,26 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         const f = fog.get(intent.scene) ?? { scene: intent.scene, revealed: [] }
         const set = new Set(f.revealed)
         for (const c of intent.cells) set.add(c)
-        if (set.size !== f.revealed.length) fog.set(intent.scene, { ...f, scene: intent.scene, revealed: [...set] })
+        // Revealing a cell the brush had hidden again takes it off the hidden list too.
+        const hidden = f.hidden?.filter((c) => !intent.cells.includes(c))
+        const hiddenChanged = !!f.hidden && hidden!.length !== f.hidden.length
+        if (set.size !== f.revealed.length || hiddenChanged) {
+          const next: FogState = { ...f, scene: intent.scene, revealed: [...set] }
+          if (hidden?.length) next.hidden = hidden
+          else delete next.hidden
+          fog.set(intent.scene, next)
+        }
+        break
+      }
+      case 'fog.hide': {
+        const f = fog.get(intent.scene)
+        if (!f) return
+        const drop = new Set(intent.cells)
+        const revealed = f.revealed.filter((c) => !drop.has(c))
+        const next: FogState = { ...f, revealed }
+        // A fully revealed map keeps its flag; the painted cells are listed as exceptions.
+        if (f.revealAll) next.hidden = [...new Set([...(f.hidden ?? []), ...intent.cells])]
+        if (revealed.length !== f.revealed.length || (next.hidden?.length ?? 0) !== (f.hidden?.length ?? 0)) fog.set(intent.scene, next)
         break
       }
       case 'fog.reset':
@@ -283,9 +305,49 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         break
       case 'fog.revealAll': {
         const f = fog.get(intent.scene) ?? { scene: intent.scene, revealed: [] }
-        if (!f.revealAll) fog.set(intent.scene, { ...f, revealAll: true })
+        if (!f.revealAll || f.hidden) {
+          const next: FogState = { ...f, revealAll: true }
+          delete next.hidden
+          fog.set(intent.scene, next)
+        }
         break
       }
+      case 'wall.add':
+        for (const w of intent.walls) walls.set(w.id, w)
+        break
+      case 'wall.update': {
+        const w = walls.get(intent.wall)
+        if (!w) return
+        walls.set(intent.wall, merge(w, { ...intent.patch, id: w.id }))
+        break
+      }
+      case 'wall.remove':
+        for (const id of intent.walls) walls.delete(id)
+        break
+      case 'door.set': {
+        const w = walls.get(intent.wall)
+        if (!w?.door || w.door.open === intent.open) return
+        walls.set(intent.wall, { ...w, door: { ...w.door, open: intent.open } })
+        break
+      }
+      case 'light.add':
+        lights.set(intent.light.id, intent.light)
+        break
+      case 'light.update': {
+        const l = lights.get(intent.light)
+        if (!l) return
+        lights.set(intent.light, merge(l, { ...intent.patch, id: l.id }))
+        break
+      }
+      case 'light.remove':
+        lights.delete(intent.light)
+        break
+      case 'prefab.upsert':
+        prefabs.set(intent.prefab.id, intent.prefab)
+        break
+      case 'prefab.remove':
+        prefabs.delete(intent.prefab)
+        break
       case 'initiative.start':
         writeInitiative(initiative, { active: true, round: 1, turn: 0, order: sortInitiative(intent.order) })
         break

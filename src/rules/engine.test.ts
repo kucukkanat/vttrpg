@@ -163,6 +163,24 @@ describe('validate', () => {
       expect(engine.validate(i, asGm, d)).toBeNull()
     }
   })
+  it('lets players work unlocked doors only where the scene allows it, and keeps walls to the GM', () => {
+    const grid = { type: 'square' as const, cellSize: 1, origin: { x: 0, y: 0, z: 0 } }
+    const door = (id: string, locked = false) => ({ id: id as never, scene, a: { x: 0, z: 0 }, b: { x: 1, z: 0 }, door: { open: false, locked } })
+    const base = doc()
+    const d = (playersOpenDoors: boolean): GameDocShape => ({
+      ...base,
+      scenes: { [scene]: { id: scene, name: 'S', grid, cameraMode: 'orbit', darkness: 0, playersOpenDoors } },
+      walls: { ['d1' as never]: door('d1'), ['d2' as never]: door('d2', true), ['w1' as never]: { id: 'w1' as never, scene, a: { x: 0, z: 0 }, b: { x: 0, z: 1 } } },
+    })
+    const open = (wall: string): Intent => ({ type: 'door.set', wall: wall as never, open: true })
+    expect(engine.validate(open('d1'), asAlice, d(true))).toBeNull()
+    expect(engine.validate(open('d1'), asAlice, d(false))).toMatch(/GM/)
+    expect(engine.validate(open('d2'), asAlice, d(true))).toMatch(/locked/)
+    expect(engine.validate(open('w1'), asAlice, d(true))).toMatch(/not a door/)
+    expect(engine.validate(open('d2'), asGm, d(false))).toBeNull()
+    expect(engine.validate({ type: 'wall.remove', walls: ['w1' as never] }, asAlice, d(true))).toMatch(/GM/)
+    expect(engine.validate({ type: 'fog.hide', scene, cells: ['0,0'] }, asAlice, d(true))).toMatch(/GM/)
+  })
   it('lets a player end their own token\'s turn, and only while it is up', () => {
     const d = { ...doc(), initiative: { active: true, round: 1, turn: 0, order: [{ token: 't-alice' as TokenId, score: 12 }, { token: 't-bob' as TokenId, score: 8 }] } }
     expect(engine.validate({ type: 'initiative.next', token: 't-alice' as TokenId }, asAlice, d)).toBeNull()
