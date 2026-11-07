@@ -3,7 +3,7 @@ import type { AssetRef } from '@/core/assets'
 import type { GameEvent } from '@/core/doc'
 import type { AssetHash, PlayerPubkey } from '@/core/ids'
 import { createAudioEngine, STALE_ONE_SHOT_MS } from './impl'
-import { builtinName, builtinRef, isBuiltin, ZERO_HASH } from './builtin'
+import { BUILTIN_DURATION_S, builtinName, builtinRef, isBuiltin, soundKey, ZERO_HASH } from './builtin'
 import { pickNewAudioEvents } from './useGameAudio'
 import { buildAmbience, AMBIENT_PRESETS } from './ambience'
 import { asAudioContext, FakeAudioContext, FakeBuffer, FakeBufferSource, FakeGain } from './fakeAudioContext'
@@ -230,6 +230,37 @@ describe('one-shots', () => {
   })
 })
 
+describe('stop and playing', () => {
+  it('tracks sounding one-shots by key and ends them when their time is up', async () => {
+    vi.useFakeTimers()
+    const { engine } = setup({ state: 'running' })
+    const seen: string[][] = []
+    engine.onPlaying(() => seen.push([...engine.playing()]))
+    await engine.playOneShot(builtinRef('drum'))
+    expect([...engine.playing()]).toEqual([soundKey(builtinRef('drum'))])
+    vi.advanceTimersByTime(BUILTIN_DURATION_S.drum * 1000 + 200)
+    expect(engine.playing().size).toBe(0)
+    expect(seen).toEqual([['builtin:drum'], []])
+  })
+
+  it('stops one sound or all of them with a short fade', async () => {
+    vi.useFakeTimers()
+    const { ctx, engine } = setup({ state: 'running' })
+    await engine.playOneShot(builtinRef('thunder'))
+    await engine.playOneShot(ref('file'))
+    expect(engine.playing()).toEqual(new Set(['builtin:thunder', ref('file').sha256]))
+    const src = ctx.of<FakeBufferSource>('bufferSource').at(-1)!
+    engine.stopOneShots(ref('file').sha256)
+    expect(engine.playing()).toEqual(new Set(['builtin:thunder']))
+    const g = src.connections[0] as FakeGain
+    expect(g.gain.calls.at(-1)).toMatchObject({ method: 'linearRampToValueAtTime', args: [0, expect.any(Number)] })
+    vi.advanceTimersByTime(200)
+    expect(src.stopped).toHaveLength(1)
+    engine.stopOneShots()
+    expect(engine.playing().size).toBe(0)
+  })
+})
+
 describe('builtin refs', () => {
   it('round-trip through the builtin: scheme with a zero hash placeholder', () => {
     const r = builtinRef('coin')
@@ -258,5 +289,11 @@ describe('pickNewAudioEvents', () => {
     events = [audio('c', 1600)] // GM pruned
     expect(pickNewAudioEvents(events, played, since)).toEqual([])
     expect([...played]).toEqual(['c'])
+  })
+
+  it('also returns stop events, in order with plays', () => {
+    const played = new Set<string>()
+    const stop: GameEvent = { id: 's', at: 1700, kind: 'audio-stop', by }
+    expect(pickNewAudioEvents([audio('a', 1600), stop], played, 1000).map((e) => e.kind)).toEqual(['audio', 'audio-stop'])
   })
 })

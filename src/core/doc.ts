@@ -159,6 +159,8 @@ export type GameEvent =
       numbers?: ResourceDelta[]
     }
   | { id: string; at: number; kind: 'audio'; asset: AssetRef; volume?: number; by: PlayerPubkey }
+  /** Stop a one-shot (or, without `asset`, all of them) on every client. */
+  | { id: string; at: number; kind: 'audio-stop'; asset?: AssetRef; by: PlayerPubkey }
 
 /** One resource change on a token's sheet: negative for damage or a cost, positive for healing. */
 export interface ResourceDelta {

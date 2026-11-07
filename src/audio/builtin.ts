@@ -33,3 +33,12 @@ export function builtinName(ref: AssetRef): BuiltinSound | null {
 }
 
 export const isBuiltin = (ref: AssetRef): boolean => builtinName(ref) !== null
+
+/** Identifies a sound for stop and "playing": `builtin:<name>` or the asset hash. */
+export function soundKey(ref: AssetRef): string {
+  const b = builtinName(ref)
+  return b ? SCHEME + b : ref.sha256
+}
+
+/** Roughly how long each synthesized one-shot sounds, for the "playing" indicator (seconds). */
+export const BUILTIN_DURATION_S: Record<BuiltinSound, number> = { door: 1.6, sword: 0.9, thunder: 3.5, coin: 0.9, scream: 1.6, drum: 0.7 }

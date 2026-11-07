@@ -21,6 +21,16 @@ describe('applyIntent', () => {
     expect(t.position).toEqual({ x: 1, y: 0, z: 2 })
     expect(t.name).toBe('Rat')
   })
+  it('records soundboard stops as audio-stop events, for one sound or all', () => {
+    const doc = new Y.Doc()
+    const asset = { sha256: 'ab'.repeat(32), kind: 'audio', mime: 'audio/ogg', size: 1, sources: [] } as never
+    applyIntent(doc, env({ type: 'audio.stop', asset }))
+    applyIntent(doc, env({ type: 'audio.stop' }))
+    const evs = doc.getArray<GameEvent>('events').toArray()
+    expect(evs.map((e) => e.kind)).toEqual(['audio-stop', 'audio-stop'])
+    expect(evs[0]).toMatchObject({ asset, by: from })
+    expect(evs[1]).not.toHaveProperty('asset')
+  })
   it('accumulates fog reveals without duplicates', () => {
     const doc = new Y.Doc()
     applyIntent(doc, env({ type: 'fog.reveal', scene: 's1' as SceneId, cells: ['0,0', '1,0'] }))
