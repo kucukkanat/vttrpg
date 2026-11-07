@@ -12,6 +12,7 @@ import type { Presence } from '@/core/presence'
 import type { Token } from '@/core/doc'
 import type { PlayerPubkey, TokenId } from '@/core/ids'
 import { useClaimPrompt } from './ClaimPrompt'
+import { CoGmControls } from './CoGmControls'
 import { buildInviteUrl, selectAll, useCopy } from '../invite'
 import { ListRow } from '../components'
 import { colorName } from '../colorName'
@@ -46,6 +47,8 @@ interface Row {
   name: string
   color: string
   isGm: boolean
+  /** Co-GM by the founder's grant (badge only; the GM badge wins for the founder). */
+  isCoGm?: boolean
   isMe: boolean
   away: boolean
   owned: Token[]
@@ -83,6 +86,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
         name: p.name || p.pubkey.slice(0, 8),
         color: p.color,
         isGm: p.pubkey === gm,
+        isCoGm: p.pubkey !== gm && (controller.connection.isWriter?.(p.pubkey) ?? false),
         isMe: false,
         away: now - p.lastSeen > AWAY_AFTER_MS,
         owned: inScene.filter((t) => t.owner === p.pubkey),
@@ -142,6 +146,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
                   <strong>{r.name}</strong>
                   {r.isMe && <span className="muted small">you</span>}
                   {r.isGm && <span className="players-badge">GM</span>}
+                  {r.isCoGm && <span className="players-badge">Co-GM</span>}
                   {r.away && <span className="muted small">away</span>}
                 </div>
                 <div className="players-token">
@@ -175,6 +180,7 @@ export function PlayersPanel({ controller }: { controller: GameController }) {
           <span>Show HP and conditions to players</span>
         </label>
       )}
+      <CoGmControls controller={controller} />
       {!isGm && scene && (
         <button type="button" className="players-pick" onClick={show}>Pick a character</button>
       )}

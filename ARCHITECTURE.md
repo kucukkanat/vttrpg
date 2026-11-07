@@ -34,3 +34,52 @@ inner files. Stubs throw `not implemented` until the owning branch lands.
 - Ids are branded (`src/core/ids.ts`). Cast at the boundary where ids enter (network, files).
 - World units are meters. Grid cell size per scene. +Y up. Blender exports with +Y up.
 - Nostr pubkeys are hex, not npub, inside the app.
+
+## Co-GM and handover
+
+`PLAN.md` deferred co-GM because the GM client is the only writer and every player holds the
+game key, so the key cannot say who the GM is. The design keeps one root of trust and adds
+nothing a player could forge.
+
+- **Founder.** The manifest's author, named by the invite's `naddr` pubkey. Clients pin it:
+  `joinGame({ gm })` asks the relays for manifests by that author only and `readManifest`
+  refuses any other signer. (Before this, the newest manifest that decrypted under the game key
+  won, so any player could publish one naming themselves GM and capture new joiners.) The
+  founder can never be replaced; the game's coordinate, `d` tag and invite are built from it.
+- **Co-GMs.** The founder's signed manifest lists grants `{ pubkey, since, until? }`
+  (`src/net/authority.ts`). A delta counts when its author is the founder, or a co-GM whose
+  window covers the event's `created_at` (with 120 s of clock skew before `since`). Revoking sets
+  `until`; from then on a live event from that key is refused whatever timestamp it claims, so
+  a revoked co-GM cannot slip in back-dated edits on clients that were online. Earlier edits stay.
+- **Who applies intents.** Every writer receives player intents; exactly one should apply them.
+  Writers rank `host` (set by the founder; "hand over hosting"), then the founder, then co-GMs
+  in grant order. A writer applies intents when it is the first one it sees as *established*:
+  present (presence within `GM_AWAY_AFTER_MS`) for `PROCESS_GRACE_MS` (12 s, above the 10 s
+  beacon) without a gap, or itself once open that long. A writer that just opened buffers
+  intents during its grace and drops them at the end if it saw another writer meanwhile (that
+  writer handled them). Single-writer games skip all of this.
+- **Manifest updates.** Everyone follows the founder's manifest live; newer `updatedAt` wins.
+  Grants, revocations, the host, relays and the snapshot pointer change without a reload. A
+  client whose own role changed is asked to reopen the game; a revoked writer stops publishing
+  at once.
+- **What stays founder-only.** Granting, revoking, choosing the host, snapshot pointers (they
+  live in the founder's manifest) and relay rotation.
+
+Known limits: two writers can both apply an intent during a hand-over moment when their
+views of each other's presence differ (one beacon's latency after a grace); the effect is a
+duplicate chat line or roll, not a lost or forged one. A co-GM-hosted session adds no snapshots,
+so late joiners replay the co-GM's deltas on top of the founder's last snapshot. A client that
+was offline during a revocation and replays from before it applies the revoked co-GM's events
+by their timestamps, so a back-dated forgery inside the old window can still reach it; the
+founder's next snapshot bounds that window. A co-GM can read GM-only notes, as can anyone with
+the game key (the doc is not split by role).
+
+## Relay resilience
+
+`RelayPool` tracks health per relay (state, failures since last open, next retry, last error,
+publishes accepted and refused in a row). The founder checks every 30 s, once the relays had
+20 s to come up and only while at least one relay is open (a device offline is not a relay
+problem): when fewer than three relays work or are still coming up, `planRelayRotation` adds
+spare relays from `RESERVE_RELAYS` (up to eight in total), and the founder republishes the
+manifest with them. Players and co-GMs follow the manifest's relay list. The top bar's status
+pill opens the per-relay list with a "Retry now" that skips the backoff.

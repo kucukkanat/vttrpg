@@ -89,7 +89,9 @@ function finish(opts: {
   return tryRules(opts.packId).then((rules) => {
     const controller = createController({ connection: opts.connection, rules, assets: opts.assets, displayName: opts.displayName, pubkey: opts.identity.pubkey })
     let stopSnapshots = () => {}
-    if (opts.connection.isGm) {
+    // Snapshot pointers live in the founder's manifest, so only the founder runs the loop; a co-GM's
+    // edits reach late joiners as deltas on top of the founder's latest snapshot.
+    if (opts.connection.isGm && opts.connection.role === 'gm') {
       const loop = createSnapshotLoop(opts.connection, {
         upload: snapshotUploader(opts.assets, opts.identity),
         prune: (intent) => controller.dispatch(intent),
@@ -129,7 +131,7 @@ export async function startGame(start: Start): Promise<StartedGame> {
   if (start.mode === 'join') {
     const info = parseInvite(start.invite)
     if (!info) throw new Error('That is not a valid invite link.')
-    const connection = await joinGame({ relays: info.relays.length ? info.relays : relayList(), identity, gameId: info.gameId, gameKey: info.gameKey, isGm: false })
+    const connection = await joinGame({ relays: info.relays.length ? info.relays : relayList(), identity, gameId: info.gameId, gameKey: info.gameKey, gm: info.gm, isGm: false })
     const m = metaOf(connection)
     const packId = (m.get('pack') as string | undefined) ?? 'mausritter'
     remember(connection, { name: (m.get('name') as string | undefined) ?? '', pack: packId, displayName: start.displayName })
@@ -147,10 +149,10 @@ export async function startGame(start: Start): Promise<StartedGame> {
   const displayName = start.displayName ?? saved.displayName ?? (saved.isGm ? 'GM' : 'Player')
   const relays = info.relays.length ? info.relays : saved.relays.length ? saved.relays : relayList()
   // joinGame replays snapshot + deltas before resolving, for GMs too; the doc is complete when we read meta.
-  const connection = await joinGame({ relays, identity, gameId: info.gameId, gameKey: info.gameKey, isGm: saved.isGm })
+  const connection = await joinGame({ relays, identity, gameId: info.gameId, gameKey: info.gameKey, gm: info.gm, isGm: saved.isGm })
   const m = metaOf(connection)
   const metaGm = m.get('gm') as string | undefined
-  const decision = decideRejoin({ saved, pubkey: identity.pubkey, connectionIsGm: connection.isGm, metaGm })
+  const decision = decideRejoin({ saved, pubkey: identity.pubkey, connectionIsGm: connection.isGm, connectionRole: connection.role, metaGm })
   if (decision.role === 'error') {
     connection.close()
     throw new Error(decision.message)
