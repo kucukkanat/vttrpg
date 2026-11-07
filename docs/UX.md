@@ -116,13 +116,145 @@ are the two cross-links; both go through the same `openPanel(id)` function.
 
 | Token | Size | Use |
 |---|---|---|
-| `--fs-xs` | 11 px | tags, tab labels |
+| `--fs-xs` | 11 px (12 px on touch) | tags, tab labels |
 | `--fs-sm` | 12 px | panel headers (uppercase), meta ("you", "hidden"), muted hints |
 | `--fs-md` | 14 px | body, list rows, chat |
 | `--fs-lg` | 16 px | inputs on touch (prevents iOS focus zoom), sheet titles |
 | `--fs-xl` | 18 px | character name |
 
-System font stack; line-height 1.35; `-webkit-text-size-adjust: 100%`.
+System font stack for body text; line-height 1.35; `-webkit-text-size-adjust: 100%`. Nothing is
+smaller than 12 px on coarse pointers. Sizes are `calc(N px * var(--text-scale))`, so the text-size
+preset (Players panel: default ×1, large ×1.15, larger ×1.3, `data-text-scale` on `<html>`) scales
+every size drawn from these tokens, including the nameplates and labels over the table.
+
+**Display face:** Alegreya Bold (SIL Open Font License 1.1, `src/ui/theme/fonts/OFL.txt`), latin
+subset, one 24 kB woff2 bundled with the app (no font server). `--font-display`, with lining,
+tabular figures. Used for names, titles and the numbers that matter: panel and sheet titles, the
+game name, character and token-bar names, nameplates, roll totals, the round badge and the scene
+title. Everything else (labels, controls, chat) keeps the system stack.
+
+## Art direction
+
+A candle-lit miniature diorama under a well-made game-box insert. The table is muted, mid-value
+scenery; the tactical layer (grid, reach, templates, rings, selection) owns the saturated colours
+and the value extremes. The chrome stays flat and clean: near-black neutrals, one display face,
+parchment cream (`#f3ead8`) for in-world text, no ornate frames. Packs may tint it (accent, display
+face, frame tint) but never move anything.
+
+Four rules hold everywhere:
+
+1. **One meaning per colour.** A colour on the table or in the HUD means one thing (table below).
+2. **Every colour has a shape twin**: a ring style, a glyph, a pattern or a word, so nothing
+   depends on telling red from green.
+3. **Urgent state lives on the token it concerns** (rings, HP bar, status chips, nameplate).
+4. **One icon family**: 24-unit grid, `ICON_STROKE` 1.75, round caps, `currentColor`
+   (`src/ui/icons.tsx`). Skill icons, status glyphs (`src/ui/theme/glyphs.ts`) and the CSS-only
+   masks (`--icon-die`, `--icon-chevron`, `--icon-warn`) use the same grid and stroke. No emoji or
+   text glyphs in the chrome; custom skills may still carry an emoji as user content.
+
+## Colour roles
+
+CSS custom properties in `src/ui/global.css` carry the roles for the DOM; `src/ui/theme/palette.ts`
+carries the same values for the 3D table, which imports them instead of writing hex literals.
+`src/ui/theme/palette.test.ts` keeps the two in step and checks contrast and colour-vision
+separation (below). Scenery materials and lights are not colour roles.
+
+| Role | Token / constant | Dark | Daylight | Backup | Where |
+|---|---|---|---|---|---|
+| Brand, primary action | `--accent` / `BRAND` | `#e0a458` | `#8f4c00` | filled button, weight 600 | primary buttons, links, focus ring, unread badges |
+| Now: whose turn | `--now` / `NOW` | `#ffc53d` | `#7a5600` | pulse, double ring, "YOUR TURN" | turn ring, token bar ring and pill, current disc and row, round badge |
+| Selected | `--select` / `SELECT` | `#f3ead8` | `#17150f` | solid ring, nameplate shown, inset edge | token and prop selection, open tab, active chip or row |
+| Mine | `--mine` / `MINE` | `#7cc4ff` | `#0b63c4` | "YOU" tag, thicker owner ring | own owner ring fallback, own disc in the turn strip, find-me, pings, players' templates |
+| Hostile / targeted | `--hostile` / `HOSTILE` | `#ff7a4d` text, `#ff5a1f` 3D | `#b8360a` | crosshair ticks, sawtooth rim, hatch, "!" | target ring, GM-side templates |
+| Help (heal, buff) | `--help` / `HELP` | `#3ee08f` | `#0b6b3d` | "+" pattern and badge | heal and buff templates and target rings |
+| Measurement | `--measure` / `MEASURE` | `#e8dcc0` | `#5a5549` | dashed edge, distance label | ruler, range preview, skill range ring, move path, elevation line |
+| Roll total | `--total` | `--fg` | `--fg` | size and display face | chat totals, roll toast |
+| Crit / fumble | `--ok` / `--bad` | `#8fd18f` / `#f28b82` | `#186b26` / `#b3261e` | star / broken ring glyph | dice faces, chat tag, roll toast |
+| HP bands | `--hp-*` / `HP_*` | `#3fbf7f` · `#f2b33d` · `#d8342c` | same | pip count, drop at ≤ 50 %, skull at 0 | token bar, floor bar, character card |
+| Whisper | `--whisper` | `#c58af9` | `#7b2fbf` | lock glyph | chat |
+| Waiting (GM away) | `WAITING` | `#9a9892` | – | ghosted token | queued move ring |
+
+Neutrals (dark → daylight): `--bg` `#0e0e10` → `#f4f1ea`, `--panel` `#17171b` → `#fbfaf6`,
+`--panel-2` `#1f1f25` → `#ece8de`, `--fg` `#e8e6e3` → `#17150f`, `--muted` `#9a9892` → `#5a5549`,
+`--border` `#2a2a31` → `#b9b1a1`, plus `--btn`, `--hover`, `--row-on`, `--well` for buttons, hover,
+selected rows and inset notes.
+
+**Glass:** one recipe per weight, all with `--glass-blur` (6 px): `--glass` (`rgba(18,18,22,.9)`:
+dock, chip, camera pill, callouts), `--glass-strong` (`.95`: menus, dice pad, tips) and `--scrim`
+(`rgba(0,0,0,.72)`: toasts, targeting and preview bars, table overlays). Text on glass is
+`--on-glass`; buttons on glass `--glass-btn` with a `--glass-edge` border; error banners
+`--error-glass` with `--on-error`. Labels drawn over the 3D table (nameplates, distance labels) use
+`LABEL_GLASS` and `PARCHMENT` from the palette and stay dark in both themes, because the table does.
+
+**Checks** (`src/ui/theme/contrast.ts`, run by `palette.test.ts`):
+
+- WCAG AA (4.5:1) for `--fg`, `--muted`, `--accent`, `--now`, `--mine`, `--hostile`, `--help`,
+  `--ok`, `--bad`, `--danger`, `--whisper` on `--bg`, `--panel` and `--panel-2`, in both themes, and
+  for the filled pills (`--accent-fg` on `--accent`, `--now-fg` on `--now`). Lowest dark values:
+  muted on panel-2 5.7:1, hostile text 6.9:1; lowest daylight: help on panel-2 5.4:1, now on panel-2 5.4:1.
+- Colour-vision simulation (Machado 2009 at full severity, protan / deutan / tritan) with a CIE76
+  distance between the simulated colours: rings (select, hostile, mine, now) and templates (mine,
+  hostile, help) stay above ΔE 15, HP bands above 25, status categories above 12. The HP green
+  moved from `#5fd36b` to `#3fbf7f` and red from `#e0453a` to `#d8342c` to get there (protan
+  separation of the old high/mid pair was 17.8); every pair also has its shape backup.
+- The hostile red-orange is `#ff5a1f` on the table (fill and rings) and `#ff7a4d` as text, which
+  passes AA on the panels.
+
+## Telegraphs
+
+Skill templates (`src/table/TargetingLayer.tsx`, rules in `src/table/telegraph.ts`) are keyed to
+who owns the effect and what it does, not to "threat to me":
+
+| Template | Colour | Rim | Fill | Centre badge |
+|---|---|---|---|---|
+| Players' side, harmful or neutral | blue `MINE` | dashed while aiming, solid once staged | low-alpha solid, darker when staged | none |
+| GM side, harmful or neutral | red-orange `HOSTILE` | the same, plus sawtooth teeth outside | diagonal hatch | "!" in a diamond |
+| Heal or buff, either side | green `HELP` | dashed / solid | "+" pattern | "+" in a circle |
+| Range of the skill | cream `MEASURE` | dashed thin | none | none |
+| Ally inside a harmful template | – | – | – | warning triangle over the ally, "Friendly fire: names" on the bar |
+
+- The skill's intent comes from its effects: damage or a save is harmful; heals and added buff
+  conditions help; anything else is neutral.
+- Tokens inside the template ring in the template colour with four crosshair ticks.
+- During combat, a template from a caster whose turn it is not is drawn at 45 % strength.
+- The targeting bar states the outcome: "Fireball → Bramble, Rat · 2-cell burst · hits 1 enemy,
+  1 ally", live while aiming and fixed once staged. Allies and enemies are relative to the caster
+  (player characters on one side, the GM's tokens on the other).
+
+## Status icons
+
+Conditions on tokens, in the token bar's GM toggles and on the character card share one look
+(`src/ui/StatusBadge.tsx`, `src/table/statusSprites.ts`, data in `src/table/tokenHud.ts`):
+
+| Category | Border shape | Colour | Examples |
+|---|---|---|---|
+| buff | circle | `#43d39e` | shield of faith, invisible |
+| harm | hexagon | `#e5484d` | blinded, injured |
+| control | square | `#ffb347` | stunned, restrained, prone, frightened |
+| magic | shield | `#4c8dff` | concentration, drained |
+| affliction | diamond | `#c77ddd` | poisoned, exhaustion, hungry |
+
+- A monochrome glyph (`ConditionDef.icon`, drawn from `src/ui/theme/glyphs.ts`) sits on a dark
+  fill inside the frame; a pack condition without a known glyph shows its two letters instead, and
+  a condition the pack does not define gets a grey frame.
+- `ConditionDef.category` sets the kind; without it the id is matched against common names, else
+  harm. Both bundled packs set it.
+- Turns left show as a number on the lower right corner when the token or sheet carries duration
+  data (`{ id, turns }` entries, or a `conditionDurations` / `durations` map; `remaining`, `rounds`
+  and `duration` are read too). Without durations, no badge. On the last turn the chip pulses
+  (reduced motion: a thicker frame).
+
+## Themes
+
+- **Dark** is the default. **Daylight** is a high-contrast light set for bright rooms and outdoor
+  phones. "Match the device" (the default preference) follows `prefers-color-scheme`; the Players
+  panel switches by hand (`vtt.theme` in localStorage, `data-theme` on `<html>`). The 3D table and
+  the labels over it stay dark in both.
+- **Pack theme hook** (`pack.json` → `"theme"`): `accent` and `accentFg` (`#rrggbb`), `frameTint`
+  (washed over the top bar, columns, drawer, sheet, tab bar and the glass over the table at
+  8–10 %), `displayFont: { family, src, weight }` (a woff2 in the pack folder). The accent is only
+  used while it keeps AA contrast on the current theme's panels. Applied while a game of the pack
+  is open (`usePackTheme` in `GameShell`).
 
 ## Spacing scale
 
@@ -191,6 +323,7 @@ keyboards still reach the table's own keys.
 - [x] Keyboard shortcuts on desktop
 - [x] Panel layout tweaks (touch rows, scroll areas), no behaviour change (CSS only; no panel TSX edited)
 - [x] `npm run typecheck`, `npx vitest run`, `npm run build` green
+- [x] Colour roles, telegraphs, status icons, display face, text-size preset, daylight theme and pack theme hook (sections above)
 - [x] Verified in the browser at 375 × 812, 768 × 1024 and 1400 × 900 with screenshots
 
 Known follow-ups outside this shell's files: `BuildTag` (fixed bottom-right) overlaps the Chat
