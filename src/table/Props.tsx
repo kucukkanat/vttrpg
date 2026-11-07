@@ -12,6 +12,7 @@ import { PropBatch } from './PropBatch'
 import { MemoPropMesh } from './PropMesh'
 import { useTable } from './context'
 import { heightVisible } from './kits/levels'
+import { hasModel } from '@/core/propParts'
 
 let instancing = true
 /** Turns instanced prop rendering off (every prop standalone); for the benchmark's baseline. */
@@ -31,11 +32,14 @@ export function Props({ sceneId }: { sceneId: SceneId }) {
   const { kits, floorY, grid } = useTable()
   const cut = kits?.cut ?? Infinity
   const list = useMemo(
-    () => Object.values(props).filter((p) => p.scene === sceneId && heightVisible(p.position.y, cut, floorY, grid)),
+    // Invisible walls, doors and lights have no model: PropParts draws their gizmos.
+    () => Object.values(props).filter((p) => p.scene === sceneId && hasModel(p) && heightVisible(p.position.y, cut, floorY, grid)),
     [props, sceneId, cut, floorY, grid],
   )
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for `standalone`
-  const { singles, groups } = useMemo(() => groupProps(list, standalone, instancing), [list, key])
+  // Door models swing on their hinge, so they are drawn standalone.
+  const doorKey = useMemo(() => list.filter((p) => p.door && !p.wall).map((p) => p.id).join('|'), [list])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for `standalone`, `doorKey` for the doors
+  const { singles, groups } = useMemo(() => groupProps(list, doorKey ? new Set([...standalone, ...(doorKey.split('|') as PropId[])]) : standalone, instancing), [list, key, doorKey])
   return (
     <>
       {groups.map((g) => <PropBatch key={g.key} props={g.props} />)}

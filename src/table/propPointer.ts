@@ -31,6 +31,7 @@ import { editRuntime } from './build/editRuntime'
 import { eyedrop, wantsEyedrop } from './build/eyedrop'
 import { applyGroupOp, type Poses } from './build/groupTransform'
 import { commitGroupOp, placeCopiesAt, posesOf } from './build/propActions'
+import { doorClickWorks, playerCanWork, toggleDoorIntent, toggleLockIntent } from './doorClick'
 
 type PropEvent = ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>
 
@@ -64,12 +65,14 @@ export interface PropPointerHandlers {
 }
 
 export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, onHover: (id: PropId | null) => void): PropPointerHandlers {
-  const { grid, floorY, viewer, onIntent } = useTable()
+  const { grid, floorY, viewer, onIntent, scene } = useTable()
   const targeting = useTableUi((s) => s.targeting !== null)
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null
   const gm = !viewer || viewer.isGm
   const drag = useRef<DragState | null>(null)
   const hit = useMemo(() => new Vector3(), [])
+  /** A press on a door that works it: the door toggles on release if the pointer stayed put. */
+  const doorPress = useRef<{ id: PropId; pointerId: number; x: number; y: number } | null>(null)
 
   const select = (id: PropId) => useGame.getState().setSelection({ kind: 'prop', id })
   const isSelected = (id: PropId) => useGame.getState().propSelection.includes(id)
@@ -107,6 +110,14 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     const id = resolve(e)
     const prop = id ? useGame.getState().props[id] : undefined
     if (!id || !prop) return
+    // Doors have their own click path (doorClick.ts): opening one is play, not editing.
+    if (doorClickWorks(prop, gm)) {
+      if (viewer?.display) return
+      e.stopPropagation()
+      if (e.button === 2) { if (gm) { const i = toggleLockIntent(prop); if (i) onIntent(i) } return }
+      if (e.button === 0) doorPress.current = { id, pointerId: e.pointerId, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
+      return
+    }
     e.stopPropagation()
     // A second finger while a twist / pinch runs belongs to the gesture.
     if (editRuntime.gestureActive || (e.pointerType === 'touch' && drag.current)) return
@@ -185,6 +196,15 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
   }
 
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    const press = doorPress.current
+    if (press && press.pointerId === e.pointerId) {
+      doorPress.current = null
+      e.stopPropagation()
+      const prop = useGame.getState().props[press.id]
+      const still = Math.hypot(e.nativeEvent.clientX - press.x, e.nativeEvent.clientY - press.y) < DRAG_THRESHOLD_PX
+      if (prop && still && (gm || playerCanWork(prop, scene, grid))) { const i = toggleDoorIntent(prop); if (i) onIntent(i) }
+      return
+    }
     const d = drag.current
     if (targeting || !d || e.pointerId !== d.pointerId) return
     e.stopPropagation()
@@ -213,14 +233,19 @@ export function usePropPointer(resolve: (e: PropEvent) => PropId | undefined, on
     onLostPointerCapture: () => endDrag(false),
     onContextMenu: (e) => {
       if (targeting) return
-      if (!resolve(e)) return
+      const id = resolve(e)
+      if (!id) return
       e.stopPropagation()
       e.nativeEvent.preventDefault()
     },
     onPointerOver: (e) => {
       if (targeting) return
       e.stopPropagation()
-      onHover(resolve(e) ?? null)
+      const id = resolve(e) ?? null
+      // Players only hover doors they can work; other props are not theirs to point at.
+      const prop = id ? useGame.getState().props[id] : undefined
+      if (!gm && prop?.door && !playerCanWork(prop, scene, grid)) { onHover(null); return }
+      onHover(id)
     },
     onPointerOut: () => onHover(null),
   }

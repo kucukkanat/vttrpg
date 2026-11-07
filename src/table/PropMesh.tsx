@@ -20,6 +20,8 @@ import { GlbMini, ModelBoundary, useAssetLoad } from './TokenMesh'
 import { MissingModel } from './MissingAsset'
 import { usePropPointer } from './propPointer'
 import { registerPropObject } from './build/editRuntime'
+import { localParts } from '@/core/propParts'
+import { noteModelBounds } from './modelBounds'
 
 const noRaycast = () => undefined
 
@@ -86,6 +88,15 @@ export function PropMesh({ prop }: { prop: Prop }) {
   // Selection outline from the model's own bounds (inside the scaled group); footprint for
   // line-of-sight from the world bounds, republished whenever the model or transform changes.
   const local = useMemo(() => (object ? localBounds(object) : null), [object])
+  // Wall and door models without a length take their segment from these bounds.
+  useEffect(() => { if (local && !local.isEmpty()) noteModelBounds(prop.model.sha256, local) }, [local, prop.model.sha256])
+  // A door model swings a little under half a turn on the hinge at one end of its segment.
+  const hinge = useMemo(() => {
+    if (!prop.door || prop.wall) return null
+    const parts = localParts(prop, local && !local.isEmpty() ? { min: { x: local.min.x, z: local.min.z }, max: { x: local.max.x, z: local.max.z } } : undefined, cell)
+    return parts ? { x: parts.whole.a.x, z: parts.whole.a.z } : null
+  }, [prop, local, cell])
+  const swing = hinge && prop.door?.open ? -Math.PI * 0.45 : 0
   const outline = useMemo(() => {
     if (!local || local.isEmpty()) return null
     const w = Math.max(0.1 / Math.max(scale.x, 1e-6), local.max.x - local.min.x) * 1.04
@@ -122,6 +133,8 @@ export function PropMesh({ prop }: { prop: Prop }) {
       rotation={[rotation.x, rotation.y, rotation.z]}
       {...handlers}
     >
+      <group position={hinge ? [hinge.x * scale.x, 0, hinge.z * scale.z] : undefined} rotation-y={swing}>
+      <group position={hinge ? [-hinge.x * scale.x, 0, -hinge.z * scale.z] : undefined}>
       <group scale={[scale.x, scale.y, scale.z]}>
         {url ? (
           <ModelBoundary fallback={<Crate cell={cell} tone="error" />}>
@@ -139,6 +152,8 @@ export function PropMesh({ prop }: { prop: Prop }) {
             <lineBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </lineSegments>
         )}
+      </group>
+      </group>
       </group>
       {prop.locked && selected && (
         <mesh position-y={0.02} rotation-x={-Math.PI / 2} raycast={noRaycast} renderOrder={3}>

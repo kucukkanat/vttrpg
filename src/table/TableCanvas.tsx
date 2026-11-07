@@ -57,6 +57,8 @@ import { imageFrame } from './imageScene'
 import { PingLayer, pingMissed } from './PingLayer'
 import { MoveBar, moveMissed, TwoTapMoveLayer } from './MovePreview'
 import { Props } from './Props'
+import { PropParts } from './PropParts'
+import { PartsConversion } from './partsConversion'
 import { RangePreview } from './RangePreview'
 import { DeclaredActions } from './DeclaredActions'
 import { RulerLayer } from './RulerLayer'
@@ -384,6 +386,8 @@ function TableInner({ sceneId, scene, onReady, onIntent, onPresence, resolveAsse
           {image && <ImageFloor image={image} grid={grid} floorY={floorY} onStatus={setImageStatus} retry={imageRetry} />}
           {gridOn && <GridOverlay grid={grid} bounds={bounds2} floorY={floorY} clip={floorRect} />}
           <Props sceneId={sceneId} />
+          <PropParts sceneId={sceneId} />
+          {gm && !viewer?.display && <PartsConversion sceneId={sceneId} floorY={floorY} onIntent={onIntent} />}
           <KitLayer kit={kits} bounds={bounds2} />
           <Tokens sceneId={sceneId} viewer={viewer ?? null} />
           <FogOverlay bounds={bounds2} walls={walls} brightFloor={!!image} />

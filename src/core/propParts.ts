@@ -173,21 +173,50 @@ function localSegment(len: number | undefined, bounds: FootprintBounds | undefin
     : { a: { x: cx, z: bounds.min.z }, b: { x: cx, z: bounds.max.z } }
 }
 
+/** Share of a doorway wall's length its door takes when no width is given (the kit pieces' gap). */
+export const DOORWAY_SHARE = 0.75
+
 /**
- * The world segment of a wall or door prop on the XZ plane, or null for a prop with neither.
- * `fallback` is the length used when nothing gives one (one cell).
+ * The parts of a wall or door prop in its own frame (before scale): the whole segment, and the
+ * door's gap within it. A door alone is all gap; a wall with a door (a doorway model) is wall on
+ * either side of a gap centred on it, `door.width` wide (else `DOORWAY_SHARE` of the wall).
+ */
+export function localParts(prop: Pick<Prop, 'wall' | 'door'>, bounds: FootprintBounds | undefined, fallback: number): { whole: Segment; gap: Segment | null } | null {
+  if (!prop.wall && !prop.door) return null
+  if (!prop.wall) { const whole = localSegment(prop.door!.width, bounds, fallback); return { whole, gap: whole } }
+  const whole = localSegment(prop.wall.length, bounds, fallback)
+  if (!prop.door) return { whole, gap: null }
+  const mx = (whole.a.x + whole.b.x) / 2, mz = (whole.a.z + whole.b.z) / 2
+  const dx = whole.b.x - whole.a.x, dz = whole.b.z - whole.a.z
+  const len = Math.hypot(dx, dz) || 1
+  const w = Math.min(len, prop.door.width ?? DOORWAY_SHARE * len)
+  const ux = (dx / len) * (w / 2), uz = (dz / len) * (w / 2)
+  return { whole, gap: { a: { x: mx - ux, z: mz - uz }, b: { x: mx + ux, z: mz + uz } } }
+}
+
+/** A point of the prop's own frame (before scale) in the world, on the XZ plane. */
+export function propPointToWorld(prop: Pick<Prop, 'position' | 'rotation' | 'scale'>, p: P2): P2 {
+  const sc = typeof prop.scale === 'number' ? { x: prop.scale, z: prop.scale } : prop.scale
+  const t = turnY(p.x * sc.x, p.z * sc.z, prop.rotation.y)
+  return { x: clean(prop.position.x + t.x), z: clean(prop.position.z + t.z) }
+}
+
+const toWorld = (prop: Prop, s: Segment): Segment => ({ a: propPointToWorld(prop, s.a), b: propPointToWorld(prop, s.b) })
+
+/**
+ * The world segment of a wall or door prop on the XZ plane (the whole of it, a doorway's wall
+ * included), or null for a prop with neither. `fallback` is the length used when nothing gives
+ * one (one cell).
  */
 export function propSegment(prop: Prop, bounds: FootprintBounds | undefined, fallback: number): Segment | null {
-  if (!prop.wall && !prop.door) return null
-  const len = prop.door ? prop.door.width ?? prop.wall?.length : prop.wall!.length
-  const local = localSegment(len, bounds, fallback)
-  const sc = typeof prop.scale === 'number' ? { x: prop.scale, z: prop.scale } : prop.scale
-  const yaw = prop.rotation.y
-  const at = (p: P2): P2 => {
-    const t = turnY(p.x * sc.x, p.z * sc.z, yaw)
-    return { x: clean(prop.position.x + t.x), z: clean(prop.position.z + t.z) }
-  }
-  return { a: at(local.a), b: at(local.b) }
+  const parts = localParts(prop, bounds, fallback)
+  return parts ? toWorld(prop, parts.whole) : null
+}
+
+/** The door gap of a door prop in the world (the whole segment for a door alone), or null. */
+export function propDoorGap(prop: Prop, bounds: FootprintBounds | undefined, fallback: number): Segment | null {
+  const parts = localParts(prop, bounds, fallback)
+  return parts?.gap ? toWorld(prop, parts.gap) : null
 }
 
 /** What blocks on one level: `sight` blocks sight and movement, `move` movement only, `sightOnly` sight only. */
@@ -213,18 +242,30 @@ export function propSegmentsByLevel(
 ): Map<number, LevelSegments> {
   const out = new Map<number, LevelSegments>()
   const list = Array.isArray(props) ? props : Object.values(props)
+  const tiny = (q: Segment) => Math.abs(q.a.x - q.b.x) < 1e-6 && Math.abs(q.a.z - q.b.z) < 1e-6
   for (const p of list as Prop[]) {
     if (p.scene !== scene || (!p.wall && !p.door)) continue
-    if (p.door?.open) continue
-    const seg = propSegment(p, hasModel(p) ? opts.boundsOf?.(p) : undefined, opts.cellSize)
-    if (!seg || (Math.abs(seg.a.x - seg.b.x) < 1e-6 && Math.abs(seg.a.z - seg.b.z) < 1e-6)) continue
+    const parts = localParts(p, hasModel(p) ? opts.boundsOf?.(p) : undefined, opts.cellSize)
+    if (!parts) continue
+    const segs: { seg: Segment; blocks: WallBlocks }[] = []
+    const closed = !!p.door && !p.door.open
+    if (!p.wall) { if (closed) segs.push({ seg: parts.whole, blocks: 'both' }) }
+    else if (!parts.gap) segs.push({ seg: parts.whole, blocks: p.wall.blocks })
+    else {
+      // A doorway: wall either side, the gap blocks only while the door is shut.
+      segs.push({ seg: { a: parts.whole.a, b: parts.gap.a }, blocks: p.wall.blocks }, { seg: { a: parts.gap.b, b: parts.whole.b }, blocks: p.wall.blocks })
+      if (closed) segs.push({ seg: parts.gap, blocks: 'both' })
+    }
     const level = propLevel(p, opts.floorY, opts.cellSize)
-    let l = out.get(level)
-    if (!l) out.set(level, (l = { sight: [], move: [], sightOnly: [] }))
-    const blocks: WallBlocks = p.door ? 'both' : p.wall!.blocks
-    if (blocks === 'both') l.sight.push(seg)
-    else if (blocks === 'move') l.move.push(seg)
-    else l.sightOnly.push(seg)
+    for (const { seg: local, blocks } of segs) {
+      if (tiny(local)) continue
+      const seg = toWorld(p, local)
+      let l = out.get(level)
+      if (!l) out.set(level, (l = { sight: [], move: [], sightOnly: [] }))
+      if (blocks === 'both') l.sight.push(seg)
+      else if (blocks === 'move') l.move.push(seg)
+      else l.sightOnly.push(seg)
+    }
   }
   return out
 }
