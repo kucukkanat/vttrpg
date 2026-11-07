@@ -31,6 +31,8 @@ export function SegmentLayer({ kind, bounds }: { kind: SegmentKind; bounds: Boun
   const props = useGame((s) => s.props)
   const scratch = useMemo(() => ({ plane: new Plane(new Vector3(0, 1, 0), -floorY), hit: new Vector3() }), [floorY])
   const [state, setState] = useState<SegmentState>(IDLE)
+  const stateRef = useRef(state)
+  stateRef.current = state
   const [cursor, setCursor] = useState<P2 | null>(null)
   const press = useRef<{ pointerId: number; x: number; y: number; at: P2; moved: boolean } | null>(null)
   const alt = useRef(false)
@@ -56,10 +58,8 @@ export function SegmentLayer({ kind, bounds }: { kind: SegmentKind; bounds: Boun
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.key !== 'Escape') return
       // First Esc ends the chain, the second puts the tool away.
-      setState((s) => {
-        if (!s.start) useBuildUi.getState().set({ tool: null })
-        return IDLE
-      })
+      if (!stateRef.current.start) useBuildUi.getState().set({ tool: null })
+      else setState(IDLE)
     }
     const up = (e: KeyboardEvent) => { if (e.key === 'Alt') alt.current = false }
     window.addEventListener('keydown', down)
