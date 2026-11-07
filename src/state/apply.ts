@@ -3,17 +3,45 @@
  * (and optimistically on the sender). Pure with respect to everything but `doc`.
  */
 import * as Y from 'yjs'
-import type { ChatMessage, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
+import type { ChatMessage, ConditionEffect, DamageCard, FogState, GameEvent, InitiativeEntry, InitiativeState, Note, Prop, ResourceDelta, RollResult, Scene, Token } from '@/core/doc'
 import type { TokenId } from '@/core/ids'
 import type { SkillDef } from '@/core/pack'
 import type { VfxCue } from '@/core/pack'
 import type { IntentEnvelope } from '@/core/intents'
+import { DEFAULT_NAMES, endConcentration, pruneEffects, setEffect, startConcentration, tickEffects, updateMessage, type EffectsDoc, type PackNames } from './effects'
 
 export interface ApplyContext {
   /** Resolved roll for 'roll' intents (the GM computes it from the seed). */
   roll?: RollResult
   /** Character patches + messages produced by the rules engine for 'skill.use'. */
-  skill?: { patches: { character: string; data: Record<string, unknown> }[]; messages: string[]; vfx?: VfxCue[] }
+  skill?: {
+    patches: { character: string; data: Record<string, unknown> }[]
+    messages: string[]
+    vfx?: VfxCue[]
+    /** Apply-damage card for what the skill dealt or healed, already applied (see `DamageCard`). */
+    card?: { text: string; card: DamageCard }
+    /** Conditions the skill added, with their durations, by token. */
+    effects?: { token: TokenId; condition: string; effect: ConditionEffect }[]
+    /** A concentration skill: the caster's previous concentration ends, this one starts. */
+    concentration?: { skill: string; name: string }
+    /** Concentrating tokens that took damage: a save prompt each. */
+    checks?: { token: TokenId; dc: number }[]
+    /** Concentrating tokens dropped to 0: their concentration ends. */
+    drops?: TokenId[]
+  }
+  /** 'damage.apply': the sheet change, the card's new state and its follow-ups, resolved by the GM. */
+  damage?: {
+    card: DamageCard
+    patch?: { character: string; data: Record<string, unknown> }
+    notices: string[]
+    numbers: ResourceDelta[]
+    check?: { token: TokenId; dc: number }
+    drop?: boolean
+  }
+  /** 'concentration.save': the resolved save; a failure ends the concentration. */
+  concentration?: { roll: RollResult; label: string; kept: boolean }
+  /** Pack names for duration and concentration notices. */
+  pack?: PackNames
 }
 
 /** A sheet value the engine tracks as a resource: a bare number or `{ current }`. */
@@ -133,6 +161,16 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
   const notes = doc.getMap<Note>('notes')
   const customSkills = doc.getMap<SkillDef>('customSkills')
   const initiative = doc.getMap<unknown>('initiative')
+  const fx: EffectsDoc = { tokens, characters, chat }
+  const names = ctx.pack ?? DEFAULT_NAMES
+  const prompt = (token: TokenId, dc: number) => {
+    const name = tokens.get(token)?.name ?? 'Someone'
+    chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text: `${name} must make a concentration save (DC ${dc}).`, concentration: { token, dc } }])
+  }
+  const floatNumbers = (scene: Scene['id'] | undefined, numbers: ResourceDelta[]) => {
+    if (!scene || !numbers.length) return
+    events.push([{ id: crypto.randomUUID(), at, kind: 'vfx', cues: [], scene, targets: [...new Set(numbers.map((n) => n.token))], numbers }])
+  }
 
   doc.transact(() => {
     switch (intent.type) {
@@ -193,8 +231,44 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
             kind: 'roll',
             text: intent.label ?? intent.formula,
             roll: ctx.roll ?? { formula: intent.formula, seed: intent.seed, dice: [], total: 0 },
+            ...(intent.visibility && intent.visibility !== 'public' ? { visibility: intent.visibility } : {}),
           },
         ])
+        break
+      case 'roll.reveal':
+        updateMessage(chat, intent.message, (m) => {
+          const next = { ...m }
+          delete next.visibility
+          return next
+        })
+        break
+      case 'damage.apply': {
+        const r = ctx.damage
+        if (!r) return
+        if (r.patch) {
+          const c = characters.get(r.patch.character)
+          if (c) characters.set(r.patch.character, { ...c, data: { ...(c.data as object), ...r.patch.data } })
+        }
+        updateMessage(chat, intent.message, (m) => ({ ...m, damage: r.card }))
+        for (const text of r.notices) chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text }])
+        floatNumbers(tokens.get(intent.token)?.scene, r.numbers)
+        if (r.drop) endConcentration(fx, intent.token, names, 'dropped to 0', at, from)
+        else if (r.check) prompt(r.check.token, r.check.dc)
+        break
+      }
+      case 'concentration.save': {
+        const r = ctx.concentration
+        if (!r) return
+        chat.push([{ id: env.id, author: from, at, kind: 'roll', text: r.label, roll: r.roll }])
+        updateMessage(chat, intent.message, (m) => (m.concentration ? { ...m, concentration: { ...m.concentration, result: r.kept ? 'kept' : 'lost' } } : m))
+        if (!r.kept) endConcentration(fx, intent.token, names, 'failed the save', at, from)
+        break
+      }
+      case 'concentration.end':
+        endConcentration(fx, intent.token, names, 'ended', at, from)
+        break
+      case 'concentration.dismiss':
+        updateMessage(chat, intent.message, (m) => (m.concentration ? { ...m, concentration: { ...m.concentration, result: 'dismissed' } } : m))
         break
       case 'skill.use': {
         const src = tokens.get(intent.source)
@@ -212,6 +286,8 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
           (id) => (characters.get(id)?.data as Record<string, unknown> | undefined),
           tokensOf,
         )
+        // A new concentration skill: remember what the caster held before this cast.
+        const conc = ctx.skill?.concentration
         for (const p of ctx.skill?.patches ?? []) {
           const c = characters.get(p.character)
           if (c) characters.set(p.character, { ...c, data: { ...(c.data as object), ...p.data } })
@@ -219,6 +295,16 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         for (const text of ctx.skill?.messages ?? []) {
           chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text }])
         }
+        for (const e of ctx.skill?.effects ?? []) setEffect(fx, e.token, e.condition, conc ? { ...e.effect, concentration: intent.source } : e.effect)
+        if (conc) {
+          const keep = new Set((ctx.skill?.effects ?? []).map((e) => `${e.token}:${e.condition}`))
+          endConcentration(fx, intent.source, names, `now ${conc.name}`, at, from, keep)
+          startConcentration(fx, intent.source, conc, names)
+        }
+        for (const id of new Set([intent.source, ...intent.targets])) pruneEffects(fx, id)
+        if (ctx.skill?.card) chat.push([{ id: crypto.randomUUID(), author: from, at, kind: 'system', text: ctx.skill.card.text, damage: ctx.skill.card.card }])
+        for (const id of ctx.skill?.drops ?? []) endConcentration(fx, id, names, 'dropped to 0', at, from)
+        for (const c of ctx.skill?.checks ?? []) if (!ctx.skill?.drops?.includes(c.token)) prompt(c.token, c.dc)
         if (src && (ctx.skill?.vfx?.length || numbers.length)) {
           const ev: Extract<GameEvent, { kind: 'vfx' }> = { id: env.id, at, kind: 'vfx', cues: ctx.skill?.vfx ?? [], scene: src.scene, source: intent.source, targets: intent.targets, point: intent.point, label: intent.skill }
           if (numbers.length) ev.numbers = numbers
@@ -286,9 +372,12 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         if (!f.revealAll) fog.set(intent.scene, { ...f, revealAll: true })
         break
       }
-      case 'initiative.start':
-        writeInitiative(initiative, { active: true, round: 1, turn: 0, order: sortInitiative(intent.order) })
+      case 'initiative.start': {
+        const order = sortInitiative(intent.order)
+        writeInitiative(initiative, { active: true, round: 1, turn: 0, order })
+        if (order[0]) tickEffects(fx, order[0].token, 'start', names, at, from)
         break
+      }
       case 'initiative.set': {
         const init = readInitiative(initiative)
         if (!init.active) return
@@ -299,7 +388,13 @@ export function applyIntent(doc: Y.Doc, env: IntentEnvelope, ctx: ApplyContext =
         const init = readInitiative(initiative)
         if (!init.active) return
         if (intent.token && init.order[init.turn]?.token !== intent.token) return
-        writeInitiative(initiative, nextTurn(init))
+        const next = nextTurn(init)
+        writeInitiative(initiative, next)
+        // Durations count down as the turn passes: the end of this turn, then the start of the next.
+        const ended = init.order[init.turn]?.token
+        const started = next.order[next.turn]?.token
+        if (ended) tickEffects(fx, ended, 'end', names, at, from)
+        if (started) tickEffects(fx, started, 'start', names, at, from)
         break
       }
       case 'initiative.remove': {
