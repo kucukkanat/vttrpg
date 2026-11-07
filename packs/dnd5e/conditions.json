@@ -1,42 +1,42 @@
 [
   {
     "id": "blinded",
-    "category": "debuff",
+    "category": "harm",
     "name": "Blinded",
     "description": "Cannot see; automatically fails any check that needs sight. Attack rolls against the creature have advantage and its own attack rolls have disadvantage. Advantage and disadvantage are applied by the players; no numeric effect.",
     "icon": "eye-off"
   },
   {
     "id": "charmed",
-    "category": "debuff",
+    "category": "control",
     "name": "Charmed",
     "description": "Cannot attack the charmer or target them with harmful abilities or magic. The charmer has advantage on social checks against the creature.",
     "icon": "heart"
   },
   {
     "id": "deafened",
-    "category": "debuff",
+    "category": "harm",
     "name": "Deafened",
     "description": "Cannot hear; automatically fails any check that needs hearing.",
     "icon": "ear-off"
   },
   {
     "id": "exhaustion",
-    "category": "debuff",
+    "category": "affliction",
     "name": "Exhaustion",
     "description": "Six cumulative levels: 1 disadvantage on ability checks, 2 speed halved, 3 disadvantage on attacks and saves, 4 hit point maximum halved, 5 speed 0, 6 death. Track the level in notes; the effects are applied by the players.",
     "icon": "zzz"
   },
   {
     "id": "frightened",
-    "category": "debuff",
+    "category": "control",
     "name": "Frightened",
     "description": "Disadvantage on ability checks and attack rolls while the source of fear is in sight; cannot willingly move closer to it.",
     "icon": "ghost"
   },
   {
     "id": "grappled",
-    "category": "debuff",
+    "category": "control",
     "name": "Grappled",
     "description": "Speed becomes 0 and no bonus to speed applies. Ends if the grappler is incapacitated or the creature is moved out of reach.",
     "icon": "hand",
@@ -44,21 +44,21 @@
   },
   {
     "id": "incapacitated",
-    "category": "debuff",
+    "category": "control",
     "name": "Incapacitated",
     "description": "Cannot take actions or reactions.",
     "icon": "ban"
   },
   {
     "id": "invisible",
-    "category": "debuff",
+    "category": "buff",
     "name": "Invisible",
     "description": "Cannot be seen without magic or a special sense; counts as heavily obscured for hiding. Attack rolls against the creature have disadvantage and its own attack rolls have advantage.",
     "icon": "eye-off"
   },
   {
     "id": "paralyzed",
-    "category": "debuff",
+    "category": "control",
     "name": "Paralyzed",
     "description": "Incapacitated, cannot move or speak, automatically fails STR and DEX saves. Attacks against the creature have advantage and hits from within 5 feet are critical hits. Speed 0.",
     "icon": "snowflake",
@@ -66,7 +66,7 @@
   },
   {
     "id": "petrified",
-    "category": "debuff",
+    "category": "control",
     "name": "Petrified",
     "description": "Turned to stone: incapacitated, unaware, weight times ten, resistance to all damage, immune to poison and disease, automatically fails STR and DEX saves. Speed 0.",
     "icon": "mountain",
@@ -76,21 +76,21 @@
   },
   {
     "id": "poisoned",
-    "category": "debuff",
+    "category": "affliction",
     "name": "Poisoned",
     "description": "Disadvantage on attack rolls and ability checks.",
     "icon": "skull"
   },
   {
     "id": "prone",
-    "category": "debuff",
+    "category": "control",
     "name": "Prone",
     "description": "Can only crawl until standing up, which costs half the movement. Disadvantage on attack rolls; attacks against the creature have advantage from within 5 feet and disadvantage from further away.",
     "icon": "arrow-down"
   },
   {
     "id": "restrained",
-    "category": "debuff",
+    "category": "control",
     "name": "Restrained",
     "description": "Speed 0. Attack rolls against the creature have advantage, its own have disadvantage, and it has disadvantage on DEX saves.",
     "icon": "link",
@@ -98,7 +98,7 @@
   },
   {
     "id": "stunned",
-    "category": "debuff",
+    "category": "control",
     "name": "Stunned",
     "description": "Incapacitated, cannot move, speaks only falteringly, automatically fails STR and DEX saves. Attacks against the creature have advantage. Speed 0.",
     "icon": "stars",
@@ -106,7 +106,7 @@
   },
   {
     "id": "unconscious",
-    "category": "debuff",
+    "category": "control",
     "name": "Unconscious",
     "description": "Incapacitated, unaware, drops what it holds and falls prone, automatically fails STR and DEX saves. Attacks against the creature have advantage and hits from within 5 feet are critical hits. Speed 0.",
     "icon": "moon",
@@ -122,7 +122,7 @@
   },
   {
     "id": "concentrating",
-    "category": "neutral",
+    "category": "magic",
     "name": "Concentrating",
     "description": "Maintaining a concentration spell. Casting another concentration spell ends it; taking damage calls for a CON save (DC 10 or half the damage, whichever is higher), and failing it ends the spell.",
     "icon": "brain"

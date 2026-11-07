@@ -113,8 +113,8 @@ const css = `
   width: max-content; max-width: min(280px, calc(100vw - 32px));
   display: flex; align-items: center; gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-1) var(--sp-2) var(--sp-3); border-radius: var(--r-md);
-  background: rgba(23, 23, 27, .95); border: 1px solid var(--accent); color: var(--fg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+  background: var(--glass-strong); border: 1px solid var(--accent); color: var(--fg);
+  box-shadow: var(--shadow-lg);
   animation: onboarding-tip-in .2s ease;
 }
 .onboarding-tip.measuring { visibility: hidden; animation: none; }
@@ -125,7 +125,7 @@ const css = `
 }
 .onboarding-tip button:hover, .onboarding-tip button:focus-visible { color: var(--fg); }
 .onboarding-tip-arrow {
-  position: absolute; width: 10px; height: 10px; background: rgba(23, 23, 27, .95);
+  position: absolute; width: 10px; height: 10px; background: var(--glass-strong);
   border: 1px solid var(--accent); transform: rotate(45deg); pointer-events: none;
 }
 .onboarding-tip--above .onboarding-tip-arrow { bottom: -6px; margin-left: -5px; border-top: 0; border-left: 0; }

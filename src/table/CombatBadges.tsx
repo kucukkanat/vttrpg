@@ -1,11 +1,12 @@
 /**
  * Small camera-facing badges on a token's footprint, next to the HP bar: the bloodied / down
  * glyph (`vitalState`) and the pack's defense value ("AC 15"). Drawn once per look into a cached
- * canvas texture. This is the display hook for those states; the visual design can restyle the
- * glyphs here without touching how they are derived (tokenHud.ts).
+ * canvas texture. The vital glyphs are the shared drop and skull (theme/glyphs.ts, statusSprites.ts).
  */
 import { CanvasTexture, SpriteMaterial, SRGBColorSpace } from 'three'
 import type { VitalState } from './tokenHud'
+import { vitalMaterial } from './statusSprites'
+import { LABEL_GLASS, PARCHMENT, MEASURE } from '@/ui/theme/palette'
 
 const materials = new Map<string, SpriteMaterial>()
 
@@ -23,46 +24,17 @@ function texture(key: string, draw: (ctx: CanvasRenderingContext2D, w: number, h
   return m
 }
 
-/** A blood drop for bloodied, a skull for down. */
-function vitalMaterial(state: VitalState): SpriteMaterial {
-  return texture(`vital:${state}`, (ctx, w, h) => {
-    ctx.fillStyle = 'rgba(14,14,16,0.85)'
-    ctx.beginPath()
-    ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2)
-    ctx.fill()
-    if (state === 'bloodied') {
-      ctx.fillStyle = '#e0453a'
-      ctx.beginPath()
-      ctx.moveTo(w / 2, h * 0.18)
-      ctx.bezierCurveTo(w * 0.78, h * 0.5, w * 0.76, h * 0.8, w / 2, h * 0.8)
-      ctx.bezierCurveTo(w * 0.24, h * 0.8, w * 0.22, h * 0.5, w / 2, h * 0.18)
-      ctx.fill()
-    } else {
-      ctx.fillStyle = '#f3ead8'
-      ctx.beginPath()
-      ctx.arc(w / 2, h * 0.44, w * 0.26, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillRect(w * 0.36, h * 0.56, w * 0.28, h * 0.2)
-      ctx.fillStyle = 'rgba(14,14,16,1)'
-      ctx.beginPath()
-      ctx.arc(w * 0.4, h * 0.44, w * 0.07, 0, Math.PI * 2)
-      ctx.arc(w * 0.6, h * 0.44, w * 0.07, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }, 64, 64)
-}
-
 /** A shield-ish rounded tag with "AC 15". */
 function defenseMaterial(text: string): SpriteMaterial {
   return texture(`def:${text}`, (ctx, w, h) => {
-    ctx.fillStyle = 'rgba(14,14,16,0.85)'
-    ctx.strokeStyle = '#c9c3b8'
+    ctx.fillStyle = LABEL_GLASS
+    ctx.strokeStyle = MEASURE
     ctx.lineWidth = 4
     ctx.beginPath()
     ctx.roundRect(3, 3, w - 6, h - 6, 14)
     ctx.fill()
     ctx.stroke()
-    ctx.fillStyle = '#f3ead8'
+    ctx.fillStyle = PARCHMENT
     ctx.font = 'bold 30px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

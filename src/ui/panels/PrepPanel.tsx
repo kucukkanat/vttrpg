@@ -15,6 +15,7 @@ import { placeRows } from '../prep/placeCreatures'
 import { formatTableRoll, rollTable, tableTitle } from '../prep/tables'
 import { pushToast } from '../toasts'
 import { AddProp } from './ObjectPanel'
+import { Icon } from '@/ui/icons'
 import { CreatureBrowser, CreaturePicker, creatureSummary, StatBlockEditor, useCompendium, type Compendium } from './CreaturesPrep'
 import { Encounters } from './EncountersPrep'
 
@@ -137,7 +138,7 @@ function NpcGenerator({ controller, disabled, compendium }: { controller: GameCo
         <label>Name
           <div style={{ display: 'flex', gap: 'var(--sp-1)' }}>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={statMode ? creature?.name ?? 'from stat block' : 'random'} />
-            <button className="icon" aria-label="Random name" title="Random name" onClick={() => setName(randomName(packId))}>🎲</button>
+            <button className="icon" aria-label="Random name" title="Random name" onClick={() => setName(randomName(packId))}><Icon name="dice" /></button>
           </div>
         </label>
         <label>Count<input type="number" min={1} max={20} value={count} onChange={(e) => setCount(Number(e.target.value))} /></label>

@@ -14,6 +14,7 @@ import { useTable } from './context'
 import { footprintWalls, snapTranslation } from './editing'
 import { fitObjectToCell, PROP_FIT } from './fitScale'
 import { useTableUi } from './tableState'
+import { HOVER, SELECT } from '@/ui/theme/palette'
 import { doubleTapEdit, tapTwice } from './editTap'
 import { capture, DRAG_THRESHOLD_PX, GlbMini, LONG_PRESS_MS, ModelBoundary, useAssetUrl } from './TokenMesh'
 
@@ -207,7 +208,7 @@ export function PropMesh({ prop }: { prop: Prop }) {
         )}
         {(selected || hovered) && outline && (
           <lineSegments geometry={outline.geometry} rotation-x={-Math.PI / 2} position={[outline.cx, 0.012 / scale, outline.cz]} renderOrder={3} raycast={noRaycast}>
-            <lineBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
+            <lineBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </lineSegments>
         )}
       </group>

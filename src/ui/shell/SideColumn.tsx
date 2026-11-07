@@ -84,7 +84,7 @@ export function SideColumn({ side, panels, width, open, collapsed, controller, o
   const drag = useRef<{ x: number; w: number } | null>(null)
   const cssVar = side === 'left' ? '--left-w' : '--right-w'
   const hideKey = side === 'left' ? '[' : ']'
-  const hideGlyph = side === 'left' ? '◂' : '▸'
+  const hideGlyph = <Icon name={side === 'left' ? 'chevron-left' : 'chevron-right'} size={12} />
 
   const down = (e: RPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
@@ -119,7 +119,7 @@ export function SideColumn({ side, panels, width, open, collapsed, controller, o
     return (
       <div className={`col rail col-${side}`}>
         <button type="button" className="icon" aria-label={`Show ${side} panels`} title={`Show panels (${hideKey})`} onClick={() => onOpen(true)}>
-          {side === 'left' ? '▸' : '◂'}
+          <Icon name={side === 'left' ? 'chevron-right' : 'chevron-left'} />
         </button>
       </div>
     )
@@ -132,7 +132,7 @@ export function SideColumn({ side, panels, width, open, collapsed, controller, o
           const isCollapsed = !!collapsed[def.id]
           const head = (
             <button type="button" className="section-head" aria-expanded={!isCollapsed} onClick={() => onToggleSection(def.id)}>
-              <span className="chev" aria-hidden>{isCollapsed ? '▸' : '▾'}</span>
+              <span className="chev" aria-hidden><Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} size={12} /></span>
               <Icon name={def.glyph} size={16} className="section-icon" />
               <span className="host-title">{def.title}</span>
             </button>

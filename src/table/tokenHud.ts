@@ -1,10 +1,13 @@
 /**
  * Pure helpers for the combat state drawn on a token's footprint (`TokenMesh`): the primary
- * resource read off a sheet for the HP bar, the colour band it falls in, and the condition chips
- * around the disc. No three.js here so it stays testable.
+ * resource read off a sheet for the HP bar, the colour band it falls in (and its bloodied / down
+ * backup), and the condition chips around the disc: category border shape and colour, a monochrome
+ * glyph and the turns left from `Token.effects`. No three.js here so it stays testable.
  */
 import type { Character, Token } from '@/core/doc'
 import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
+import { HP_HIGH, HP_LOW, HP_MID, STATUS } from '@/ui/theme/palette'
+import { CATEGORY_SHAPE, hasGlyph, STATUS_CATEGORIES, type StatusCategory, type StatusShape } from '@/ui/theme/glyphs'
 
 export interface ResourceReading {
   current: number
@@ -51,7 +54,7 @@ export function hpBand(current: number, max: number): HpBand {
   return r > 0.5 ? 'high' : r > 0.25 ? 'mid' : 'low'
 }
 
-export const HP_BAND_COLORS: Record<HpBand, string> = { high: '#5fd36b', mid: '#f2b33d', low: '#e0453a' }
+export const HP_BAND_COLORS: Record<HpBand, string> = { high: HP_HIGH, mid: HP_MID, low: HP_LOW }
 
 /**
  * Glanceable combat state beyond the colour band: `bloodied` at half or less, `dead` at zero
@@ -115,20 +118,43 @@ export function defenseAbbr(attr: AttributeDef): string {
 /** Bars up to this many points are split into pips; longer ones are a continuous fill. */
 export const MAX_PIPS = 12
 
-/** Distinct chip colours, assigned by the condition's index in the pack list. */
-export const CONDITION_PALETTE = ['#e0453a', '#7cc4ff', '#f2b33d', '#9fd356', '#c77dff', '#ff9b4a', '#4fd1c5', '#ff7eb6']
+/** Border colour per status category (the frame shape carries the same meaning). */
+export const CATEGORY_COLORS: Record<StatusCategory, string> = STATUS
+/** Border of a condition the pack does not define. */
 export const UNKNOWN_CONDITION_COLOR = '#8a8f99'
+
+/**
+ * Category of a condition: the pack's `category` when it names one, else a guess from well-known
+ * condition names, else harm. Control is anything that takes away actions or movement.
+ */
+const KNOWN_CATEGORIES: Record<string, StatusCategory> = {
+  stunned: 'control', paralyzed: 'control', paralysed: 'control', restrained: 'control', grappled: 'control', prone: 'control',
+  incapacitated: 'control', petrified: 'control', unconscious: 'control', charmed: 'control', frightened: 'control', asleep: 'control',
+  poisoned: 'affliction', diseased: 'affliction', cursed: 'affliction', exhaustion: 'affliction', exhausted: 'affliction',
+  hungry: 'affliction', bleeding: 'affliction', burning: 'affliction',
+  blessed: 'buff', hasted: 'buff', invisible: 'buff', inspired: 'buff', 'shield-of-faith': 'buff',
+  concentrating: 'magic', concentration: 'magic', drained: 'magic', hexed: 'magic',
+}
+export function conditionCategory(id: string, def: Pick<ConditionDef, 'category'> | undefined): StatusCategory {
+  if (def?.category && STATUS_CATEGORIES.includes(def.category)) return def.category
+  return KNOWN_CATEGORIES[id.toLowerCase()] ?? 'harm'
+}
 
 export interface ConditionChip {
   id: string
-  /** One or two upper-case letters drawn on the chip. */
+  /** One or two upper-case letters, drawn when there is no glyph (pack conditions without an icon). */
   label: string
   name: string
+  /** Border colour: the category colour, grey for conditions the pack does not know. */
   color: string
-  /** Turns left when the condition has a duration (`Token.effects`). */
-  remaining?: number
-  /** The pack's category, for styling buffs and debuffs apart. */
-  category?: 'buff' | 'debuff' | 'neutral'
+  category: StatusCategory
+  shape: StatusShape
+  /** Monochrome glyph name from theme/glyphs.ts, or null to draw `label` instead. */
+  glyph: string | null
+  /** Turns left when the condition has a duration (`Token.effects[id].remaining`); null without one. */
+  remaining: number | null
+  /** One turn left: the chip pulses. */
+  last: boolean
   /** Held by someone's concentration. */
   concentration?: boolean
 }
@@ -141,10 +167,27 @@ export function chipLabel(name: string): string {
   return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase()
 }
 
+/** Look of one condition (shared by the token chips, the token bar and the character card). */
+export function conditionLook(id: string, defs: readonly ConditionDef[], remaining: number | null = null): ConditionChip {
+  const def = defs.find((d) => d.id === id)
+  const category = conditionCategory(id, def)
+  return {
+    id,
+    label: chipLabel(def?.name ?? id),
+    name: def?.name ?? id,
+    color: def ? CATEGORY_COLORS[category] : UNKNOWN_CONDITION_COLOR,
+    category,
+    shape: CATEGORY_SHAPE[category],
+    glyph: hasGlyph(def?.icon) ? def.icon : null,
+    remaining,
+    last: remaining === 1,
+  }
+}
+
 /**
  * Conditions to show on a token: the token's own list plus the sheet's `conditions` (the engine
- * writes skill effects there), deduplicated in order. Ids the pack does not know still get a
- * grey chip so nothing is silently dropped.
+ * writes skill effects there), deduplicated in order, with turns left and concentration from
+ * `Token.effects`. Ids the pack does not know still get a grey chip so nothing is silently dropped.
  */
 export function conditionChips(
   token: Pick<Token, 'conditions'> & Partial<Pick<Token, 'effects'>>,
@@ -159,18 +202,9 @@ export function conditionChips(
   push(token.conditions)
   push(character?.data.conditions)
   return ids.map((id) => {
-    const i = defs.findIndex((d) => d.id === id)
-    const def = i >= 0 ? defs[i]! : undefined
-    const chip: ConditionChip = {
-      id,
-      label: chipLabel(def?.name ?? id),
-      name: def?.name ?? id,
-      color: i >= 0 ? CONDITION_PALETTE[i % CONDITION_PALETTE.length]! : UNKNOWN_CONDITION_COLOR,
-    }
     const effect = token.effects?.[id]
-    if (effect?.remaining !== undefined) chip.remaining = effect.remaining
+    const chip = conditionLook(id, defs, effect?.remaining ?? null)
     if (effect?.concentration) chip.concentration = true
-    if (def?.category) chip.category = def.category
     return chip
   })
 }

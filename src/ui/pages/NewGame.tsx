@@ -172,7 +172,7 @@ function ImportSection({ displayName, disabled }: { displayName: string; disable
   return (
     <>
       <Step n="+" title="Or import a game file" />
-      <p className="muted small" style={{ margin: '4px 0 0' }}>A file exported from a table (top bar ▣ menu). You become its GM, with a new invite link.</p>
+      <p className="muted small" style={{ margin: '4px 0 0' }}>A file exported from a table (top bar View and layout menu). You become its GM, with a new invite link.</p>
       <label className="tiny-file" style={{ minHeight: 48, justifySelf: 'start', marginTop: 8 }}>
         {state.busy ?? 'Choose a .vttgame.json file'}
         <input type="file" accept="application/json,.json" hidden disabled={disabled || !!state.busy} onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />

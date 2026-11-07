@@ -12,6 +12,7 @@ import { newId } from '@/core/ids'
 import { renderMarkdown } from '../prep/markdown'
 import { isUnread, loadRead, markRead } from '../prep/unread'
 import './journal.css'
+import { Icon } from '@/ui/icons'
 
 type Mode = { kind: 'list' } | { kind: 'read'; id: NoteId } | { kind: 'edit'; id: NoteId | null }
 
@@ -116,9 +117,9 @@ export function JournalPanel({ controller }: { controller: GameController }) {
         {visible.map((n) => (
           <li key={n.id} onClick={() => setMode({ kind: 'read', id: n.id })}>
             <span className="dot" style={{ background: isUnread(read, n) ? 'var(--accent)' : 'transparent', border: isUnread(read, n) ? 'none' : '1px solid var(--border)' }} aria-label={isUnread(read, n) ? 'unread' : undefined} />
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.pinned && '📌 '}{n.title || 'Untitled'}</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.pinned && <><Icon name="tack" size={14} label="pinned" />{' '}</>}{n.title || 'Untitled'}</span>
             {isGm && <span className="muted small">{shareLabel(n)}</span>}
-            {n.image && <span className="muted small" aria-label="has image">🖼</span>}
+            {n.image && <span className="muted small"><Icon name="image" size={16} label="has image" /></span>}
           </li>
         ))}
       </ul>
@@ -154,7 +155,7 @@ function NoteView({ controller, note, isGm, onEdit, onPin, onShare, onDelete }: 
   useEffect(() => setConfirm(false), [note.id])
   return (
     <div>
-      <strong style={{ display: 'block', fontSize: 'var(--fs-lg)', marginBottom: 'var(--sp-1)' }}>{note.pinned && '📌 '}{note.title || 'Untitled'}</strong>
+      <strong style={{ display: 'block', fontSize: 'var(--fs-lg)', marginBottom: 'var(--sp-1)' }}>{note.pinned && <><Icon name="tack" size={16} label="pinned" />{' '}</>}{note.title || 'Untitled'}</strong>
       {isGm && <p className="muted small" style={{ margin: '0 0 var(--sp-2)' }}>{shareLabel(note)} · updated {new Date(note.updatedAt).toLocaleString()}</p>}
       {url && <img src={url} alt={note.image?.name ?? note.title} style={{ maxWidth: '100%', borderRadius: 'var(--r-sm)', display: 'block', marginBottom: 'var(--sp-2)' }} />}
       {/* Safe: renderMarkdown escapes every character of the source before adding its own tags. */}

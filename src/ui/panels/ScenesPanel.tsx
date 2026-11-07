@@ -11,6 +11,7 @@ import { fogStatus, isFogEnabled } from '@/table/vision'
 import { libraryModels, libraryRef, loadLibraryIndex, titleCase } from '../library'
 import { pushToast } from '../toasts'
 import './ScenesPanel.css'
+import { Icon } from '@/ui/icons'
 
 /** A map image waiting for its grid size. */
 interface MapImageDraft {
@@ -176,7 +177,7 @@ export function ScenesPanel({ controller }: { controller: GameController }) {
           return (
             <li key={s.id} className={live ? 'selected' : ''}>
               <span className="scene-name">
-                {err && <span className="scene-warn" role="img" aria-label="Failed to load" title={`Couldn't load ${s.name}: ${err}`}>⚠</span>}
+                {err && <span className="scene-warn" role="img" aria-label="Failed to load" title={`Couldn't load ${s.name}: ${err}`}><Icon name="warning" size={16} /></span>}
                 <span className="scene-title">{s.name}</span>
                 {s.image && !s.model ? <span className="muted small"> · map</span> : null}
               </span>

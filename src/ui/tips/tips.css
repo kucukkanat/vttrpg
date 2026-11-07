@@ -2,17 +2,17 @@
 .tip-card {
   position: fixed; z-index: 70; width: min(320px, calc(100vw - 16px)); max-height: min(60vh, 420px); overflow-y: auto;
   padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md);
-  background: rgba(18, 18, 22, .97); border: 1px solid var(--border); color: var(--fg);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .55); font-size: var(--fs-md); line-height: 1.4;
+  background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--border); color: var(--fg);
+  box-shadow: var(--shadow-lg); font-size: var(--fs-md); line-height: 1.4;
   animation: tip-in .12s ease-out;
 }
-.tip-card.pinned { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
-.tip-card--l2 { z-index: 71; width: min(280px, calc(100vw - 16px)); box-shadow: 0 10px 32px rgba(0, 0, 0, .65); }
+.tip-card.pinned { border-color: color-mix(in srgb, var(--select) 55%, var(--border)); }
+.tip-card--l2 { z-index: 71; width: min(280px, calc(100vw - 16px)); box-shadow: var(--shadow-lg); }
 .tip-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tip-head { display: flex; align-items: center; gap: var(--sp-2); min-height: 28px; padding-right: 36px; }
 .tip-card:not(.pinned) .tip-head { padding-right: 0; }
 .tip-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tip-cost, .tip-kind { flex: none; font-size: var(--fs-xs); color: var(--accent); }
+.tip-cost, .tip-kind { flex: none; font-size: var(--fs-xs); color: var(--muted); }
 .tip-kind { text-transform: uppercase; letter-spacing: .06em; }
 .tip-close { position: absolute; top: 2px; right: 2px; }
 .tip-text { margin: var(--sp-1) 0 0; }
@@ -21,11 +21,11 @@
   text-decoration: underline dotted color-mix(in srgb, var(--accent) 80%, transparent); text-underline-offset: 3px; text-decoration-thickness: 2px;
   cursor: help;
 }
-.tip-term:hover, .tip-term:focus-visible { color: var(--accent); background: rgba(224, 164, 88, .12); }
+.tip-term:hover, .tip-term:focus-visible { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 /* A finger needs more than the word: widen the hit area without moving the text. */
 @media (pointer: coarse) { .tip-term { padding: 6px 2px; margin: -6px -2px; } }
 .tip-term-plain { font-style: normal; font-weight: 600; }
-.tip-reason { margin: var(--sp-1) 0 0; color: var(--bad, #ff9a93); font-size: var(--fs-sm); }
+.tip-reason { margin: var(--sp-1) 0 0; color: var(--bad); font-size: var(--fs-sm); }
 .tip-mods { margin: var(--sp-1) 0 0; font-size: var(--fs-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
 .tip-hint { margin-top: var(--sp-1); font-size: var(--fs-xs); text-align: right; }
 @media (hover: hover) and (pointer: fine) { .tip-hint { display: none; } }
@@ -36,11 +36,12 @@
 
 /* Animated shape picture (ShapePreview.tsx). */
 .shape-preview { flex: none; display: block; }
-.shape-preview .sp-grid rect { fill: rgba(255, 255, 255, .05); stroke: rgba(255, 255, 255, .08); stroke-width: .5; }
-.shape-preview .sp-area rect { fill: color-mix(in srgb, var(--accent) 55%, transparent); stroke: var(--accent); stroke-width: .6; }
-.shape-preview .sp-caster { fill: #7cc4ff; stroke: #0b0b10; stroke-width: 1; }
-.shape-preview .sp-dart { fill: #fff; }
-.shape-preview .sp-aura { fill: none; stroke: var(--accent); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; }
+.shape-preview .sp-grid rect { fill: color-mix(in srgb, var(--fg) 5%, transparent); stroke: color-mix(in srgb, var(--fg) 8%, transparent); stroke-width: .5; }
+/* Same telegraph as the table: the viewer's own template is blue. */
+.shape-preview .sp-area rect { fill: color-mix(in srgb, var(--mine) 45%, transparent); stroke: var(--mine); stroke-width: .6; }
+.shape-preview .sp-caster { fill: var(--select); stroke: var(--bg); stroke-width: 1; }
+.shape-preview .sp-dart { fill: var(--fg); }
+.shape-preview .sp-aura { fill: none; stroke: var(--mine); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; }
 .shape-preview--radius .sp-area { animation: sp-bloom 1.8s ease-out infinite; }
 .shape-preview--cone .sp-area, .shape-preview--line .sp-area { animation: sp-sweep 1.8s ease-out infinite; }
 .shape-preview--single .sp-area { animation: sp-flash 1.8s ease-out infinite; }

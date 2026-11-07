@@ -4,6 +4,7 @@
  * combatants are left out for players.
  */
 import type { EncounterSummary } from '@/core/doc'
+import { Icon } from '@/ui/icons'
 
 export function EncounterSummaryCard({ summary, isGm }: { summary: EncounterSummary; isGm: boolean }) {
   const rows = summary.rows.filter((r) => isGm || !r.hidden)
@@ -25,7 +26,7 @@ export function EncounterSummaryCard({ summary, isGm }: { summary: EncounterSumm
           <tbody>
             {rows.map((r) => (
               <tr key={r.token} className={r.down ? 'down' : undefined}>
-                <th scope="row">{r.name}{r.down && <span className="encounter-down" title="Ended the encounter down"> ✕</span>}</th>
+                <th scope="row">{r.name}{r.down && <span className="encounter-down vital vital--dead" title="Ended the encounter down"> <Icon name="skull" size={14} label="down" /></span>}</th>
                 <td>{r.dealt || '–'}</td>
                 <td>{r.taken || '–'}</td>
                 <td>{r.healed || '–'}</td>

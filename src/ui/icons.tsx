@@ -7,6 +7,13 @@
  * label, aria-label or title.
  */
 import type { ReactNode } from 'react'
+import { GLYPHS } from './theme/glyphs'
+
+/** The one stroke width of every line icon in the app (this set, skill icons, status glyphs, CSS masks). */
+export const ICON_STROKE = 1.75
+
+/** A glyph from the shared path data (theme/glyphs.ts), as icon children. */
+const glyph = (name: string) => <>{GLYPHS[name]!.map((d) => <path key={d} d={d} />)}</>
 
 const dot = (cx: number, cy: number, r = 1.4) => <circle key={`${cx},${cy}`} cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" />
 
@@ -52,9 +59,50 @@ const ICONS = {
   /** Pin the drawer: a thumbtack. */
   tack: <path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  /** View and layout presets: a framed panel. */
+  layout: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9h17M9.5 9v10.5" /></>,
+  /** Turn a quarter. */
+  rotate: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
+  /** Stop playback: a rounded square. */
+  stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
+  /** Play / current turn: a triangle pointing right. */
+  play: <path d="M8 5.5v13l10.5-6.5L8 5.5z" />,
+  /** Done / chosen: a check mark. */
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  /** A flag (declared, marked). */
+  flag: <><path d="M5 21V4" /><path d="M5 4.5h11l-2.5 4 2.5 4H5" /></>,
+  /** Add. */
+  plus: <path d="M12 5v14M5 12h14" />,
+  /** Edit: a pencil. */
+  pencil: <><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" /><path d="M13.5 7l3 3" /></>,
+  /** Remove: a bin. */
+  trash: <><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" /><path d="M10 11v5.5M14 11v5.5" /></>,
+  /** Drawer / menu toggle. */
+  menu: <path d="M4 6.5h16M4 12h16M4 17.5h16" />,
+  /** Find my token: a crosshair. */
+  crosshair: <><circle cx="12" cy="12" r="7" /><path d="M12 2.5V7M12 17v4.5M2.5 12H7M17 12h4.5" /></>,
+  /** Warnings (friendly fire, a scene that failed to load). */
+  warning: <><path d="M12 3.5 2.5 20h19L12 3.5z" /><path d="M12 10v4.5" />{dot(12, 17.2, 1.1)}</>,
+  /** Whisper: a closed padlock. */
+  lock: <><rect x="5" y="11" width="14" height="9.5" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+  /** A picture (journal entries with an image). */
+  image: <><rect x="3.5" y="5" width="17" height="14" rx="2" /><circle cx="9" cy="10" r="1.8" /><path d="M20.5 16.5 15 11l-8 8" /></>,
+  /** Soundboard pads. */
+  door: <><path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21M3.5 21h17" />{dot(14.8, 12.5, 1.2)}</>,
+  thunder: <><path d="M7 16.5a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 8" /><path d="M12.5 12 10 16.5h3.5L11 21" /></>,
+  coin: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="5.5" /><path d="M12 9.5v5" /></>,
+  scream: <><circle cx="12" cy="12" r="9" /><ellipse cx="12" cy="15.5" rx="2.2" ry="3" /><path d="M8 9h.5M15.5 9h.5" /></>,
+  drum: <><ellipse cx="12" cy="8" rx="8" ry="3" /><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8" /><path d="M7 3.5l3 3.5M17 3.5l-3 3.5" /></>,
+  /** HP backups: a blood drop when bloodied (half or less), a skull at zero. Same drawings as the table's. */
+  bloodied: glyph('bloodied'),
+  skull: glyph('skull'),
+  /** Dice backups: a star on a natural max, a broken ring on a natural 1. */
+  crit: glyph('crit'),
+  fumble: glyph('fumble'),
   'chevron-left': <path d="M15 6l-6 6 6 6" />,
   'chevron-right': <path d="M9 6l6 6-6 6" />,
   'chevron-down': <path d="M6 9l6 6 6-6" />,
+  'chevron-up': <path d="M6 15l6-6 6 6" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS
@@ -63,7 +111,7 @@ export const ICON_NAMES = Object.keys(ICONS) as IconName[]
 
 export const isIconName = (name: string): name is IconName => Object.prototype.hasOwnProperty.call(ICONS, name)
 
-export function Icon({ name, size = 20, className }: { name: IconName; size?: number; className?: string }) {
+export function Icon({ name, size = 20, className, label }: { name: IconName; size?: number; className?: string; label?: string }) {
   return (
     <svg
       className={className ? `icon-svg ${className}` : 'icon-svg'}
@@ -72,10 +120,12 @@ export function Icon({ name, size = 20, className }: { name: IconName; size?: nu
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
+      strokeWidth={ICON_STROKE}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden="true"
+      aria-hidden={label ? undefined : 'true'}
+      role={label ? 'img' : undefined}
+      aria-label={label}
       focusable="false"
     >
       {ICONS[name]}

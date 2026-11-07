@@ -24,7 +24,7 @@ const badge = (gm: boolean): CSSProperties => ({
   padding: '2px 8px',
   borderRadius: 999,
   border: '1px solid var(--border)',
-  color: gm ? '#111' : 'var(--muted)',
+  color: gm ? 'var(--accent-fg)' : 'var(--muted)',
   background: gm ? 'var(--accent)' : 'transparent',
   fontWeight: gm ? 600 : 400,
 })

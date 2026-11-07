@@ -9,6 +9,7 @@ import type { GameController } from '../controller'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import { AddProp, Selected } from '../panels/ObjectPanel'
+import { Icon } from '@/ui/icons'
 
 export function EditBar({ controller }: { controller: GameController }) {
   const isGm = controller.connection.isGm
@@ -53,7 +54,7 @@ export function EditBar({ controller }: { controller: GameController }) {
           Snap
         </button>
         <button type="button" className={`tiny${details ? ' on' : ''}`} aria-expanded={details} onClick={() => setDetails(!details)}>
-          Details {details ? '▾' : '▴'}
+          Details <Icon name={details ? 'chevron-down' : 'chevron-up'} size={14} />
         </button>
         <button type="button" className="tiny primary" onClick={done} title="Leave edit mode (or double tap)">Done</button>
       </div>

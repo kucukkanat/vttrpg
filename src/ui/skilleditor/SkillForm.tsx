@@ -186,7 +186,7 @@ function AddMenu<T extends string>({ label, options, onPick }: { label: string; 
       value=""
       onChange={(e) => { if (e.target.value) onPick(e.target.value as T) }}
       aria-label={label}
-      style={{ width: 'auto', minWidth: 0, maxWidth: '100%', background: '#26262d', fontSize: 'var(--fs-sm)' }}
+      style={{ width: 'auto', minWidth: 0, maxWidth: '100%', background: 'var(--btn)', fontSize: 'var(--fs-sm)' }}
     >
       <option value="">{label}</option>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}

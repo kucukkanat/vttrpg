@@ -45,7 +45,7 @@ export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?:
         <button type="button" className="chip-main" onClick={() => find(mine)} aria-label={`Find my token ${mine.name}`}>
           <span className="dot" style={{ background: mine.color }} />
           <span className="chip-name">{mine.name}</span>
-          <span className="chip-hint">⌖ Find me</span>
+          <span className="chip-hint"><Icon name="crosshair" size={16} /> Find me</span>
         </button>
       </div>
     )
@@ -61,7 +61,7 @@ export function SelectedTokenChip({ onOpen, pubkey }: { onOpen(): void; pubkey?:
         {character && character.name !== token.name && <span className="muted small">{character.name}</span>}
         <span className="chip-hint">Sheet ›</span>
       </button>
-      <button type="button" className="chip-find" onClick={() => find(target)} aria-label={findLabel} title={findLabel}>⌖</button>
+      <button type="button" className="chip-find" onClick={() => find(target)} aria-label={findLabel} title={findLabel}><Icon name="crosshair" /></button>
     </div>
   )
 }
@@ -197,7 +197,11 @@ export function RollToast({ roll, who, onOpenChat }: { roll: ChatMessage | null;
           <span className="toast-formula">{shown.text}</span>
           <span key={pop} className={`toast-total${pop ? ' pop' : ''}`}>{r.total}</span>
           <DiceValues className="muted small" formula={r.formula} dice={r.dice} />
-          {success !== null && <span className={success ? 'ok' : 'bad'}>{success ? 'success' : 'fail'}{critical ? '!' : ''}</span>}
+          {success !== null && (
+            <span className={`roll-toast-outcome ${success ? 'ok' : 'bad'}`}>
+              {critical && <Icon name={success ? 'crit' : 'fumble'} size={14} />}{critical ? (success ? 'critical success' : 'critical fail') : success ? 'success' : 'fail'}
+            </span>
+          )}
         </button>
       )}
     </>

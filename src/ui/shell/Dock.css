@@ -9,8 +9,8 @@
 .game--phone .dock { padding-bottom: var(--sp-2); }
 .skill-dock, .edit-dock { display: flex; flex-direction: column; gap: var(--sp-2); width: min(100%, 640px); pointer-events: none; }
 .dock-bar, .dock-card {
-  pointer-events: auto; background: rgba(18, 18, 22, .9); border: 1px solid var(--border); border-radius: var(--r-md);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+  pointer-events: auto; background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-md);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: var(--shadow);
 }
 .dock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-1); padding: var(--sp-1); max-height: 45vh; overflow-y: auto; }
 .dock-card { padding: var(--sp-2) var(--sp-3); max-height: 40vh; overflow-y: auto; }
@@ -31,15 +31,15 @@
 .cost-badges { display: inline-flex; flex-wrap: wrap; gap: 3px; }
 .cost-badge {
   display: inline-flex; align-items: center; gap: 3px; padding: 0 4px; border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); line-height: 14px; font-weight: 600; letter-spacing: .02em;
+  border: 1px solid var(--border); color: var(--fg); line-height: 14px; font-weight: 600; letter-spacing: .02em;
 }
 .cost-dots { display: inline-flex; gap: 2px; }
 .cost-dots i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .cost-free { color: var(--muted); }
 .skill-chip:disabled, .skill-chip[aria-disabled="true"] { opacity: .5; cursor: help; }
-.skill-chip.on { border-color: var(--accent); }
+.skill-chip.on { border-color: var(--select); box-shadow: inset 0 0 0 1px var(--select); }
 .skill-chip-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-chip-cost { font-size: var(--fs-xs); color: var(--accent); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-chip-cost { font-size: var(--fs-xs); color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .skill-chip:disabled .skill-chip-cost, .skill-chip[aria-disabled="true"] .skill-chip-cost { color: var(--bad); }
 .skill-chip--edit { background: transparent; border-style: dashed; }
 .skill-chip--edit .skill-chip-cost { color: var(--muted); }
@@ -58,7 +58,7 @@
 .edit-bar { justify-content: flex-end; }
 .edit-bar-title { flex: 1 1 8em; min-width: 0; display: flex; align-items: baseline; gap: var(--sp-2); padding: 0 var(--sp-2); }
 .edit-bar-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.edit-bar button.on { border-color: var(--accent); color: var(--accent); }
+.edit-bar button.on { border-color: var(--select); color: var(--select); }
 .edit-details .props { margin-top: 0; padding-top: 0; border-top: 0; }
 .edit-details-extra { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--border); display: grid; gap: var(--sp-2); justify-items: start; }
 .edit-details-extra > :last-child { justify-self: stretch; }
@@ -67,36 +67,36 @@
 
 /* Token bar: a head row (name, turn, HP, End turn, ⋯), chips (saves, skills), and the GM's actions. */
 .token-bar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: var(--sp-1); }
-.token-bar.up { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 6px 20px rgba(0, 0, 0, .4); }
+/* Your turn: a gold double ring (gold means "now" and nothing else). */
+.token-bar.up { border-color: var(--now); box-shadow: 0 0 0 1px var(--now), 0 0 0 4px color-mix(in srgb, var(--now) 22%, transparent), var(--shadow); }
 .token-bar-head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--sp-2); min-width: 0; padding: 0 var(--sp-1) 0 var(--sp-2); }
 .token-bar-name { flex: 1 1 4em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-bar-turn { flex: none; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--now-fg); background: var(--now); border-radius: 999px; padding: 2px 8px; }
 .token-bar-turn { flex: none; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-fg); background: var(--accent); border-radius: 999px; padding: 2px 8px; }
 .token-bar-def { flex: none; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; }
 .token-bar-hp { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
 /* HP meter: pips (up to 12) or a bar, in the token HP band colour (--hp), the number small beside it. */
 .hp-meter { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 0 var(--sp-1); }
 .hp-pips { display: flex; gap: 2px; width: calc(var(--pips) * 9px); min-width: 24px; max-width: 28vw; flex: 0 1 auto; }
-.hp-pips i { flex: 1 1 0; min-width: 2px; height: 10px; border-radius: 2px; background: rgba(255, 255, 255, .14); }
+.hp-pips i { flex: 1 1 0; min-width: 2px; height: 10px; border-radius: 2px; background: var(--track); }
 .hp-pips i.on { background: var(--hp); box-shadow: 0 0 4px color-mix(in srgb, var(--hp) 50%, transparent); }
-.hp-track { position: relative; display: block; width: 72px; max-width: 28vw; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+.hp-track { position: relative; display: block; width: 72px; max-width: 28vw; height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
 .hp-fill { position: absolute; inset: 0 auto 0 0; background: var(--hp); border-radius: 5px; transition: width .25s ease; }
 .hp-num { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .hp-meter--low .hp-num { color: var(--hp); }
+/* Bloodied / down backup: a drop or a skull before the pips, so the state reads without the band colour. */
+.hp-meter .hp-state { flex: none; color: var(--hp); }
+.hp-meter--dead .hp-state { color: var(--fg); }
 .token-bar-more { flex: none; font-size: var(--fs-lg); }
 .token-bar-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .token-bar-gm { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); padding-top: var(--sp-1); border-top: 1px solid var(--border); }
-.token-bar-gm button.on, .condition-chips button.on { border-color: var(--accent); color: var(--accent); }
+.token-bar-gm button.on, .condition-chips button.on { border-color: var(--select); color: var(--select); }
 .save-chip { background: transparent; }
 .save-chip .skill-chip-cost { color: var(--muted); }
 .condition-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
-/* GM condition toggles: the coloured letter chip drawn on the token, then the name. */
+/* GM condition toggles: the status icon drawn on the token (StatusBadge), then the name. */
 .condition-chips .condition-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
-.condition-chips .condition-chip.on { border-color: var(--cond); color: inherit; background: color-mix(in srgb, var(--cond) 22%, transparent); }
-.condition-chip-badge {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%;
-  font-size: 10px; font-weight: 800; letter-spacing: 0; color: #111; background: var(--cond); opacity: .45;
-}
-.condition-chip.on .condition-chip-badge { opacity: 1; box-shadow: 0 0 0 2px rgba(0, 0, 0, .35); }
+.condition-chips .condition-chip.on { border-color: var(--cond); color: inherit; background: color-mix(in srgb, var(--cond) 18%, transparent); }
 .condition-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .token-bar-head > button { flex: none; white-space: nowrap; }

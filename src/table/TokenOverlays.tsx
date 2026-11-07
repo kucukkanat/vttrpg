@@ -1,7 +1,8 @@
 /**
  * What a token shows on the table besides itself (TokenMesh mounts these):
- * - TurnRing: a pulsing amber ring on the footprint of the combatant whose turn it is, with a one-off
- *   flare bursting outward when the turn starts.
+ * - TurnRing: a pulsing gold double ring on the footprint of the combatant whose turn it is, with a
+ *   one-off flare bursting outward when the turn starts.
+ * - TargetRing: the red-orange ring with crosshair ticks on a token inside the aimed shape.
  * - Nameplate: the token's name floating above it (DOM label, pointer events pass through).
  * - MoveTrail: while the viewer drags a token, the straight path's cells tinted on the floor and
  *   the distance ("4 cells · 6 m") at the ghost. The maths is in moveDistance.ts.
@@ -20,12 +21,13 @@ import type { OwnerShape } from './ownerShape'
 import { OwnerShapeGlyph } from './OwnerShapeGlyph'
 import type { RulerPoint } from './ruler'
 import { FloorLabel } from './RulerLayer'
+import { HOSTILE, LABEL_GLASS, MEASURE, MINE, NOW, PARCHMENT } from '@/ui/theme/palette'
 
 const noRaycast = () => undefined
 
-/** Accent colour of the current turn (matches --accent in the UI). */
-export const TURN_COLOR = '#e0a458'
-const TRAIL_COLOR = '#ffd166'
+/** Colour of the current turn: gold, which means "now" and nothing else (--now in the UI). */
+export const TURN_COLOR = NOW
+const TRAIL_COLOR = MEASURE
 
 let turnGeometry: { outer: RingGeometry; inner: RingGeometry } | null = null
 function turnRings() {
@@ -72,6 +74,31 @@ export function TurnRing({ radius }: { radius: number }) {
   )
 }
 
+let targetGeometry: { ring: RingGeometry; tick: PlaneGeometry } | null = null
+const targetMaterials = new Map<string, MeshBasicMaterial>()
+/**
+ * A token inside the aimed shape: a ring in the template colour (red-orange unless the skill helps)
+ * plus four crosshair ticks crossing it, so the mark reads without its colour. Scaled to the token.
+ */
+export function TargetRing({ radius, color = HOSTILE }: { radius: number; color?: string }) {
+  targetGeometry ??= { ring: new RingGeometry(1.1, 1.38, 48), tick: new PlaneGeometry(0.1, 0.5) }
+  let m = targetMaterials.get(color)
+  if (!m) {
+    m = new MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false })
+    targetMaterials.set(color, m)
+  }
+  const g = targetGeometry
+  return (
+    <group rotation-x={-Math.PI / 2} position-y={0.012} scale={[radius, radius, 1]} raycast={noRaycast}>
+      <mesh geometry={g.ring} material={m} renderOrder={6} raycast={noRaycast} />
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i * Math.PI) / 2
+        return <mesh key={i} geometry={g.tick} material={m} position={[Math.cos(a) * 1.24, Math.sin(a) * 1.24, 0]} rotation-z={a + Math.PI / 2} renderOrder={6} raycast={noRaycast} />
+      })}
+    </group>
+  )
+}
+
 /**
  * The token's name above it. `accent` outlines the label (owner colour, or the turn colour);
  * `mine` adds a small "you" tag so the viewer's own token reads at a glance; `shape` repeats the
@@ -83,12 +110,12 @@ export function Nameplate({ name, y, accent, mine, current, shape = null }: { na
       <div style={{
         transform: 'translate(-50%, calc(-100% - 2px))', display: 'inline-flex', alignItems: 'center', gap: 4,
         maxWidth: 160, padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap', overflow: 'hidden',
-        fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: 600, lineHeight: '18px', color: '#f3ead8',
-        background: 'rgba(14,14,16,0.78)', border: `1px solid ${current ? TURN_COLOR : accent ?? 'rgba(255,255,255,0.18)'}`,
+        fontFamily: 'var(--font-display)', fontSize: 'calc(var(--fs-sm) + 1px)', fontWeight: 700, lineHeight: '18px', color: PARCHMENT,
+        background: LABEL_GLASS, border: `1px solid ${current ? TURN_COLOR : accent ?? 'rgba(255,255,255,0.18)'}`,
         boxShadow: '0 1px 4px rgba(0,0,0,0.45)', userSelect: 'none', WebkitUserSelect: 'none', pointerEvents: 'none',
       }}>
         {shape && accent && <OwnerShapeGlyph shape={shape} color={accent} size={11} />}
-        {mine && <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: accent ?? '#7cc4ff' }}>you</span>}
+        {mine && <span style={{ flex: 'none', fontFamily: 'var(--font-body)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: accent ?? MINE }}>you</span>}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
       </div>
     </Html>

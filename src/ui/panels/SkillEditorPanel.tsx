@@ -65,7 +65,7 @@ const touch: CSSProperties = { minHeight: 'var(--control)' }
 
 const card: CSSProperties = {
   display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 10, rowGap: 2, alignItems: 'center', textAlign: 'left',
-  minHeight: 56, padding: '8px 12px', borderRadius: 10, width: '100%', border: '1px solid var(--border)', background: '#26262d',
+  minHeight: 56, padding: '8px 12px', borderRadius: 10, width: '100%', border: '1px solid var(--border)', background: 'var(--btn)',
 }
 
 export function SkillEditorPanel({ controller }: { controller: GameController }) {
@@ -344,7 +344,7 @@ export function SkillEditorPanel({ controller }: { controller: GameController })
       )}
 
       {test && (
-        <div className="small" style={{ marginTop: 8, padding: '6px 8px', borderRadius: 8, background: '#101014', borderLeft: `3px solid ${test.ok ? 'var(--accent)' : 'var(--danger)'}` }}>
+        <div className="small" style={{ marginTop: 8, padding: '6px 8px', borderRadius: 8, background: 'var(--well)', borderLeft: `3px solid ${test.ok ? 'var(--ok)' : 'var(--danger)'}` }}>
           <div className="muted" style={{ marginBottom: 4 }}>Test run: Tester casts at Dummy (both with every stat at 10). The document is not changed.</div>
           {test.lines.map((l, i) => <div key={i} style={{ color: test.ok ? undefined : 'var(--danger)' }}>{l}</div>)}
         </div>

@@ -6,6 +6,7 @@
 import type { ResourceDelta, Token } from '@/core/doc'
 import type { Vec3 } from '@/core/geometry'
 import { CHEST_HEIGHT_CELLS, type VfxEvent } from './schedule'
+import { CRIT, DAMAGE, DOWNED, HEAL } from '@/ui/theme/palette'
 
 export interface FloatingNumberSpec {
   /** Unique per instance: `${eventId}:n:${index}`. */
@@ -33,11 +34,14 @@ export interface FloatingNumberSpec {
  */
 export type NumberTier = 'normal' | 'crit' | 'down'
 
-export const DAMAGE_COLOR = '#ff5f52'
-export const HEAL_COLOR = '#5fd36b'
-/** Gold for criticals, a deep crimson for knock-downs; both carry a word tag too, so colour is never the only cue. */
-export const CRIT_COLOR = '#ffc93c'
-export const DOWN_COLOR = '#ff2e4d'
+export const DAMAGE_COLOR = DAMAGE
+export const HEAL_COLOR = HEAL
+/**
+ * Criticals burn white-hot (gold means "your turn" and nothing else), knock-downs a deep crimson;
+ * both carry a word tag too, so colour is never the only cue.
+ */
+export const CRIT_COLOR = CRIT
+export const DOWN_COLOR = DOWNED
 export const NUMBER_DURATION_MS = 1100
 /** Crits and knock-downs linger a little longer. */
 export const LOUD_NUMBER_DURATION_MS = 1500

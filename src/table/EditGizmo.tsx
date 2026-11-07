@@ -22,6 +22,7 @@ import {
 } from './editing'
 import { baseOf } from './SceneModel'
 import { useTableUi, type EditPreview } from './tableState'
+import { SELECT } from '@/ui/theme/palette'
 
 export const GIZMO_PX = 110
 export const GIZMO_LINE_PX = 8
@@ -196,7 +197,7 @@ function Gizmo({ target, grid }: { target: Target; grid: GridSpec }) {
   // around Y. Two PivotControls share the same matrix object, so dragging either moves both.
   const common = {
     matrix, autoTransform: false, fixed: true, scale: GIZMO_PX, lineWidth: GIZMO_LINE_PX, depthTest: false, disableSliders: true,
-    axisColors: ['#ff5a7a', '#8fd18f', '#5aa9ff'] as [string, string, string], hoveredColor: '#ffd166',
+    axisColors: ['#ff5a7a', '#8fd18f', '#5aa9ff'] as [string, string, string], hoveredColor: SELECT,
     onDragStart, onDrag, onDragEnd,
   }
   return (

@@ -11,6 +11,7 @@ import { usePersisted } from '../shell/usePersisted'
 import { DiceRow } from '../dice/DiceFace'
 import { dieViews, outcomeText, rollLabel, rollOutcome, rollSummary } from '../dice/diceFaces'
 import { toggleShortcutsOverlay } from '../shell/useShortcuts'
+import { Icon } from '../icons'
 import { canSeeRoll, hiddenRollText } from '../rollMode'
 import { ConcentrationPrompt, DamageCardView, RollExtras, RollModeBar } from './RollCards'
 import './ChatPanel.css'
@@ -173,7 +174,7 @@ export function ChatPanel({ controller }: { controller: GameController }) {
           }
           return (
             <div key={b.key} className={`group ${b.messages[0].kind}`}>
-              <div className="who">{name(b.author)}{b.to && <> → {b.to.map(name).join(', ')}</>}</div>
+              <div className="who">{b.messages[0].kind === 'whisper' && <Icon name="lock" size={12} className="who-lock" label="whisper" />}{name(b.author)}{b.to && <> → {b.to.map(name).join(', ')}</>}</div>
               {b.messages.map((m) => (
                 <div key={m.id} className={`msg ${m.kind}`}>
                   <span className="body">{body(m)}</span>

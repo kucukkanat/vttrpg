@@ -11,6 +11,8 @@ import type { RulesEngine } from '@/rules'
 import { conditionChips, defenseAbbr, defenseAttribute, HP_BAND_COLORS, hpBand, readDefense, readResource, VITAL_LABELS, vitalState, type ConditionChip, type ResourceReading, type VitalState } from '@/table/tokenHud'
 import { tokenSkillList } from '../skillbar/tokenSkills'
 import { combatantName } from './initiative'
+import { Icon } from '@/ui/icons'
+import { StatusBadge } from '../StatusBadge'
 
 export interface FrameData {
   hp: ResourceReading | null
@@ -41,7 +43,7 @@ export function frameData(token: Token | undefined, character: Character | undef
 export function VitalGlyph({ state }: { state: VitalState }) {
   return (
     <span className={`vital vital--${state}`} title={VITAL_LABELS[state]} role="img" aria-label={VITAL_LABELS[state]}>
-      {state === 'dead' ? '✕' : '▾'}
+      <Icon name={state === 'dead' ? 'skull' : 'bloodied'} size={14} />
     </span>
   )
 }
@@ -74,12 +76,12 @@ export function FrameLine({ data, showState, declared, tokens, isGm }: {
       {showState && vital && <VitalGlyph state={vital} />}
       {showState && defense && <span className="init-def" title={`${defense.abbr} ${defense.value}`}>{defense.abbr} {defense.value}</span>}
       {showState && chips.slice(0, MAX_CHIPS).map((c) => (
-        <span key={c.id} className="init-cond" style={{ background: c.color }} title={c.name}>{c.label}</span>
+        <StatusBadge key={c.id} chip={c} size={16} label={c.remaining !== null ? `${c.name}, ${c.remaining} ${c.remaining === 1 ? 'turn' : 'turns'} left` : c.name} />
       ))}
       {showState && extra > 0 && <span className="init-cond more" title={chips.slice(MAX_CHIPS).map((c) => c.name).join(', ')}>+{extra}</span>}
       {declared && (
         <span className="init-intent" title={`Declared: ${declared.label}${targets.length ? ` → ${targets.join(', ')}` : ''}`}>
-          <span aria-hidden>⚑</span> {declared.label}{targets.length > 0 && <span className="init-target"> → {targets.join(', ')}</span>}
+          <Icon name="flag" size={12} /> {declared.label}{targets.length > 0 && <span className="init-target"> → {targets.join(', ')}</span>}
         </span>
       )}
     </span>
@@ -106,7 +108,7 @@ export function DeclareForm({ token, order, tokens, rules, declared, onDeclare, 
   if (declared) {
     return (
       <div className="init-declare" role="group" aria-label={`${token.name}'s declared action`}>
-        <span className="init-declare-now">⚑ {declared.label}</span>
+        <span className="init-declare-now"><Icon name="flag" size={12} /> {declared.label}</span>
         <button type="button" onClick={onResolve}>Resolve</button>
       </div>
     )

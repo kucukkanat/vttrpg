@@ -18,7 +18,7 @@
 .chrome-restore {
   position: absolute; z-index: 50; top: calc(var(--sp-2) + var(--sat)); right: calc(var(--sp-2) + var(--sar));
   min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; gap: var(--sp-1);
-  border-radius: 999px; background: rgba(23, 23, 27, .55); border: 1px solid var(--border); color: var(--fg);
+  border-radius: 999px; background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--border); color: var(--fg);
   opacity: .45; transition: opacity .2s;
 }
 .chrome-restore:hover, .chrome-restore:focus-visible { opacity: 1; }

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { presetsFor, type LayoutPresetId } from './layoutPresets'
 import { isTypingTarget } from './useShortcuts'
 import './ViewMenu.css'
+import { Icon } from '@/ui/icons'
 
 export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: boolean; preset: LayoutPresetId; onPreset(id: LayoutPresetId): void; onZen(): void; onExport?(): void }) {
   const [open, setOpen] = useState(false)
@@ -21,7 +22,7 @@ export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: bo
   }, [open])
   return (
     <div className="menu view-menu" ref={ref}>
-      <button type="button" className="icon" aria-haspopup="menu" aria-expanded={open} aria-label="View and layout" title="View and layout" onClick={() => setOpen((o) => !o)}>▣</button>
+      <button type="button" className="icon" aria-haspopup="menu" aria-expanded={open} aria-label="View and layout" title="View and layout" onClick={() => setOpen((o) => !o)}><Icon name="layout" /></button>
       {open && (
         <div className="menu-list" role="menu">
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onZen() }}>
@@ -31,7 +32,7 @@ export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: bo
           {presetsFor(isGm).map((p) => (
             <button key={p.id} type="button" role="menuitemradio" aria-checked={preset === p.id} title={p.hint}
               onClick={() => { setOpen(false); onPreset(p.id) }}>
-              <span aria-hidden className="view-check">{preset === p.id ? '✓' : ''}</span>
+              <span aria-hidden className="view-check">{preset === p.id ? <Icon name="check" size={16} /> : null}</span>
               <span className="view-item"><span>{p.label}</span><span className="muted small">{p.hint}</span></span>
             </button>
           ))}
@@ -54,7 +55,7 @@ export function ViewMenu({ isGm, preset, onPreset, onZen, onExport }: { isGm: bo
 export function RestoreChrome({ label, onRestore }: { label: string; onRestore(): void }) {
   return (
     <button type="button" className="chrome-restore" onClick={onRestore} aria-label={label} title={label}>
-      <span aria-hidden>▣</span><span className="chrome-restore-word">{label}</span>
+      <Icon name="layout" size={16} /><span className="chrome-restore-word">{label}</span>
     </button>
   )
 }

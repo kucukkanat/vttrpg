@@ -53,6 +53,8 @@ export interface TargetingUi {
   hovered: TokenId | null
   /** Touch: the pick waiting for the confirm button. */
   candidate: { targets: TokenId[]; point: { x: number; y: number; z: number } } | null
+  /** Template colour (telegraph.ts); tokens inside ring in it. Absent: the hostile red-orange. */
+  color?: string
 }
 
 /**

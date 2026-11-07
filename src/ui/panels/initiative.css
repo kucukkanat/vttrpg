@@ -3,7 +3,7 @@
 
 .init-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-2); }
 .init-status { font-size: var(--fs-md); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.init-status strong { color: var(--accent); }
+.init-status strong { color: var(--now); }
 .init-actions { display: flex; gap: var(--sp-1); flex: none; }
 .init-actions button { min-height: 44px; }
 .init-actions .primary { min-width: 88px; }
@@ -12,15 +12,15 @@
 .init-row { display: block; }
 .init-row .list-row-main { min-height: 44px; padding: 0 var(--sp-2); width: 100%; }
 /* The combatant whose turn it is reads as live at a glance. */
-.init-row.current .list-row-main { background: #2b2b35; box-shadow: inset 3px 0 0 var(--accent); }
-.init-turn { flex: none; width: 14px; color: var(--accent); font-size: var(--fs-sm); text-align: center; }
+.init-row.current .list-row-main { background: var(--row-on); box-shadow: inset 3px 0 0 var(--now); }
+.init-turn { flex: none; width: 14px; color: var(--now); font-size: var(--fs-sm); text-align: center; }
 .init-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
 .init-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .init-score {
   flex: none; min-width: 32px; padding: 0 8px; border-radius: 999px; text-align: center;
   font-variant-numeric: tabular-nums; font-weight: 600; background: var(--panel-2); border: 1px solid var(--border);
 }
-.init-row.current .init-score { border-color: var(--accent); color: var(--accent); }
+.init-row.current .init-score { border-color: var(--now); color: var(--now); }
 
 /* Inline editor under the tapped row (GM): every control is a 44 px target. */
 .init-edit { margin: var(--sp-1) 0 var(--sp-2); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); display: grid; gap: var(--sp-1); }
@@ -49,7 +49,7 @@
 .init-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .init-round {
   flex: none; width: 34px; display: inline-flex; align-items: baseline; justify-content: center; gap: 1px;
-  color: var(--accent); font-weight: 700; font-size: var(--fs-md); font-variant-numeric: tabular-nums;
+  color: var(--now); font-weight: 700; font-size: var(--fs-md); font-variant-numeric: tabular-nums;
 }
 .init-round small { font-size: var(--fs-xs); font-weight: 600; opacity: .8; }
 .init-disc {
@@ -60,10 +60,10 @@
 /* Whose turn: larger, ringed in the accent with a gap so it reads on any token colour. */
 .init-disc.current {
   width: 32px; height: 32px; font-size: var(--fs-sm);
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .45), 0 0 0 2px var(--panel, #17171b), 0 0 0 4px var(--accent);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .45), 0 0 0 2px var(--panel), 0 0 0 4px var(--now);
   margin: 0 3px; /* room for the ring; STRIP_METRICS.current (38) counts it */
 }
-.init-disc.mine:not(.current) { box-shadow: inset 0 0 0 2px #7cc4ff; }
+.init-disc.mine:not(.current) { box-shadow: inset 0 0 0 2px var(--mine); }
 .init-disc.hidden { opacity: .5; }
 .init-disc.more { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); box-shadow: none; }
 /* Clear of the camera rail on the right edge (Hud.css sets --rail-w). */
@@ -79,9 +79,10 @@
 .init-frame { display: flex; align-items: center; gap: 4px; min-width: 0; flex-wrap: wrap; font-size: var(--fs-xs); }
 .init-hp { flex: none; width: 56px; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .45); overflow: hidden; }
 .init-hp-fill { display: block; height: 100%; border-radius: 3px; }
-.vital { flex: none; font-weight: 700; line-height: 1; }
-.vital--bloodied { color: #e0453a; }
-.vital--dead { color: var(--muted); }
+/* Vital glyph (EncounterFrame VitalGlyph): the shared drop and skull icons. */
+.vital { flex: none; display: inline-flex; line-height: 0; }
+.vital--bloodied { color: var(--hp-low); }
+.vital--dead { color: var(--fg); }
 .init-row.dead .init-name strong { text-decoration: line-through; opacity: .7; }
 .init-def {
   flex: none; padding: 0 4px; border-radius: 4px; border: 1px solid var(--border); color: var(--fg);
@@ -89,10 +90,10 @@
 }
 .init-cond {
   flex: none; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; color: #1a1612; line-height: 1;
+  font-size: var(--fs-xs); font-weight: 700; color: var(--accent-fg); line-height: 1;
 }
 .init-cond.more { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
-.init-intent { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ff9b4a; font-weight: 600; }
+.init-intent { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--hostile); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
 .init-target { color: var(--fg); font-weight: 400; }
 .init-hint { margin: var(--sp-1) 0 0; }
 .init-option { margin-top: var(--sp-2); display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; font-size: var(--fs-sm); }
@@ -100,7 +101,7 @@
 
 /* Group initiative: members of one slot are bracketed together. */
 .init-row.grouped .list-row-main { box-shadow: inset 2px 0 0 var(--border); }
-.init-row.grouped.current .list-row-main { box-shadow: inset 3px 0 0 var(--accent); }
+.init-row.grouped.current .list-row-main { box-shadow: inset 3px 0 0 var(--now); }
 .init-row.grouped:not(.group-end) { margin-bottom: 0; }
 
 /* Declare form (GM) under the row editor. */
@@ -109,20 +110,20 @@
 .init-declare-row select, .init-declare-row input { flex: 1 1 0; min-width: 0; min-height: 44px; }
 .init-declare-targets { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
 .init-target-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 999px; }
-.init-target-chip.on { border-color: #ff9b4a; color: #ff9b4a; }
+.init-target-chip.on { border-color: var(--hostile); color: var(--hostile); }
 .init-declare > .primary, .init-declare > button { min-height: 44px; }
-.init-declare-now { color: #ff9b4a; font-weight: 600; }
+.init-declare-now { color: var(--hostile); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
 
 /* Turn strip extras: group size and a declared-action badge on the disc. */
 .init-disc { position: relative; }
 .init-disc-count {
   position: absolute; right: -3px; bottom: -3px; min-width: 14px; height: 14px; padding: 0 2px; border-radius: 7px;
-  background: var(--panel, #17171b); color: var(--fg); font-size: 9px; line-height: 14px; text-align: center; border: 1px solid var(--border);
+  background: var(--panel); color: var(--fg); font-size: 10px; line-height: 14px; text-align: center; border: 1px solid var(--border);
 }
 .init-disc-intent {
   position: absolute; right: -4px; top: -4px; width: 16px; height: 16px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
-  background: #ff9b4a; color: #1a1612; font-size: 10px; font-weight: 800; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+  background: var(--hostile); color: var(--accent-fg); font-size: 10px; font-weight: 800; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
 }
 .init-intent-icon { width: 11px; height: 11px; }
 /* The strip clips overflow; give the badges room. */

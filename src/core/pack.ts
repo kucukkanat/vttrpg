@@ -19,6 +19,8 @@ export interface PackManifest {
    * `d20-vs-dc`: success when the total is >= the target.
    */
   resolution?: RollResolution
+  /** Optional look for games of this pack: tints the chrome, never moves it (src/ui/theme/theme.ts). */
+  theme?: PackTheme
   /** How damage lands: the resource it hits, temporary points, types and resistances. */
   damage?: DamageModel
   /** Concentration: one skill at a time per caster, a save when the caster takes damage. */
@@ -139,6 +141,18 @@ export interface EncounterRules {
 }
 
 /**
+ * Pack theme hook. `accent` replaces the brand amber (primary buttons, links) when it stays AA
+ * readable on the current theme; `frameTint` washes the chrome panels; `displayFont` replaces the
+ * display face for names, titles and totals (`src` relative to the pack folder, woff2).
+ */
+export interface PackTheme {
+  accent?: string
+  accentFg?: string
+  frameTint?: string
+  displayFont?: { family: string; src?: string; weight?: string }
+}
+
+/**
  * A rules term the tooltips can explain ("Advantage", "Saving throw"). Skill, condition and other
  * glossary texts that mention the term (or an alias) link to it. Conditions and resources are
  * terms already; a glossary entry with the same name adds to them rather than repeating them.
@@ -199,15 +213,24 @@ export interface ResourceDef {
   resetOn?: 'rest' | 'longRest' | 'session' | 'never'
 }
 
+export type ConditionCategory = 'buff' | 'harm' | 'control' | 'magic' | 'affliction'
+export const CONDITION_CATEGORIES: readonly ConditionCategory[] = ['buff', 'harm', 'control', 'magic', 'affliction']
+
 export interface ConditionDef {
   id: string
   name: string
   description: string
+  /** Glyph name drawn on the status chip (see src/ui/theme/glyphs.ts); unknown names fall back to letters. */
   icon?: string
   /** Attribute modifiers while active, e.g. { str: -2 }. */
   modifiers?: Record<string, number>
-  /** For status displays: helps (`buff`), hinders (`debuff`) or neither. */
-  category?: 'buff' | 'debuff' | 'neutral'
+  /**
+   * Status kind, one scheme for every display: `buff` helps; `harm`, `control` (takes away actions or
+   * movement) and `affliction` (poison, disease, curse, exhaustion) hinder; `magic` is neither
+   * (concentration, magical marks). Sets the chip's border shape and colour (docs/UX.md, "Status
+   * icons"). Absent: guessed from the id, else harm.
+   */
+  category?: ConditionCategory
   /** Damage type ids this condition grants resistance, immunity or vulnerability to (`all` for every type). */
   resist?: string[]
   immune?: string[]

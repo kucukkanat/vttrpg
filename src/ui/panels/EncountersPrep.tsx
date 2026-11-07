@@ -19,6 +19,7 @@ import {
 import { groupInitiative, placeRows } from '../prep/placeCreatures'
 import { getPath } from '@/rules/expr'
 import { CreaturePicker, creatureSummary, ensureTemplate, type Compendium } from './CreaturesPrep'
+import { Icon } from '@/ui/icons'
 
 export function Encounters({ controller, disabled, compendium, open, setOpen, onEditTemplate }: {
   controller: GameController
@@ -186,7 +187,7 @@ function EncounterEditor({ controller, e, compendium, onChange, onDelete, onEdit
               )}
               <label className="check" style={{ margin: 0 }}><input type="checkbox" checked={!!r.friendly} onChange={(ev) => setRow(r.id, { friendly: ev.target.checked, ...(ev.target.checked && r.color !== FRIENDLY_COLOR ? { color: FRIENDLY_COLOR } : {}) })} /> Friendly</label>
               <span className="spacer" />
-              <button className="icon" aria-label="Remove row" onClick={() => onChange({ ...e, rows: e.rows.filter((x) => x.id !== r.id) })}>🗑</button>
+              <button className="icon" aria-label="Remove row" onClick={() => onChange({ ...e, rows: e.rows.filter((x) => x.id !== r.id) })}><Icon name="trash" /></button>
             </div>
             <div className="swatches">
               {ENCOUNTER_COLORS.map((c) => <Swatch key={c} color={c} on={c === r.color} onPick={(color) => setRow(r.id, { color })} />)}
@@ -259,8 +260,8 @@ function DifficultyMeter({ controller, encounter, compendium, compact, onParty }
   const pct = Math.min(100, (d.total / top) * 100)
   const bar = (
     <div aria-hidden style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--border)', overflow: 'hidden', marginTop: 4 }}>
-      <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: d.over ? 'var(--danger, #f28b82)' : 'var(--accent)' }} />
-      {d.budgets.slice(0, -1).map((b) => <div key={b.id} style={{ position: 'absolute', top: 0, bottom: 0, left: `${(b.xp / top) * 100}%`, width: 1, background: 'var(--panel, #000)' }} />)}
+      <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: d.over ? 'var(--danger)' : 'var(--measure)' }} />
+      {d.budgets.slice(0, -1).map((b) => <div key={b.id} style={{ position: 'absolute', top: 0, bottom: 0, left: `${(b.xp / top) * 100}%`, width: 1, background: 'var(--panel)' }} />)}
     </div>
   )
   if (compact) {

@@ -36,6 +36,7 @@ import {
 } from './initiative'
 import { DeclareForm, FrameLine, frameData } from './EncounterFrame'
 import './initiative.css'
+import { Icon } from '@/ui/icons'
 
 /** Light the token up on the table while its row is pointed at (the range preview with no reach). */
 function highlight(token: TokenId | null): void {
@@ -183,12 +184,12 @@ export function InitiativePanel({ controller }: { controller: GameController }) 
                   />
                 </label>
                 <div className="init-edit-row">
-                  <button type="button" onClick={() => dispatchOrder(moveEntry(order, idx, idx - 1))} disabled={idx <= 0} aria-label={`Move ${name} up`}>▲ Up</button>
-                  <button type="button" onClick={() => dispatchOrder(moveEntry(order, idx, idx + 1))} disabled={idx >= order.length - 1} aria-label={`Move ${name} down`}>▼ Down</button>
+                  <button type="button" onClick={() => dispatchOrder(moveEntry(order, idx, idx - 1))} disabled={idx <= 0} aria-label={`Move ${name} up`}><Icon name="chevron-up" size={16} /> Up</button>
+                  <button type="button" onClick={() => dispatchOrder(moveEntry(order, idx, idx + 1))} disabled={idx >= order.length - 1} aria-label={`Move ${name} down`}><Icon name="chevron-down" size={16} /> Down</button>
                   {grouped ? (
                     <button type="button" onClick={() => dispatchOrder(leaveGroup(order, e.token))} aria-label={`${name} acts alone`}>Ungroup</button>
                   ) : (
-                    <button type="button" onClick={() => dispatchOrder(joinAbove(order, idx))} disabled={idx <= 0} aria-label={`${name} shares the turn above`}>Group ▲</button>
+                    <button type="button" onClick={() => dispatchOrder(joinAbove(order, idx))} disabled={idx <= 0} aria-label={`${name} shares the turn above`}>Group <Icon name="chevron-up" size={16} /></button>
                   )}
                   <button type="button" className="danger" onClick={() => remove(e.token)} aria-label={`Remove ${name} from initiative`}>Remove</button>
                 </div>
@@ -226,7 +227,7 @@ export function InitiativePanel({ controller }: { controller: GameController }) 
                   onBlur: () => highlight(null),
                 }}
               >
-                <span className="init-turn" aria-hidden>{isCurrent && idx === gStart ? '▶' : ''}</span>
+                <span className="init-turn" aria-hidden>{isCurrent && idx === gStart ? <Icon name="play" size={12} /> : null}</span>
                 {t && <span className="dot" style={{ background: t.color }} />}
                 <span className="init-main">
                   <span className="init-name">

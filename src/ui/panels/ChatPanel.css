@@ -13,6 +13,7 @@
 .chat .group { display: grid; gap: 2px; }
 .chat .group + .group { margin-top: var(--sp-1); }
 .chat .group > .who { display: block; }
+.chat .who-lock { margin-right: 4px; vertical-align: -1px; color: var(--whisper); }
 .chat .group .msg { display: flex; align-items: baseline; gap: var(--sp-2); }
 .chat .group .msg .body { flex: 1 1 auto; min-width: 0; }
 .chat .group .msg .time { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
@@ -30,11 +31,12 @@
 .chat .roll-formula { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
 .chat .roll-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); min-width: 0; }
 .chat .roll-line .dice-row { flex: 0 1 auto; }
-.chat .roll-total { font-size: var(--fs-xl); font-weight: 800; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.chat .roll-total { font-size: calc(var(--fs-xl) + 2px); font-weight: 800; line-height: 1; color: var(--total); }
 .chat .roll-total::before { content: '= '; font-size: var(--fs-sm); font-weight: 400; color: var(--muted); }
 .chat .roll-tag { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor; line-height: 1.4; white-space: nowrap; }
-.chat .roll-tag.ok { background: rgba(143, 209, 143, .1); }
-.chat .roll-tag.bad { background: rgba(242, 139, 130, .1); }
+.chat .roll-tag { display: inline-flex; align-items: center; gap: 3px; }
+.chat .roll-tag.ok { background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.chat .roll-tag.bad { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 /* Critical: filled and heavier, so it reads from across the table. */
 .chat .roll-tag.crit { font-weight: 800; }
 .chat .roll-tag.crit.ok { background: var(--ok); color: var(--accent-fg); border-color: var(--ok); }

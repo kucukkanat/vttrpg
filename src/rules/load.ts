@@ -18,6 +18,7 @@ import type {
   SkillDef,
   VfxCue,
 } from '@/core/pack'
+import { CONDITION_CATEGORIES } from '@/core/pack'
 import type { TargetShape } from '@/core/geometry'
 import type { LoadedPack } from './index'
 import { parse, usesDice } from './expr'
@@ -65,6 +66,9 @@ export async function loadPack(baseUrl: string, fetchImpl?: FetchLike): Promise<
   }
 
   const manifest = guardManifest(await read('pack.json'))
+  // A pack's display font lives in the pack folder; hand the theme hook a URL it can load.
+  const font = manifest.theme?.displayFont
+  if (font?.src) manifest.theme = { ...manifest.theme, displayFont: { ...font, src: resolvePackUrl(baseUrl, font.src) } }
   const f = manifest.files
   const [attributes, resources, conditions, sheet] = await Promise.all([
     read(f.attributes).then((v) => guardAttributes(v, f.attributes)),
@@ -109,6 +113,14 @@ function expr(src: unknown, file: string, where: string): string {
   return src
 }
 
+const isHex = (v: unknown): v is string => isStr(v) && /^#[0-9a-f]{6}$/i.test(v)
+function guardTheme(v: unknown): boolean {
+  if (!isRec(v)) return false
+  if (!opt(v.accent, isHex) || !opt(v.accentFg, isHex) || !opt(v.frameTint, isHex)) return false
+  const f = v.displayFont
+  return f === undefined || (isRec(f) && isStr(f.family) && opt(f.src, isStr) && opt(f.weight, isStr))
+}
+
 function guardResolution(v: unknown): v is RollResolution {
   if (!isRec(v)) return false
   if (v.kind === 'roll-under') return isStr(v.die)
@@ -124,6 +136,8 @@ export function guardManifest(v: unknown): PackManifest {
   if (!opt(v.description, isStr) || !opt(v.license, isStr)) throw new PackError(file, 'description/license must be strings')
   if (!isRec(v.grid) || !['square', 'hex', 'none'].includes(v.grid.type as string) || !isNum(v.grid.cellSize))
     throw new PackError(file, '"grid" must be { type: square|hex|none, cellSize: number }')
+  if (v.theme !== undefined && !guardTheme(v.theme))
+    throw new PackError(file, '"theme" must be { accent?, accentFg?, frameTint?: "#rrggbb", displayFont?: { family, src?, weight? } }')
   if (v.resolution !== undefined && !guardResolution(v.resolution))
     throw new PackError(file, '"resolution" must be { kind: "roll-under", die } or { kind: "d20-vs-dc" }')
   if (v.damage !== undefined) guardDamageModel(v.damage, file)
@@ -214,8 +228,8 @@ export function guardConditions(v: unknown, file: string): ConditionDef[] {
     if (!opt(x.icon, isStr)) throw new PackError(file, `${x.id}: icon must be a string`)
     if (x.modifiers !== undefined && !(isRec(x.modifiers) && Object.values(x.modifiers).every(isNum)))
       throw new PackError(file, `${x.id}: modifiers must map attribute ids to numbers`)
-    if (x.category !== undefined && !['buff', 'debuff', 'neutral'].includes(x.category as string))
-      throw new PackError(file, `${x.id}: category must be buff, debuff or neutral`)
+    if (x.category !== undefined && !(CONDITION_CATEGORIES as readonly unknown[]).includes(x.category))
+      throw new PackError(file, `${x.id}: category must be one of ${CONDITION_CATEGORIES.join(', ')}`)
     for (const k of ['resist', 'immune', 'vulnerable'])
       if (!opt(x[k], isStrArr)) throw new PackError(file, `${x.id}: ${k} must be a list of damage type ids`)
     return x as unknown as ConditionDef

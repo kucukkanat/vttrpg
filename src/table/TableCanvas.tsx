@@ -52,6 +52,7 @@ import { SceneModel } from './SceneModel'
 import { ScenePreviewBar, SceneTransition } from './SceneTransition'
 import { clearSceneTransition, sceneTransitionEvent, setPreviewScene, setSceneError, tableRuntime, useTableUi, focusToken } from './tableState'
 import { stagedSummary, stageTargeting } from './targeting'
+import { targetingWarnings, targetingOutcome } from './telegraph'
 import { describeShape, TargetingLayer, type TargetingProps } from './TargetingLayer'
 import './TargetingBar.css'
 import { toonMaterial } from './stylize'
@@ -483,7 +484,8 @@ function ContextLostNotice({ onReload }: { onReload(): void }) {
 
 /**
  * HTML controls for targeting: the skill being aimed, then the staged pick ("Fireball → Bramble,
- * Nettle · 2-cell burst") with a warning when a target is a player character, and Cast / Cancel.
+ * Nettle · 2-cell burst"), the outcome ("hits 2 enemies, 1 ally"), a friendly-fire warning (or one
+ * when a target is another player's character), and Cast / Cancel.
  * Every pointer type stages first; Enter casts the staged pick, Esc cancels (TableInner). 44px
  * buttons, safe-area aware, stacks on narrow screens (styles in TargetingBar.css).
  */
@@ -493,10 +495,11 @@ function TargetingBar({ targeting }: { targeting: TargetingProps }) {
   const tokens = useGame((s) => s.tokens)
   const nameOf = useCallback((id: TokenId) => tokens[id]?.name ?? 'someone', [tokens])
   const names = useMemo(() => (candidate?.targets ?? []).map(nameOf), [candidate, nameOf])
-  const players = useMemo(
-    () => (candidate?.targets ?? []).filter((id) => targeting.isPlayerCharacter?.(id) ?? false).map(nameOf),
-    [candidate, nameOf, targeting],
-  )
+  // While aiming an area, the live count follows the pointer; once staged it is the pick's.
+  const inside = useTableUi((s) => s.targeting?.inside)
+  const live = useMemo(() => candidate?.targets ?? [...(inside ?? [])], [candidate, inside])
+  const outcome = targetingOutcome(targeting, live)
+  const warnings = targetingWarnings(targeting, candidate?.targets ?? [], nameOf)
   const cast = useCallback(() => {
     const t = useTableUi.getState().targeting
     const r = stageTargeting(t?.candidate ?? null, { kind: 'confirm' })
@@ -517,14 +520,14 @@ function TargetingBar({ targeting }: { targeting: TargetingProps }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [cast])
-  const warning = players.length === 0 ? null : `${players.join(', ')} ${players.length === 1 ? 'is a player character' : 'are player characters'}`
   return (
     <div className="targeting-bar" role="group" aria-label="Skill targeting">
       <div className="targeting-bar__card">
         <div className="targeting-bar__text" aria-live="polite">
           {candidate ? stagedSummary(targeting.name, targeting.shape, names) : `${targeting.name} · ${describeShape(targeting.shape)}`}
+          {outcome && <span className={`targeting-bar__outcome targeting-bar__outcome--${outcome.tone}`}> · {outcome.text}</span>}
         </div>
-        {warning && <div className="targeting-bar__warn" role="alert">{warning}</div>}
+        {warnings.map((w) => <div key={w} className="targeting-bar__warn" role="alert">{w}</div>)}
         <div className="targeting-bar__actions">
           <button type="button" className="targeting-bar__btn" onClick={() => targeting.onCancel()}>Cancel</button>
           {candidate && (
@@ -677,7 +680,7 @@ function MapImageError({ status, onRetry }: { status: Extract<ImageFloorStatus, 
   return (
     <div role="alert" style={{
       position: 'absolute', left: 12, bottom: 12, maxWidth: 'min(420px, calc(100% - 24px))', padding: '8px 10px', borderRadius: 6, fontSize: 13,
-      background: 'rgba(120,30,30,0.9)', color: '#f3ead8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      background: 'var(--error-glass)', color: 'var(--on-error)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
     }}>
       <span style={{ flex: '1 1 160px', minWidth: 0 }}>
         <strong>Map image failed to load</strong>
@@ -685,7 +688,7 @@ function MapImageError({ status, onRetry }: { status: Extract<ImageFloorStatus, 
       </span>
       <button type="button" onClick={onRetry} style={{
         minHeight: 36, padding: '0 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
-        color: '#f3ead8', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+        color: 'var(--on-error)', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
       }}>Retry</button>
     </div>
   )
@@ -703,12 +706,12 @@ function SceneLoadError({ sceneId, name, detail, gm, onRetry, onSwitch }: {
   const other = Object.values(scenes).find((s) => s.id !== sceneId && !sceneErrors[s.id]) ?? Object.values(scenes).find((s) => s.id !== sceneId)
   const button = {
     minHeight: 44, padding: '0 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.3)',
-    color: '#f3ead8', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
+    color: 'var(--on-error)', fontSize: 13, fontWeight: 600, cursor: 'pointer', touchAction: 'manipulation',
   } as const
   return (
     <div role="alert" style={{
       position: 'absolute', left: 12, bottom: 12, maxWidth: 'min(440px, calc(100% - 24px))', padding: '8px 10px', borderRadius: 6, fontSize: 13,
-      background: 'rgba(120,30,30,0.9)', color: '#f3ead8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      background: 'var(--error-glass)', color: 'var(--on-error)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
     }}>
       <span style={{ flex: '1 1 160px', minWidth: 0 }}>
         <strong>Couldn't load {name}</strong>
@@ -724,7 +727,7 @@ function Overlay({ children, tone }: { children: React.ReactNode; tone?: 'error'
   return (
     <div style={{
       position: 'absolute', left: 12, bottom: 12, padding: '6px 10px', borderRadius: 6, fontSize: 13,
-      background: tone === 'error' ? 'rgba(120,30,30,0.85)' : 'rgba(0,0,0,0.55)', color: '#f3ead8', pointerEvents: 'none',
+      background: tone === 'error' ? 'var(--error-glass)' : 'var(--scrim)', color: tone === 'error' ? 'var(--on-error)' : 'var(--on-glass)', pointerEvents: 'none',
     }}>{children}</div>
   )
 }

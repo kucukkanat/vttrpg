@@ -4,7 +4,7 @@
  * menu (right-click / long-press) and drag-to-move with snapping; dragging a selected token moves the whole selection.
  * Combat state sits on the footprint: an HP bar from the sheet's primary resource, condition
  * chips around the disc, a ring in the owner's presence colour on player-owned tokens (thicker on
- * the viewer's own, with the owner's shape on it as a colour-blind-safe backup) and a pulsing amber
+ * the viewer's own, with the owner's shape on it as a colour-blind-safe backup) and a pulsing gold
  * ring on the combatant whose turn it is. A name label floats
  * above the viewer's own tokens, the selection, the current combatant and whatever is hovered.
  * While the viewer drags, the path and its length show on the floor (TokenOverlays.tsx).
@@ -17,7 +17,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCursor, useGLTF } from '@react-three/drei'
 import {
   CanvasTexture, CircleGeometry, Color, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Plane, PlaneGeometry,
-  PointLight, RingGeometry, Shape, ShapeGeometry, SpriteMaterial, SRGBColorSpace, Vector3,
+  PointLight, RingGeometry, Shape, ShapeGeometry, SRGBColorSpace, Vector3,
 } from 'three'
 import type { Token } from '@/core/doc'
 import { useGame } from '@/state/store'
@@ -30,17 +30,19 @@ import { fitObjectToCell, TOKEN_FIT, type FitRange } from './fitScale'
 import { clearPendingMove, groupMoveTargets, useTableUi } from './tableState'
 import { doubleTapEdit, tapTwice } from './editTap'
 import { chipAngle, conditionChips, defenseAbbr, defenseAttribute, HP_BAND_COLORS, hpBand, MAX_PIPS, readDefense, readResource, vitalState, type ConditionChip, type HpBand } from './tokenHud'
+import { statusChipMaterial } from './statusSprites'
 import { CombatBadges } from './CombatBadges'
 import { inCurrentSlot } from '@/state/initiative'
 import { initialsOf, LOCAL_OWNER_COLOR, nameplateShown, ownerRingColor } from './tokenLabel'
-import { MoveTrail, Nameplate, TurnRing } from './TokenOverlays'
+import { MoveTrail, Nameplate, TargetRing, TurnRing } from './TokenOverlays'
+import { HOVER, MEASURE, SELECT, WAITING } from '@/ui/theme/palette'
 import { ownerShapeIn, shapePoints, type OwnerShape } from './ownerShape'
 import { blobShadowLook } from './atmosphere'
 import { labelYaw } from './labelFacing'
 import { addOutlines, buildGlow, materialModeFor, OUTLINE_INK, outlineMaterial, smoothNormals, stylizeObject, toonMaterial } from './stylize'
 
-/** Colour of the high-tier selection outline; matches the selection ring under the token. */
-export const SELECTION_OUTLINE_COLOR = '#ffd166'
+/** Colour of the high-tier selection outline: the palette's selection role, like the ring under the token. */
+export const SELECTION_OUTLINE_COLOR = SELECT
 /** Ink outline and selection outline widths, in cells. */
 const INK_WIDTH = 0.014
 const SELECTION_WIDTH = 0.04
@@ -253,37 +255,6 @@ function ownerMaterial(color: string): MeshBasicMaterial {
   }
   return m
 }
-/** One sprite material per chip look (label + colour); the pack's condition list bounds the cache. */
-const chipMaterials = new Map<string, SpriteMaterial>()
-function chipMaterial(chip: ConditionChip): SpriteMaterial {
-  const key = `${chip.label}|${chip.color}`
-  let m = chipMaterials.get(key)
-  if (m) return m
-  const size = 64
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = chip.color
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,0.7)'
-  ctx.lineWidth = 4
-  ctx.stroke()
-  const c = new Color(chip.color)
-  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
-  ctx.fillStyle = lum > 0.45 ? '#1a1612' : '#f6efe3'
-  ctx.font = `bold ${chip.label.length > 1 ? 30 : 36}px system-ui, sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(chip.label, size / 2, size / 2 + 2)
-  const map = new CanvasTexture(canvas)
-  map.colorSpace = SRGBColorSpace
-  m = new SpriteMaterial({ map, transparent: true, depthWrite: false, toneMapped: false })
-  chipMaterials.set(key, m)
-  return m
-}
 const noRaycast = () => undefined
 const tmpObject = new Object3D()
 
@@ -322,17 +293,29 @@ function HpBar({ current, max, radius }: { current: number; max: number; radius:
   )
 }
 
-/** Camera-facing lettered chips around the rim of the disc, one sprite each with a shared material per look. */
+/**
+ * Camera-facing status chips around the rim of the disc (category frame, glyph, turns left), one
+ * sprite each with a shared material per look. A chip on its last turn pulses.
+ */
 function ConditionGlyphs({ chips, radius }: { chips: ConditionChip[]; radius: number }) {
-  const size = radius * 0.55
-  const ringR = radius * 1.2
+  const size = radius * 0.62
+  const ringR = radius * 1.22
   const y = radius * 0.22 + size * 0.5
+  const pulsing = useRef<(Object3D | null)[]>([])
+  const anyLast = chips.some((c) => c.last)
+  useFrame(({ clock }) => {
+    if (!anyLast) return
+    const k = 1 + 0.18 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 5))
+    for (const o of pulsing.current) o?.scale.set(size * k, size * k, 1)
+  })
+  pulsing.current = []
   return (
     <>
       {chips.map((c, i) => {
         const a = chipAngle(i)
         return (
-          <sprite key={c.id} material={chipMaterial(c)} position={[Math.cos(a) * ringR, y, -Math.sin(a) * ringR]} scale={[size, size, 1]} renderOrder={7} raycast={noRaycast} />
+          <sprite key={c.id} ref={c.last ? (o) => { pulsing.current.push(o) } : undefined} material={statusChipMaterial(c)}
+            position={[Math.cos(a) * ringR, y, -Math.sin(a) * ringR]} scale={[size, size, 1]} renderOrder={7} raycast={noRaycast} />
         )
       })}
     </>
@@ -408,6 +391,7 @@ export function TokenMesh({ token }: { token: Token }) {
   const pending = useTableUi((s) => s.pending[token.id] ?? null)
   const targeting = useTableUi((s) => s.targeting !== null)
   const targetInside = useTableUi((s) => s.targeting?.inside.has(token.id) ?? false)
+  const targetColor = useTableUi((s) => s.targeting?.color)
   const targetOutOfRange = useTableUi((s) => (s.targeting ? !s.targeting.inRange.has(token.id) : false))
   const uiSet = useTableUi((s) => s.set)
   // Live transform while the edit gizmo drags this token.
@@ -652,24 +636,19 @@ export function TokenMesh({ token }: { token: Token }) {
           </ModelBoundary>
         ) : disc}
         {ghost && (
-          // Amber "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
+          // Muted "waiting" ring under a move the GM has not applied yet; minis cannot fade, so they get the ring alone.
           <mesh rotation-x={-Math.PI / 2} position-y={0.01} renderOrder={4} raycast={() => undefined}>
             <ringGeometry args={[radius * 1.15, radius * 1.3, 48]} />
-            <meshBasicMaterial color="#e0a458" transparent opacity={0.6} depthWrite={false} />
+            <meshBasicMaterial color={WAITING} transparent opacity={0.7} depthWrite={false} />
           </mesh>
         )}
         {(selected || hovered) && !targeting && (
           <mesh rotation-x={-Math.PI / 2} position-y={0.008} renderOrder={3}>
             <ringGeometry args={[radius * 1.12, radius * (selected ? 1.3 : 1.22), 48]} />
-            <meshBasicMaterial color={selected ? '#ffd166' : '#ffffff'} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
+            <meshBasicMaterial color={selected ? SELECT : HOVER} transparent opacity={selected ? 0.95 : 0.5} depthWrite={false} />
           </mesh>
         )}
-        {targetInside && (
-          <mesh rotation-x={-Math.PI / 2} position-y={0.012} renderOrder={6} raycast={() => undefined}>
-            <ringGeometry args={[radius * 1.1, radius * 1.45, 48]} />
-            <meshBasicMaterial color="#ff5a1f" transparent opacity={0.95} depthWrite={false} />
-          </mesh>
-        )}
+        {targetInside && <TargetRing radius={radius} color={targetColor} />}
         {token.light > 0 && (
           <pointLight
             ref={light}
@@ -703,7 +682,7 @@ function ElevationMarker({ elevation, cell }: { elevation: number; cell: number 
   return (
     <mesh position-y={elevation / 2} raycast={noRaycast}>
       <cylinderGeometry args={[0.012 * cell, 0.012 * cell, elevation, 6]} />
-      <meshBasicMaterial color="#f3ead8" transparent opacity={0.55} depthWrite={false} />
+      <meshBasicMaterial color={MEASURE} transparent opacity={0.55} depthWrite={false} />
     </mesh>
   )
 }

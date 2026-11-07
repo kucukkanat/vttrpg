@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SHORTCUT_GROUPS, SHORTCUTS, SHORTCUTS_EVENT, type Shortcut } from './useShortcuts'
 import './ShortcutsOverlay.css'
+import { Icon } from '@/ui/icons'
 
 export function ShortcutsOverlay() {
   const [open, setOpen] = useState(false)
@@ -45,7 +46,7 @@ export function ShortcutsOverlay() {
       <div className="shortcuts" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" onClick={(e) => e.stopPropagation()}>
         <div className="shortcuts-head">
           <h2 id="shortcuts-title">Keyboard shortcuts</h2>
-          <button type="button" className="icon shortcuts-close" ref={closeBtn} aria-label="Close" onClick={() => setOpen(false)}>✕</button>
+          <button type="button" className="icon shortcuts-close" ref={closeBtn} aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button>
         </div>
         <ShortcutList shortcuts={SHORTCUTS} />
         <p className="shortcuts-note muted small">Keys are ignored while typing in a field. Panel and chat keys need the desktop layout; table keys work with any keyboard.</p>

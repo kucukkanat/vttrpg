@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { AttributeDef, ConditionDef, ResourceDef } from '@/core/pack'
-import { chipAngle, chipLabel, conditionChips, CONDITION_PALETTE, defenseAbbr, defenseAttribute, hpBand, MAX_PIPS, readDefense, readResource, UNKNOWN_CONDITION_COLOR, vitalState } from './tokenHud'
+import { CATEGORY_COLORS, chipAngle, chipLabel, conditionCategory, conditionChips, defenseAbbr, defenseAttribute, hpBand, MAX_PIPS, readDefense, readResource, UNKNOWN_CONDITION_COLOR, vitalState } from './tokenHud'
 
 const hp: ResourceDef = { id: 'hp', name: 'Hit Protection', max: 'hp.max' }
 const defs: ConditionDef[] = [
-  { id: 'exhausted', name: 'Exhausted', description: '' },
-  { id: 'frightened', name: 'Frightened', description: '' },
-  { id: 'shield-of-faith', name: 'Shield of Faith', description: '' },
+  { id: 'exhausted', name: 'Exhausted', description: '', icon: 'zzz', category: 'affliction' },
+  { id: 'frightened', name: 'Frightened', description: '', icon: 'not-a-glyph' },
+  { id: 'shield-of-faith', name: 'Shield of Faith', description: '', icon: 'shield', category: 'buff' },
 ]
 
 describe('readResource', () => {
@@ -53,12 +53,25 @@ describe('condition chips', () => {
   it('merges token and sheet conditions without duplicates, in order', () => {
     const chips = conditionChips({ conditions: ['frightened'] }, { data: { conditions: ['exhausted', 'frightened'] } }, defs)
     expect(chips.map((c) => c.id)).toEqual(['frightened', 'exhausted'])
-    expect(chips[0]).toMatchObject({ label: 'FR', name: 'Frightened', color: CONDITION_PALETTE[1] })
-    expect(chips[1]).toMatchObject({ label: 'EX', color: CONDITION_PALETTE[0] })
+    // No category in the pack: guessed from the name. An icon name without a drawing falls back to letters.
+    expect(chips[0]).toMatchObject({ label: 'FR', name: 'Frightened', category: 'control', shape: 'square', glyph: null, color: CATEGORY_COLORS.control })
+    expect(chips[1]).toMatchObject({ label: 'EX', category: 'affliction', shape: 'diamond', glyph: 'zzz', color: CATEGORY_COLORS.affliction })
   })
   it('keeps unknown ids as grey chips and ignores non-strings', () => {
     const chips = conditionChips({ conditions: ['stunned', '' as string] }, { data: { conditions: [3, null] } }, defs)
-    expect(chips).toEqual([{ id: 'stunned', label: 'ST', name: 'stunned', color: UNKNOWN_CONDITION_COLOR }])
+    expect(chips).toEqual([{
+      id: 'stunned', label: 'ST', name: 'stunned', color: UNKNOWN_CONDITION_COLOR, category: 'control', shape: 'square', glyph: null, remaining: null, last: false,
+    }])
+  })
+  it('defaults to harm and honours the pack category', () => {
+    expect(conditionCategory('mystery', undefined)).toBe('harm')
+    expect(conditionCategory('stunned', { category: 'buff' })).toBe('buff')
+  })
+  it('reads turns left and concentration from Token.effects, and pulses on the last turn', () => {
+    const token = { conditions: ['frightened', 'exhausted'], effects: { frightened: { remaining: 3 }, exhausted: { remaining: 1, concentration: true } } }
+    const chips = conditionChips(token as never, undefined, defs)
+    expect(chips.map((c) => [c.id, c.remaining, c.last, c.concentration ?? false])).toEqual([['frightened', 3, false, false], ['exhausted', 1, true, true]])
+    expect(conditionChips({ conditions: ['frightened'] }, undefined, defs)[0]).toMatchObject({ remaining: null, last: false })
   })
   it('is empty without conditions or a sheet', () => {
     expect(conditionChips({ conditions: [] }, undefined, defs)).toEqual([])

@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { sharedAudioEngine, useAudioUnlock, useGameAudio } from '@/audio'
 import { useSession } from './session'
+import { Icon } from '@/ui/icons'
 
 export function AudioBridge() {
   const { controller } = useSession()
@@ -11,7 +12,7 @@ export function AudioBridge() {
   if (!engine || unlocked) return null
   return (
     <button className="audio-unlock" onClick={() => void unlock()} aria-label="Enable sound">
-      🔈 Tap to enable sound
+      <Icon name="sound" size={18} /> Tap to enable sound
     </button>
   )
 }

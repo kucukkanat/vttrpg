@@ -12,6 +12,7 @@ import type { Token } from '@/core/doc'
 import { isTypingTarget } from '../shell/useShortcuts'
 import { startEditing } from '@/table/editTap'
 import './tokens.css'
+import { Icon } from '@/ui/icons'
 
 const COLORS = ['#e0a458', '#7cc4ff', '#8fd18f', '#f28b82', '#c58af9', '#ffd166', '#9aa0a6']
 /** Above this many rows the list gets a filter box and scrolls on its own. */
@@ -97,8 +98,8 @@ export function TokensPanel({ controller }: { controller: GameController }) {
               <span className="name">{t.name}</span>
               {t.owner === controller.pubkey && <span className="muted small">you</span>}
               {t.hidden && <span className="muted small">hidden</span>}
-              {editable && <button className="icon" aria-label={`Edit ${t.name}`} title="Size, rotation and model" onClick={(e) => { e.stopPropagation(); edit(t.id as TokenId) }}>✎</button>}
-              {isGm && <button className="icon" aria-label={`Remove ${t.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); remove(t.id as TokenId) }}>🗑</button>}
+              {editable && <button className="icon" aria-label={`Edit ${t.name}`} title="Size, rotation and model" onClick={(e) => { e.stopPropagation(); edit(t.id as TokenId) }}><Icon name="pencil" /></button>}
+              {isGm && <button className="icon" aria-label={`Remove ${t.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); remove(t.id as TokenId) }}><Icon name="trash" /></button>}
             </li>
           )
         })}

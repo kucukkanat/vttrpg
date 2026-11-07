@@ -35,6 +35,8 @@ import { Cues } from '../cues'
 import { downloadBlob, exportGame } from '../gameFile'
 import { pushToast } from '../toasts'
 import { OnboardingTips } from '../onboarding/OnboardingTips'
+import { Icon } from '@/ui/icons'
+import { usePackTheme } from '../theme/theme'
 import { canSeeRoll } from '../rollMode'
 
 // The 3D stack (three, fiber, drei, rapier, the draco and basis loaders) is loaded on first use, so
@@ -73,6 +75,7 @@ export function GameShell({ controller }: { controller: GameController }) {
   const chat = useGame((s) => s.chat)
   const presence = useGame((s) => s.presence)
   const targeting = useSkillTargeting(controller)
+  usePackTheme(controller.rules?.pack.manifest.theme)
   const keyboard = useKeyboardInset()
 
   // Layout state per breakpoint. Phone tab is session-only (a panel id, or MORE_ID while the More
@@ -174,7 +177,7 @@ export function GameShell({ controller }: { controller: GameController }) {
 
   const drawerToggle = bp === 'tablet' ? (
     <button type="button" className="icon drawer-toggle" aria-pressed={tablet.open} aria-label={tablet.open ? 'Hide panels' : 'Show panels'} onClick={() => setTablet((t) => ({ ...t, open: !t.open }))}>
-      ☰{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
+      <Icon name="menu" />{!tablet.open && unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
     </button>
   ) : null
 

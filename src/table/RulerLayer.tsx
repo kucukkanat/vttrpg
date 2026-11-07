@@ -16,6 +16,7 @@ import { useTable } from './context'
 import type { Bounds2 } from './grid'
 import { measure, type Measurement, type RulerPoint } from './ruler'
 import { useTableUi } from './tableState'
+import { LABEL_GLASS, MEASURE, PARCHMENT } from '@/ui/theme/palette'
 
 /**
  * three.js layer the tool catcher lives on. While a catcher is mounted the pointer raycaster only
@@ -25,7 +26,7 @@ import { useTableUi } from './tableState'
 export const TOOL_LAYER = 7
 
 const DRAG_THRESHOLD_PX = 8
-const COLOR = '#ffd166'
+const COLOR = MEASURE
 const noRaycast = () => undefined
 
 type CaptureTarget = { setPointerCapture(id: number): void; releasePointerCapture(id: number): void }
@@ -90,8 +91,8 @@ export function FloorLabel({ x, y, z, color, children }: { x: number; y: number;
   return (
     <Html position={[x, y, z]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div style={{
-        padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap', fontSize: 13, fontWeight: 600, lineHeight: 1.3,
-        fontFamily: 'system-ui, sans-serif', color: '#f3ead8', background: 'rgba(14,14,16,0.85)', border: `1px solid ${color}`,
+        padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap', fontSize: 'calc(var(--fs-sm) + 1px)', fontWeight: 600, lineHeight: 1.3,
+        fontFamily: 'var(--font-body)', fontVariantNumeric: 'tabular-nums', color: PARCHMENT, background: LABEL_GLASS, border: `1px dashed ${color}`,
         boxShadow: '0 2px 8px rgba(0,0,0,0.4)', userSelect: 'none',
       }}>{children}</div>
     </Html>

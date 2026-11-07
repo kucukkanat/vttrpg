@@ -10,10 +10,11 @@ import type { AssetRef } from '@/core/assets'
 import { useGame } from '@/state/store'
 import { AMBIENT_PRESETS, BUILTIN_SOUNDS, builtinRef, sharedAudioEngine, soundKey, useAudioUnlock, type AmbientPreset, type AudioEngine } from '@/audio'
 import { BUILTIN_LABELS } from '@/audio/builtin'
+import { Icon, type IconName } from '@/ui/icons'
 import { PAD_VOLUME_MAX, clampPadVolume, loadPadVolumes, padVolume, savePadVolumes, usePlaying, type PadVolumes } from './soundboard'
 
 const BOARD_KEY = 'vttrpg.soundboard'
-const ICONS: Record<(typeof BUILTIN_SOUNDS)[number], string> = { door: '🚪', sword: '⚔️', thunder: '⛈️', coin: '🪙', scream: '😱', drum: '🥁' }
+const ICONS: Record<(typeof BUILTIN_SOUNDS)[number], IconName> = { door: 'door', sword: 'swords', thunder: 'thunder', coin: 'coin', scream: 'scream', drum: 'drum' }
 
 const css = `
 .sb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
@@ -95,20 +96,20 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
     void controller.dispatch({ type: 'scene.update', scene: meta.activeScene, patch: { ambientAudio: undefined } })
   }
 
-  const pad = (asset: AssetRef, icon: string, label: string, extra?: React.ReactNode) => {
+  const pad = (asset: AssetRef, icon: IconName, label: string, extra?: React.ReactNode) => {
     const key = soundKey(asset)
     const on = playing.has(key)
     const v = padVolume(volumes, key)
     return (
       <div key={key} className={`sb-pad${on ? ' playing' : ''}`}>
         <button type="button" className="sb-play" onClick={() => play(asset)} aria-label={`Play ${label}${on ? ' (playing)' : ''}`} title={label}>
-          <span className="icon" aria-hidden>{icon}</span>
+          <span className="icon" aria-hidden><Icon name={icon} size={24} /></span>
           <span className="name">{label}</span>
         </button>
         <div className="sb-row">
           <input type="range" min={0} max={PAD_VOLUME_MAX} step={0.05} value={v} aria-label={`Volume for ${label}`}
             title={`${Math.round(v * 100)}%`} onChange={(e) => setPadVolume(key, Number(e.target.value))} />
-          <button type="button" className="icon" aria-label={`Stop ${label}`} disabled={!on} onClick={() => stop(asset)}>■</button>
+          <button type="button" className="icon" aria-label={`Stop ${label}`} disabled={!on} onClick={() => stop(asset)}><Icon name="stop" size={16} /></button>
           {extra}
         </div>
         <div className="sb-state" aria-live="polite">{on ? 'Playing' : v !== 1 ? `${Math.round(v * 100)}%` : ''}</div>
@@ -124,18 +125,18 @@ export function SoundboardPanel({ controller, engine: engineProp }: { controller
         {!unlocked && <button className="tiny primary" onClick={() => void unlock()}>Tap to enable sound</button>}
       </h3>
       <div className="sb-top">
-        <button type="button" disabled={playing.size === 0} onClick={() => stop()}>■ Stop all sounds</button>
+        <button type="button" disabled={playing.size === 0} onClick={() => stop()}><Icon name="stop" size={16} /> Stop all sounds</button>
         <span className="small muted">{playing.size ? `${playing.size} playing` : 'Nothing playing'}</span>
       </div>
       <div className="sb-grid">
         {BUILTIN_SOUNDS.map((name) => pad(builtinRef(name), ICONS[name], BUILTIN_LABELS[name]))}
         {board.map((ref) =>
-          pad(ref, '🔊', ref.name?.replace(/\.[^.]+$/, '') ?? 'sound', (
-            <button type="button" className="icon" aria-label={`Remove ${ref.name ?? 'sound'}`} onClick={() => remove(ref)} style={{ color: 'var(--muted)' }}>✕</button>
+          pad(ref, 'sound', ref.name?.replace(/\.[^.]+$/, '') ?? 'sound', (
+            <button type="button" className="icon" aria-label={`Remove ${ref.name ?? 'sound'}`} onClick={() => remove(ref)} style={{ color: 'var(--muted)' }}><Icon name="close" size={14} /></button>
           )),
         )}
         <label className="tiny-file sb-pad" style={{ margin: 0, color: 'var(--muted)', display: 'grid', placeItems: 'center', minHeight: 60 }}>
-          <span style={{ fontSize: 22 }}>＋</span>
+          <Icon name="plus" size={24} />
           <span>{busy ? 'Importing…' : 'Audio file'}</span>
           <input type="file" accept="audio/*" multiple hidden disabled={busy} onChange={(e) => { void importFiles(e.target.files); e.target.value = '' }} />
         </label>

@@ -183,7 +183,7 @@ describe('dnd5e damage types, temporary hit points and durations', () => {
     expect(pack.manifest.damage?.resource).toBe('hp')
     expect(pack.manifest.damage?.types?.map((t) => t.id)).toContain('radiant')
     expect(pack.manifest.concentration?.condition).toBe('concentrating')
-    expect(pack.conditions.find((c) => c.id === 'concentrating')?.category).toBe('neutral')
+    expect(pack.conditions.find((c) => c.id === 'concentrating')?.category).toBe('magic')
     expect(pack.conditions.find((c) => c.id === 'petrified')?.resist).toEqual(['all'])
     expect(pack.conditions.every((c) => c.category)).toBe(true)
   })

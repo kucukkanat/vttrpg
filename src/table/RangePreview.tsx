@@ -8,8 +8,9 @@ import { DoubleSide } from 'three'
 import { useGame } from '@/state/store'
 import { useTable } from './context'
 import { useTableUi } from './tableState'
+import { MEASURE } from '@/ui/theme/palette'
 
-const COLOR = '#ffd166'
+const COLOR = MEASURE
 const noRaycast = () => undefined
 
 export function RangePreview() {

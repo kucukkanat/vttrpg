@@ -73,7 +73,7 @@ export function sheetSummary(character: Character, attributes: readonly Attribut
 const css = `
 .claim-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; max-height: 85%; display: flex; flex-direction: column;
   background: var(--panel); border-top: 1px solid var(--border); border-radius: var(--r-lg) var(--r-lg) 0 0;
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, .45); padding: var(--sp-3) calc(var(--sp-4) + var(--sar)) calc(var(--sp-4) + var(--sab)) calc(var(--sp-4) + var(--sal));
+  box-shadow: var(--shadow-lg); padding: var(--sp-3) calc(var(--sp-4) + var(--sar)) calc(var(--sp-4) + var(--sab)) calc(var(--sp-4) + var(--sal));
   animation: claim-in .25s ease; }
 .claim-sheet .grip { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin-bottom: var(--sp-2); }
 .claim-sheet h2 { margin: 0 0 2px; font-size: var(--fs-xl); }

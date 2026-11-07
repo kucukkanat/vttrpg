@@ -20,6 +20,7 @@ import { useTableUi } from './tableState'
 import { DragGhostMesh } from './TokenMesh'
 import { MoveTrail } from './TokenOverlays'
 import { draftAt, isTouchTap, moveIntents, setMoveDraft, stepMoveTap, useMoveDraft, type MoveDraft } from './twoTapMove'
+import { MINE } from '@/ui/theme/palette'
 
 type MissHandler = (e: MouseEvent) => boolean
 let missHandler: MissHandler | null = null
@@ -45,7 +46,7 @@ export function TwoTapMoveLayer() {
   const draft = useMoveDraft((s) => s.draft)
   const token = useGame((s) => (draft ? s.tokens[draft.token] : undefined))
   const selected = useGame((s) => s.selectedToken)
-  const color = useGame((s) => (viewer ? s.presence[viewer.pubkey]?.color : undefined)) ?? '#ffd166'
+  const color = useGame((s) => (viewer ? s.presence[viewer.pubkey]?.color : undefined)) ?? MINE
   const pack = useGame((s) => s.meta?.pack ?? null)
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
