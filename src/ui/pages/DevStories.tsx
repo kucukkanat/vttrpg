@@ -17,7 +17,7 @@ for (const [file, load] of Object.entries(modules)) {
 }
 
 /** Short names for stories that live deeper in a module. */
-const ALIASES: Record<string, string> = { 'props-bench': 'table-propsBench' }
+const ALIASES: Record<string, string> = { 'props-bench': 'table-propsBench', 'kit-bench': 'table-kits' }
 
 export function DevStories({ story }: { story: string }) {
   // Anything after `?` is the story's own options (see e.g. table/propsBench).

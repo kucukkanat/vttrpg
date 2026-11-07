@@ -258,11 +258,12 @@ export function kitIndexFor(table: readonly (string | null)[], kit: string): { i
 export function turn(v: readonly [number, number], q: number): [number, number] {
   const k = ((q % 4) + 4) % 4
   const [x, z] = v
+  // `+ 0` turns -0 into 0, so turned points compare equal.
   switch (k) {
-    case 0: return [x, z]
-    case 1: return [z, -x]
-    case 2: return [-x, -z]
-    default: return [-z, x]
+    case 0: return [x + 0, z + 0]
+    case 1: return [z + 0, -x + 0]
+    case 2: return [-x + 0, -z + 0]
+    default: return [-z + 0, x + 0]
   }
 }
 
