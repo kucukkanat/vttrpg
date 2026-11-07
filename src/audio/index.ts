@@ -24,6 +24,8 @@ export interface AudioEngine {
   playOneShot(asset: AssetRef, opts?: { volume?: number; at?: number }): Promise<void>
   /** Synthesized dice click; strength 0..1. No asset needed. */
   diceImpact(strength: number): void
+  /** Synthesized "your turn" chime. No asset needed. */
+  turnChime(): void
   setMasterVolume(v: number): void
   getMasterVolume(): number
   dispose(): void
