@@ -66,6 +66,8 @@ function useCommands(controller: GameController, panels: PanelDef[], actions: Pa
 
     // Open: every panel, wherever it lives.
     for (const p of panels) {
+      // The GM's Library has its own commands below ("Open Library" and the shelves).
+      if (isGm && p.id === 'library') continue
       const route = routePanel(p.id, isGm)
       const drawer = isGm && DRAWER_PANELS.has(p.id)
       const where = route.kind === 'scroll' ? 'The scroll' : route.kind === 'library' ? 'Library' : drawer ? 'GM drawer' : p.id === 'scene-switcher' ? 'Scene title' : 'Card'
