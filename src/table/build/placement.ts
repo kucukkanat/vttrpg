@@ -113,6 +113,25 @@ export function pickSurface(hits: readonly SurfaceHit[], floorY: number): Surfac
   return { y: floorY, on: 'floor' }
 }
 
+/** Node names that say nothing (Blender and exporter defaults). */
+const GENERIC_NODE = /^(cube|mesh|object|plane|cylinder|sphere|node|scene|group|root|primitive|geometry|default|untitled|gltf|model)\b/i
+
+/**
+ * A readable name for a surface in the scene model, from the hit node's name and its parents'
+ * (nearest first): "table_long.003" reads "Table long". Generic names are skipped; null when
+ * nothing useful is left.
+ */
+export function sceneSurfaceLabel(names: readonly string[]): string | undefined {
+  for (const raw of names) {
+    const n = raw.replace(/[._-]\d+$/g, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_.\-]+/g, ' ').replace(/\d+/g, ' ').replace(/\s+/g, ' ').trim()
+    const t = n.replace(/\s+(model|mesh|geo|geometry|obj|lod)$/i, '')
+    if (!t || GENERIC_NODE.test(t) || t.length < 3) continue
+    const s = t.toLowerCase()
+    return s[0]!.toUpperCase() + s.slice(1)
+  }
+  return undefined
+}
+
 /** Small seeded RNG (mulberry32) so scatter tests are repeatable; returns [0, 1). */
 export function seededRandom(seed: number): () => number {
   let a = seed >>> 0

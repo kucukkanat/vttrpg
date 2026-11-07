@@ -91,10 +91,10 @@ export function LibraryPanel({ controller }: { controller: GameController }) {
           </button>
         )}
       </div>
-      <div className="lib-chips" role="tablist" aria-label="Shelf">
+      <div className="lib-chips lib-shelves" role="tablist" aria-label="Shelf">
         {SHELVES.map((s) => (
           <button key={s.id} type="button" role="tab" aria-selected={shelf === s.id} className={`lib-chip${shelf === s.id ? ' on' : ''}`} onClick={() => setShelf(s.id)}>
-            {s.label}{s.id === 'mine' && mine.length ? ` ${mine.length}` : ''}
+            {s.label}{s.id === 'mine' && mine.length ? <span className="lib-count"> · {mine.length}</span> : null}
           </button>
         ))}
       </div>
@@ -206,7 +206,13 @@ function CardGrid({ entries, cell, resolve, onPick, phone, favourites }: GridPro
   const hoverStart = (e: CatalogueEntry, el: HTMLElement) => {
     if (!canHover) return
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => { setPreviewMounted(true); setPreview({ entry: e, rect: el.getBoundingClientRect() }) }, PREVIEW_DELAY_MS)
+    timer.current = setTimeout(() => {
+      // Beside the tray (not over the cards), level with the hovered card.
+      const card = el.getBoundingClientRect()
+      const side = (el.closest('.t-tray') ?? box.current ?? el).getBoundingClientRect()
+      setPreviewMounted(true)
+      setPreview({ entry: e, rect: new DOMRect(side.left, card.top, side.width, card.height) })
+    }, PREVIEW_DELAY_MS)
   }
   const hoverEnd = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null }

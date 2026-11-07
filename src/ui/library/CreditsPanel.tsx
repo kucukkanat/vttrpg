@@ -45,7 +45,7 @@ export function CreditsPanel(_: { controller: GameController }) {
           <p className="muted small">Models in {sceneName ?? 'this scene'} by:</p>
           <ul className="list credits-list">
             {credits.map((e) => (
-              <li key={e.id} className="credits-row" style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '4px 0' }}>
+              <li key={e.id} className="credits-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', gap: 2, padding: '4px 0' }}>
                 <strong><Link href={e.licence.sourceUrl}>{e.title}</Link></strong>
                 <span className="small">
                   {e.licence.author ? <>by <Link href={e.licence.authorUrl}>{e.licence.author}</Link></> : 'Author unknown'}

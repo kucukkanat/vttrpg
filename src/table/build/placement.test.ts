@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AssetRef } from '@/core/assets'
 import type { PropId, SceneId } from '@/core/ids'
 import {
-  DEFAULT_SCATTER_RANGE, MAX_SCATTER_RANGE, pickSurface, placedProp, rollScatter, seededRandom, snapPlacement, turnHeld,
+  DEFAULT_SCATTER_RANGE, MAX_SCATTER_RANGE, pickSurface, placedProp, rollScatter, sceneSurfaceLabel, seededRandom, snapPlacement, turnHeld,
   TURN_STEP, TURN_STEP_BIG, wrapAngle, yawDegrees, type HeldModel,
 } from './placement'
 
@@ -112,5 +112,14 @@ describe('placedProp', () => {
     expect(p.scale).toEqual({ x: 2.2, y: 1.1, z: 2.2 })
     expect(p.catalogue).toBeUndefined()
     expect(p.createdBy).toBeUndefined()
+  })
+})
+
+describe('sceneSurfaceLabel', () => {
+  it('reads a scene node name, skipping generic ones', () => {
+    expect(sceneSurfaceLabel(['Cube.012', 'table_long.003'])).toBe('Table long')
+    expect(sceneSurfaceLabel(['BarCounter'])).toBe('Bar counter')
+    expect(sceneSurfaceLabel(['Table_model'])).toBe('Table')
+    expect(sceneSurfaceLabel(['Mesh_0', 'Object_7', ''])).toBeUndefined()
   })
 })

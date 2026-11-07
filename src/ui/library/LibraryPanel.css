@@ -5,8 +5,10 @@
 .t-screen-sheet .hosted > .panel.library-panel,
 .panel.library-panel { display: flex; flex-direction: column; gap: var(--sp-2); overflow: hidden; min-height: 0; }
 .t-tray .hosted:has(> .library-panel) { display: flex; flex-direction: column; }
-.t-tray .hosted > .library-panel { flex: 1; height: min(62vh, 640px); }
-.t-screen-sheet .hosted > .library-panel { height: min(58vh, 560px); }
+.t-tray .hosted > .library-panel { flex: 1 1 auto; height: min(62vh, 640px); }
+/* The phone sheet is a grid: without this the chip rows' max-content width would widen it. */
+.t-screen-sheet > .hosted:has(> .library-panel) { min-width: 0; }
+.t-screen-sheet .hosted > .library-panel { flex: 1 1 auto; height: min(58vh, 560px); }
 
 .lib-top { display: flex; gap: var(--sp-2); align-items: center; }
 .lib-search {
@@ -16,6 +18,7 @@
 .lib-search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 6px 0; min-height: 30px; outline: none; }
 .lib-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
 
+.lib-chips.lib-shelves { flex-wrap: wrap; overflow: visible; }
 .lib-chips { display: flex; gap: var(--sp-1); overflow-x: auto; scrollbar-width: none; flex: none; padding-bottom: 1px; }
 .lib-chips::-webkit-scrollbar { display: none; }
 .lib-chip {
@@ -69,6 +72,8 @@
 .lib-star.on { color: #b07400; opacity: 1; }
 .lib-star.on svg { fill: currentColor; }
 
+/* Phones: one row of shelves, scrolled sideways, so the cards get the room. */
+@media (max-width: 699.98px) { .lib-chips.lib-shelves { flex-wrap: nowrap; overflow-x: auto; } }
 @media (pointer: coarse) {
   .lib-chip { min-height: 36px; }
   .lib-star { width: 32px; height: 32px; }

@@ -29,7 +29,7 @@ import { useAssetLoad } from '../TokenMesh'
 import { useModel } from '../useModel'
 import { nextRoll, putDownModel, useBuildUi } from './buildState'
 import { eyedrop } from './eyedrop'
-import { pickSurface, placedProp, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
+import { pickSurface, placedProp, sceneSurfaceLabel, snapPlacement, turnHeld, yawDegrees, type HeldModel, type SurfaceHit } from './placement'
 
 const noRaycast = () => undefined
 const DRAG_THRESHOLD_PX = 6
@@ -38,6 +38,24 @@ const WHEEL_PER_STEP = 60
 /** Height above a picked surface the second, downward ray starts from (metres). */
 const DROP_FROM = 0.3
 const DOWN = new Vector3(0, -1, 0)
+/** A hit this close to the scene's floor height reads as "floor". */
+const FLOOR_TOLERANCE = 0.05
+const HELPER = /^(COL|FOG)_/
+/** Scene-model surfaces higher than this over the floor (beams, rafters, roofs) are not rested on. */
+const SCENE_REACH = 2.5
+
+/** Every node from `o` up to the scene model's root, nearest first, for the "on: …" hint. */
+function nodeNames(o: Object3D, root: Object3D | null): string[] {
+  const out: string[] = []
+  for (let x: Object3D | null = o; x && x !== root; x = x.parent) out.push(x.name)
+  return out
+}
+
+/** Visible all the way up (a hidden parent hides its meshes too). */
+function visibleInScene(o: Object3D): boolean {
+  for (let x: Object3D | null = o; x; x = x.parent) if (!x.visible) return false
+  return true
+}
 
 const isTyping = (t: EventTarget | null) => {
   const el = t as HTMLElement | null
@@ -78,7 +96,8 @@ interface Picker {
 /** Raycasting against the props and the floor, shared by the ghost, the eyedropper and drops. */
 function usePicker(): Picker {
   const scene = useThree((s) => s.scene)
-  const { grid, floorY } = useTable()
+  const { grid, floorY, loaded } = useTable()
+  const sceneRoot = loaded?.root ?? null
   return useMemo(() => {
     const raycaster = new Raycaster()
     raycaster.layers.enableAll()
@@ -88,14 +107,21 @@ function usePicker(): Picker {
     const normal = new Vector3()
     const toHits = (list: Intersection[]): SurfaceHit[] => {
       const props = useGame.getState().props
-      return list.map((h) => {
+      return list.filter((h) => propIdOf(h) || h.point.y <= floorY + SCENE_REACH).map((h) => {
         const propId = propIdOf(h)
         if (h.face) normal.copy(h.face.normal).transformDirection(h.object.matrixWorld)
         else normal.set(0, 1, 0)
-        return { distance: h.distance, y: h.point.y, normalY: normal.y, propId, label: propId ? props[propId as PropId]?.name : undefined }
+        const label = propId ? props[propId as PropId]?.name
+          : Math.abs(h.point.y - floorY) < FLOOR_TOLERANCE ? 'floor' : sceneSurfaceLabel(nodeNames(h.object, sceneRoot))
+        return { distance: h.distance, y: h.point.y, normalY: normal.y, propId, label }
       })
     }
-    const cast = () => raycaster.intersectObjects(propRoots(scene), true).filter((h) => (h.object as Mesh).isMesh && h.object.visible)
+    // Props, and the scene model's own furniture (tables, counters, steps) when it has one.
+    const cast = (withScene = true) => {
+      const roots = propRoots(scene)
+      if (withScene && sceneRoot) roots.push(sceneRoot)
+      return raycaster.intersectObjects(roots, true).filter((h) => (h.object as Mesh).isMesh && visibleInScene(h.object) && !HELPER.test(h.object.name))
+    }
     return {
       rest(ray, free) {
         raycaster.ray.copy(ray)
@@ -117,11 +143,11 @@ function usePicker(): Picker {
       },
       propAt(ray) {
         raycaster.ray.copy(ray)
-        const id = cast().map((h) => propIdOf(h)).find((x) => !!x)
+        const id = cast(false).map((h) => propIdOf(h)).find((x) => !!x)
         return id ? useGame.getState().props[id as PropId] : undefined
       },
     }
-  }, [scene, grid, floorY])
+  }, [scene, grid, floorY, sceneRoot])
 }
 
 /** Sends one stamp: one intent, one undo step; then the next scatter roll and Recently placed. */

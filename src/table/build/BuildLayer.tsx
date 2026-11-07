@@ -92,7 +92,7 @@ export function BuildLayer({ bounds, baseWalls }: { bounds: Bounds2; baseWalls: 
     <>
       <Doors />
       <Lights />
-      {gm && (active || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
+      {gm && ((active && active !== 'place' && active !== 'eyedropper') || showWalls || proposal) && <WallsOverlay baseWalls={baseWalls} />}
       {active && (active === 'place' || active === 'eyedropper'
         ? <PlaceLayer tool={active} bounds={bounds} />
         : <ToolCatcher key={active} tool={active} bounds={bounds} baseWalls={baseWalls} />)}
