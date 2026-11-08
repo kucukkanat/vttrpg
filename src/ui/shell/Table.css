@@ -268,11 +268,29 @@ button.t-scene:hover { border: 0; background: rgba(0, 0, 0, .18); }
 }
 .t-well-btn-word { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
 .t-well-btn.on { box-shadow: 0 0 0 3px var(--paper), 0 4px 10px rgba(0, 0, 0, .5); }
-.t-well-pad {
-  position: absolute; right: 0; bottom: calc(100% + var(--sp-4)); width: min(300px, calc(100vw - 24px));
-  border: 1px solid #b59a6c; border-radius: 8px; box-shadow: var(--shadow-lg); background: var(--panel) var(--paper-tex); padding-bottom: var(--sp-2);
+/* The dice ring: buttons fanned round the brass button's centre (--a: angle, --i: order). */
+.t-well-wrap { --ring-c: 19px; --ring-r: 100px; --ring-d: 44px; }
+.t-ring { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.t-ring-item {
+  position: absolute; left: var(--ring-c); top: var(--ring-c); width: var(--ring-d); height: var(--ring-d); margin: calc(var(--ring-d) / -2);
+  min-height: 0; padding: 0; border-radius: 50%; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  font-weight: 800; font-size: 13px; line-height: 1.05; color: #2a1c10; font-variant-numeric: tabular-nums;
+  background: radial-gradient(circle at 35% 30%, #fbf3df, var(--paper) 60%, #d8c49a); border: 2px solid #8a6a36;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .6);
+  transform: rotate(var(--a)) translateX(var(--ring-r)) rotate(calc(-1 * var(--a)));
+  animation: t-ring-out .2s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i) * 18ms);
 }
-.t-well-pad .dice-pad { position: static; width: auto; padding: 0 var(--sp-3); background: none; border: 0; box-shadow: none; }
+.t-ring-item:active { transform: rotate(var(--a)) translateX(var(--ring-r)) rotate(calc(-1 * var(--a))) scale(.92); }
+.t-ring-item:focus-visible { outline: 2px solid var(--brass-hi); outline-offset: 2px; }
+.t-ring-vis, .t-ring-clear { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+.t-ring-vis { background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 55%, var(--brass-lo)); border-color: #6b4a1a; }
+.t-ring-vis.hidden-roll { background: radial-gradient(circle at 35% 30%, #6a5a8a, #3f3358 60%, #2a2140); color: #efe6ff; border-color: #1f1830; }
+.t-ring-clear { background: radial-gradient(circle at 35% 30%, #e9b3a6, #c06b58 60%, #8e3f30); color: #fff6ef; border-color: #6d2a1f; }
+.t-ring-clear:disabled { opacity: .45; cursor: default; }
+.t-ring-total { font-family: var(--font-display); font-size: 15px; letter-spacing: 0; text-transform: none; }
+@keyframes t-ring-out { from { opacity: 0; transform: rotate(var(--a)) translateX(0) rotate(calc(-1 * var(--a))) scale(.4); } }
+@media (max-width: 1099px) { .t-well-wrap { --ring-r: 92px; --ring-d: 40px; } }
+@media (prefers-reduced-motion: reduce) { .t-ring-item { animation: none; } }
 .dice-pad { display: grid; gap: var(--sp-2); }
 .dice-pad-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
 .dice-pad .die-chip {

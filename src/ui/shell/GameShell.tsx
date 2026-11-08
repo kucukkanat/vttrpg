@@ -68,6 +68,18 @@ const DiceTrayOverlay = lazy(() => import('@/dice/DiceTrayOverlay').then((m) => 
 /** Dice in the well: a camera close over a small tray, so a die reads at the well's size. */
 const WELL_ZOOM = 2.4
 const PHONE_WELL_ZOOM = 2
+/** Most dice the well holds at once; older throws are taken out to make room. */
+const MAX_PILE_DICE = 12
+
+interface PileRoll { id: string; dice: { sides: number; value: number }[]; total: number }
+
+/** Drops the oldest throws until the pile fits MAX_PILE_DICE (the newest always stays). */
+function trimPile(pile: PileRoll[]): PileRoll[] {
+  let count = pile.reduce((n, r) => n + r.dice.length, 0)
+  let start = 0
+  while (count > MAX_PILE_DICE && start < pile.length - 1) count -= pile[start++].dice.length
+  return start ? pile.slice(start) : pile
+}
 
 function TableLoading() {
   return (
@@ -130,15 +142,23 @@ export function GameShell({ controller }: { controller: GameController }) {
   // Aiming a skill on a phone needs the whole table: drop the sheets, the table's own bar has Cancel.
   useEffect(() => { if (phone && targeting) useTableLayout.getState().set({ card: null, scrollOpen: false, phone: null }) }, [phone, targeting])
 
-  // Dice: animate the most recent roll once, in the well; clear it a few seconds after it settles.
-  const [shownRoll, setShownRoll] = useState<string | null>(null)
+  // Dice: each roll tumbles into the well once. On the table the dice pile up until Clear (the
+  // oldest drop out past MAX_PILE_DICE); on a phone a roll replaces the last and leaves after it settles.
+  const [pile, setPile] = useState<PileRoll[]>([])
   // Hidden rolls (GM only, blind) neither animate nor read out for those who may not read them.
   const lastRoll = useMemo(() => [...chat].reverse().find((m) => m.kind === 'roll' && m.roll?.dice.length && canSeeRoll(m, controller.pubkey, controller.connection.gm)) ?? null, [chat, controller])
-  useEffect(() => { if (lastRoll?.roll && lastRoll.at > Date.now() - 15_000) setShownRoll(lastRoll.roll.seed) }, [lastRoll])
-  const dice = shownRoll ? (
+  useEffect(() => {
+    const r = lastRoll?.roll
+    if (!r || lastRoll.at <= Date.now() - 15_000) return
+    const next: PileRoll = { id: r.seed, dice: r.dice, total: r.total }
+    setPile((p) => (p.some((x) => x.id === next.id) ? p : phone ? [next] : trimPile([...p, next])))
+  }, [lastRoll, phone])
+  const clearPile = useCallback(() => setPile([]), [])
+  const pileTotal = pile.length ? pile.reduce((n, r) => n + r.total, 0) : null
+  const dice = pile.length ? (
     <Suspense fallback={null}>
-      <DiceTrayOverlay rollId={shownRoll} dice={lastRoll?.roll?.dice ?? []} showRim={false} floor="shadow" zoom={phone ? PHONE_WELL_ZOOM : WELL_ZOOM} fill={0.86}
-        onSettled={() => setTimeout(() => setShownRoll(null), 4000)}
+      <DiceTrayOverlay rolls={pile} accumulate={!phone} showRim={false} floor="shadow" zoom={phone ? PHONE_WELL_ZOOM : WELL_ZOOM} fill={0.86}
+        onSettled={phone ? (id) => setTimeout(() => setPile((p) => (p.at(-1)?.id === id ? [] : p)), 4000) : undefined}
         onImpact={(strength) => sharedAudioEngine({ resolve: (ref) => controller.assets.resolve(ref) }).diceImpact(strength)} />
     </Suspense>
   ) : null
@@ -245,7 +265,7 @@ export function GameShell({ controller }: { controller: GameController }) {
           drawer={<GmDrawer me={controller.pubkey} playing={playing.size} journalNew={journalUnread} />} />}
         {!phone && isGm && chrome && <LibraryHost controller={controller} />}
         {isGm && chrome && <InspectorHost controller={controller} phone={phone} />}
-        <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} />
+        <DiceWell dice={dice} roll={lastRoll} who={who} compact={phone} pileTotal={pileTotal} onClear={clearPile} />
         <GameNotices controller={controller} onOpenPanel={openPanel} />
         {isGm && <GmCallout />}
         {isGm && chrome && <HeldBar phone={phone} />}

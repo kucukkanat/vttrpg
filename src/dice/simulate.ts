@@ -36,6 +36,15 @@ export interface ThrowParams {
   dieSize: number
   /** Inner tray size, centred on the origin, floor at y = 0. */
   tray: { width: number; depth: number }
+  /** Dice already resting in the tray (an earlier throw's final poses): fixed, so new dice land among them. */
+  obstacles?: RestingDie[]
+}
+
+/** A die at rest: its body pose (without the visual offset). */
+export interface RestingDie {
+  die: PhysicalDie
+  position: [number, number, number]
+  rotation: [number, number, number, number]
 }
 
 export interface DieTrack {
@@ -115,7 +124,7 @@ export async function simulateRoll(params: ThrowParams): Promise<RollRecording> 
 
 /** Requires `rapierReady()` to have resolved. */
 export function simulateRollSync(params: ThrowParams): RollRecording {
-  const { seed, dice, dieSize, tray } = params
+  const { seed, dice, dieSize, tray, obstacles = [] } = params
   const rnd = seededRandom(seed)
   const range = (lo: number, hi: number) => lo + (hi - lo) * rnd()
   const g = 9.81 * (dieSize / REAL_DIE_RADIUS) * SLOW_MOTION
@@ -136,6 +145,13 @@ export function simulateRollSync(params: ThrowParams): RollRecording {
   fixed(RAPIER.ColliderDesc.cuboid(thick, wallH, hd + thick).setTranslation(-hw - thick, wallH / 2, 0))
   fixed(RAPIER.ColliderDesc.cuboid(hw + thick, wallH, thick).setTranslation(0, wallH / 2, hd + thick))
   fixed(RAPIER.ColliderDesc.cuboid(hw + thick, wallH, thick).setTranslation(0, wallH / 2, -hd - thick))
+
+  for (const o of obstacles) {
+    const hull = RAPIER.ColliderDesc.convexHull(hullPoints(dieDef(o.die.type), dieSize))
+    if (!hull) continue
+    const [x, y, z] = o.position, [qx, qy, qz, qw] = o.rotation
+    fixed(hull.setTranslation(x, y, z).setRotation({ x: qx, y: qy, z: qz, w: qw }))
+  }
 
   // Throw from one side toward the far side, dice fanned out across the throw direction.
   const side = Math.floor(rnd() * 4)
@@ -271,6 +287,16 @@ export function simulateRollSync(params: ThrowParams): RollRecording {
     tracks,
     impacts: [...impactByStep.entries()].map(([step, strength]) => ({ step, strength })).sort((a, b) => a.step - b.step),
   }
+}
+
+/** Where each die of a finished recording rests (body poses), to use as `obstacles` for the next throw. */
+export function restingDice(rec: RollRecording): RestingDie[] {
+  const last = rec.steps - 1
+  return rec.tracks.map((t) => ({
+    die: t.die,
+    position: [t.positions[last * 3], t.positions[last * 3 + 1], t.positions[last * 3 + 2]],
+    rotation: [t.rotations[last * 4], t.rotations[last * 4 + 1], t.rotations[last * 4 + 2], t.rotations[last * 4 + 3]],
+  }))
 }
 
 /** Pose of one track at time `t` (seconds), interpolated between recorded steps. */

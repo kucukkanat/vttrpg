@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { Quaternion, Vector3 } from 'three'
 import { dieDef, toPhysicalDice, upFlatness, upReading } from './geometry'
-import { rapierReady, samplePose, seededRandom, simulateRollSync, type ThrowParams } from './simulate'
+import { rapierReady, restingDice, samplePose, seededRandom, simulateRollSync, type ThrowParams } from './simulate'
 
 const tray = { width: 8, depth: 5 }
 const dieSize = 0.5
@@ -66,6 +66,21 @@ describe('simulateRoll', () => {
       expect(i.step).toBeLessThan(rec.steps)
     }
   }, 60_000)
+
+  it('throws among dice already resting in the tray: committed values, nothing ends inside them', () => {
+    const first = simulateRollSync(params('pile-1', [{ sides: 6, value: 3 }, { sides: 6, value: 5 }, { sides: 20, value: 17 }]))
+    const resting = restingDice(first)
+    expect(resting).toHaveLength(3)
+    const dice = [{ sides: 8, value: 2 }, { sides: 12, value: 11 }, { sides: 20, value: 1 }]
+    const rec = simulateRollSync({ ...params('pile-2', dice), obstacles: resting })
+    const pos = new Vector3(), rot = new Quaternion()
+    for (const track of rec.tracks) {
+      samplePose(rec, track, rec.duration, pos, rot)
+      const def = dieDef(track.die.type)
+      expect(def.readings[upReading(def, rot)].value).toBe(track.die.value)
+      for (const r of resting) expect(pos.distanceTo(new Vector3(...r.position))).toBeGreaterThan(dieSize * 0.8)
+    }
+  })
 
   it('handles an empty roll', () => {
     const rec = simulateRollSync(params('empty', []))
