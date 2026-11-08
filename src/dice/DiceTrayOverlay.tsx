@@ -35,6 +35,8 @@ export interface DiceTrayOverlayProps extends Omit<DiceTrayProps, 'position' | '
   yieldTo?(): DOMRect | null
   /** Get out of the way now (the chat keyboard or a full sheet needs the room). */
   yieldNow?: boolean
+  /** Settled dice stay (no linger, fade or yield): the parent clears them by dropping `rolls`. */
+  accumulate?: boolean
 }
 
 interface Fit { size: [number, number]; z: number }
@@ -59,7 +61,7 @@ function fitTray(camera: PerspectiveCamera, fill: number): Fit {
   return { size: [halfW * 2 * fill, depth * fill], z: (zNear + zFar) / 2 }
 }
 
-type SceneProps = Omit<DiceTrayOverlayProps, 'className' | 'style' | 'zoom' | 'lingerMs' | 'fadeMs' | 'yieldTo' | 'yieldNow'> & { tilt: number; fill: number; zoom: number }
+type SceneProps = Omit<DiceTrayOverlayProps, 'className' | 'style' | 'zoom' | 'lingerMs' | 'fadeMs' | 'yieldTo' | 'yieldNow' | 'accumulate'> & { tilt: number; fill: number; zoom: number }
 
 function Scene({ tilt, fill, zoom, dieSize = 0.5, shadows = true, ...tray }: SceneProps) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
@@ -103,10 +105,12 @@ function Scene({ tilt, fill, zoom, dieSize = 0.5, shadows = true, ...tray }: Sce
   )
 }
 
-export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor = 'shadow', zoom, lingerMs = 3000, fadeMs = 1000, onSettled, yieldTo, yieldNow = false, ...rest }: DiceTrayOverlayProps) {
+export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor = 'shadow', zoom, lingerMs = 3000, fadeMs = 1000, onSettled, yieldTo, yieldNow = false, accumulate = false, ...rest }: DiceTrayOverlayProps) {
   const skip = useSkipDice()
   const phone = useMatchMedia(PHONE_QUERY)
   const z = zoom ?? (phone ? PHONE_ZOOM : 1)
+  // The throw that leaving and skipping follow: the newest one.
+  const newest = rest.rolls ? (rest.rolls.at(-1)?.id ?? null) : (rest.rollId ?? null)
 
   // Leaving: full opacity while rolling and lingering, then a fade, or on phones a shrink into the
   // roll toast (`yieldTransform`); a new roll resets it.
@@ -119,7 +123,7 @@ export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor
     setLeave(null)
     clearTimeout(timer.current)
     return () => clearTimeout(timer.current)
-  }, [rest.rollId])
+  }, [newest])
 
   const goAway = () => {
     clearTimeout(timer.current)
@@ -129,18 +133,19 @@ export function DiceTrayOverlay({ className, style, tilt = 20, fill = 0.9, floor
     setLeave(to && from && from.width > 0 ? { kind: 'yield', transform: yieldTransform(from, to) } : { kind: 'fade' })
   }
   // The keyboard or a full sheet needs the room: yield now.
-  useEffect(() => { if (yieldNow && rest.rollId) goAway() }, [yieldNow, rest.rollId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (yieldNow && newest && !accumulate) goAway() }, [yieldNow, newest, accumulate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Skipping: report the roll as settled straight away so the parent clears it on its usual schedule.
   useEffect(() => {
-    if (skip && rest.rollId) { latest.current.onSettled?.(rest.rollId); announceDiceSettled(rest.rollId) }
-  }, [skip, rest.rollId])
+    if (skip && newest) { latest.current.onSettled?.(newest); announceDiceSettled(newest) }
+  }, [skip, newest])
 
   if (skip) return null
 
   const settled = (id: string) => {
     latest.current.onSettled?.(id)
     announceDiceSettled(id)
+    if (accumulate) return
     clearTimeout(timer.current)
     timer.current = setTimeout(goAway, latest.current.phone ? Math.min(PHONE_LINGER_MS, latest.current.lingerMs) : latest.current.lingerMs)
   }

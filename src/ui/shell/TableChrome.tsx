@@ -12,7 +12,7 @@ import type { PanelDef } from '../panels/registry'
 import { useGame } from '@/state/store'
 import { PanelHost } from './PanelHost'
 import { useTableLayout } from './tableLayout'
-import { DicePad, WellReadout } from './Hud'
+import { DiceRing, WellReadout } from './Hud'
 import { isTypingTarget } from './useShortcuts'
 import { useAttention, handleAttention } from '../attention'
 import { endCombat, startCombat } from '../panels/InitiativePanel'
@@ -102,27 +102,24 @@ export function Scroll({ controller, chat, unread }: { controller: GameControlle
 
 /**
  * The dice well in the bottom-right corner: dice roll inside it (the 3D tray is mounted in the
- * well, nowhere else), the latest result reads out on its rim, and the d20 button opens the pad.
+ * well, nowhere else), the latest result reads out on its rim, and the brass button fans the dice
+ * ring out around itself (DiceRing): a die throws at once, throws pile up in the well, Clear takes
+ * them out.
  */
-export function DiceWell({ dice, roll, who, compact = false }: { dice: ReactNode; roll: ChatMessage | null; who(pubkey: string): string; compact?: boolean }) {
-  const [pad, setPad] = useState(false)
+export function DiceWell({ dice, roll, who, compact = false, pileTotal, onClear }: { dice: ReactNode; roll: ChatMessage | null; who(pubkey: string): string; compact?: boolean; pileTotal: number | null; onClear(): void }) {
+  const [ring, setRing] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const set = useTableLayout((s) => s.set)
-  useOutside(pad, ref, () => setPad(false))
-  useEscape(pad, () => setPad(false))
+  useOutside(ring, ref, () => setRing(false))
+  useEscape(ring, () => setRing(false))
   return (
     <div className={`t-well-wrap${compact ? ' compact' : ''}`} ref={ref}>
-      {pad && (
-        <div className="t-well-pad skin-paper" role="dialog" aria-label="Roll dice">
-          <PaperHead title="Dice" glyph="dice" onClose={() => setPad(false)} />
-          <DicePad onRolled={() => setPad(false)} onRollMode={() => { setPad(false); set({ scrollOpen: true }) }} />
-        </div>
-      )}
       <div className="t-well">
         <div className="t-well-felt">{dice}</div>
         <WellReadout roll={roll} who={who} onOpenChat={() => set({ scrollOpen: true })} />
       </div>
-      <button type="button" className={`t-well-btn${pad ? ' on' : ''}`} aria-expanded={pad} aria-label="Roll dice" title="Roll dice" onClick={() => setPad((o) => !o)}>
+      {ring && <DiceRing pileTotal={pileTotal} onClear={onClear} />}
+      <button type="button" className={`t-well-btn${ring ? ' on' : ''}`} aria-expanded={ring} aria-label="Dice" title="Dice" onClick={() => setRing((o) => !o)}>
         <Icon name="dice" />
         <span className="t-well-btn-word">Roll</span>
       </button>

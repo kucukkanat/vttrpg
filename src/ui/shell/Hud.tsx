@@ -2,7 +2,7 @@
  * Things over the table: the camera and table tools (the tool rail), the dice well's readout and
  * pad, and the shared overlay layers. All ignore pointer events except on their own controls.
  */
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { useGame } from '@/state/store'
 import { useTableUi } from '@/table/tableState'
 import type { ChatMessage, RollAdvantage, RollVisibility } from '@/core/doc'
@@ -246,6 +246,55 @@ export function DicePad({ onRolled, onRollMode }: { onRolled?(): void; onRollMod
       </form>
       <button type="button" className="dice-pad-mode" onClick={onRollMode} title="Set who sees rolls and advantage in the scroll">
         {rollModeLabel(visibility, armed)} <Icon name="chevron-right" size={14} />
+      </button>
+    </div>
+  )
+}
+
+/** The dice on the well's ring: the polyhedral set, then the pack's percentile (d66 in Mausritter). */
+export function ringDice(pack: string | undefined): string[] {
+  return ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', pack === 'mausritter' ? 'd66' : 'd100']
+}
+
+/** Where the ring's items sit around the well's button, in degrees (0 = right, 90 = down): a fan
+ * from below-left round to the upper right, clear of the well itself. */
+const RING_FROM = 115, RING_TO = 345
+
+/**
+ * The ring around the dice well's button: who sees the rolls, one button per die, and Clear. A die
+ * throws at once and the ring stays open, so throws pile up in the well until Clear takes them out
+ * (it shows the pile's total).
+ */
+export function DiceRing({ pileTotal, onClear }: { pileTotal: number | null; onClear(): void }) {
+  const { controller } = useSession()
+  const pack = useGame((s) => s.meta?.pack)
+  const visibility = useRollMode((s) => s.visibility)
+  const setVisibility = useRollMode((s) => s.setVisibility)
+  if (!controller) return null
+  const roll = (f: string) => {
+    rememberRollFormula(f)
+    void controller.dispatch({ type: 'roll', formula: f, seed: newSeed() })
+  }
+  const dice = ringDice(pack)
+  const n = dice.length + 2
+  const at = (i: number) => ({ '--a': `${RING_FROM + ((RING_TO - RING_FROM) * i) / (n - 1)}deg`, '--i': i }) as CSSProperties
+  const everyone = visibility === 'public'
+  return (
+    <div className="t-ring" role="group" aria-label="Dice">
+      <button type="button" className={`t-ring-item t-ring-vis${everyone ? '' : ' hidden-roll'}`} style={at(0)}
+        aria-label={everyone ? 'Rolls: everyone sees. Switch to GM only' : 'Rolls: GM only. Switch to everyone'} aria-pressed={!everyone}
+        title={everyone ? 'Everyone sees these rolls (click for GM only)' : 'Only the GM sees these rolls (click for everyone)'}
+        onClick={() => setVisibility(everyone ? 'gm' : 'public')}>
+        <Icon name={everyone ? 'eye' : 'lock'} size={14} />
+        <span>{everyone ? 'All' : visibility === 'gm' ? 'GM' : 'Blind'}</span>
+      </button>
+      {dice.map((f, i) => (
+        <button key={f} type="button" className="t-ring-item t-ring-die" style={at(i + 1)} onClick={() => roll(f)} aria-label={`Roll ${f}`} title={`Roll ${f}`}>{f}</button>
+      ))}
+      <button type="button" className="t-ring-item t-ring-clear" style={at(n - 1)} disabled={pileTotal === null} onClick={onClear}
+        aria-label={pileTotal === null ? 'Clear the dice (nothing thrown)' : `Clear the dice, total ${pileTotal}`} title="Take the thrown dice out of the well">
+        <span>Clear</span>
+        {pileTotal !== null && <span className="t-ring-total">{pileTotal}</span>}
       </button>
     </div>
   )
